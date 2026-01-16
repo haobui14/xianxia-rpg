@@ -293,9 +293,23 @@ function applyInventoryDelta(
       state.inventory.spirit_stones += Math.min(value as number, 20);
     }
   } else if (field === 'add_item') {
-    // Add item to inventory
+    // Add item to inventory - stack if duplicate
     if (typeof value === 'object' && value.id) {
-      state.inventory.items.push(value);
+      const existingItem = state.inventory.items.find(
+        (item) => item.id === value.id && item.type === value.type
+      );
+      
+      if (existingItem) {
+        // Stack the item
+        existingItem.quantity += (value.quantity || 1);
+      } else {
+        // Add new item
+        state.inventory.items.push({
+          ...value,
+          quantity: value.quantity || 1,
+        });
+      }
+      
       events.push({
         type: 'loot',
         data: { item: value },
@@ -307,7 +321,19 @@ function applyInventoryDelta(
       const loot = generateLoot(value, rng, state.progress.realm === 'PhàmNhân' ? 'vi' : 'en');
       state.inventory.silver += loot.silver;
       state.inventory.spirit_stones += loot.spiritStones;
-      loot.items.forEach((item) => state.inventory.items.push(item));
+      
+      // Stack items properly
+      loot.items.forEach((item) => {
+        const existingItem = state.inventory.items.find(
+          (inv) => inv.id === item.id && inv.type === item.type
+        );
+        
+        if (existingItem) {
+          existingItem.quantity += item.quantity;
+        } else {
+          state.inventory.items.push(item);
+        }
+      });
 
       events.push({
         type: 'loot',

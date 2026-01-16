@@ -82,6 +82,45 @@ export default function InventoryView({ state, locale }: InventoryViewProps) {
                   </div>
                 </div>
 
+                {/* Show bonus stats for equipment */}
+                {item.bonus_stats && Object.keys(item.bonus_stats).length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-xianxia-accent/20">
+                    <div className="text-sm text-green-400 font-semibold">
+                      {locale === 'vi' ? 'Chỉ số:' : 'Stats:'}
+                    </div>
+                    <div className="text-sm text-gray-300 mt-1 grid grid-cols-2 gap-1">
+                      {item.bonus_stats.hp && (
+                        <div>HP: +{item.bonus_stats.hp}</div>
+                      )}
+                      {item.bonus_stats.qi && (
+                        <div>Qi: +{item.bonus_stats.qi}</div>
+                      )}
+                      {item.bonus_stats.stamina && (
+                        <div>Stamina: +{item.bonus_stats.stamina}</div>
+                      )}
+                      {item.bonus_stats.str && (
+                        <div>STR: +{item.bonus_stats.str}</div>
+                      )}
+                      {item.bonus_stats.agi && (
+                        <div>AGI: +{item.bonus_stats.agi}</div>
+                      )}
+                      {item.bonus_stats.int && (
+                        <div>INT: +{item.bonus_stats.int}</div>
+                      )}
+                      {item.bonus_stats.perception && (
+                        <div>PER: +{item.bonus_stats.perception}</div>
+                      )}
+                      {item.bonus_stats.luck && (
+                        <div>LUCK: +{item.bonus_stats.luck}</div>
+                      )}
+                      {item.bonus_stats.cultivation_speed && (
+                        <div>{locale === 'vi' ? 'Tốc độ tu luyện' : 'Cultivation Speed'}: +{item.bonus_stats.cultivation_speed}%</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Show effects for consumables */}
                 {item.effects && Object.keys(item.effects).length > 0 && (
                   <div className="mt-3 pt-3 border-t border-xianxia-accent/20">
                     <div className="text-sm text-xianxia-accent">
@@ -90,10 +129,17 @@ export default function InventoryView({ state, locale }: InventoryViewProps) {
                     <div className="text-sm text-gray-300 mt-1">
                       {Object.entries(item.effects).map(([key, value]) => (
                         <div key={key}>
-                          {key}: {String(value)}
+                          {key.replace(/_/g, ' ')}: {String(value)}
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Show equipment slot */}
+                {item.equipment_slot && (
+                  <div className="mt-2 text-xs text-blue-400">
+                    {locale === 'vi' ? 'Trang bị:' : 'Slot:'} {item.equipment_slot}
                   </div>
                 )}
               </div>
