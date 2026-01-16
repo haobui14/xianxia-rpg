@@ -91,6 +91,7 @@ export interface CultivationTechnique {
   description_en: string;
   grade: 'Mortal' | 'Earth' | 'Heaven';
   type: 'Main' | 'Support';
+  elements: Element[]; // Elements of the technique (e.g., ['Hỏa', 'Kim'])
 }
 
 // Inventory item
@@ -136,6 +137,31 @@ export interface Inventory {
   items: InventoryItem[];
 }
 
+// Market item for buying/selling
+export interface MarketItem extends InventoryItem {
+  price_silver?: number;
+  price_spirit_stones?: number;
+}
+
+// Market state
+export interface MarketState {
+  items: MarketItem[];
+  last_regenerated: string; // ISO timestamp
+  next_regeneration: {
+    month: number;
+    year: number;
+  };
+}
+
+// Auction state  
+export interface AuctionState {
+  active: boolean;
+  items: MarketItem[];
+  start_time: string;
+  end_time: string;
+  bids: Record<string, { bidder: string; amount: number; is_ai: boolean }>;
+}
+
 // Game state (stored in runs.current_state)
 export interface GameState {
   stats: CharacterStats;
@@ -160,6 +186,8 @@ export interface GameState {
   techniques: CultivationTechnique[];
   sect?: string; // Môn phái
   sect_en?: string;
+  market?: MarketState;
+  auction?: AuctionState;
 }
 
 // Choice for player

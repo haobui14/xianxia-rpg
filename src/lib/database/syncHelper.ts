@@ -1,0 +1,274 @@
+/**
+ * Sync Helper - Keep JSONB state and normalized tables in sync
+ * This ensures data consistency between current_state and the new tables
+ */
+
+import { supabase } from './client';
+import { GameState, InventoryItem } from '@/types/game';
+import { inventoryQueries, marketQueries, combatQueries, leaderboardQueries } from './extendedQueries';
+
+/**
+ * Sync inventory from JSONB to normalized tables
+ */
+export async function syncInventoryToTables(runId: string, inventory: GameState['inventory'], equippedItems: GameState['equipped_items']) {
+  try {
+    // Use imported supabase
+
+    // Clear existing inventory for this run
+    await supabase.from('character_inventory').delete().eq('run_id', runId);
+    await supabase.from('character_equipment').delete().eq('run_id', runId);
+
+    // Insert inventory items
+    if (inventory.items.length > 0) {
+      const inventoryData = inventory.items.map(item => ({
+        run_id: runId,
+        item_id: item.id,
+        item_data: item,
+        quantity: item.quantity,
+        is_equipped: false,
+        equipped_slot: null
+      }));
+
+      await supabase.from('character_inventory').insert(inventoryData);
+    }
+
+    // Insert equipped items
+    for (const [slot, item] of Object.entries(equippedItems)) {
+      if (item) {
+        await supabase.from('character_equipment').insert({
+          run_id: runId,
+          slot,
+          item_data: item,
+          inventory_item_id: null // We don't track this in JSONB approach
+        });
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error syncing inventory:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Load inventory from normalized tables to JSONB state
+ */
+export async function loadInventoryFromTables(runId: string): Promise<{
+  inventory: GameState['inventory'];
+  equippedItems: GameState['equipped_items'];
+} | null> {
+  try {
+    // Use imported supabase
+
+    // Get inventory items
+    const { data: inventoryData, error: invError } = await supabase
+      .from('character_inventory')
+      .select('*')
+      .eq('run_id', runId)
+      .eq('is_equipped', false);
+
+    if (invError) throw invError;
+
+    // Get equipped items
+    const { data: equippedData, error: eqError } = await supabase
+      .from('character_equipment')
+      .select('*')
+      .eq('run_id', runId);
+
+    if (eqError) throw eqError;
+
+    // Transform to GameState format
+    const inventory = {
+      silver: 0, // These need to be loaded from current_state
+      spirit_stones: 0,
+      items: (inventoryData || []).map((item: any) => ({
+        ...item.item_data,
+        quantity: item.quantity
+      }))
+    };
+
+    const equippedItems: GameState['equipped_items'] = {};
+    (equippedData || []).forEach((eq: any) => {
+      equippedItems[eq.slot as keyof GameState['equipped_items']] = eq.item_data;
+    });
+
+    return { inventory, equippedItems };
+  } catch (error) {
+    console.error('Error loading inventory from tables:', error);
+    return null;
+  }
+}
+
+/**
+ * Sync market listings to tables
+ */
+export async function syncMarketToTables(
+  worldSeed: string,
+  generationQuarter: number,
+  items: any[]
+) {
+  try {
+    // Use imported supabase
+
+    // Delete old listings for this quarter
+    await supabase
+      .from('market_listings')
+      .delete()
+      .eq('world_seed', worldSeed)
+      .eq('generation_quarter', generationQuarter);
+
+    // Insert new listings
+    if (items.length > 0) {
+      const listings = items.map(item => ({
+        world_seed: worldSeed,
+        generation_quarter: generationQuarter,
+        item_id: item.id,
+        item_data: item,
+        price_silver: item.price_silver || 0,
+        price_spirit_stones: item.price_spirit_stones || 0,
+        quantity_available: 1
+      }));
+
+      await supabase.from('market_listings').insert(listings);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error syncing market:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Load market listings from tables
+ */
+export async function loadMarketFromTables(
+  worldSeed: string,
+  generationQuarter: number
+) {
+  try {
+    // Use imported supabase
+
+    const { data, error } = await supabase
+      .from('market_listings')
+      .select('*')
+      .eq('world_seed', worldSeed)
+      .eq('generation_quarter', generationQuarter);
+
+    if (error) throw error;
+
+    return (data || []).map((listing: any) => ({
+      ...listing.item_data,
+      price_silver: listing.price_silver,
+      price_spirit_stones: listing.price_spirit_stones
+    }));
+  } catch (error) {
+    console.error('Error loading market from tables:', error);
+    return null;
+  }
+}
+
+/**
+ * Record combat to history table
+ */
+export async function recordCombatHistory(
+  runId: string,
+  enemyId: string,
+  enemyName: string,
+  victory: boolean,
+  playerDamageDealt: number,
+  playerDamageTaken: number,
+  rewards: any,
+  gameDate: { year: number; month: number; day: number },
+  turnNo: number
+) {
+  try {
+    await combatQueries.recordCombat(
+      runId,
+      enemyId,
+      enemyName,
+      victory,
+      playerDamageDealt,
+      playerDamageTaken,
+      rewards,
+      gameDate,
+      turnNo
+    );
+    return { success: true };
+  } catch (error) {
+    console.error('Error recording combat history:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Update player statistics for leaderboard
+ */
+export async function updatePlayerStats(
+  runId: string,
+  characterName: string,
+  state: GameState,
+  combatWins: number = 0
+) {
+  try {
+    const totalWealth = state.inventory.silver + (state.inventory.spirit_stones * 100);
+    
+    await leaderboardQueries.updateStatistics(
+      runId,
+      characterName,
+      state.progress.realm,
+      state.progress.realm_stage,
+      state.inventory.silver,
+      state.inventory.spirit_stones,
+      combatWins,
+      state.progress.cultivation_exp,
+      0 // achievements count - would need to track this
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating player stats:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Record market transaction
+ */
+export async function recordMarketTransaction(
+  runId: string,
+  type: 'buy' | 'sell',
+  itemId: string,
+  itemName: string,
+  quantity: number,
+  priceSilver: number,
+  priceSpiritStones: number,
+  gameDate: { year: number; month: number; day: number }
+) {
+  try {
+    await marketQueries.recordTransaction(
+      runId,
+      type,
+      itemId,
+      itemName,
+      quantity,
+      priceSilver,
+      priceSpiritStones,
+      gameDate
+    );
+    return { success: true };
+  } catch (error) {
+    console.error('Error recording transaction:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Full sync - sync entire game state to tables
+ */
+export async function fullSync(runId: string, state: GameState, characterName: string) {
+  await syncInventoryToTables(runId, state.inventory, state.equipped_items);
+  await updatePlayerStats(runId, characterName, state);
+  // Add more syncs as needed (skills, techniques, quests, etc.)
+}

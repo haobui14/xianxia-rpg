@@ -1,6 +1,7 @@
 import { GameState, Enemy, GameEvent } from '@/types/game';
 import { DeterministicRNG } from './rng';
 import { updateHP, updateQi, clampStat } from './mechanics';
+import { calculateTotalAttributes, getEquipmentBonus } from './equipment';
 
 export interface CombatResult {
   victory: boolean;
@@ -11,17 +12,50 @@ export interface CombatResult {
 }
 
 /**
- * Calculate base damage
+ * Calculate base damage with proper stat consideration
  */
 function calculateDamage(
   atk: number,
   def: number,
+  str: number,  // Add character STR for physical damage
   rng: DeterministicRNG
 ): number {
-  const baseDamage = Math.max(1, atk - def);
-  const variance = rng.randomInt(-2, 3);
-  const critical = rng.chance(0.15) ? 1.5 : 1.0;
+  // Factor in strength for physical attacks
+  const effectiveAtk = atk + Math.floor(str / 2);
+  const baseDamage = Math.max(1, effectiveAtk - def);
+  const variance = rng.randomInt(-2, 5);
+  const critical = rng.chance(0.15 + (str * 0.002)) ? 1.5 : 1.0; // STR increases crit chance
   return Math.floor(baseDamage * critical + variance);
+}
+
+/**
+ * Calculate magical/qi damage
+ */
+function calculateQiDamage(
+  intStat: number,
+  strStat: number,
+  def: number,
+  rng: DeterministicRNG
+): number {
+  // INT is primary stat for qi attacks, STR adds bonus
+  const effectiveAtk = intStat * 2 + Math.floor(strStat / 2);
+  const baseDamage = Math.max(1, effectiveAtk - Math.floor(def / 2)); // Qi bypasses some defense
+  const variance = rng.randomInt(-3, 6);
+  const critical = rng.chance(0.20 + (intStat * 0.003)) ? 2.0 : 1.0; // INT increases crit chance and multiplier
+  return Math.floor(baseDamage * critical + variance);
+}
+
+/**
+ * Calculate effective defense
+ */
+function calculateDefense(
+  baseDefense: number,
+  agiStat: number,
+  isDefending: boolean
+): number {
+  const agiBonus = Math.floor(agiStat / 3);
+  const defenseBonus = isDefending ? 8 : 0;
+  return baseDefense + agiBonus + defenseBonus;
 }
 
 /**
@@ -39,9 +73,18 @@ export function processCombatTurn(
   // Player's turn
   let playerDamage = 0;
   let enemyDamage = 0;
+  
+  // Use total attributes including equipment
+  const totalAttrs = calculateTotalAttributes(state);
 
   if (playerAction === 'attack') {
-    playerDamage = calculateDamage(state.attrs.str + 5, enemy.def, rng);
+    // Physical attack using STR
+    playerDamage = calculateDamage(
+      10, // Base attack power
+      enemy.def,
+      totalAttrs.str,
+      rng
+    );
     enemy.hp -= playerDamage;
     narrative += `Bạn tấn công gây ${playerDamage} sát thương. `;
   } else if (playerAction === 'defend') {
@@ -50,8 +93,9 @@ export function processCombatTurn(
   } else if (playerAction === 'qi_attack') {
     if (state.stats.qi >= 10) {
       updateQi(state, -10);
-      playerDamage = calculateDamage(
-        state.attrs.int * 2 + state.attrs.str,
+      playerDamage = calculateQiDamage(
+        totalAttrs.int,
+        totalAttrs.str,
         enemy.def,
         rng
       );
@@ -59,7 +103,7 @@ export function processCombatTurn(
       narrative += `Bạn sử dụng 10 Linh lực, gây ${playerDamage} sát thương thuộc tính! `;
     } else {
       narrative += `Không đủ Linh lực! Bạn tấn công thường. `;
-      playerDamage = calculateDamage(state.attrs.str + 5, enemy.def, rng);
+      playerDamage = calculateDamage(10, enemy.def, totalAttrs.str, rng);
       enemy.hp -= playerDamage;
     }
   }
@@ -82,9 +126,24 @@ export function processCombatTurn(
   }
 
   // Enemy's turn
-  const enemyAtk = enemy.atk;
-  const playerDef = state.attrs.agi + (playerAction === 'defend' ? 5 : 0);
-  enemyDamage = calculateDamage(enemyAtk, playerDef, rng);
+  cototalAttrs.agi,
+    playerAction === 'defend'
+  );
+  
+  // Factor in equipped items' defense bonuses
+  const hpBonus = getEquipmentBonus(state, 'hp');
+  const agiBonus = getEquipmentBonus(state, 'agi');
+  const equipmentDefenseBonus = Math.floor(hpBonus / 20) + Math.floor(agiBonus / 3 if (item?.bonus_stats?.agi) {
+      equipmentDefenseBonus += Math.floor(item.bonus_stats.agi / 3);
+    }
+  });
+  
+  enemyDamage = calculateDamage(
+    enemyAtk,
+    playerDef + equipmentDefenseBonus,
+    0, // Enemy doesn't use player STR
+    rng
+  );
 
   updateHP(state, -enemyDamage);
   narrative += `${enemy.name} tấn công gây ${enemyDamage} sát thương. `;
@@ -119,6 +178,58 @@ export function processCombatTurn(
     playerDamage,
     enemyDamage,
     events,
+  };
+}
+
+/**
+ * Generate an enemy scaled to player's realm and stats
+ */
+export function generateEnemy(
+  state: GameState,
+  difficulty: 'easy' | 'medium' | 'hard',
+  rng: DeterministicRNG
+): Enemy {
+  const realmMultiplier = {
+    'PhàmNhân': 1,
+    'LuyệnKhí': 2,
+    'TrúcCơ': 4,
+    'KếtĐan': 8,
+    'NguyênAnh': 16,
+  }[state.progress.realm] || 1;
+
+  const difficultyMultiplier = {
+    easy: 0.7,
+    medium: 1.0,
+    hard: 1.5,
+  }[difficulty];
+
+  const baseHP = 30 + (state.progress.stage * 20);
+  const baseAtk = 8 + (state.progress.stage * 3);
+  const baseDef = 3 + (state.progress.stage * 2);
+
+  const monsterTypes = [
+    { name: 'Sói Hoang', name_en: 'Wild Wolf', behavior: 'aggressive' as const },
+    { name: 'Hổ Ma Thú', name_en: 'Demonic Tiger', behavior: 'aggressive' as const },
+    { name: 'Yêu Quái', name_en: 'Demon', behavior: 'tactical' as const },
+    { name: 'Tu Sĩ Tà Đạo', name_en: 'Evil Cultivator', behavior: 'tactical' as const },
+    { name: 'Rắn Linh', name_en: 'Spirit Snake', behavior: 'defensive' as const },
+    { name: 'Thổ Phỉ', name_en: 'Bandit', behavior: 'aggressive' as const },
+  ];
+
+  const selectedType = monsterTypes[rng.randomInt(0, monsterTypes.length - 1)];
+
+  const hp = Math.floor(baseHP * realmMultiplier * difficultyMultiplier);
+
+  return {
+    id: `enemy_${state.turn_count}_${rng.randomInt(1000, 9999)}`,
+    name: selectedType.name,
+    name_en: selectedType.name_en,
+    hp,
+    hp_max: hp,
+    atk: Math.floor(baseAtk * realmMultiplier * difficultyMultiplier),
+    def: Math.floor(baseDef * realmMultiplier * difficultyMultiplier),
+    behavior: selectedType.behavior,
+    loot_table_id: difficulty === 'hard' ? 'rare_loot' : difficulty === 'medium' ? 'bandit_loot' : 'common_herbs',
   };
 }
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { runQueries, turnLogQueries } from '@/lib/database/queries';
+import { runQueries, turnLogQueries, characterQueries } from '@/lib/database/queries';
 import { generateAITurn, getFallbackResponse } from '@/lib/ai/agent';
 import {
   GameState,
@@ -25,6 +25,7 @@ import {
   selectRandomTemplate,
 } from '@/lib/game/scenes';
 import { generateLoot, validateLoot } from '@/lib/game/loot';
+import { recordCombatHistory, updatePlayerStats, syncInventoryToTables } from '@/lib/database/syncHelper';
 
 export async function POST(request: Request) {
   try {
@@ -44,6 +45,17 @@ export async function POST(request: Request) {
     const state: GameState = run.current_state as GameState;
     const locale = run.locale;
     const turnNo = state.turn_count + 1;
+
+    // Migration: Add elements field to techniques that don't have it
+    if (state.techniques) {
+      state.techniques = state.techniques.map(tech => {
+        if (!tech.elements) {
+          // Default to character's first spirit root element if not specified
+          return { ...tech, elements: [state.spirit_root.elements[0]] };
+        }
+        return tech;
+      });
+    }
 
     // Create RNG for this turn
     const rng = createTurnRNG(run.world_seed, turnNo);
@@ -130,13 +142,38 @@ export async function POST(request: Request) {
       }
     }
 
-    // Update turn count
-    state.turn_count = turnNo;
-
     // Update story summary every 10 turns
     if (turnNo % 10 === 0) {
       updateStorySummary(state, aiResult.narrative, locale);
     }
+
+    // Record combat events to history table
+    const combatEvents = events.filter(e => e.type === 'combat');
+    for (const event of combatEvents) {
+      if (event.data.enemy && event.data.victory !== undefined) {
+        await recordCombatHistory(
+          runId,
+          event.data.enemy.id || 'unknown',
+          event.data.enemy.name || 'Unknown Enemy',
+          event.data.victory,
+          event.data.playerDamage || 0,
+          event.data.enemyDamage || 0,
+          event.data.loot || {},
+          { year: state.time_year, month: state.time_month, day: state.time_day },
+          turnNo
+        );
+      }
+    }
+
+    // Update leaderboard statistics
+    const character = await characterQueries.getById(run.character_id);
+    if (character) {
+      const combatWins = combatEvents.filter(e => e.data.victory === true).length;
+      await updatePlayerStats(runId, character.name, state, combatWins);
+    }
+
+    // Sync inventory to tables
+    await syncInventoryToTables(runId, state.inventory, state.equipped_items);
 
     // Save state
     await runQueries.update(runId, state);
@@ -211,6 +248,8 @@ function applyDelta(
     applyInventoryDelta(state, parts[1], operation, value, rng, events);
   } else if (parts[0] === 'karma') {
     applyKarmaDelta(state, operation, value as number);
+  } else if (parts[0] === 'techniques') {
+    applyTechniqueDelta(state, parts[1], operation, value);
   }
 }
 
@@ -267,7 +306,9 @@ function applyProgressDelta(
   if (field === 'cultivation_exp' && operation === 'add') {
     const maxExpGain = 50;
     const clampedValue = Math.min(value, maxExpGain);
-    state.progress.cultivation_exp += clampedValue;
+    // Apply spirit root bonus to cultivation exp gain
+    const bonusedExp = calculateCultivationExpGain(state, clampedValue);
+    state.progress.cultivation_exp += bonusedExp;
   }
 }
 
@@ -359,6 +400,33 @@ function applyKarmaDelta(
     state.karma += clampedValue;
   } else if (operation === 'subtract') {
     state.karma -= clampedValue;
+  }
+}
+
+function applyTechniqueDelta(
+  state: GameState,
+  field: string,
+  operation: string,
+  value: any
+): void {
+  if (field === 'add' && operation === 'add') {
+    // Validate technique structure
+    if (value && value.id && value.name && value.name_en && value.grade && value.type) {
+      // Initialize techniques array if it doesn't exist
+      if (!state.techniques) {
+        state.techniques = [];
+      }
+      
+      // Check if technique already exists
+      const exists = state.techniques.some(t => t.id === value.id);
+      if (!exists) {
+        // Ensure elements field exists
+        if (!value.elements) {
+          value.elements = [];
+        }
+        state.techniques.push(value);
+      }
+    }
   }
 }
 

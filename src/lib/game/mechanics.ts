@@ -249,6 +249,98 @@ export function getSpiritRootBonus(grade: SpiritRootGrade): number {
 }
 
 /**
+ * Element interaction table (Wu Xing - Five Elements)
+ * Kim (Metal) -> Mộc (Wood) -> Thổ (Earth) -> Thủy (Water) -> Hỏa (Fire) -> Kim
+ */
+const ELEMENT_GENERATES: Record<Element, Element> = {
+  'Kim': 'Thủy',    // Metal generates Water
+  'Thủy': 'Mộc',    // Water generates Wood  
+  'Mộc': 'Hỏa',     // Wood generates Fire
+  'Hỏa': 'Thổ',     // Fire generates Earth
+  'Thổ': 'Kim',     // Earth generates Metal
+};
+
+const ELEMENT_OVERCOMES: Record<Element, Element> = {
+  'Kim': 'Mộc',     // Metal overcomes Wood
+  'Mộc': 'Thổ',     // Wood overcomes Earth
+  'Thổ': 'Thủy',    // Earth overcomes Water
+  'Thủy': 'Hỏa',    // Water overcomes Fire
+  'Hỏa': 'Kim',     // Fire overcomes Metal
+};
+
+/**
+ * Calculate element compatibility bonus between spirit root and technique
+ * Perfect Match: +30% (all technique elements in spirit root)
+ * Good Match: +15% (generates/supports)
+ * Neutral: +0% (no conflict)
+ * Weak Conflict: -10% (overcome by technique)
+ * Strong Conflict: -20% (technique overcomes spirit root)
+ */
+export function getElementCompatibility(
+  spiritRootElements: Element[],
+  techniqueElements: Element[]
+): number {
+  if (techniqueElements.length === 0) return 0;
+
+  // Perfect match: all technique elements are in spirit root
+  const perfectMatch = techniqueElements.every(te => spiritRootElements.includes(te));
+  if (perfectMatch) return 0.3;
+
+  let compatibility = 0;
+  let matchCount = 0;
+  
+  for (const techElement of techniqueElements) {
+    for (const spiritElement of spiritRootElements) {
+      if (techElement === spiritElement) {
+        // Direct match
+        compatibility += 0.3;
+        matchCount++;
+      } else if (ELEMENT_GENERATES[spiritElement] === techElement) {
+        // Spirit root generates technique element (good)
+        compatibility += 0.15;
+        matchCount++;
+      } else if (ELEMENT_GENERATES[techElement] === spiritElement) {
+        // Technique generates spirit root (ok)
+        compatibility += 0.1;
+        matchCount++;
+      } else if (ELEMENT_OVERCOMES[techElement] === spiritElement) {
+        // Technique overcomes spirit root (bad)
+        compatibility -= 0.2;
+        matchCount++;
+      } else if (ELEMENT_OVERCOMES[spiritElement] === techElement) {
+        // Spirit root overcomes technique (weak conflict)
+        compatibility -= 0.1;
+        matchCount++;
+      }
+    }
+  }
+  
+  // Average the compatibility
+  return matchCount > 0 ? compatibility / matchCount : 0;
+}
+
+/**
+ * Get technique bonus considering element compatibility
+ */
+export function getTechniqueBonus(state: GameState): number {
+  if (!state.techniques || state.techniques.length === 0) return 1.0;
+  
+  let maxBonus = 0;
+  
+  for (const technique of state.techniques) {
+    if (technique.elements && technique.elements.length > 0) {
+      const compatibility = getElementCompatibility(
+        state.spirit_root.elements,
+        technique.elements
+      );
+      maxBonus = Math.max(maxBonus, compatibility);
+    }
+  }
+  
+  return 1.0 + maxBonus;
+}
+
+/**
  * Cultivation exp requirements by realm and stage
  */
 export const CULTIVATION_EXP_REQUIREMENTS: Record<string, number[]> = {
@@ -277,8 +369,9 @@ export function calculateCultivationExpGain(
   state: GameState,
   baseExp: number
 ): number {
-  const bonus = getSpiritRootBonus(state.spirit_root.grade);
-  return Math.floor(baseExp * bonus);
+  const spiritRootBonus = getSpiritRootBonus(state.spirit_root.grade);
+  const techniqueBonus = getTechniqueBonus(state);
+  return Math.floor(baseExp * spiritRootBonus * techniqueBonus);
 }
 
 /**

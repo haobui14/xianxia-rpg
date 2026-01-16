@@ -5,6 +5,7 @@ import { GameState, Choice, ValidatedTurnResult } from '@/types/game';
 import { t, Locale } from '@/lib/i18n/translations';
 import CharacterSheet from './CharacterSheet';
 import InventoryView from './InventoryView';
+import MarketView from './MarketView';
 import NotificationManager from './NotificationManager';
 
 interface GameScreenProps {
@@ -20,7 +21,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'game' | 'character' | 'inventory' | 'notifications'>('game');
+  const [activeTab, setActiveTab] = useState<'game' | 'character' | 'inventory' | 'market' | 'notifications'>('game');
   const firstTurnStartedRef = useRef(false);
   const lastNotificationRef = useRef<number>(0);
   const previousStaminaRef = useRef<number>(0);
@@ -53,6 +54,67 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       setProcessing(false);
     }
   }, [runId, locale]);
+
+  const handleEquipItem = useCallback(async (itemId: string, action: 'equip' | 'unequip') => {
+    try {
+      const response = await fetch('/api/equip-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId, action }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to equip/unequip item');
+      }
+
+      const result = await response.json();
+      setState(result.state);
+    } catch (err) {
+      console.error('Equip error:', err);
+      setError(locale === 'vi' ? 'Lỗi trang bị' : 'Error equipping item');
+    }
+  }, [locale]);
+
+  const handleMarketAction = useCallback(async (itemId: string, action: 'buy' | 'sell') => {
+    try {
+      const response = await fetch('/api/market', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId, action }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to complete transaction');
+      }
+
+      const result = await response.json();
+      setState(result.state);
+    } catch (err: any) {
+      console.error('Market error:', err);
+      setError(err.message || (locale === 'vi' ? 'Lỗi giao dịch' : 'Transaction error'));
+    }
+  }, [locale]);
+
+  const handleDiscardItem = useCallback(async (itemId: string, quantity: number) => {
+    try {
+      const response = await fetch('/api/discard-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId, quantity }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to discard item');
+      }
+
+      const result = await response.json();
+      setState(result.state);
+    } catch (err) {
+      console.error('Discard error:', err);
+      setError(locale === 'vi' ? 'Lỗi vứt vật phẩm' : 'Error discarding item');
+    }
+  }, [locale]);
 
   const loadRun = useCallback(async () => {
     try {
@@ -245,8 +307,16 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           >
             {t(locale, 'tabInventory')}
           </button>
-          <button
-            onClick={() => setActiveTab('notifications')}
+          <button            onClick={() => setActiveTab('market')}
+            className={`px-4 py-2 rounded-t-lg transition-colors ${
+              activeTab === 'market'
+                ? 'bg-xianxia-accent text-white'
+                : 'bg-xianxia-dark hover:bg-xianxia-accent/20'
+            }`}
+          >
+            {locale === 'vi' ? 'Chợ' : 'Market'}
+          </button>
+          <button            onClick={() => setActiveTab('notifications')}
             className={`px-4 py-2 rounded-t-lg transition-colors ${
               activeTab === 'notifications'
                 ? 'bg-xianxia-accent text-white'
@@ -385,7 +455,8 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         )}
 
         {activeTab === 'character' && <CharacterSheet state={state} locale={locale} />}
-        {activeTab === 'inventory' && <InventoryView state={state} locale={locale} />}
+        {activeTab === 'inventory' && <InventoryView state={state} locale={locale} onEquipItem={handleEquipItem} onDiscardItem={handleDiscardItem} />}
+        {activeTab === 'market' && <MarketView state={state} locale={locale} onBuyItem={(id) => handleMarketAction(id, 'buy')} onSellItem={(id) => handleMarketAction(id, 'sell')} />}
         {activeTab === 'notifications' && userId && (
           <NotificationManager userId={userId} locale={locale} />
         )}
