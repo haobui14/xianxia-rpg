@@ -6,10 +6,4 @@
   package = "@netlify/plugin-nextjs"
 
 [build.environment]
-  NODE_VERSION = "22"
-
-# Redirect all requests to Next.js
-[[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/nextjs/:splat"
-  status = 200
+  NODE_VERSION = "20"
