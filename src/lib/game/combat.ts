@@ -126,17 +126,17 @@ export function processCombatTurn(
   }
 
   // Enemy's turn
-  cototalAttrs.agi,
+  const enemyAtk = enemy.atk;
+  const playerDef = calculateDefense(
+    5, // Base player defense
+    totalAttrs.agi,
     playerAction === 'defend'
   );
   
   // Factor in equipped items' defense bonuses
   const hpBonus = getEquipmentBonus(state, 'hp');
   const agiBonus = getEquipmentBonus(state, 'agi');
-  const equipmentDefenseBonus = Math.floor(hpBonus / 20) + Math.floor(agiBonus / 3 if (item?.bonus_stats?.agi) {
-      equipmentDefenseBonus += Math.floor(item.bonus_stats.agi / 3);
-    }
-  });
+  const equipmentDefenseBonus = Math.floor(hpBonus / 20) + Math.floor(agiBonus / 3);
   
   enemyDamage = calculateDamage(
     enemyAtk,
@@ -203,17 +203,17 @@ export function generateEnemy(
     hard: 1.5,
   }[difficulty];
 
-  const baseHP = 30 + (state.progress.stage * 20);
-  const baseAtk = 8 + (state.progress.stage * 3);
-  const baseDef = 3 + (state.progress.stage * 2);
+  const baseHP = 30 + (state.progress.realm_stage * 20);
+  const baseAtk = 8 + (state.progress.realm_stage * 3);
+  const baseDef = 3 + (state.progress.realm_stage * 2);
 
   const monsterTypes = [
-    { name: 'Sói Hoang', name_en: 'Wild Wolf', behavior: 'aggressive' as const },
-    { name: 'Hổ Ma Thú', name_en: 'Demonic Tiger', behavior: 'aggressive' as const },
-    { name: 'Yêu Quái', name_en: 'Demon', behavior: 'tactical' as const },
-    { name: 'Tu Sĩ Tà Đạo', name_en: 'Evil Cultivator', behavior: 'tactical' as const },
-    { name: 'Rắn Linh', name_en: 'Spirit Snake', behavior: 'defensive' as const },
-    { name: 'Thổ Phỉ', name_en: 'Bandit', behavior: 'aggressive' as const },
+    { name: 'Sói Hoang', name_en: 'Wild Wolf', behavior: 'Aggressive' as const },
+    { name: 'Hổ Ma Thú', name_en: 'Demonic Tiger', behavior: 'Aggressive' as const },
+    { name: 'Yêu Quái', name_en: 'Demon', behavior: 'Balanced' as const },
+    { name: 'Tu Sĩ Tà Đạo', name_en: 'Evil Cultivator', behavior: 'Balanced' as const },
+    { name: 'Rắn Linh', name_en: 'Spirit Snake', behavior: 'Defensive' as const },
+    { name: 'Thổ Phỉ', name_en: 'Bandit', behavior: 'Aggressive' as const },
   ];
 
   const selectedType = monsterTypes[rng.randomInt(0, monsterTypes.length - 1)];
