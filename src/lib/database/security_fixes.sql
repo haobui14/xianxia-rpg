@@ -324,6 +324,7 @@ GRANT EXECUTE ON FUNCTION public.sync_character_inventory_admin(UUID, JSONB, JSO
 
 -- Fix auction_bids UPDATE policy
 DROP POLICY IF EXISTS "System can update winning bids" ON auction_bids;
+DROP POLICY IF EXISTS "Users can update their own bids" ON auction_bids;
 
 CREATE POLICY "Users can update their own bids"
   ON auction_bids FOR UPDATE
@@ -498,7 +499,165 @@ $$;
 GRANT EXECUTE ON FUNCTION public.record_market_transaction(UUID, TEXT, TEXT, TEXT, INTEGER, INTEGER, INTEGER, JSONB) TO authenticated;
 
 -- ============================================
--- 7. VERIFICATION QUERIES
+-- 7. SKILLS & TECHNIQUES SYNC RPC FUNCTIONS
+-- ============================================
+
+-- Function to sync character skills
+CREATE OR REPLACE FUNCTION public.sync_character_skills(
+  p_run_id UUID,
+  p_skills JSONB DEFAULT '[]'::jsonb
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_user_id UUID;
+  v_skill JSONB;
+BEGIN
+  -- Verify the user owns this run
+  SELECT c.user_id INTO v_user_id
+  FROM public.runs r
+  JOIN public.characters c ON r.character_id = c.id
+  WHERE r.id = p_run_id;
+
+  IF v_user_id IS NULL OR v_user_id != auth.uid() THEN
+    RAISE EXCEPTION 'Access denied: You do not own this run';
+  END IF;
+
+  -- Clear existing skills
+  DELETE FROM public.character_skills WHERE run_id = p_run_id;
+
+  -- Insert skills
+  FOR v_skill IN SELECT * FROM jsonb_array_elements(p_skills)
+  LOOP
+    INSERT INTO public.character_skills (run_id, skill_id, skill_data, current_level, experience)
+    VALUES (
+      p_run_id,
+      v_skill->>'skill_id',
+      v_skill->'skill_data',
+      COALESCE((v_skill->>'current_level')::INTEGER, 1),
+      0
+    );
+  END LOOP;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.sync_character_skills(UUID, JSONB) TO authenticated;
+
+-- Admin function for service role (no auth check)
+CREATE OR REPLACE FUNCTION public.sync_character_skills_admin(
+  p_run_id UUID,
+  p_skills JSONB DEFAULT '[]'::jsonb
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_skill JSONB;
+BEGIN
+  -- Clear existing skills
+  DELETE FROM public.character_skills WHERE run_id = p_run_id;
+
+  -- Insert skills
+  FOR v_skill IN SELECT * FROM jsonb_array_elements(p_skills)
+  LOOP
+    INSERT INTO public.character_skills (run_id, skill_id, skill_data, current_level, experience)
+    VALUES (
+      p_run_id,
+      v_skill->>'skill_id',
+      v_skill->'skill_data',
+      COALESCE((v_skill->>'current_level')::INTEGER, 1),
+      0
+    );
+  END LOOP;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.sync_character_skills_admin(UUID, JSONB) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.sync_character_skills_admin(UUID, JSONB) TO service_role;
+
+-- Function to sync character techniques
+CREATE OR REPLACE FUNCTION public.sync_character_techniques(
+  p_run_id UUID,
+  p_techniques JSONB DEFAULT '[]'::jsonb
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_user_id UUID;
+  v_technique JSONB;
+BEGIN
+  -- Verify the user owns this run
+  SELECT c.user_id INTO v_user_id
+  FROM public.runs r
+  JOIN public.characters c ON r.character_id = c.id
+  WHERE r.id = p_run_id;
+
+  IF v_user_id IS NULL OR v_user_id != auth.uid() THEN
+    RAISE EXCEPTION 'Access denied: You do not own this run';
+  END IF;
+
+  -- Clear existing techniques
+  DELETE FROM public.character_techniques WHERE run_id = p_run_id;
+
+  -- Insert techniques
+  FOR v_technique IN SELECT * FROM jsonb_array_elements(p_techniques)
+  LOOP
+    INSERT INTO public.character_techniques (run_id, technique_id, technique_data, mastery_level)
+    VALUES (
+      p_run_id,
+      v_technique->>'technique_id',
+      v_technique->'technique_data',
+      COALESCE((v_technique->>'mastery_level')::INTEGER, 1)
+    );
+  END LOOP;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.sync_character_techniques(UUID, JSONB) TO authenticated;
+
+-- Admin function for service role (no auth check)
+CREATE OR REPLACE FUNCTION public.sync_character_techniques_admin(
+  p_run_id UUID,
+  p_techniques JSONB DEFAULT '[]'::jsonb
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_technique JSONB;
+BEGIN
+  -- Clear existing techniques
+  DELETE FROM public.character_techniques WHERE run_id = p_run_id;
+
+  -- Insert techniques
+  FOR v_technique IN SELECT * FROM jsonb_array_elements(p_techniques)
+  LOOP
+    INSERT INTO public.character_techniques (run_id, technique_id, technique_data, mastery_level)
+    VALUES (
+      p_run_id,
+      v_technique->>'technique_id',
+      v_technique->'technique_data',
+      COALESCE((v_technique->>'mastery_level')::INTEGER, 1)
+    );
+  END LOOP;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.sync_character_techniques_admin(UUID, JSONB) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.sync_character_techniques_admin(UUID, JSONB) TO service_role;
+
+-- ============================================
+-- 8. VERIFICATION QUERIES
 -- ============================================
 
 -- List all functions with their settings
@@ -519,6 +678,10 @@ AND p.proname IN (
   'upsert_player_statistics_admin',
   'sync_character_inventory',
   'sync_character_inventory_admin',
+  'sync_character_skills',
+  'sync_character_skills_admin',
+  'sync_character_techniques',
+  'sync_character_techniques_admin',
   'mark_winning_bid',
   'create_auction_event',
   'record_combat_history',

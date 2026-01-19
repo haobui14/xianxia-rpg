@@ -51,10 +51,13 @@ export async function POST(request: NextRequest) {
     const state = run.current_state as GameState;
     
     if (action === 'equip') {
-      // Find the item in inventory - for equipment, match by id AND index to get exact item
+      // Find the item in inventory - for equipment/accessories
       const itemIndex = state.inventory.items.findIndex((item, idx) => 
-        item.id === itemId && item.type === 'Equipment'
+        item.id === itemId && (item.type === 'Equipment' || item.type === 'Accessory')
       );
+      
+      console.log('Equip attempt:', { itemId, itemIndex, totalItems: state.inventory.items.length });
+      console.log('Matching items:', state.inventory.items.filter(i => i.id === itemId));
       
       if (itemIndex === -1) {
         return NextResponse.json({ error: 'Item not found' }, { status: 404 });
@@ -62,9 +65,17 @@ export async function POST(request: NextRequest) {
 
       const item = state.inventory.items[itemIndex];
       
-      if (item.type !== 'Equipment' || !item.equipment_slot) {
+      // Auto-assign equipment_slot for accessories if missing
+      if (item.type === 'Accessory' && !item.equipment_slot) {
+        item.equipment_slot = 'Accessory';
+        console.log('Auto-assigned Accessory slot');
+      }
+      
+      console.log('Item to equip:', { id: item.id, type: item.type, slot: item.equipment_slot });
+      
+      if ((item.type !== 'Equipment' && item.type !== 'Accessory') || !item.equipment_slot) {
         return NextResponse.json(
-          { error: 'Item cannot be equipped' },
+          { error: `Item cannot be equipped - type: ${item.type}, slot: ${item.equipment_slot}` },
           { status: 400 }
         );
       }

@@ -9,10 +9,13 @@ interface MarketViewProps {
   locale: Locale;
   onBuyItem?: (itemId: string) => Promise<void>;
   onSellItem?: (itemId: string) => Promise<void>;
+  onRefreshMarket?: () => Promise<void>;
+  onExchange?: (amount: number) => Promise<void>;
 }
 
-export default function MarketView({ state, locale, onBuyItem, onSellItem }: MarketViewProps) {
+export default function MarketView({ state, locale, onBuyItem, onSellItem, onRefreshMarket, onExchange }: MarketViewProps) {
   const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
+  const [exchangeAmount, setExchangeAmount] = useState(1);
 
   // Initialize market if not exists
   if (!state.market) {
@@ -24,8 +27,13 @@ export default function MarketView({ state, locale, onBuyItem, onSellItem }: Mar
   }
 
   const sellableItems = state.inventory.items.filter(
-    item => item.type !== 'Misc' && !item.is_equipped
+    item => !['Misc', 'Main', 'Support', 'Attack', 'Defense', 'Movement'].includes(item.type) && !item.is_equipped
   );
+
+  // Debug logging
+  console.log('Market inventory items:', state.inventory.items.length);
+  console.log('Market sellable items:', sellableItems.length);
+  console.log('Sellable items:', sellableItems.map(i => ({ id: i.id, name: i.name, type: i.type })));
 
   return (
     <div className="space-y-6">
@@ -34,12 +42,58 @@ export default function MarketView({ state, locale, onBuyItem, onSellItem }: Mar
         <h2 className="text-2xl font-bold mb-2 text-xianxia-gold">
           {locale === 'vi' ? 'Chợ Linh Vật' : 'Spirit Market'}
         </h2>
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-gray-400 mb-4">
           {locale === 'vi' 
             ? `Chợ sẽ làm mới vào tháng ${state.market.next_regeneration.month} năm ${state.market.next_regeneration.year}`
             : `Market refreshes at month ${state.market.next_regeneration.month}, year ${state.market.next_regeneration.year}`
           }
         </p>
+
+        {/* Market Actions */}
+        <div className="flex flex-wrap gap-3">
+          {/* Refresh Market */}
+          {onRefreshMarket && (
+            <button
+              onClick={onRefreshMarket}
+              disabled={state.inventory.spirit_stones < 20}
+              className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+                state.inventory.spirit_stones >= 20
+                  ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                  : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              🔄 {locale === 'vi' ? 'Làm mới (20 Linh Thạch)' : 'Refresh (20 Spirit Stones)'}
+            </button>
+          )}
+
+          {/* Exchange Spirit Stones */}
+          {onExchange && (
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="1"
+                max={state.inventory.spirit_stones}
+                value={exchangeAmount}
+                onChange={(e) => setExchangeAmount(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-20 px-2 py-2 bg-gray-800 border border-gray-600 rounded text-white"
+              />
+              <button
+                onClick={() => onExchange(exchangeAmount)}
+                disabled={state.inventory.spirit_stones < exchangeAmount}
+                className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+                  state.inventory.spirit_stones >= exchangeAmount
+                    ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                    : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                💱 {locale === 'vi' 
+                  ? `Đổi → ${exchangeAmount * 100} Bạc` 
+                  : `Exchange → ${exchangeAmount * 100} Silver`
+                }
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}

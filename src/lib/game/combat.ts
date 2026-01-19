@@ -17,15 +17,29 @@ export interface CombatResult {
 function calculateDamage(
   atk: number,
   def: number,
-  str: number,  // Add character STR for physical damage
+  str: number,  // Character STR for physical damage
+  perception: number,  // Affects accuracy
+  luck: number,  // Affects crit chance
   rng: DeterministicRNG
 ): number {
+  // Accuracy check based on perception
+  const accuracyBonus = perception * 0.01; // Each perception = +1% accuracy
+  const hitChance = 0.85 + accuracyBonus; // Base 85% hit chance
+  
+  if (!rng.chance(Math.min(0.99, hitChance))) {
+    return 0; // Miss!
+  }
+  
   // Factor in strength for physical attacks
   const effectiveAtk = atk + Math.floor(str / 2);
   const baseDamage = Math.max(1, effectiveAtk - def);
   const variance = rng.randomInt(-2, 5);
-  const critical = rng.chance(0.15 + (str * 0.002)) ? 1.5 : 1.0; // STR increases crit chance
-  return Math.floor(baseDamage * critical + variance);
+  
+  // Critical hit calculation with STR and LUCK
+  const critChance = 0.10 + (str * 0.002) + (luck * 0.003); // Base 10% + STR + LUCK bonus
+  const critMultiplier = rng.chance(critChance) ? (1.5 + (luck * 0.01)) : 1.0; // LUCK increases crit damage
+  
+  return Math.floor(baseDamage * critMultiplier + variance);
 }
 
 /**
@@ -34,15 +48,29 @@ function calculateDamage(
 function calculateQiDamage(
   intStat: number,
   strStat: number,
+  perception: number,
+  luck: number,
   def: number,
   rng: DeterministicRNG
 ): number {
+  // Accuracy check - qi attacks more accurate due to INT
+  const accuracyBonus = (perception + intStat) * 0.01;
+  const hitChance = 0.90 + accuracyBonus; // Base 90% hit chance for qi attacks
+  
+  if (!rng.chance(Math.min(0.99, hitChance))) {
+    return 0; // Miss!
+  }
+  
   // INT is primary stat for qi attacks, STR adds bonus
   const effectiveAtk = intStat * 2 + Math.floor(strStat / 2);
   const baseDamage = Math.max(1, effectiveAtk - Math.floor(def / 2)); // Qi bypasses some defense
   const variance = rng.randomInt(-3, 6);
-  const critical = rng.chance(0.20 + (intStat * 0.003)) ? 2.0 : 1.0; // INT increases crit chance and multiplier
-  return Math.floor(baseDamage * critical + variance);
+  
+  // Critical hit with INT and LUCK
+  const critChance = 0.15 + (intStat * 0.003) + (luck * 0.004); // Qi attacks have higher base crit
+  const critMultiplier = rng.chance(critChance) ? (2.0 + (luck * 0.015)) : 1.0; // Higher crit damage for qi
+  
+  return Math.floor(baseDamage * critMultiplier + variance);
 }
 
 /**
@@ -51,11 +79,29 @@ function calculateQiDamage(
 function calculateDefense(
   baseDefense: number,
   agiStat: number,
+  luck: number,
   isDefending: boolean
 ): number {
   const agiBonus = Math.floor(agiStat / 3);
+  const luckBonus = Math.floor(luck / 10); // LUCK provides small defense bonus
   const defenseBonus = isDefending ? 8 : 0;
-  return baseDefense + agiBonus + defenseBonus;
+  return baseDefense + agiBonus + luckBonus + defenseBonus;
+}
+
+/**
+ * Calculate dodge chance
+ */
+function calculateDodgeChance(
+  agiStat: number,
+  perception: number,
+  luck: number
+): number {
+  // AGI is primary, perception and luck secondary
+  const baseChance = 0.05; // 5% base dodge
+  const agiBonus = agiStat * 0.01; // Each AGI = +1% dodge
+  const perBonus = perception * 0.003; // Each PER = +0.3% dodge
+  const luckBonus = luck * 0.002; // Each LUCK = +0.2% dodge
+  return Math.min(0.40, baseChance + agiBonus + perBonus + luckBonus); // Cap at 40%
 }
 
 /**
@@ -78,15 +124,21 @@ export function processCombatTurn(
   const totalAttrs = calculateTotalAttributes(state);
 
   if (playerAction === 'attack') {
-    // Physical attack using STR
+    // Physical attack using STR, PERCEPTION, LUCK
     playerDamage = calculateDamage(
       10, // Base attack power
       enemy.def,
       totalAttrs.str,
+      totalAttrs.perception,
+      totalAttrs.luck,
       rng
     );
     enemy.hp -= playerDamage;
-    narrative += `Bạn tấn công gây ${playerDamage} sát thương. `;
+    if (playerDamage === 0) {
+      narrative += `Bạn tấn công nhưng bị trượt! `;
+    } else {
+      narrative += `Bạn tấn công gây ${playerDamage} sát thương. `;
+    }
   } else if (playerAction === 'defend') {
     // Defending reduces incoming damage
     narrative += `Bạn phòng thủ. `;
@@ -96,14 +148,20 @@ export function processCombatTurn(
       playerDamage = calculateQiDamage(
         totalAttrs.int,
         totalAttrs.str,
+        totalAttrs.perception,
+        totalAttrs.luck,
         enemy.def,
         rng
       );
       enemy.hp -= playerDamage;
-      narrative += `Bạn sử dụng 10 Linh lực, gây ${playerDamage} sát thương thuộc tính! `;
+      if (playerDamage === 0) {
+        narrative += `Bạn sử dụng 10 Linh lực nhưng đối thủ né được! `;
+      } else {
+        narrative += `Bạn sử dụng 10 Linh lực, gây ${playerDamage} sát thương thuộc tính! `;
+      }
     } else {
       narrative += `Không đủ Linh lực! Bạn tấn công thường. `;
-      playerDamage = calculateDamage(10, enemy.def, totalAttrs.str, rng);
+      playerDamage = calculateDamage(10, enemy.def, totalAttrs.str, totalAttrs.perception, totalAttrs.luck, rng);
       enemy.hp -= playerDamage;
     }
   }
@@ -125,28 +183,42 @@ export function processCombatTurn(
     };
   }
 
-  // Enemy's turn
-  const enemyAtk = enemy.atk;
-  const playerDef = calculateDefense(
-    5, // Base player defense
-    totalAttrs.agi,
-    playerAction === 'defend'
-  );
-  
-  // Factor in equipped items' defense bonuses
-  const hpBonus = getEquipmentBonus(state, 'hp');
-  const agiBonus = getEquipmentBonus(state, 'agi');
-  const equipmentDefenseBonus = Math.floor(hpBonus / 20) + Math.floor(agiBonus / 3);
-  
-  enemyDamage = calculateDamage(
-    enemyAtk,
-    playerDef + equipmentDefenseBonus,
-    0, // Enemy doesn't use player STR
-    rng
-  );
+  // Check if player dodges enemy attack
+  const dodgeChance = calculateDodgeChance(totalAttrs.agi, totalAttrs.perception, totalAttrs.luck);
+  if (rng.chance(dodgeChance)) {
+    narrative += `Bạn né tránh đòn tấn công của ${enemy.name}! `;
+    enemyDamage = 0;
+  } else {
+    // Enemy's turn
+    const enemyAtk = enemy.atk;
+    const playerDef = calculateDefense(
+      5, // Base player defense
+      totalAttrs.agi,
+      totalAttrs.luck,
+      playerAction === 'defend'
+    );
+    
+    // Factor in equipped items' defense bonuses
+    const hpBonus = getEquipmentBonus(state, 'hp');
+    const agiBonus = getEquipmentBonus(state, 'agi');
+    const equipmentDefenseBonus = Math.floor(hpBonus / 20) + Math.floor(agiBonus / 3);
+    
+    enemyDamage = calculateDamage(
+      enemyAtk,
+      playerDef + equipmentDefenseBonus,
+      0, // Enemy STR (uses atk instead)
+      5, // Enemy perception
+      5, // Enemy luck
+      rng
+    );
 
-  updateHP(state, -enemyDamage);
-  narrative += `${enemy.name} tấn công gây ${enemyDamage} sát thương. `;
+    updateHP(state, -enemyDamage);
+    if (enemyDamage === 0) {
+      narrative += `${enemy.name} tấn công nhưng bị trượt. `;
+    } else {
+      narrative += `${enemy.name} tấn công gây ${enemyDamage} sát thương. `;
+    }
+  }
 
   // Check if player defeated
   if (state.stats.hp <= 0) {

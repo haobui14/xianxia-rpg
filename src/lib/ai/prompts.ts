@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { Locale, GameState, AITurnResult, Choice, ProposedDelta, GameEvent } from '@/types/game';
 import { calculateTotalAttributes } from '@/lib/game/equipment';
+import { getRequiredExp, getSpiritRootBonus, getTechniqueBonus } from '@/lib/game/mechanics';
 
 // Zod schemas for validation
 export const ChoiceSchema = z.object({
@@ -59,246 +60,117 @@ export function validateAIResponse(data: unknown): AITurnResult {
 }
 
 /**
- * Build system prompt
+ * Build system prompt - Optimized for token efficiency
+ * Shared schema definitions reduce duplication between languages
  */
+
+// Shared JSON schemas (language-agnostic)
+const DELTA_SCHEMA = {
+  stats: '{"field": "stats.[hp|qi]", "operation": "subtract", "value": N}',
+  attrs: '{"field": "attrs.[str|agi|int|perception|luck]", "operation": "add", "value": N}',
+  exp: '{"field": "progress.cultivation_exp", "operation": "add", "value": 15-50}',
+  resources: '{"field": "inventory.[spirit_stones|silver]", "operation": "add", "value": N}',
+};
+
+const ITEM_SCHEMA = {
+  base: 'id, name, name_en, description, description_en, type, rarity, quantity',
+  medicine: 'type="Medicine", effects: {hp_restore?, qi_restore?, cultivation_exp?, permanent_[stat]?}',
+  equipment: 'type="Equipment", equipment_slot: Weapon|Head|Chest|Legs|Feet|Hands|Accessory|Artifact, bonus_stats: {str?, agi?, int?, perception?, luck?, hp?, qi?, cultivation_speed?}',
+  book: 'type="Book", teaches_technique?: {TECHNIQUE_SCHEMA} OR teaches_skill?: {SKILL_SCHEMA}. Books teach ONE technique OR ONE skill when used.',
+};
+
+const TECHNIQUE_SCHEMA = 'id, name, name_en, description, description_en, grade: Mortal|Earth|Heaven, type: Main|Support, elements: ["Kim"|"Mộc"|"Thủy"|"Hỏa"|"Thổ"], cultivation_speed_bonus, qi_recovery_bonus?, breakthrough_bonus?';
+
+const SKILL_SCHEMA = 'id, name, name_en, description, description_en, type: Attack|Defense|Movement|Support, element?, level, max_level, damage_multiplier, qi_cost, cooldown, effects?';
+
 export function buildSystemPrompt(locale: Locale): string {
-  if (locale === 'vi') {
-    return `Bạn là Game Master cho game tu tiên RPG. Vai trò:
-1. KỂ CHUYỆN: Mô tả tình huống hiện tại (150-250 từ), sinh động, có nhiều sự kiện và tiến triển
-2. LỰA CHỌN: Đưa 2-5 lựa chọn hợp lý với kết quả rõ ràng
-3. ĐỀ XUẤT: Đề xuất thay đổi stats đáng kể (server sẽ validate)
+  const isVi = locale === 'vi';
 
-LINH CĂN & NGŨ HÀNH (SPIRIT ROOT & FIVE ELEMENTS) - QUAN TRỌNG:
-- Linh căn quyết định tốc độ tu luyện của nhân vật
-- Thiên Phẩm: x2.0 exp tu luyện (cực kỳ hiếm, thiên tài)
-- Hiếm: x1.5 exp tu luyện (hiếm có, tài năng cao)  
-- Khá: x1.2 exp tu luyện (khá tốt, trên trung bình)
-- Phổ Thông: x1.0 exp tu luyện (bình thường)
+  const rules = {
+    role: isVi
+      ? 'Bạn là Game Master cho game tu tiên RPG.\n1. KỂ CHUYỆN: 150-250 từ, sinh động\n2. LỰA CHỌN: 2-5 lựa chọn\n3. ĐỀ XUẤT: Thay đổi stats qua proposed_deltas'
+      : 'You are a Game Master for a xianxia cultivation RPG.\n1. STORYTELLING: 150-250 words, engaging\n2. CHOICES: 2-5 reasonable choices\n3. PROPOSALS: Stat changes via proposed_deltas',
 
-HỆ NGŨ HÀNH (FIVE ELEMENTS CYCLE):
-- Tương Sinh (Generate): Kim→Thủy→Mộc→Hỏa→Thổ→Kim (Metal→Water→Wood→Fire→Earth)
-- Tương Khắc (Overcome): Kim khắc Mộc, Mộc khắc Thổ, Thổ khắc Thủy, Thủy khắc Hỏa, Hỏa khắc Kim
+    antiRepeat: isVi
+      ? '⚠️ TRÁNH LẶP: Xem "3 LƯỢT GẦN NHẤT", tạo nội dung KHÁC BIỆT. Rừng→chợ/làng. Chiến đấu→nghỉ/tu luyện.'
+      : '⚠️ AVOID REPETITION: Review "RECENT 3 TURNS", create DIFFERENT content. Forest→market/village. Combat→rest/cultivate.',
 
-CÔNG PHÁP & THUỘC TÍNH:
-- MỌI công pháp PHẢI có "elements" (1-2 thuộc tính)
-- Khớp hoàn hảo: Công pháp cùng thuộc tính với linh căn → +30% exp
-- Tương sinh: Linh căn sinh công pháp → +15% exp
-- Tương khắc: Công pháp khắc linh căn → -20% exp (rất khó tu luyện)
-- LUÔN xem xét linh căn khi kể về tu luyện và học công pháp
+    elements: isVi
+      ? 'NGŨ HÀNH: ThiênPhẩm x2.0 | Hiếm x1.5 | Khá x1.2 | PhổThông x1.0\nSinh: Kim→Thủy→Mộc→Hỏa→Thổ→Kim | Khắc: Kim→Mộc→Thổ→Thủy→Hỏa→Kim\nCông pháp khớp linh căn: +30% | Tương sinh: +15% | Tương khắc: -20%'
+      : 'ELEMENTS: Heavenly x2.0 | Rare x1.5 | Uncommon x1.2 | Common x1.0\nGeneration: Metal→Water→Wood→Fire→Earth→Metal | Overcoming: Metal→Wood→Earth→Water→Fire→Metal\nTechnique matches root: +30% | Generation: +15% | Overcoming: -20%',
 
-NGHIÊM CẤM - KHÔNG ĐƯỢC BỊA CHỈ SỐ:
-- KHÔNG BAO GIỜ nói "sức mạnh tăng lên X", "chỉ số lên Y" trong narrative
-- CHỈ mô tả cảm giác: "cảm thấy mạnh mẽ hơn", "năng lượng tràn trề"
-- Trang bị ĐÃ ĐƯỢC ÁP DỤNG - KHÔNG kể lại bonus của trang bị đã đeo
-- Muốn tăng stats thực sự → PHẢI dùng proposed_deltas
-- Ví dụ SAI: "Sức mạnh tăng lên 8" (KHÔNG được phép!)
-- Ví dụ ĐÚNG: "Cảm thấy sức mạnh dồi dào" + proposed_deltas: [{"field": "attrs.str", "operation": "add", "value": 1}]
+    noStats: isVi
+      ? 'NGHIÊM CẤM: KHÔNG nói số trong narrative. SAI: "sức mạnh lên 8". ĐÚNG: "cảm thấy mạnh mẽ" + proposed_deltas'
+      : 'FORBIDDEN: NO numbers in narrative. WRONG: "strength to 8". RIGHT: "feeling stronger" + proposed_deltas',
 
-QUAN TRỌNG - TIẾN TRIỂN NHANH:
-- MỖI HÀNH ĐỘNG CÓ KẾT QUẢ RÕ: Tăng cultivation_exp (15-50), thu thập vật phẩm (5-20 linh thạch, 50-200 bạc), cải thiện stats
-- CHI PHÍ HỢP LÝ: Stamina cost 1-2 cho hành động thường, 3-4 cho khó, LUÔN có lựa chọn nghỉ (cost: 0)
-- PHỤC HỒI: LUÔN có ít nhất 1 lựa chọn nghỉ ngơi hồi 10-20 stamina
-- PHẦN THƯỞNG LỚN: Thu thập vật phẩm, tăng exp, học kĩ năng, tìm công pháp
-- THỜI GIAN TRÔI: Các hành động nên tốn time_segments (1-2) để thời gian tiến triển
-- CHIẾN ĐẤU: Khi chiến đấu quái vật, PHẢI giảm HP và qi qua proposed_deltas:
-  * Mất HP: {"field": "stats.hp", "operation": "subtract", "value": 10-30}
-  * Tiêu qi: {"field": "stats.qi", "operation": "subtract", "value": 5-20}
-  * Chiến thắng thì có loot và exp
-- NẾU kể về thu thập, PHẢI thêm proposed_deltas:
-  * Thu linh thạch: {"field": "inventory.spirit_stones", "operation": "add", "value": 5-20}
-  * Thu bạc: {"field": "inventory.silver", "operation": "add", "value": 50-200}
-  * Tăng exp: {"field": "progress.cultivation_exp", "operation": "add", "value": 20-50}
+    progression: isVi
+      ? 'TIẾN TRIỂN: Mỗi action có kết quả (exp 15-50, items). Stamina: 1-2 thường, 3-4 khó. LUÔN có 1 lựa chọn nghỉ hồi 10-20 stamina. time_segments: 1-2.'
+      : 'PROGRESSION: Every action has results (exp 15-50, items). Stamina: 1-2 normal, 3-4 hard. ALWAYS 1 rest option recovering 10-20 stamina. time_segments: 1-2.',
 
-VẬT PHẨM - QUAN TRỌNG:
-  * CONSUMABLE (Đan dược, thuốc): type="Medicine", có "effects" để hồi phục hoặc tăng stats vĩnh viễn
-    Ví dụ đan dược hồi máu: {"field": "inventory.add_item", "operation": "add", "value": {
-      "id": "healing_pill_01",
-      "name": "Hồi Huyết Đan",
-      "name_en": "Healing Pill",
-      "description": "Đan dược hồi phục 50 HP",
-      "description_en": "Pill that restores 50 HP",
-      "type": "Medicine",
-      "rarity": "Common",
-      "quantity": 1,
-      "effects": {"hp_restore": 50}
-    }}
-    Ví dụ đan dược tăng exp: {"effects": {"cultivation_exp": 100}}
-    Ví dụ đan dược tăng stats vĩnh viễn: {"effects": {"permanent_str": 2, "permanent_int": 1}}
+    combat: isVi
+      ? 'CHIẾN ĐẤU: PHẢI giảm HP (10-30) và qi (5-20) qua proposed_deltas. Thắng → loot + exp.'
+      : 'COMBAT: MUST reduce HP (10-30) and qi (5-20) via proposed_deltas. Victory → loot + exp.',
 
-  * EQUIPMENT (Vũ khí, giáp, phụ kiện): type="Equipment", BẮT BUỘC có "equipment_slot" và "bonus_stats"
-    ** QUAN TRỌNG: MỌI TRANG BỊ PHẢI CÓ bonus_stats để tăng chỉ số nhân vật **
-    ** Có thể tăng: str, agi, int, perception, luck, hp, qi, stamina, cultivation_speed **
-    
-    Ví dụ vũ khí: {"field": "inventory.add_item", "operation": "add", "value": {
-      "id": "iron_sword_01",
-      "name": "Kiếm Sắt",
-      "name_en": "Iron Sword",
-      "description": "Thanh kiếm sắt thông thường, tăng sức mạnh",
-      "description_en": "Common iron sword, increases strength",
-      "type": "Equipment",
-      "equipment_slot": "Weapon",
-      "rarity": "Common",
-      "quantity": 1,
-      "bonus_stats": {"str": 3, "hp": 10}
-    }}
-    
-    Ví dụ giáp: {"equipment_slot": "Chest", "bonus_stats": {"hp": 50, "agi": -2}}
-    Ví dụ nhẫn: {"equipment_slot": "Accessory", "bonus_stats": {"luck": 3, "perception": 2}}
-    Ví dụ bảo vật: {"equipment_slot": "Artifact", "bonus_stats": {"int": 5, "cultivation_speed": 10}}
-    
-    Slots: "Weapon", "Head", "Chest", "Legs", "Feet", "Hands", "Accessory", "Artifact"
+    luck: isVi
+      ? '🍀 MAY MẮN (Max 100): LUCK <20: Common/Uncommon | LUCK 20-40: Rare thường xuyên | LUCK 41-60: Epic thường xuyên | LUCK 61-80: Epic + Legendary | LUCK 81-100: Legendary thường xuyên. Cao LUCK → sự kiện tích cực, tìm bảo vật, may trong chiến đấu. Thấp LUCK → bẫy, rủi ro.\n⚠️ LUCK HIẾM: KHÔNG ĐƯỢC tăng LUCK qua lựa chọn thường. Chỉ +1-2 LUCK từ sự kiện CỰC HIẾM (bảo vật thiên địa, phúc duyên lớn). +3+ LUCK chỉ từ equipment/artifacts.'
+      : '🍀 LUCK (Max 100): LUCK <20: Common/Uncommon | LUCK 20-40: Frequent Rare | LUCK 41-60: Frequent Epic | LUCK 61-80: Epic + Legendary | LUCK 81-100: Frequent Legendary. High LUCK → positive events, find treasures, lucky in combat. Low LUCK → traps, risks.\n⚠️ LUCK IS RARE: NEVER increase LUCK from normal choices. Only +1-2 LUCK from EXTREMELY RARE events (heavenly treasures, major fortune). +3+ LUCK only from equipment/artifacts.',
+  };
 
-HỌC CÔNG PHÁP (Learning Techniques):
-- Khi nhân vật học công pháp mới, dùng: {"field": "techniques.add", "operation": "add", "value": {...}}
-- Ví dụ:
-  {"field": "techniques.add", "operation": "add", "value": {
-    "id": "blazing_sun_art",
-    "name": "Liệt Dương Công",
-    "name_en": "Blazing Sun Art",
-    "description": "Công pháp hỏa hệ mạnh mẽ",
-    "description_en": "Powerful fire-element technique",
-    "grade": "Earth",
-    "type": "Main",
-    "elements": ["Hỏa"]
-  }}
-- Elements phải là: "Kim", "Mộc", "Thủy", "Hỏa", "Thổ"
+  const schemas = `
+DELTA FIELDS: ${JSON.stringify(DELTA_SCHEMA)}
 
-QUAN TRỌNG - FORMAT JSON:
-- LUÔN bao gồm tất cả các trường: locale, narrative, choices, proposed_deltas, events
-- events LUÔN là mảng rỗng [] (không cần thêm gì vào đây)
+ITEMS - inventory.add_item:
+- Base: ${ITEM_SCHEMA.base}
+- Medicine: ${ITEM_SCHEMA.medicine}
+- Equipment: ${ITEM_SCHEMA.equipment}
+- Book: ${ITEM_SCHEMA.book}
+- Rarity: Common|Uncommon|Rare|Epic|Legendary
+${isVi ? '⚠️ QUAN TRỌNG: KHI câu chuyện nhắc nhặt/nhận/tìm được vật phẩm → PHẢI thêm delta {"field": "add_item", "operation": "add", "value": {item object}}' : '⚠️ IMPORTANT: WHEN narrative mentions finding/receiving/looting items → MUST add delta {"field": "add_item", "operation": "add", "value": {item object}}'}
+${isVi ? 'KHÔNG CHỈ MÔ TẢ - PHẢI THÊM VÀO proposed_deltas!' : 'DO NOT JUST DESCRIBE - MUST ADD TO proposed_deltas!'}
 
-Trả về JSON:
+TECHNIQUES (techniques.add) - ${isVi ? 'CHỈ tăng tốc tu luyện, KHÔNG chiến đấu' : 'cultivation speed ONLY, NOT combat'}:
+${TECHNIQUE_SCHEMA}
+Grade bonus: Mortal +5-15%, Earth +15-30%, Heaven +30-50%
+${isVi ? '⚠️ QUAN TRỌNG: KHI câu chuyện nhắc về học/tìm được công pháp/bí kíp → PHẢI thêm delta {"field": "techniques.add", "operation": "add", "value": {technique object}}' : '⚠️ IMPORTANT: WHEN narrative mentions learning/finding techniques/manuals → MUST add delta {"field": "techniques.add", "operation": "add", "value": {technique object}}'}
+${isVi ? 'Cách học: 1) Trực tiếp thêm vào techniques.add, HOẶC 2) Cho sách (Book) với teaches_technique' : 'Learning: 1) Directly add via techniques.add, OR 2) Give book (Book) with teaches_technique'}
+
+SKILLS (skills.add) - ${isVi ? 'DÙNG trong chiến đấu, tiêu qi' : 'USED in combat, consumes qi'}:
+${SKILL_SCHEMA}
+${isVi ? '⚠️ QUAN TRỌNG: KHI câu chuyện nhắc về học/lĩnh ngộ kỹ năng chiến đấu → PHẢI thêm delta {"field": "skills.add", "operation": "add", "value": {skill object}}' : '⚠️ IMPORTANT: WHEN narrative mentions learning/comprehending combat skills → MUST add delta {"field": "skills.add", "operation": "add", "value": {skill object}}'}
+${isVi ? 'Cách học: 1) Trực tiếp thêm vào skills.add, HOẶC 2) Cho sách (Book) với teaches_skill' : 'Learning: 1) Directly add via skills.add, OR 2) Give book (Book) with teaches_skill'}`;
+
+  const outputFormat = `
+OUTPUT JSON:
 {
-  "locale": "vi",
+  "locale": "${locale}",
   "narrative": "...",
-  "choices": [
-    {"id": "action", "text": "Hành động", "cost": {"stamina": 2, "time_segments": 1}}
-  ],
+  "choices": [{"id": "action", "text": "...", "cost": {"stamina": N, "time_segments": N}}],
   "proposed_deltas": [
-    {"field": "progress.cultivation_exp", "operation": "add", "value": 30},
-    {"field": "inventory.spirit_stones", "operation": "add", "value": 10}
+    {"field": "stats.stamina", "operation": "subtract", "value": 2},
+    {"field": "progress.cultivation_exp", "operation": "add", "value": 25},
+    {"field": "add_item", "operation": "add", "value": {item_object}} ${isVi ? '← NẾU nhặt/nhận vật phẩm' : '← IF finding/receiving items'},
+    {"field": "techniques.add", "operation": "add", "value": {technique_object}} ${isVi ? '← NẾU học công pháp' : '← IF learning technique'},
+    {"field": "skills.add", "operation": "add", "value": {skill_object}} ${isVi ? '← NẾU học kỹ năng' : '← IF learning skill'}
   ],
   "events": []
-}`;
-  } else {
-    return `You are a Game Master for a xianxia cultivation RPG. Role:
-1. STORYTELLING: Describe current situation (150-250 words), engaging
-2. CHOICES: Provide 2-5 reasonable choices
-3. PROPOSALS: Suggest stat changes (server validates)
+}
+${isVi ? 'LƯU Ý: Mỗi vật phẩm/kỹ năng/công pháp trong narrative PHẢI có delta tương ứng!' : 'NOTE: Every item/skill/technique in narrative MUST have corresponding delta!'}`;
 
-SPIRIT ROOT & FIVE ELEMENTS - IMPORTANT:
-- Spirit root determines cultivation speed
-- Heavenly (ThiênPhẩm): x2.0 cultivation exp (extremely rare, genius)
-- Rare (Hiếm): x1.5 cultivation exp (rare, high talent)
-- Uncommon (Khá): x1.2 cultivation exp (above average)
-- Common (PhổThông): x1.0 cultivation exp (normal)
+  return `${rules.role}
 
-FIVE ELEMENTS CYCLE (Wu Xing):
-- Generation: Metal→Water→Wood→Fire→Earth→Metal
-- Overcoming: Metal overcomes Wood, Wood overcomes Earth, Earth overcomes Water, Water overcomes Fire, Fire overcomes Metal
+${rules.antiRepeat}
 
-TECHNIQUES & ELEMENTS:
-- ALL techniques MUST have "elements" array (1-2 elements)
-- Perfect Match: Technique matches spirit root → +30% exp
-- Generation: Spirit root generates technique element → +15% exp  
-- Overcoming: Technique overcomes spirit root → -20% exp (very difficult)
-- ALWAYS consider spirit root when narrating cultivation and learning techniques
+${rules.elements}
 
-STRICTLY FORBIDDEN - NEVER INVENT STATS:
-- NEVER say "strength increased to X", "stats rose to Y" in narrative
-- ONLY describe feelings: "feeling stronger", "energy surging"
-- Equipment bonuses ALREADY APPLIED - DON'T narrate existing equipment bonuses
-- To actually increase stats → MUST use proposed_deltas
-- Wrong example: "Strength increased to 8" (FORBIDDEN!)
-- Correct example: "Feeling surge of power" + proposed_deltas: [{"field": "attrs.str", "operation": "add", "value": 1}]
+${rules.luck}
 
-IMPORTANT - FAST PROGRESSION:
-- EVERY ACTION HAS CLEAR RESULTS: Increase cultivation_exp (15-50), collect items (5-20 spirit stones, 50-200 silver), improve stats
-- REASONABLE COSTS: Stamina cost 1-2 for normal actions, 3-4 for difficult, ALWAYS have rest option (cost: 0)
-- RECOVERY: ALWAYS include at least 1 rest option recovering 10-20 stamina
-- BIG REWARDS: Collect items, gain exp, learn skills, find techniques
-- TIME PROGRESSION: Actions should cost time_segments (1-2) to advance time
-- COMBAT: When fighting monsters, MUST reduce HP and qi via proposed_deltas:
-  * Lose HP: {"field": "stats.hp", "operation": "subtract", "value": 10-30}
-  * Use qi: {"field": "stats.qi", "operation": "subtract", "value": 5-20}
-  * Victory gives loot and exp
-- IF narrating collection, MUST add proposed_deltas:
-  * Collect spirit stones: {"field": "inventory.spirit_stones", "operation": "add", "value": 5-20}
-  * Collect silver: {"field": "inventory.silver", "operation": "add", "value": 50-200}
-  * Gain exp: {"field": "progress.cultivation_exp", "operation": "add", "value": 20-50}
+${rules.noStats}
 
-ITEMS - IMPORTANT:
-  * CONSUMABLE (Pills, medicine): type="Medicine", has "effects" for restoration or permanent stat boosts
-    Healing pill example: {"field": "inventory.add_item", "operation": "add", "value": {
-      "id": "healing_pill_01",
-      "name": "Hồi Huyết Đan",
-      "name_en": "Healing Pill",
-      "description": "Đan dược hồi phục 50 HP",
-      "description_en": "Pill that restores 50 HP",
-      "type": "Medicine",
-      "rarity": "Common",
-      "quantity": 1,
-      "effects": {"hp_restore": 50}
-    }}
-    Exp boost pill: {"effects": {"cultivation_exp": 100}}
-    Permanent stat pill: {"effects": {"permanent_str": 2, "permanent_int": 1}}
+${rules.progression}
 
-  * EQUIPMENT (Weapons, armor, accessories): type="Equipment", MUST have "equipment_slot" and "bonus_stats"
-    ** CRITICAL: ALL EQUIPMENT MUST HAVE bonus_stats to increase character stats **
-    ** Can increase: str, agi, int, perception, luck, hp, qi, stamina, cultivation_speed **
-    
-    Weapon example: {"field": "inventory.add_item", "operation": "add", "value": {
-      "id": "iron_sword_01",
-      "name": "Kiếm Sắt",
-      "name_en": "Iron Sword",
-      "description": "Thanh kiếm sắt thông thường, tăng sức mạnh",
-      "description_en": "Common iron sword, increases strength",
-      "type": "Equipment",
-      "equipment_slot": "Weapon",
-      "rarity": "Common",
-      "quantity": 1,
-      "bonus_stats": {"str": 3, "hp": 10}
-    }}
-    
-    Armor example: {"equipment_slot": "Chest", "bonus_stats": {"hp": 50, "agi": -2}}
-    Ring example: {"equipment_slot": "Accessory", "bonus_stats": {"luck": 3, "perception": 2}}
-    Artifact example: {"equipment_slot": "Artifact", "bonus_stats": {"int": 5, "cultivation_speed": 10}}
-    
-    Slots: "Weapon", "Head", "Chest", "Legs", "Feet", "Hands", "Accessory", "Artifact"
-
-LEARNING TECHNIQUES:
-- When character learns new technique, use: {"field": "techniques.add", "operation": "add", "value": {...}}
-- Example:
-  {"field": "techniques.add", "operation": "add", "value": {
-    "id": "blazing_sun_art",
-    "name": "Liệt Dương Công",
-    "name_en": "Blazing Sun Art",
-    "description": "Công pháp hỏa hệ mạnh mẽ",
-    "description_en": "Powerful fire-element technique",
-    "grade": "Earth",
-    "type": "Main",
-    "elements": ["Hỏa"]
-  }}
-- Elements must be: "Kim", "Mộc", "Thủy", "Hỏa", "Thổ"
-
-IMPORTANT - JSON FORMAT:
-- ALWAYS include all fields: locale, narrative, choices, proposed_deltas, events
-- events ALWAYS empty array [] (don't add anything here)
-
-Return JSON:
-{
-  "locale": "en",
-  "narrative": "...",
-  "choices": [
-    {"id": "action", "text": "Action", "cost": {"stamina": 3}}
-  ],
-  "proposed_deltas": [
-    {"field": "stats.qi", "operation": "add", "value": 5},
-    {"field": "inventory.spirit_stones", "operation": "add", "value": 3}
-  ],
-  "events": []
-}`;
-  }
+${rules.combat}
+${schemas}
+${outputFormat}`;
 }
 
 /**
@@ -344,24 +216,34 @@ export function buildGameContext(
   );
   ctx.push('');
 
+  // Calculate required exp for next level
+  const requiredExp = getRequiredExp(state.progress.realm, state.progress.realm_stage);
+  const expDisplay = requiredExp === Infinity 
+    ? state.progress.cultivation_exp 
+    : `${state.progress.cultivation_exp}/${requiredExp}`;
+
   ctx.push(
     locale === 'vi'
-      ? `Tu vi: ${state.progress.realm} tầng ${state.progress.realm_stage} (Exp: ${state.progress.cultivation_exp})`
-      : `Cultivation: ${state.progress.realm} stage ${state.progress.realm_stage} (Exp: ${state.progress.cultivation_exp})`
+      ? `Tu vi: ${state.progress.realm} tầng ${state.progress.realm_stage} (Exp: ${expDisplay})`
+      : `Cultivation: ${state.progress.realm} stage ${state.progress.realm_stage} (Exp: ${expDisplay})`
   );
   
-  // Calculate cultivation speed multiplier
-  const spiritRootBonus = {
-    'ThiênPhẩm': 2.0,
-    'Hiếm': 1.5,
-    'Khá': 1.2,
-    'PhổThông': 1.0
-  }[state.spirit_root.grade] || 1.0;
+  // Calculate total cultivation speed multiplier
+  const spiritRootBonus = getSpiritRootBonus(state.spirit_root.grade);
+  const techniqueBonus = getTechniqueBonus(state);
+  const totalMultiplier = spiritRootBonus * techniqueBonus;
   
   ctx.push(
     locale === 'vi'
-      ? `Linh căn: ${state.spirit_root.elements.join('/')} - ${state.spirit_root.grade} (Tu luyện x${spiritRootBonus})`
-      : `Spirit Root: ${state.spirit_root.elements.join('/')} - ${state.spirit_root.grade} (Cultivation x${spiritRootBonus})`
+      ? `Linh căn: ${state.spirit_root.elements.join('/')} - ${state.spirit_root.grade} (x${spiritRootBonus.toFixed(1)})`
+      : `Spirit Root: ${state.spirit_root.elements.join('/')} - ${state.spirit_root.grade} (x${spiritRootBonus.toFixed(1)})`
+  );
+  
+  // Show total cultivation multiplier from all sources
+  ctx.push(
+    locale === 'vi'
+      ? `Tốc độ tu luyện tổng hợp: x${totalMultiplier.toFixed(2)} (Linh căn x${spiritRootBonus.toFixed(1)} + Công pháp x${techniqueBonus.toFixed(2)})`
+      : `Total Cultivation Speed: x${totalMultiplier.toFixed(2)} (Spirit Root x${spiritRootBonus.toFixed(1)} + Techniques x${techniqueBonus.toFixed(2)})`
   );
   ctx.push('');
 
@@ -429,6 +311,33 @@ export function buildGameContext(
     ctx.push('');
   }
 
+  // Helper function to translate rarity
+  const translateRarity = (rarity: string, loc: Locale) => {
+    if (loc === 'vi') {
+      const rarityMap: Record<string, string> = {
+        'Common': 'Phàm Phẩm',
+        'Uncommon': 'Hạ Phẩm', 
+        'Rare': 'Trung Phẩm',
+        'Epic': 'Thượng Phẩm',
+        'Legendary': 'Cực Phẩm'
+      };
+      return rarityMap[rarity] || rarity;
+    }
+    return rarity;
+  };
+
+  const translateSlot = (slot: string, loc: Locale) => {
+    if (loc === 'vi') {
+      const slotMap: Record<string, string> = {
+        'Weapon': 'Vũ Khí', 'Head': 'Đầu', 'Chest': 'Ngực', 
+        'Legs': 'Chân', 'Feet': 'Giày', 'Hands': 'Tay',
+        'Accessory': 'Phụ Kiện', 'Artifact': 'Bảo Vật'
+      };
+      return slotMap[slot] || slot;
+    }
+    return slot;
+  };
+
   // Inventory items with details
   ctx.push(
     locale === 'vi'
@@ -438,10 +347,11 @@ export function buildGameContext(
   if (state.inventory.items.length > 0) {
     state.inventory.items.slice(0, 10).forEach((item) => {
       const name = locale === 'vi' ? item.name : item.name_en;
+      const rarity = translateRarity(item.rarity, locale);
       const details = [];
       details.push(`x${item.quantity}`);
       details.push(item.type);
-      details.push(item.rarity);
+      details.push(rarity);
       
       // Show bonus stats for equipment
       if (item.type === 'Equipment' && item.bonus_stats) {
@@ -454,14 +364,14 @@ export function buildGameContext(
         if (item.bonus_stats.hp) stats.push(`HP+${item.bonus_stats.hp}`);
         if (item.bonus_stats.qi) stats.push(`Qi+${item.bonus_stats.qi}`);
         if (stats.length > 0) details.push(`(${stats.join(', ')})`);
-        if (item.equipment_slot) details.push(`[${item.equipment_slot}]`);
+        if (item.equipment_slot) details.push(`[${translateSlot(item.equipment_slot, locale)}]`);
       }
       
       // Show effects for consumables
       if (item.effects && Object.keys(item.effects).length > 0) {
         const effects = [];
-        if (item.effects.hp_restore) effects.push(`Heal ${item.effects.hp_restore} HP`);
-        if (item.effects.qi_restore) effects.push(`Restore ${item.effects.qi_restore} Qi`);
+        if (item.effects.hp_restore) effects.push(locale === 'vi' ? `Hồi ${item.effects.hp_restore} HP` : `Heal ${item.effects.hp_restore} HP`);
+        if (item.effects.qi_restore) effects.push(locale === 'vi' ? `Hồi ${item.effects.qi_restore} Qi` : `Restore ${item.effects.qi_restore} Qi`);
         if (item.effects.cultivation_exp) effects.push(`+${item.effects.cultivation_exp} Exp`);
         if (effects.length > 0) details.push(`(${effects.join(', ')})`);
       }
@@ -469,20 +379,62 @@ export function buildGameContext(
       ctx.push(`  - ${name} ${details.join(' ')}`);
     });
     if (state.inventory.items.length > 10) {
-      ctx.push(`  ... and ${state.inventory.items.length - 10} more items`);
+      ctx.push(locale === 'vi' ? `  ... và ${state.inventory.items.length - 10} vật phẩm khác` : `  ... and ${state.inventory.items.length - 10} more items`);
     }
   }
   ctx.push('');
 
-  // Techniques with element compatibility
+  // Helper function to translate terms
+  const translateGrade = (grade: string, loc: Locale) => {
+    if (loc === 'vi') {
+      const gradeMap: Record<string, string> = { 'Mortal': 'Phàm Cấp', 'Earth': 'Địa Cấp', 'Heaven': 'Thiên Cấp' };
+      return gradeMap[grade] || grade;
+    }
+    return grade;
+  };
+  
+  const translateTechType = (type: string, loc: Locale) => {
+    if (loc === 'vi') {
+      const typeMap: Record<string, string> = { 'Main': 'Chính', 'Support': 'Phụ' };
+      return typeMap[type] || type;
+    }
+    return type;
+  };
+
+  const translateSkillType = (type: string, loc: Locale) => {
+    if (loc === 'vi') {
+      const typeMap: Record<string, string> = { 'Attack': 'Tấn Công', 'Defense': 'Phòng Thủ', 'Movement': 'Thân Pháp', 'Support': 'Hỗ Trợ' };
+      return typeMap[type] || type;
+    }
+    return type;
+  };
+
+  // Techniques (for cultivation speed) with element compatibility
   if (state.techniques && state.techniques.length > 0) {
-    ctx.push(locale === 'vi' ? '=== CÔNG PHÁP ===' : '=== TECHNIQUES ===');
+    ctx.push(locale === 'vi' ? '=== CÔNG PHÁP (Tăng tốc tu luyện) ===' : '=== TECHNIQUES (Cultivation Speed) ===');
     state.techniques.forEach((tech) => {
       const name = locale === 'vi' ? tech.name : tech.name_en;
       const elements = tech.elements && tech.elements.length > 0 
         ? `[${tech.elements.join('/')}]` 
         : '';
-      ctx.push(`  - ${name} ${elements} (${tech.grade}, ${tech.type})`);
+      const speedBonus = tech.cultivation_speed_bonus ? `+${tech.cultivation_speed_bonus}%` : '';
+      const grade = translateGrade(tech.grade, locale);
+      const techType = translateTechType(tech.type, locale);
+      ctx.push(`  - ${name} ${elements} (${grade}, ${techType}) ${speedBonus}`);
+    });
+    ctx.push('');
+  }
+
+  // Skills (for combat)
+  if (state.skills && state.skills.length > 0) {
+    ctx.push(locale === 'vi' ? '=== KỸ NĂNG CHIẾN ĐẤU ===' : '=== COMBAT SKILLS ===');
+    state.skills.forEach((skill) => {
+      const name = locale === 'vi' ? skill.name : skill.name_en;
+      const element = skill.element ? `[${skill.element}]` : '';
+      const skillType = translateSkillType(skill.type, locale);
+      const dmg = skill.damage_multiplier ? `${skill.damage_multiplier}x` : '';
+      const cost = skill.qi_cost ? `${skill.qi_cost} qi` : '';
+      ctx.push(`  - ${name} ${element} Lv.${skill.level}/${skill.max_level} [${skillType}] (${dmg}, ${cost})`);
     });
     ctx.push('');
   }
@@ -511,4 +463,63 @@ export function buildUserMessage(
       ? `${sceneContext}\n\nBắt đầu tình huống mới này. Mô tả chi tiết và đưa ra lựa chọn.`
       : `${sceneContext}\n\nBegin this new situation. Describe in detail and provide choices.`;
   }
+}
+
+/**
+ * Build variety enforcement hints to prevent repetitive narratives
+ */
+export function buildVarietyEnforcement(
+  themesToAvoid: string[],
+  turnCount: number,
+  locale: Locale
+): string {
+  const hints: string[] = [];
+  
+  if (locale === 'vi') {
+    hints.push('=== YÊU CẦU ĐA DẠNG ===');
+    
+    if (themesToAvoid.length > 0) {
+      hints.push(`TRÁNH các chủ đề đã xuất hiện gần đây: ${themesToAvoid.join(', ')}`);
+      hints.push('Hãy tạo tình huống MỚI và KHÁC BIỆT hoàn toàn.');
+    }
+    
+    // Add variety suggestions based on turn count
+    const varietySuggestions = [
+      'Thêm yếu tố bất ngờ hoặc twist',
+      'Giới thiệu NPC mới với tính cách đặc biệt',
+      'Mô tả cảnh quan hoặc thời tiết độc đáo',
+      'Tạo xung đột nội tâm hoặc lựa chọn khó khăn',
+      'Thêm yếu tố hài hước hoặc nhẹ nhàng',
+      'Đưa ra cơ hội hiếm có (tương xứng LUCK)',
+      'Kể về quá khứ hoặc hồi ức của nhân vật',
+      'Tạo cuộc gặp gỡ bí ẩn hoặc kỳ lạ',
+    ];
+    
+    const suggestionIndex = turnCount % varietySuggestions.length;
+    hints.push(`GỢI Ý: ${varietySuggestions[suggestionIndex]}`);
+    
+  } else {
+    hints.push('=== VARIETY REQUIREMENTS ===');
+    
+    if (themesToAvoid.length > 0) {
+      hints.push(`AVOID themes that appeared recently: ${themesToAvoid.join(', ')}`);
+      hints.push('Create a completely NEW and DIFFERENT situation.');
+    }
+    
+    const varietySuggestions = [
+      'Add a surprising element or plot twist',
+      'Introduce a new NPC with unique personality',
+      'Describe unique scenery or weather',
+      'Create internal conflict or difficult choice',
+      'Add humor or lighthearted moment',
+      'Present rare opportunity (scale with LUCK)',
+      'Reference character backstory or memories',
+      'Create mysterious or strange encounter',
+    ];
+    
+    const suggestionIndex = turnCount % varietySuggestions.length;
+    hints.push(`SUGGESTION: ${varietySuggestions[suggestionIndex]}`);
+  }
+  
+  return hints.join('\n');
 }

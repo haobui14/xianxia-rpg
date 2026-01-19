@@ -3,7 +3,7 @@
 import { GameState } from '@/types/game';
 import { t, Locale } from '@/lib/i18n/translations';
 import { calculateTotalAttributes, getEquipmentBonus } from '@/lib/game/equipment';
-import { getElementCompatibility } from '@/lib/game/mechanics';
+import { getElementCompatibility, getRequiredExp, getSpiritRootBonus, getTechniqueBonus } from '@/lib/game/mechanics';
 
 interface CharacterSheetProps {
   state: GameState;
@@ -15,6 +15,15 @@ export default function CharacterSheet({ state, locale }: CharacterSheetProps) {
   const hpBonus = getEquipmentBonus(state, 'hp');
   const qiBonus = getEquipmentBonus(state, 'qi');
   const staminaBonus = getEquipmentBonus(state, 'stamina');
+  const requiredExp = getRequiredExp(state.progress.realm, state.progress.realm_stage);
+  const expDisplay = requiredExp === Infinity 
+    ? (locale === 'vi' ? 'Đột phá cảnh giới' : 'Realm Breakthrough') 
+    : `${state.progress.cultivation_exp}/${requiredExp}`;
+  
+  // Calculate total cultivation speed multiplier
+  const spiritRootMultiplier = getSpiritRootBonus(state.spirit_root.grade);
+  const techniqueMultiplier = getTechniqueBonus(state);
+  const totalCultivationSpeed = spiritRootMultiplier * techniqueMultiplier;
 
   return (
     <div className="space-y-6">
@@ -55,7 +64,15 @@ export default function CharacterSheet({ state, locale }: CharacterSheetProps) {
           </div>
           <div>
             <span className="text-gray-400">{t(locale, 'experience')}: </span>
-            <span className="font-medium">{state.progress.cultivation_exp}</span>
+            <span className="font-medium">{expDisplay}</span>
+          </div>
+          <div>
+            <span className="text-gray-400">
+              {locale === 'vi' ? 'Tốc độ tu luyện:' : 'Cultivation Speed:'}
+            </span>
+            <span className="font-bold text-green-400 text-lg ml-2">
+              ×{totalCultivationSpeed.toFixed(2)}
+            </span>
           </div>
         </div>
       </div>
@@ -78,22 +95,27 @@ export default function CharacterSheet({ state, locale }: CharacterSheetProps) {
           </div>
           <div className="mt-3 p-3 bg-xianxia-darker rounded border border-xianxia-accent/20">
             <div className="text-sm text-gray-400 mb-1">
-              {locale === 'vi' ? 'Tốc độ tu luyện:' : 'Cultivation Speed:'}
+              {locale === 'vi' ? 'Chi tiết tốc độ:' : 'Speed Breakdown:'}
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <span className="text-lg font-bold text-green-400">
-                  ×{{
-                    'ThiênPhẩm': 2.0,
-                    'Hiếm': 1.5,
-                    'Khá': 1.2,
-                    'PhổThông': 1.0
-                  }[state.spirit_root.grade] || 1.0}
+                  ×{spiritRootMultiplier.toFixed(2)}
                 </span>
                 <span className="text-xs text-gray-400">
                   {locale === 'vi' ? '(từ linh căn)' : '(from spirit root)'}
                 </span>
               </div>
+              {techniqueMultiplier > 1 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-bold text-purple-400">
+                    ×{techniqueMultiplier.toFixed(2)}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {locale === 'vi' ? '(từ công pháp)' : '(from techniques)'}
+                  </span>
+                </div>
+              )}
               {(() => {
                 const equipBonus = getEquipmentBonus(state, 'cultivation_speed');
                 if (equipBonus > 0) {

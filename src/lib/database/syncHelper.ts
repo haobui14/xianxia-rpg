@@ -5,9 +5,8 @@
  */
 
 import { supabase } from "./client";
-import { GameState, InventoryItem } from "@/types/game";
+import { GameState } from "@/types/game";
 import {
-  inventoryQueries,
   marketQueries,
   combatQueries,
   leaderboardQueries,
@@ -45,11 +44,14 @@ export async function syncInventoryToTables(
       p_equipped_items: equippedItemsArray,
     });
 
-    if (error) throw error;
+    if (error) {
+      // Function might not exist - that's okay
+      return { success: false, error };
+    }
 
     return { success: true };
   } catch (error) {
-    console.error("Error syncing inventory:", error);
+    // Silently fail if RPC function doesn't exist
     return { success: false, error };
   }
 }
@@ -216,9 +218,6 @@ export async function updatePlayerStats(
   combatWins: number = 0
 ) {
   try {
-    const totalWealth =
-      state.inventory.silver + state.inventory.spirit_stones * 100;
-
     await leaderboardQueries.updateStatistics(
       runId,
       characterName,
@@ -270,6 +269,194 @@ export async function recordMarketTransaction(
 }
 
 /**
+ * Sync skills from JSONB state to normalized table
+ */
+export async function syncSkillsToTables(
+  runId: string,
+  skills: GameState["skills"]
+) {
+  try {
+    if (!skills || skills.length === 0) return { success: true };
+
+    // Prepare skills data
+    const skillsData = skills.map((skill) => ({
+      skill_id: skill.id,
+      skill_data: skill,
+      current_level: skill.level,
+    }));
+
+    // Use RPC function to sync skills
+    const { error } = await supabase.rpc("sync_character_skills", {
+      p_run_id: runId,
+      p_skills: skillsData,
+    });
+
+    if (error) {
+      // Try direct insert if RPC doesn't exist
+      console.log("RPC sync_character_skills not found, using direct sync");
+      return await syncSkillsDirect(runId, skills);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error syncing skills:", error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Direct sync for skills (fallback if RPC not available)
+ */
+async function syncSkillsDirect(
+  runId: string,
+  skills: GameState["skills"]
+) {
+  try {
+    // Delete existing skills for this run
+    await supabase
+      .from("character_skills")
+      .delete()
+      .eq("run_id", runId);
+
+    // Insert all skills
+    if (skills.length > 0) {
+      const skillRecords = skills.map((skill) => ({
+        run_id: runId,
+        skill_id: skill.id,
+        skill_data: skill,
+        current_level: skill.level,
+        experience: 0,
+      }));
+
+      const { error } = await supabase
+        .from("character_skills")
+        .insert(skillRecords);
+
+      if (error) throw error;
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error in direct skills sync:", error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Sync techniques from JSONB state to normalized table
+ */
+export async function syncTechniquesToTables(
+  runId: string,
+  techniques: GameState["techniques"]
+) {
+  try {
+    if (!techniques || techniques.length === 0) return { success: true };
+
+    // Prepare techniques data
+    const techniquesData = techniques.map((tech) => ({
+      technique_id: tech.id,
+      technique_data: tech,
+      mastery_level: 1, // Default mastery
+    }));
+
+    // Use RPC function to sync techniques
+    const { error } = await supabase.rpc("sync_character_techniques", {
+      p_run_id: runId,
+      p_techniques: techniquesData,
+    });
+
+    if (error) {
+      // Try direct insert if RPC doesn't exist
+      console.log("RPC sync_character_techniques not found, using direct sync");
+      return await syncTechniquesDirect(runId, techniques);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error syncing techniques:", error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Direct sync for techniques (fallback if RPC not available)
+ */
+async function syncTechniquesDirect(
+  runId: string,
+  techniques: GameState["techniques"]
+) {
+  try {
+    // Delete existing techniques for this run
+    await supabase
+      .from("character_techniques")
+      .delete()
+      .eq("run_id", runId);
+
+    // Insert all techniques
+    if (techniques.length > 0) {
+      const techRecords = techniques.map((tech) => ({
+        run_id: runId,
+        technique_id: tech.id,
+        technique_data: tech,
+        mastery_level: 1,
+      }));
+
+      const { error } = await supabase
+        .from("character_techniques")
+        .insert(techRecords);
+
+      if (error) throw error;
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error in direct techniques sync:", error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Load skills from normalized tables
+ */
+export async function loadSkillsFromTables(runId: string): Promise<GameState["skills"] | null> {
+  try {
+    const { data, error } = await supabase
+      .from("character_skills")
+      .select("*")
+      .eq("run_id", runId);
+
+    if (error) throw error;
+
+    return (data || []).map((record: any) => ({
+      ...record.skill_data,
+      level: record.current_level,
+    }));
+  } catch (error) {
+    console.error("Error loading skills from tables:", error);
+    return null;
+  }
+}
+
+/**
+ * Load techniques from normalized tables
+ */
+export async function loadTechniquesFromTables(runId: string): Promise<GameState["techniques"] | null> {
+  try {
+    const { data, error } = await supabase
+      .from("character_techniques")
+      .select("*")
+      .eq("run_id", runId);
+
+    if (error) throw error;
+
+    return (data || []).map((record: any) => record.technique_data);
+  } catch (error) {
+    console.error("Error loading techniques from tables:", error);
+    return null;
+  }
+}
+
+/**
  * Full sync - sync entire game state to tables
  */
 export async function fullSync(
@@ -278,6 +465,7 @@ export async function fullSync(
   characterName: string
 ) {
   await syncInventoryToTables(runId, state.inventory, state.equipped_items);
+  await syncSkillsToTables(runId, state.skills);
+  await syncTechniquesToTables(runId, state.techniques);
   await updatePlayerStats(runId, characterName, state);
-  // Add more syncs as needed (skills, techniques, quests, etc.)
 }

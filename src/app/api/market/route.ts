@@ -137,14 +137,95 @@ function generateConsumable(
   };
 }
 
+// Helper function to initialize or regenerate market
+async function initializeMarket(
+  state: GameState,
+  worldSeed: string,
+  runId: string
+): Promise<GameState> {
+  const generationMonth = state.time_year * 12 + state.time_month;
+
+  if (!state.market || shouldRegenerateMarket(state)) {
+    // Try loading from tables first
+    const cachedMarket = await loadMarketFromTables(worldSeed, generationMonth);
+
+    if (cachedMarket && cachedMarket.length > 0) {
+      state.market = {
+        items: cachedMarket,
+        last_regenerated: new Date().toISOString(),
+        next_regeneration: {
+          month: (state.time_month % 12) + 1,
+          year: state.time_month === 12 ? state.time_year + 1 : state.time_year,
+        },
+      };
+    } else {
+      // Generate new market
+      const seed = `${worldSeed}_${state.time_year}_${state.time_month}`;
+      const rng = new DeterministicRNG(seed);
+      const newItems = generateMarketItems(state, rng);
+
+      state.market = {
+        items: newItems,
+        last_regenerated: new Date().toISOString(),
+        next_regeneration: {
+          month: (state.time_month % 12) + 1,
+          year: state.time_month === 12 ? state.time_year + 1 : state.time_year,
+        },
+      };
+
+      // Sync to tables for other players with same world seed
+      await syncMarketToTables(worldSeed, generationMonth, newItems);
+    }
+
+    // Save state with new market
+    await runQueries.update(runId, state);
+  }
+
+  return state;
+}
+
+// GET endpoint to initialize market (called when opening market tab)
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = await createServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    const characters = await characterQueries.getByUserId(user.id);
+    if (characters.length === 0) {
+      return NextResponse.json({ error: 'Character not found' }, { status: 404 });
+    }
+
+    const character = characters[0];
+    const runs = await runQueries.getByCharacterId(character.id);
+    if (runs.length === 0) {
+      return NextResponse.json({ error: 'No active run' }, { status: 404 });
+    }
+
+    const run = runs[0];
+    let state = run.current_state as GameState;
+
+    // Initialize market if needed
+    state = await initializeMarket(state, run.world_seed, run.id);
+
+    return NextResponse.json({ success: true, state });
+  } catch (error) {
+    console.error('Market init error:', error);
+    return NextResponse.json({ error: 'Failed to initialize market' }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { action, itemId } = await request.json();
+    const { action, itemId, amount } = await request.json();
 
     // Get authenticated user
     const supabase = await createServerClient();
     const { data: { user } } = await supabase.auth.getUser();
-    
+
     if (!user) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
@@ -156,54 +237,59 @@ export async function POST(request: NextRequest) {
     }
 
     const character = characters[0];
-    
+
     // Get current run
     const runs = await runQueries.getByCharacterId(character.id);
     if (runs.length === 0) {
       return NextResponse.json({ error: 'No active run' }, { status: 404 });
     }
-    
+
     const run = runs[0];
-    const state = run.current_state as GameState;
+    let state = run.current_state as GameState;
 
     // Initialize or regenerate market if needed
-    const generationQuarter = state.time_year * 4 + Math.floor(state.time_month / 3);
-    
-    if (!state.market || shouldRegenerateMarket(state)) {
-      // Try loading from tables first
-      const cachedMarket = await loadMarketFromTables(run.world_seed, generationQuarter);
-      
-      if (cachedMarket && cachedMarket.length > 0) {
-        // Use cached market from tables
-        state.market = {
-          items: cachedMarket,
-          last_regenerated: new Date().toISOString(),
-          next_regeneration: {
-            month: ((Math.floor(state.time_month / 3) + 1) * 3) % 12 || 12,
-            year: state.time_month >= 9 ? state.time_year + 1 : state.time_year,
-          },
-        };
-      } else {
-        // Generate new market
-        const seed = `${state.time_year}_${Math.floor(state.time_month / 3)}`;
-        const rng = new DeterministicRNG(seed);
-        const newItems = generateMarketItems(state, rng);
-        
-        state.market = {
-          items: newItems,
-          last_regenerated: new Date().toISOString(),
-          next_regeneration: {
-            month: ((Math.floor(state.time_month / 3) + 1) * 3) % 12 || 12,
-            year: state.time_month >= 9 ? state.time_year + 1 : state.time_year,
-          },
-        };
-        
-        // Sync to tables for other players with same world seed
-        await syncMarketToTables(run.world_seed, generationQuarter, newItems);
-      }
-    }
+    state = await initializeMarket(state, run.world_seed, run.id);
 
-    if (action === 'buy') {
+    if (action === 'refresh') {
+      // Cost: 20 spirit stones to refresh market
+      const REFRESH_COST = 20;
+      
+      if (state.inventory.spirit_stones < REFRESH_COST) {
+        return NextResponse.json({ error: 'Not enough spirit stones (need 20)' }, { status: 400 });
+      }
+
+      // Deduct spirit stones
+      state.inventory.spirit_stones -= REFRESH_COST;
+
+      // Generate new market with different seed
+      const refreshSeed = `${state.time_year}_${state.time_month}_refresh_${Date.now()}`;
+      const rng = new DeterministicRNG(refreshSeed);
+      const newItems = generateMarketItems(state, rng);
+      
+      state.market = {
+        items: newItems,
+        last_regenerated: new Date().toISOString(),
+        next_regeneration: state.market.next_regeneration,
+      };
+
+    } else if (action === 'exchange') {
+      // Exchange spirit stones to silver: 1 spirit stone = 100 silver
+      const EXCHANGE_RATE = 100;
+      const stonesToExchange = amount || 1;
+      
+      if (!stonesToExchange || stonesToExchange < 1) {
+        return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
+      }
+      
+      if (state.inventory.spirit_stones < stonesToExchange) {
+        return NextResponse.json({ error: 'Not enough spirit stones' }, { status: 400 });
+      }
+
+      // Exchange
+      state.inventory.spirit_stones -= stonesToExchange;
+      state.inventory.silver += stonesToExchange * EXCHANGE_RATE;
+
+    } else if (action === 'buy') {
       const item = state.market.items.find(i => i.id === itemId);
       if (!item) {
         return NextResponse.json({ error: 'Item not found' }, { status: 404 });

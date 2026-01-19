@@ -26,8 +26,8 @@ export function createInitialState(
     hp_max: 100,
     qi: 0,
     qi_max: 0,
-    stamina: 50,
-    stamina_max: 50,
+    stamina: 999999, // Testing: Unlimited stamina
+    stamina_max: 999999,
   };
 
   const baseAttrs: CharacterAttributes = {
@@ -80,6 +80,14 @@ export function createInitialState(
     techniques: [],
     sect: undefined,
     sect_en: undefined,
+    market: {
+      items: [],
+      last_regenerated: new Date().toISOString(),
+      next_regeneration: {
+        month: 2, // Next market refresh at month 2
+        year: 1,
+      },
+    },
   };
 }
 
@@ -320,35 +328,58 @@ export function getElementCompatibility(
 }
 
 /**
- * Get technique bonus considering element compatibility
+ * Get technique bonus considering element compatibility AND cultivation speed bonus
+ * Techniques boost cultivation speed, not combat
  */
 export function getTechniqueBonus(state: GameState): number {
   if (!state.techniques || state.techniques.length === 0) return 1.0;
   
-  let maxBonus = 0;
+  let totalBonus = 0;
+  let mainTechniqueBonus = 0;
+  let supportTechniqueBonus = 0;
   
   for (const technique of state.techniques) {
+    // Base cultivation speed bonus from technique grade
+    const cultivationSpeedBonus = technique.cultivation_speed_bonus || 0;
+    const baseBonus = cultivationSpeedBonus / 100; // Convert percentage to multiplier
+    
+    // Element compatibility bonus
+    let elementBonus = 0;
     if (technique.elements && technique.elements.length > 0) {
-      const compatibility = getElementCompatibility(
+      elementBonus = getElementCompatibility(
         state.spirit_root.elements,
         technique.elements
       );
-      maxBonus = Math.max(maxBonus, compatibility);
+    }
+    
+    const techBonus = baseBonus + elementBonus;
+    
+    // Main techniques give full bonus, support techniques stack 50%
+    if (technique.type === 'Main') {
+      mainTechniqueBonus = Math.max(mainTechniqueBonus, techBonus);
+    } else {
+      supportTechniqueBonus += techBonus * 0.5;
     }
   }
   
-  return 1.0 + maxBonus;
+  // Cap support bonus at 50% extra
+  supportTechniqueBonus = Math.min(supportTechniqueBonus, 0.5);
+  
+  totalBonus = mainTechniqueBonus + supportTechniqueBonus;
+  
+  return 1.0 + totalBonus;
 }
 
 /**
  * Cultivation exp requirements by realm and stage
+ * Each realm has 9 stages (0-8)
  */
 export const CULTIVATION_EXP_REQUIREMENTS: Record<string, number[]> = {
-  'PhàmNhân': [100], // Stage 0 -> Stage 1 (breakthrough to LuyệnKhí)
-  'LuyệnKhí': [200, 400, 600, 800, 1000], // Stages 1-5
-  'TrúcCơ': [1500, 2000, 2500, 3000, 3500], // Stages 1-5
-  'KếtĐan': [4000, 5000, 6000, 7000, 8000], // Stages 1-5
-  'NguyênAnh': [10000, 12000, 14000, 16000, 18000], // Stages 1-5
+  'PhàmNhân': [150], // Stage 0 -> Stage 1 (breakthrough to LuyệnKhí)
+  'LuyệnKhí': [300, 500, 800, 1200, 1800, 2500, 3500, 5000, 7000], // Stages 1-9
+  'TrúcCơ': [8000, 10000, 12000, 15000, 18000, 22000, 27000, 33000, 40000], // Stages 1-9
+  'KếtĐan': [45000, 50000, 60000, 70000, 85000, 100000, 120000, 140000, 170000], // Stages 1-9
+  'NguyênAnh': [200000, 230000, 270000, 320000, 380000, 450000, 530000, 620000, 750000], // Stages 1-9
 };
 
 /**
@@ -414,8 +445,8 @@ export function performBreakthrough(state: GameState): boolean {
     state.attrs.perception += 1;
 
     return true;
-  } else if (realm === 'LuyệnKhí' && realm_stage < 5) {
-    // Advance to next stage
+  } else if (realm === 'LuyệnKhí' && realm_stage < 9) {
+    // Advance to next stage within Luyện Khí realm
     state.progress.realm_stage++;
     state.progress.cultivation_exp = 0;
 
@@ -428,6 +459,73 @@ export function performBreakthrough(state: GameState): boolean {
     state.attrs.str += 1;
     state.attrs.agi += 1;
     state.attrs.int += 1;
+
+    return true;
+  } else if (realm === 'LuyệnKhí' && realm_stage === 9) {
+    // Breakthrough to Trúc Cơ realm
+    state.progress.realm = 'TrúcCơ';
+    state.progress.realm_stage = 1;
+    state.progress.cultivation_exp = 0;
+
+    // Major stat increases for realm breakthrough
+    state.stats.hp_max += 100;
+    state.stats.hp = state.stats.hp_max;
+    state.stats.qi_max += 200;
+    state.stats.qi = state.stats.qi_max;
+    state.stats.stamina_max += 5;
+
+    state.attrs.str += 3;
+    state.attrs.agi += 3;
+    state.attrs.int += 3;
+    state.attrs.perception += 2;
+
+    return true;
+  } else if (realm === 'TrúcCơ' && realm_stage < 9) {
+    // Advance within Trúc Cơ realm
+    state.progress.realm_stage++;
+    state.progress.cultivation_exp = 0;
+
+    state.stats.hp_max += 50;
+    state.stats.hp = state.stats.hp_max;
+    state.stats.qi_max += 80;
+    state.stats.qi = state.stats.qi_max;
+
+    state.attrs.str += 2;
+    state.attrs.agi += 2;
+    state.attrs.int += 2;
+
+    return true;
+  } else if (realm === 'TrúcCơ' && realm_stage === 9) {
+    // Breakthrough to Kết Đan realm
+    state.progress.realm = 'KếtĐan';
+    state.progress.realm_stage = 1;
+    state.progress.cultivation_exp = 0;
+
+    state.stats.hp_max += 150;
+    state.stats.hp = state.stats.hp_max;
+    state.stats.qi_max += 300;
+    state.stats.qi = state.stats.qi_max;
+    state.stats.stamina_max += 8;
+
+    state.attrs.str += 4;
+    state.attrs.agi += 4;
+    state.attrs.int += 4;
+    state.attrs.perception += 3;
+
+    return true;
+  } else if (realm === 'KếtĐan' && realm_stage < 9) {
+    // Advance within Kết Đan realm
+    state.progress.realm_stage++;
+    state.progress.cultivation_exp = 0;
+
+    state.stats.hp_max += 80;
+    state.stats.hp = state.stats.hp_max;
+    state.stats.qi_max += 120;
+    state.stats.qi = state.stats.qi_max;
+
+    state.attrs.str += 3;
+    state.attrs.agi += 3;
+    state.attrs.int += 3;
 
     return true;
   }

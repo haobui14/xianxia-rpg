@@ -7,6 +7,7 @@ import CharacterSheet from './CharacterSheet';
 import InventoryView from './InventoryView';
 import MarketView from './MarketView';
 import NotificationManager from './NotificationManager';
+import DebugInventory from './DebugInventory';
 
 interface GameScreenProps {
   runId: string;
@@ -64,14 +65,16 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to equip/unequip item');
+        const errorData = await response.json();
+        console.error('Equip API error:', errorData);
+        throw new Error(errorData.error || 'Failed to equip/unequip item');
       }
 
       const result = await response.json();
       setState(result.state);
     } catch (err) {
       console.error('Equip error:', err);
-      setError(locale === 'vi' ? 'Lỗi trang bị' : 'Error equipping item');
+      setError((err instanceof Error ? err.message : '') || (locale === 'vi' ? 'Lỗi trang bị' : 'Error equipping item'));
     }
   }, [locale]);
 
@@ -96,6 +99,48 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
     }
   }, [locale]);
 
+  const handleRefreshMarket = useCallback(async () => {
+    try {
+      const response = await fetch('/api/market', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'refresh' }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to refresh market');
+      }
+
+      const result = await response.json();
+      setState(result.state);
+    } catch (err: any) {
+      console.error('Refresh error:', err);
+      setError(err.message || (locale === 'vi' ? 'Lỗi làm mới' : 'Refresh error'));
+    }
+  }, [locale]);
+
+  const handleExchange = useCallback(async (amount: number) => {
+    try {
+      const response = await fetch('/api/market', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'exchange', amount }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to exchange');
+      }
+
+      const result = await response.json();
+      setState(result.state);
+    } catch (err: any) {
+      console.error('Exchange error:', err);
+      setError(err.message || (locale === 'vi' ? 'Lỗi đổi tiền' : 'Exchange error'));
+    }
+  }, [locale]);
+
   const handleDiscardItem = useCallback(async (itemId: string, quantity: number) => {
     try {
       const response = await fetch('/api/discard-item', {
@@ -113,6 +158,27 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
     } catch (err) {
       console.error('Discard error:', err);
       setError(locale === 'vi' ? 'Lỗi vứt vật phẩm' : 'Error discarding item');
+    }
+  }, [locale]);
+
+  const handleUseItem = useCallback(async (itemId: string) => {
+    try {
+      const response = await fetch('/api/use-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to use item');
+      }
+
+      const result = await response.json();
+      setState(result.state);
+    } catch (err: any) {
+      console.error('Use item error:', err);
+      setError(err.message || (locale === 'vi' ? 'Lỗi sử dụng vật phẩm' : 'Error using item'));
     }
   }, [locale]);
 
@@ -455,12 +521,15 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         )}
 
         {activeTab === 'character' && <CharacterSheet state={state} locale={locale} />}
-        {activeTab === 'inventory' && <InventoryView state={state} locale={locale} onEquipItem={handleEquipItem} onDiscardItem={handleDiscardItem} />}
-        {activeTab === 'market' && <MarketView state={state} locale={locale} onBuyItem={(id) => handleMarketAction(id, 'buy')} onSellItem={(id) => handleMarketAction(id, 'sell')} />}
+        {activeTab === 'inventory' && <InventoryView state={state} locale={locale} onEquipItem={handleEquipItem} onDiscardItem={handleDiscardItem} onUseItem={handleUseItem} />}
+        {activeTab === 'market' && <MarketView state={state} locale={locale} onBuyItem={(id) => handleMarketAction(id, 'buy')} onSellItem={(id) => handleMarketAction(id, 'sell')} onRefreshMarket={handleRefreshMarket} onExchange={handleExchange} />}
         {activeTab === 'notifications' && userId && (
           <NotificationManager userId={userId} locale={locale} />
         )}
       </div>
+      
+      {/* Debug button - remove after testing */}
+      <DebugInventory />
     </div>
   );
 }

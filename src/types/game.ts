@@ -70,19 +70,31 @@ export interface Location {
   place: string;
 }
 
-// Skill
+// Combat Skill - Used in battle
 export interface Skill {
   id: string;
   name: string;
   name_en: string;
   description: string;
   description_en: string;
-  type: 'Combat' | 'Movement' | 'Utility' | 'Cultivation';
+  type: 'Attack' | 'Defense' | 'Movement' | 'Support';
+  element?: Element; // Optional element for elemental skills
   level: number;
   max_level: number;
+  // Combat properties
+  damage_multiplier: number; // Base damage multiplier (1.0 = normal attack)
+  qi_cost: number; // Qi required to use
+  cooldown: number; // Turns before can use again
+  effects?: {
+    stun_chance?: number; // 0-1 chance to stun
+    bleed_damage?: number; // Damage over time
+    defense_break?: number; // Reduce enemy defense
+    heal_percent?: number; // Heal % of max HP
+    buff_stats?: Record<string, number>; // Temporary stat buffs
+  };
 }
 
-// Cultivation Technique
+// Cultivation Technique - Boosts cultivation speed
 export interface CultivationTechnique {
   id: string;
   name: string;
@@ -92,6 +104,10 @@ export interface CultivationTechnique {
   grade: 'Mortal' | 'Earth' | 'Heaven';
   type: 'Main' | 'Support';
   elements: Element[]; // Elements of the technique (e.g., ['Hỏa', 'Kim'])
+  // Cultivation bonuses
+  cultivation_speed_bonus: number; // Percentage bonus to cultivation exp (e.g., 10 = +10%)
+  qi_recovery_bonus?: number; // Bonus qi recovery during rest
+  breakthrough_bonus?: number; // Bonus success rate for breakthroughs
 }
 
 // Inventory item
@@ -101,7 +117,7 @@ export interface InventoryItem {
   name_en: string;
   description: string;
   description_en: string;
-  type: 'Medicine' | 'Material' | 'Equipment' | 'Manual' | 'Misc';
+  type: 'Medicine' | 'Material' | 'Equipment' | 'Accessory' | 'Manual' | 'Book' | 'Effect' | 'Misc';
   rarity: ItemRarity;
   quantity: number;
   
@@ -125,6 +141,10 @@ export interface InventoryItem {
   
   // Effects (for consumables, artifacts)
   effects?: Record<string, any>;
+  
+  // Teaching properties (for Book type)
+  teaches_technique?: CultivationTechnique;
+  teaches_skill?: Skill;
   
   // Equipment state
   is_equipped?: boolean;

@@ -25,7 +25,7 @@ import {
   selectRandomTemplate,
 } from '@/lib/game/scenes';
 import { generateLoot, validateLoot } from '@/lib/game/loot';
-import { recordCombatHistory, updatePlayerStats, syncInventoryToTables } from '@/lib/database/syncHelper';
+import { recordCombatHistory, updatePlayerStats, syncInventoryToTables, syncSkillsToTables, syncTechniquesToTables } from '@/lib/database/syncHelper';
 
 export async function POST(request: Request) {
   try {
@@ -57,12 +57,108 @@ export async function POST(request: Request) {
       });
     }
 
+    // Migration: Initialize market for existing games
+    if (!state.market) {
+      state.market = {
+        items: [],
+        last_regenerated: new Date().toISOString(),
+        next_regeneration: {
+          month: (state.time_month % 12) + 1,
+          year: state.time_month === 12 ? state.time_year + 1 : state.time_year,
+        },
+      };
+    }
+
+    // Migration: Add equipment_slot to accessories that don't have it
+    state.inventory.items = state.inventory.items.map(item => {
+      if (item.type === 'Accessory' && !item.equipment_slot) {
+        return { ...item, equipment_slot: 'Accessory' };
+      }
+      return item;
+    });
+
+    // Migration: Move incorrectly stored techniques/skills from inventory to proper arrays
+    const techniqueTypes = ['Main', 'Support'];
+    const skillTypes = ['Attack', 'Defense', 'Movement'];
+    
+    const misplacedTechniques = state.inventory.items.filter(item => techniqueTypes.includes(item.type));
+    const misplacedSkills = state.inventory.items.filter(item => skillTypes.includes(item.type));
+    
+    if (misplacedTechniques.length > 0) {
+      console.log(`Found ${misplacedTechniques.length} techniques incorrectly stored as items, migrating...`);
+      misplacedTechniques.forEach(item => {
+        // Check if not already in techniques array
+        const alreadyExists = state.techniques.some(t => t.id === item.id || t.name === item.name);
+        if (!alreadyExists) {
+          // Convert item to technique format
+          const grade: 'Mortal' | 'Earth' | 'Heaven' = 
+            (item.rarity === 'Rare' || item.rarity === 'Epic') ? 'Earth' : 
+            (item.rarity === 'Legendary') ? 'Heaven' : 'Mortal';
+          
+          const technique = {
+            id: item.id,
+            name: item.name,
+            name_en: item.name_en || item.name,
+            description: item.description,
+            description_en: item.description_en || item.description,
+            grade,
+            type: item.type as 'Main' | 'Support',
+            elements: [state.spirit_root.elements[0]], // Default to character's element
+            cultivation_speed_bonus: item.rarity === 'Legendary' ? 40 : 
+                                    item.rarity === 'Epic' ? 25 : 
+                                    item.rarity === 'Rare' ? 15 : 10,
+          };
+          state.techniques.push(technique);
+        }
+      });
+    }
+    
+    if (misplacedSkills.length > 0) {
+      console.log(`Found ${misplacedSkills.length} skills incorrectly stored as items, migrating...`);
+      misplacedSkills.forEach(item => {
+        const alreadyExists = state.skills.some(s => s.id === item.id || s.name === item.name);
+        if (!alreadyExists) {
+          const skillType = ['Attack', 'Defense', 'Movement', 'Support'].includes(item.type) 
+            ? item.type as 'Attack' | 'Defense' | 'Movement' | 'Support'
+            : 'Support';
+          
+          const skill = {
+            id: item.id,
+            name: item.name,
+            name_en: item.name_en || item.name,
+            description: item.description,
+            description_en: item.description_en || item.description,
+            type: skillType,
+            level: 1,
+            max_level: 10,
+            damage_multiplier: skillType === 'Attack' ? 1.5 : 1.0,
+            qi_cost: 10,
+            cooldown: 2,
+          };
+          state.skills.push(skill);
+        }
+      });
+    }
+    
+    // Remove misplaced techniques/skills from inventory
+    if (misplacedTechniques.length > 0 || misplacedSkills.length > 0) {
+      state.inventory.items = state.inventory.items.filter(
+        item => !techniqueTypes.includes(item.type) && !skillTypes.includes(item.type)
+      );
+      console.log(`Cleaned up inventory, removed ${misplacedTechniques.length + misplacedSkills.length} misplaced items`);
+    }
+
     // Create RNG for this turn
     const rng = createTurnRNG(run.world_seed, turnNo);
 
-    // Get recent narratives for context
-    const recentLogs = await turnLogQueries.getLastTurns(runId, 3);
+    // Get recent narratives for context (increased from 3 to 5 for better anti-repetition)
+    const recentLogs = await turnLogQueries.getLastTurns(runId, 5);
     const recentNarratives = recentLogs.map((log) => log.narrative);
+    
+    // Track recent scene types to avoid repetition
+    const recentSceneTypes = recentLogs
+      .map((log) => (log.ai_json as any)?.sceneType)
+      .filter(Boolean);
 
     // Apply choice costs immediately (before AI generation)
     const events: GameEvent[] = [];
@@ -88,12 +184,22 @@ export async function POST(request: Request) {
 
     // Select scene template if starting new scene
     let sceneContext = '';
+    let selectedSceneType = '';
     if (!choiceId || state.turn_count === 0) {
       const applicableTemplates = getApplicableTemplates(state);
-      const template = selectRandomTemplate(applicableTemplates, rng);
+      
+      // Filter out recently used scene types to increase variety
+      const filteredTemplates = applicableTemplates.filter(
+        t => !recentSceneTypes.includes(t.id)
+      );
+      
+      // Use filtered templates if available, otherwise fall back to all
+      const templatesToUse = filteredTemplates.length > 2 ? filteredTemplates : applicableTemplates;
+      const template = selectRandomTemplate(templatesToUse, rng);
 
       if (template) {
         sceneContext = template.getPromptContext(state, locale);
+        selectedSceneType = template.id;
       } else {
         sceneContext =
           locale === 'vi'
@@ -126,6 +232,7 @@ export async function POST(request: Request) {
     events.push(...aiResult.events);
 
     // Validate and apply deltas from AI
+    console.log(`AI proposed ${aiResult.proposed_deltas?.length || 0} deltas`);
     applyValidatedDeltas(state, aiResult.proposed_deltas, rng, events);
 
     // Check for breakthrough
@@ -172,19 +279,27 @@ export async function POST(request: Request) {
       await updatePlayerStats(runId, character.name, state, combatWins);
     }
 
-    // Sync inventory to tables
-    await syncInventoryToTables(runId, state.inventory, state.equipped_items);
+    // Sync to normalized tables (optional - don't fail if functions don't exist)
+    try {
+      await syncInventoryToTables(runId, state.inventory, state.equipped_items);
+      await syncSkillsToTables(runId, state.skills);
+      await syncTechniquesToTables(runId, state.techniques);
+    } catch (err) {
+      // Ignore sync errors - this is optional functionality
+      console.log('Table sync skipped (function not available)');
+    }
 
     // Save state
+    console.log(`Saving state - Skills: ${state.skills?.length || 0}, Techniques: ${state.techniques?.length || 0}`);
     await runQueries.update(runId, state);
 
-    // Save turn log
+    // Save turn log with scene type for future anti-repetition
     await turnLogQueries.create(
       runId,
       turnNo,
       choiceId,
       aiResult.narrative,
-      aiResult
+      { ...aiResult, sceneType: selectedSceneType }
     );
 
     // Return result
@@ -235,6 +350,11 @@ function applyDelta(
 ): void {
   const { field, operation, value } = delta;
 
+  // Log skill/technique additions
+  if (field.startsWith('skills.') || field.startsWith('techniques.')) {
+    console.log(`Applying delta: ${field} ${operation}`, value?.name || value?.id);
+  }
+
   // Parse field path (e.g., "stats.hp", "inventory.silver")
   const parts = field.split('.');
 
@@ -250,6 +370,8 @@ function applyDelta(
     applyKarmaDelta(state, operation, value as number);
   } else if (parts[0] === 'techniques') {
     applyTechniqueDelta(state, parts[1], operation, value);
+  } else if (parts[0] === 'skills') {
+    applySkillDelta(state, parts[1], operation, value);
   }
 }
 
@@ -336,6 +458,12 @@ function applyInventoryDelta(
   } else if (field === 'add_item') {
     // Add item to inventory - stack if duplicate
     if (typeof value === 'object' && value.id) {
+      // Validate: Don't add techniques/skills to inventory (they have their own arrays)
+      if (['Main', 'Support', 'Attack', 'Defense', 'Movement'].includes(value.type)) {
+        console.warn(`Ignoring ${value.type} type item in inventory.add_item - should use techniques/skills delta instead`);
+        return;
+      }
+      
       const existingItem = state.inventory.items.find(
         (item) => item.id === value.id && item.type === value.type
       );
@@ -424,7 +552,61 @@ function applyTechniqueDelta(
         if (!value.elements) {
           value.elements = [];
         }
+        // Ensure cultivation_speed_bonus exists (default based on grade)
+        if (value.cultivation_speed_bonus === undefined) {
+          const gradeBonus = { 'Mortal': 10, 'Earth': 20, 'Heaven': 40 };
+          value.cultivation_speed_bonus = gradeBonus[value.grade as keyof typeof gradeBonus] || 10;
+        }
         state.techniques.push(value);
+      }
+    }
+  }
+}
+
+/**
+ * Apply skill delta (combat skills)
+ */
+function applySkillDelta(
+  state: GameState,
+  field: string,
+  operation: string,
+  value: any
+): void {
+  if (field === 'add' && operation === 'add') {
+    // Validate skill structure
+    if (value && value.id && value.name && value.name_en && value.type) {
+      // Initialize skills array if it doesn't exist
+      if (!state.skills) {
+        state.skills = [];
+      }
+      
+      // Check if skill already exists
+      const existingIndex = state.skills.findIndex(s => s.id === value.id);
+      if (existingIndex >= 0) {
+        // Upgrade existing skill level
+        const existingSkill = state.skills[existingIndex];
+        if (existingSkill.level < existingSkill.max_level) {
+          existingSkill.level += 1;
+          // Increase damage multiplier slightly on level up
+          existingSkill.damage_multiplier = (existingSkill.damage_multiplier || 1) * 1.1;
+        }
+      } else {
+        // Add new skill with defaults
+        state.skills.push({
+          id: value.id,
+          name: value.name,
+          name_en: value.name_en,
+          description: value.description || '',
+          description_en: value.description_en || '',
+          type: value.type,
+          element: value.element,
+          level: value.level || 1,
+          max_level: value.max_level || 10,
+          damage_multiplier: value.damage_multiplier || 1.5,
+          qi_cost: value.qi_cost || 10,
+          cooldown: value.cooldown || 1,
+          effects: value.effects,
+        });
       }
     }
   }

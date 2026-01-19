@@ -96,6 +96,10 @@ export const runQueries = {
 
   async update(id: string, state: GameState): Promise<void> {
     const supabase = await createServerClient();
+    
+    // Verify state contains skills/techniques before saving
+    console.log(`[DB] Updating run ${id} - Skills: ${state.skills?.length || 0}, Techniques: ${state.techniques?.length || 0}`);
+    
     const { error } = await supabase
       .from('runs')
       .update({ current_state: state })

@@ -80,6 +80,38 @@ export const translations = {
     Chiều: 'Chiều',
     Tối: 'Tối',
     Đêm: 'Đêm',
+
+    // Item Rarity
+    Common: 'Phàm Phẩm',
+    Uncommon: 'Hạ Phẩm',
+    Rare: 'Trung Phẩm',
+    Epic: 'Thượng Phẩm',
+    Legendary: 'Cực Phẩm',
+
+    // Technique Grade
+    Mortal: 'Phàm Cấp',
+    Earth: 'Địa Cấp',
+    Heaven: 'Thiên Cấp',
+
+    // Skill Type
+    Attack: 'Tấn Công',
+    Defense: 'Phòng Thủ',
+    Movement: 'Thân Pháp',
+    Support: 'Hỗ Trợ',
+
+    // Equipment Slots
+    Weapon: 'Vũ Khí',
+    Head: 'Đầu',
+    Chest: 'Ngực',
+    Legs: 'Chân',
+    Feet: 'Giày',
+    Hands: 'Tay',
+    Accessory: 'Phụ Kiện',
+    Artifact: 'Bảo Vật',
+
+    // Technique Type
+    Main: 'Chính',
+    'Support': 'Phụ',
   },
 
   en: {
@@ -163,6 +195,38 @@ export const translations = {
     Chiều: 'Afternoon',
     Tối: 'Evening',
     Đêm: 'Night',
+
+    // Item Rarity
+    Common: 'Common',
+    Uncommon: 'Uncommon',
+    Rare: 'Rare',
+    Epic: 'Epic',
+    Legendary: 'Legendary',
+
+    // Technique Grade
+    Mortal: 'Mortal',
+    Earth: 'Earth',
+    Heaven: 'Heaven',
+
+    // Skill Type
+    Attack: 'Attack',
+    Defense: 'Defense',
+    Movement: 'Movement',
+    Support: 'Support',
+
+    // Equipment Slots
+    Weapon: 'Weapon',
+    Head: 'Head',
+    Chest: 'Chest',
+    Legs: 'Legs',
+    Feet: 'Feet',
+    Hands: 'Hands',
+    Accessory: 'Accessory',
+    Artifact: 'Artifact',
+
+    // Technique Type
+    Main: 'Main',
+    'Support': 'Support',
   },
 };
 
