@@ -111,7 +111,6 @@ export const translations = {
 
     // Technique Type
     Main: 'Chính',
-    'Support': 'Phụ',
   },
 
   en: {
