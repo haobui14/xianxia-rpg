@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { GameState, Choice, ValidatedTurnResult } from '@/types/game';
+import { GameState, Choice, ValidatedTurnResult, Realm, Enemy, CombatLogEntry } from '@/types/game';
 import { t, Locale } from '@/lib/i18n/translations';
 import CharacterSheet from './CharacterSheet';
 import InventoryView from './InventoryView';
 import MarketView from './MarketView';
 import NotificationManager from './NotificationManager';
 import DebugInventory from './DebugInventory';
+import BreakthroughModal, { BreakthroughEvent } from './BreakthroughModal';
+import CombatView from './CombatView';
 
 interface GameScreenProps {
   runId: string;
@@ -23,18 +25,33 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'game' | 'character' | 'inventory' | 'market' | 'notifications'>('game');
+  const [breakthroughEvent, setBreakthroughEvent] = useState<BreakthroughEvent | null>(null);
+  const [previousExp, setPreviousExp] = useState<number | undefined>(undefined);
+  const [testCombat, setTestCombat] = useState<{ enemy: Enemy; log: CombatLogEntry[]; playerTurn: boolean; playerHp: number } | null>(null);
+  const [customAction, setCustomAction] = useState('');
   const firstTurnStartedRef = useRef(false);
   const lastNotificationRef = useRef<number>(0);
   const previousStaminaRef = useRef<number>(0);
+  const previousRealmRef = useRef<{ realm: Realm; stage: number } | null>(null);
 
   const processTurn = useCallback(async (choiceId: string | null, selectedChoice?: Choice) => {
     setProcessing(true);
     setError('');
 
+    // Store previous exp for animation
+    if (state) {
+      setPreviousExp(state.progress.cultivation_exp);
+      previousRealmRef.current = {
+        realm: state.progress.realm,
+        stage: state.progress.realm_stage,
+      };
+    }
+
     try {
       const response = await fetch('/api/turn', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ runId, choiceId, selectedChoice }),
       });
 
@@ -45,6 +62,50 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
 
       const result: ValidatedTurnResult = await response.json();
       console.log('Turn result:', result);
+
+      // Check for breakthrough event
+      if (previousRealmRef.current) {
+        const prevRealm = previousRealmRef.current.realm;
+        const prevStage = previousRealmRef.current.stage;
+        const newRealm = result.state.progress.realm;
+        const newStage = result.state.progress.realm_stage;
+
+        // Detect breakthrough (realm changed or stage increased)
+        if (prevRealm !== newRealm || (prevRealm === newRealm && newStage > prevStage)) {
+          // Calculate stat increases (approximate based on typical breakthrough)
+          const breakthroughData: BreakthroughEvent = {
+            previousRealm: prevRealm,
+            previousStage: prevStage,
+            newRealm: newRealm,
+            newStage: newStage,
+            statIncreases: {},
+          };
+
+          // For realm breakthroughs, show major stat increases
+          if (prevRealm !== newRealm) {
+            breakthroughData.statIncreases = {
+              hp_max: prevRealm === 'PhàmNhân' ? 50 : prevRealm === 'LuyệnKhí' ? 100 : 150,
+              qi_max: prevRealm === 'PhàmNhân' ? 100 : prevRealm === 'LuyệnKhí' ? 200 : 300,
+              str: prevRealm === 'PhàmNhân' ? 2 : prevRealm === 'LuyệnKhí' ? 3 : 4,
+              agi: prevRealm === 'PhàmNhân' ? 2 : prevRealm === 'LuyệnKhí' ? 3 : 4,
+              int: prevRealm === 'PhàmNhân' ? 2 : prevRealm === 'LuyệnKhí' ? 3 : 4,
+              perception: prevRealm === 'PhàmNhân' ? 1 : prevRealm === 'LuyệnKhí' ? 2 : 3,
+            };
+          } else {
+            // Stage breakthrough within same realm
+            breakthroughData.statIncreases = {
+              hp_max: prevRealm === 'LuyệnKhí' ? 30 : prevRealm === 'TrúcCơ' ? 50 : 80,
+              qi_max: prevRealm === 'LuyệnKhí' ? 50 : prevRealm === 'TrúcCơ' ? 80 : 120,
+              str: prevRealm === 'LuyệnKhí' ? 1 : prevRealm === 'TrúcCơ' ? 2 : 3,
+              agi: prevRealm === 'LuyệnKhí' ? 1 : prevRealm === 'TrúcCơ' ? 2 : 3,
+              int: prevRealm === 'LuyệnKhí' ? 1 : prevRealm === 'TrúcCơ' ? 2 : 3,
+            };
+          }
+
+          setBreakthroughEvent(breakthroughData);
+        }
+      }
+
       setState(result.state);
       setNarrative(result.narrative);
       setChoices(result.choices);
@@ -54,13 +115,14 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
     } finally {
       setProcessing(false);
     }
-  }, [runId, locale]);
+  }, [runId, locale, state]);
 
   const handleEquipItem = useCallback(async (itemId: string, action: 'equip' | 'unequip') => {
     try {
       const response = await fetch('/api/equip-item', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ itemId, action }),
       });
 
@@ -83,6 +145,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       const response = await fetch('/api/market', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ itemId, action }),
       });
 
@@ -104,6 +167,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       const response = await fetch('/api/market', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ action: 'refresh' }),
       });
 
@@ -125,6 +189,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       const response = await fetch('/api/market', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ action: 'exchange', amount }),
       });
 
@@ -146,6 +211,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       const response = await fetch('/api/discard-item', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ itemId, quantity }),
       });
 
@@ -166,6 +232,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       const response = await fetch('/api/use-item', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ itemId }),
       });
 
@@ -181,6 +248,170 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       setError(err.message || (locale === 'vi' ? 'Lỗi sử dụng vật phẩm' : 'Error using item'));
     }
   }, [locale]);
+
+  const handleEnhanceItem = useCallback(async (itemId: string) => {
+    try {
+      const response = await fetch('/api/enhance-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ itemId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to enhance item');
+      }
+
+      const result = await response.json();
+      setState(result.state);
+      return result.result; // Return the enhancement result for the modal
+    } catch (err: any) {
+      console.error('Enhance item error:', err);
+      setError(err.message || (locale === 'vi' ? 'Lỗi cường hóa vật phẩm' : 'Error enhancing item'));
+      return null;
+    }
+  }, [locale]);
+
+  // Test combat with dummy enemy
+  const startTestCombat = useCallback(() => {
+    if (!state) return;
+    const dummyEnemy: Enemy = {
+      id: 'test_enemy',
+      name: 'Sói Hoang',
+      name_en: 'Wild Wolf',
+      hp: 50,
+      hp_max: 50,
+      atk: 8,
+      def: 3,
+      behavior: 'Aggressive',
+      loot_table_id: 'common_herbs',
+    };
+    setTestCombat({
+      enemy: dummyEnemy,
+      log: [],
+      playerTurn: true,
+      playerHp: state.stats.hp,
+    });
+  }, [state]);
+
+  // Handle test combat action
+  const handleTestCombatAction = useCallback((action: 'attack' | 'qi_attack' | 'defend' | 'flee') => {
+    if (!testCombat || !state) return;
+
+    const { enemy, log, playerHp } = testCombat;
+    const newLog = [...log];
+    const turnNumber = Math.floor(log.length / 2) + 1;
+
+    // Helper to apply enemy damage
+    const applyEnemyTurn = (isDefending: boolean, currentPlayerHp: number, currentEnemy: Enemy, currentLog: CombatLogEntry[]) => {
+      setTimeout(() => {
+        const enemyDamage = Math.floor(currentEnemy.atk * (0.8 + Math.random() * 0.4));
+        const defendBonus = isDefending ? 0.5 : 1;
+        const enemyMiss = Math.random() < 0.15;
+        const enemyCrit = Math.random() < 0.1;
+        const finalDamage = enemyMiss ? 0 : Math.floor(enemyDamage * defendBonus * (enemyCrit ? 1.5 : 1));
+
+        const enemyLogEntry: CombatLogEntry = {
+          id: `log-enemy-${Date.now()}`,
+          turn: turnNumber,
+          actor: 'enemy',
+          action: 'attack',
+          damage: finalDamage,
+          isCritical: enemyCrit,
+          isMiss: enemyMiss,
+          timestamp: Date.now(),
+        };
+
+        const newPlayerHp = Math.max(0, currentPlayerHp - finalDamage);
+
+        setTestCombat(prev => prev ? {
+          ...prev,
+          log: [...prev.log, enemyLogEntry],
+          playerTurn: true,
+          playerHp: newPlayerHp,
+        } : null);
+      }, 800);
+    };
+
+    // Simple combat simulation
+    if (action === 'flee') {
+      const fleeChance = Math.random();
+      if (fleeChance > 0.5) {
+        setTestCombat(null);
+        return;
+      }
+      newLog.push({
+        id: `log-${Date.now()}`,
+        turn: turnNumber,
+        actor: 'player',
+        action: 'flee',
+        isMiss: true,
+        timestamp: Date.now(),
+      });
+
+      setTestCombat(prev => prev ? { ...prev, log: newLog, playerTurn: false } : null);
+      applyEnemyTurn(false, playerHp, enemy, newLog);
+      return;
+    }
+
+    if (action === 'defend') {
+      newLog.push({
+        id: `log-${Date.now()}`,
+        turn: turnNumber,
+        actor: 'player',
+        action: 'defend',
+        timestamp: Date.now(),
+      });
+
+      setTestCombat(prev => prev ? { ...prev, log: newLog, playerTurn: false } : null);
+      applyEnemyTurn(true, playerHp, enemy, newLog);
+      return;
+    }
+
+    // Attack or qi_attack
+    const baseDamage = action === 'qi_attack'
+      ? state.attrs.int * 2 + state.attrs.str
+      : state.attrs.str * 1.5;
+    const isCritical = Math.random() < 0.15;
+    const isMiss = Math.random() < 0.1;
+    const damage = isMiss ? 0 : Math.floor(baseDamage * (isCritical ? 2 : 1) - enemy.def / 2);
+
+    newLog.push({
+      id: `log-${Date.now()}`,
+      turn: turnNumber,
+      actor: 'player',
+      action: action,
+      damage: Math.max(0, damage),
+      isCritical,
+      isMiss,
+      timestamp: Date.now(),
+    });
+
+    // Update enemy HP
+    const newEnemyHp = Math.max(0, enemy.hp - (isMiss ? 0 : Math.max(0, damage)));
+    const updatedEnemy = { ...enemy, hp: newEnemyHp };
+
+    // Enemy turn (if not dead)
+    if (newEnemyHp > 0) {
+      setTestCombat({
+        enemy: updatedEnemy,
+        log: newLog,
+        playerTurn: false,
+        playerHp,
+      });
+      applyEnemyTurn(false, playerHp, updatedEnemy, newLog);
+      return;
+    }
+
+    // Enemy dead
+    setTestCombat({
+      enemy: updatedEnemy,
+      log: newLog,
+      playerTurn: true,
+      playerHp,
+    });
+  }, [testCombat, state]);
 
   const loadRun = useCallback(async () => {
     try {
@@ -320,6 +551,19 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
     }
     
     await processTurn(choiceId, selectedChoice);
+  };
+
+  const handleCustomAction = async () => {
+    if (!customAction.trim()) return;
+    
+    // Create a custom choice with the user's input
+    const customChoice: Choice = {
+      id: 'custom_action',
+      text: customAction.trim(),
+    };
+    
+    await processTurn('custom_action', customChoice);
+    setCustomAction(''); // Clear input after submission
   };
 
   if (loading) {
@@ -509,6 +753,40 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
                     </button>
                   );
                 })}
+
+                {/* Custom Action Input */}
+                <div className="mt-4 p-4 bg-xianxia-darker border border-xianxia-accent/30 rounded-lg">
+                  <label className="block text-sm font-medium text-xianxia-accent mb-2">
+                    {locale === 'vi' ? '✍️ Hoặc nhập hành động của bạn:' : '✍️ Or type your own action:'}
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={customAction}
+                      onChange={(e) => setCustomAction(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !processing && customAction.trim()) {
+                          handleCustomAction();
+                        }
+                      }}
+                      disabled={processing}
+                      placeholder={locale === 'vi' ? 'Ví dụ: Tôi muốn khám phá hang động phía đông...' : 'Example: I want to explore the cave to the east...'}
+                      className="flex-1 px-4 py-2 bg-xianxia-dark border border-xianxia-accent/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-xianxia-accent disabled:opacity-50"
+                    />
+                    <button
+                      onClick={handleCustomAction}
+                      disabled={processing || !customAction.trim()}
+                      className="px-6 py-2 bg-xianxia-accent hover:bg-xianxia-accent/80 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
+                    >
+                      {locale === 'vi' ? 'Gửi' : 'Submit'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {locale === 'vi' 
+                      ? 'Bạn có thể nhập bất kỳ hành động nào bạn muốn thực hiện. AI sẽ xử lý và tạo kết quả phù hợp với câu chuyện.'
+                      : 'You can type any action you want to take. The AI will process it and generate results fitting the story.'}
+                  </p>
+                </div>
               </div>
             )}
 
@@ -520,16 +798,57 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           </div>
         )}
 
-        {activeTab === 'character' && <CharacterSheet state={state} locale={locale} />}
-        {activeTab === 'inventory' && <InventoryView state={state} locale={locale} onEquipItem={handleEquipItem} onDiscardItem={handleDiscardItem} onUseItem={handleUseItem} />}
+        {activeTab === 'character' && <CharacterSheet state={state} locale={locale} previousExp={previousExp} />}
+        {activeTab === 'inventory' && <InventoryView state={state} locale={locale} onEquipItem={handleEquipItem} onDiscardItem={handleDiscardItem} onUseItem={handleUseItem} onEnhanceItem={handleEnhanceItem} />}
         {activeTab === 'market' && <MarketView state={state} locale={locale} onBuyItem={(id) => handleMarketAction(id, 'buy')} onSellItem={(id) => handleMarketAction(id, 'sell')} onRefreshMarket={handleRefreshMarket} onExchange={handleExchange} />}
         {activeTab === 'notifications' && userId && (
           <NotificationManager userId={userId} locale={locale} />
         )}
       </div>
       
-      {/* Debug button - remove after testing */}
-      <DebugInventory />
+      {/* Debug buttons - remove after testing */}
+      <div className="fixed bottom-4 right-4 flex gap-2">
+        <DebugInventory />
+        <button
+          onClick={startTestCombat}
+          className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg shadow-lg transition-colors"
+        >
+          {locale === 'vi' ? '⚔️ Test Combat' : '⚔️ Test Combat'}
+        </button>
+      </div>
+
+      {/* Test Combat View */}
+      {testCombat && state && (
+        <div className="fixed inset-0 z-40 bg-black/80 flex items-center justify-center p-4">
+          <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <CombatView
+              state={state}
+              enemy={testCombat.enemy}
+              locale={locale}
+              combatLog={testCombat.log}
+              playerTurn={testCombat.playerTurn}
+              onAction={handleTestCombatAction}
+              onCombatEnd={() => setTestCombat(null)}
+              overridePlayerHp={testCombat.playerHp}
+            />
+            <button
+              onClick={() => setTestCombat(null)}
+              className="mt-4 w-full py-2 bg-gray-600 hover:bg-gray-500 rounded-lg transition-colors"
+            >
+              {locale === 'vi' ? 'Đóng Test Combat' : 'Close Test Combat'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Breakthrough Modal */}
+      {breakthroughEvent && (
+        <BreakthroughModal
+          event={breakthroughEvent}
+          locale={locale}
+          onClose={() => setBreakthroughEvent(null)}
+        />
+      )}
     </div>
   );
 }

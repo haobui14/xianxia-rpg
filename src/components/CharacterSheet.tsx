@@ -4,22 +4,25 @@ import { GameState } from '@/types/game';
 import { t, Locale } from '@/lib/i18n/translations';
 import { calculateTotalAttributes, getEquipmentBonus } from '@/lib/game/equipment';
 import { getElementCompatibility, getRequiredExp, getSpiritRootBonus, getTechniqueBonus } from '@/lib/game/mechanics';
+import CultivationVisualization from './CultivationVisualization';
+import MeridianDiagram from './MeridianDiagram';
 
 interface CharacterSheetProps {
   state: GameState;
   locale: Locale;
+  previousExp?: number; // For cultivation animation
 }
 
-export default function CharacterSheet({ state, locale }: CharacterSheetProps) {
+export default function CharacterSheet({ state, locale, previousExp }: CharacterSheetProps) {
   const totalAttrs = calculateTotalAttributes(state);
   const hpBonus = getEquipmentBonus(state, 'hp');
   const qiBonus = getEquipmentBonus(state, 'qi');
   const staminaBonus = getEquipmentBonus(state, 'stamina');
   const requiredExp = getRequiredExp(state.progress.realm, state.progress.realm_stage);
-  const expDisplay = requiredExp === Infinity 
-    ? (locale === 'vi' ? 'Đột phá cảnh giới' : 'Realm Breakthrough') 
+  const expDisplay = requiredExp === Infinity
+    ? (locale === 'vi' ? 'Đột phá cảnh giới' : 'Realm Breakthrough')
     : `${state.progress.cultivation_exp}/${requiredExp}`;
-  
+
   // Calculate total cultivation speed multiplier
   const spiritRootMultiplier = getSpiritRootBonus(state.spirit_root.grade);
   const techniqueMultiplier = getTechniqueBonus(state);
@@ -48,31 +51,25 @@ export default function CharacterSheet({ state, locale }: CharacterSheetProps) {
         </div>
       </div>
 
-      {/* Cultivation Progress */}
+      {/* Cultivation Progress - Enhanced Visualization */}
       <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
         <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">{t(locale, 'cultivation')}</h2>
-        <div className="space-y-3">
-          <div>
-            <span className="text-gray-400">Realm: </span>
-            <span className="font-bold text-xianxia-accent text-lg">
-              {t(locale, state.progress.realm)}
-            </span>
+        <div className="flex flex-col lg:flex-row gap-6 items-center">
+          {/* Main Cultivation Visualization */}
+          <div className="flex-1 w-full">
+            <CultivationVisualization
+              state={state}
+              locale={locale}
+              previousExp={previousExp}
+            />
           </div>
-          <div>
-            <span className="text-gray-400">{t(locale, 'stage')}: </span>
-            <span className="font-medium">{state.progress.realm_stage}</span>
-          </div>
-          <div>
-            <span className="text-gray-400">{t(locale, 'experience')}: </span>
-            <span className="font-medium">{expDisplay}</span>
-          </div>
-          <div>
-            <span className="text-gray-400">
-              {locale === 'vi' ? 'Tốc độ tu luyện:' : 'Cultivation Speed:'}
-            </span>
-            <span className="font-bold text-green-400 text-lg ml-2">
-              ×{totalCultivationSpeed.toFixed(2)}
-            </span>
+          {/* Meridian Diagram */}
+          <div className="flex-shrink-0">
+            <MeridianDiagram
+              state={state}
+              locale={locale}
+              size="medium"
+            />
           </div>
         </div>
       </div>

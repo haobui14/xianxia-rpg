@@ -1,8 +1,10 @@
 'use client';
 
-import { GameState } from '@/types/game';
+import { GameState, InventoryItem } from '@/types/game';
 import { t, Locale } from '@/lib/i18n/translations';
 import { useState } from 'react';
+import EnhancementView from './EnhancementView';
+import { EnhancementResult, canEnhance, getEnhancedItemName, getEnhancementColor } from '@/lib/game/enhancement';
 
 interface InventoryViewProps {
   state: GameState;
@@ -10,6 +12,8 @@ interface InventoryViewProps {
   onEquipItem?: (itemId: string, action: 'equip' | 'unequip') => Promise<void>;
   onDiscardItem?: (itemId: string, quantity: number) => Promise<void>;
   onUseItem?: (itemId: string) => Promise<void>;
+  onEnhanceItem?: (itemId: string) => Promise<EnhancementResult | null>;
+  onStateUpdate?: (state: GameState) => void;
 }
 
 // Vietnamese translations for item types and rarities
@@ -54,10 +58,11 @@ const EFFECT_VI: Record<string, string> = {
   'permanent_luck': 'May Mắn Vĩnh Viễn',
 };
 
-export default function InventoryView({ state, locale, onEquipItem, onDiscardItem, onUseItem }: InventoryViewProps) {
+export default function InventoryView({ state, locale, onEquipItem, onDiscardItem, onUseItem, onEnhanceItem, onStateUpdate }: InventoryViewProps) {
   const [activeTab, setActiveTab] = useState<'consumable' | 'equipment'>('consumable');
   const [discardConfirm, setDiscardConfirm] = useState<{itemId: string, name: string, quantity: number} | null>(null);
   const [useMessage, setUseMessage] = useState<string | null>(null);
+  const [selectedEnhanceItem, setSelectedEnhanceItem] = useState<InventoryItem | null>(null);
 
   // Filter out techniques/skills that shouldn't be in inventory
   const validInventoryItems = state.inventory.items.filter(
@@ -85,6 +90,12 @@ export default function InventoryView({ state, locale, onEquipItem, onDiscardIte
       setUseMessage(locale === 'vi' ? `Đã sử dụng ${itemName}` : `Used ${itemName}`);
       setTimeout(() => setUseMessage(null), 2000);
     }
+  };
+
+  const handleEnhance = async (itemId: string): Promise<EnhancementResult | null> => {
+    if (!onEnhanceItem) return null;
+    const result = await onEnhanceItem(itemId);
+    return result;
   };
 
   return (
@@ -187,7 +198,7 @@ export default function InventoryView({ state, locale, onEquipItem, onDiscardIte
             </p>
           ) : (
             <div className="space-y-3">
-              {renderItems(consumableItems, locale, onEquipItem, setDiscardConfirm, handleUseItem)}
+              {renderItems(consumableItems, locale, onEquipItem, setDiscardConfirm, handleUseItem, setSelectedEnhanceItem)}
             </div>
           )
         ) : (
@@ -197,7 +208,7 @@ export default function InventoryView({ state, locale, onEquipItem, onDiscardIte
             </p>
           ) : (
             <div className="space-y-3">
-              {renderItems(equipmentItems, locale, onEquipItem, setDiscardConfirm, handleUseItem)}
+              {renderItems(equipmentItems, locale, onEquipItem, setDiscardConfirm, handleUseItem, setSelectedEnhanceItem)}
             </div>
           )
         )}
@@ -237,6 +248,17 @@ export default function InventoryView({ state, locale, onEquipItem, onDiscardIte
           </div>
         </div>
       )}
+      
+      {/* Enhancement Modal */}
+      {selectedEnhanceItem && (
+        <EnhancementView
+          item={selectedEnhanceItem}
+          state={state}
+          locale={locale}
+          onEnhance={handleEnhance}
+          onClose={() => setSelectedEnhanceItem(null)}
+        />
+      )}
     </div>
   );
 }
@@ -246,7 +268,8 @@ function renderItems(
   locale: Locale,
   onEquipItem?: (itemId: string, action: 'equip' | 'unequip') => Promise<void>,
   setDiscardConfirm?: (confirm: {itemId: string, name: string, quantity: number} | null) => void,
-  onUseItem?: (itemId: string, itemName: string) => void
+  onUseItem?: (itemId: string, itemName: string) => void,
+  setSelectedEnhanceItem?: (item: any) => void
 ) {
   return items.map((item, index) => {
     const isConsumable = item.type === 'Medicine' || item.type === 'Book' || item.effects;
@@ -310,6 +333,16 @@ function renderItems(
                   className="px-3 py-1 bg-xianxia-accent hover:bg-xianxia-accent/80 text-white rounded text-sm transition-colors"
                 >
                   {locale === 'vi' ? 'Trang bị' : 'Equip'}
+                </button>
+              )}
+
+              {/* Enhance button for equipment and accessories */}
+              {(item.type === 'Equipment' || item.type === 'Accessory') && canEnhance(item) && setSelectedEnhanceItem && (
+                <button
+                  onClick={() => setSelectedEnhanceItem(item)}
+                  className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-sm transition-colors"
+                >
+                  {locale === 'vi' ? '✨ Cường Hóa' : '✨ Enhance'}
                 </button>
               )}
 

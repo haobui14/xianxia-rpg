@@ -25,6 +25,50 @@ export interface LootTable {
   spiritStoneRange: [number, number];
 }
 
+// Enhancement materials - can be obtained from various sources
+export const ENHANCEMENT_MATERIALS: LootEntry[] = [
+  {
+    id: 'enhancement_stone_common',
+    name: 'Đá Cường Hóa (Thường)',
+    name_en: 'Enhancement Stone (Common)',
+    description: 'Đá cường hóa cơ bản, dùng để nâng cấp trang bị +1 đến +3.',
+    description_en: 'Basic enhancement stone, used to upgrade equipment from +1 to +3.',
+    type: 'Material',
+    rarity: 'Common',
+    weight: 40,
+  },
+  {
+    id: 'enhancement_stone_uncommon',
+    name: 'Đá Cường Hóa (Tốt)',
+    name_en: 'Enhancement Stone (Uncommon)',
+    description: 'Đá cường hóa chất lượng tốt, dùng để nâng cấp trang bị +4 đến +6.',
+    description_en: 'Good quality enhancement stone, used to upgrade equipment from +4 to +6.',
+    type: 'Material',
+    rarity: 'Uncommon',
+    weight: 25,
+  },
+  {
+    id: 'enhancement_stone_rare',
+    name: 'Đá Cường Hóa (Hiếm)',
+    name_en: 'Enhancement Stone (Rare)',
+    description: 'Đá cường hóa hiếm, dùng để nâng cấp trang bị +7 đến +9.',
+    description_en: 'Rare enhancement stone, used to upgrade equipment from +7 to +9.',
+    type: 'Material',
+    rarity: 'Rare',
+    weight: 15,
+  },
+  {
+    id: 'enhancement_stone_epic',
+    name: 'Đá Cường Hóa (Sử Thi)',
+    name_en: 'Enhancement Stone (Epic)',
+    description: 'Đá cường hóa cực phẩm, dùng để nâng cấp trang bị lên +10.',
+    description_en: 'Epic enhancement stone, used to upgrade equipment to +10.',
+    type: 'Material',
+    rarity: 'Epic',
+    weight: 5,
+  },
+];
+
 // Define loot tables
 export const LOOT_TABLES: Record<string, LootTable> = {
   common_herbs: {
@@ -111,6 +155,8 @@ export const LOOT_TABLES: Record<string, LootTable> = {
         effects: { hp_restore: 50 },
         weight: 45,
       },
+      // Enhancement stones
+      ENHANCEMENT_MATERIALS[0], // Common enhancement stone
     ],
   },
 
@@ -165,6 +211,59 @@ export const LOOT_TABLES: Record<string, LootTable> = {
         effects: { qi_max_bonus: 20 },
         weight: 25,
       },
+      // Enhancement stones - common and uncommon
+      ENHANCEMENT_MATERIALS[0], // Common enhancement stone
+      ENHANCEMENT_MATERIALS[1], // Uncommon enhancement stone
+    ],
+  },
+
+  // Higher tier loot table with rare enhancement stones
+  dungeon_boss: {
+    id: 'dungeon_boss',
+    tier: 3,
+    silverRange: [200, 500],
+    spiritStoneChance: 0.6,
+    spiritStoneRange: [5, 15],
+    entries: [
+      {
+        id: 'spirit_sword',
+        name: 'Linh Kiếm',
+        name_en: 'Spirit Sword',
+        description: 'Kiếm chứa linh khí, tăng sức mạnh đáng kể.',
+        description_en: 'Sword imbued with spiritual energy, significantly increases strength.',
+        type: 'Equipment',
+        rarity: 'Rare',
+        equipment_slot: 'Weapon',
+        bonus_stats: { str: 8, agi: 3 },
+        weight: 20,
+      },
+      {
+        id: 'mystic_robe',
+        name: 'Huyền Bào',
+        name_en: 'Mystic Robe',
+        description: 'Áo bào huyền bí, tăng trí tuệ và khí.',
+        description_en: 'Mysterious robe, increases intelligence and Qi.',
+        type: 'Equipment',
+        rarity: 'Rare',
+        equipment_slot: 'Chest',
+        bonus_stats: { int: 5, qi: 30 },
+        weight: 20,
+      },
+      {
+        id: 'foundation_pill',
+        name: 'Trúc Cơ Đan',
+        name_en: 'Foundation Pill',
+        description: 'Đan dược quý hiếm giúp đột phá cảnh giới.',
+        description_en: 'Rare pill that helps breakthrough cultivation realm.',
+        type: 'Medicine',
+        rarity: 'Epic',
+        effects: { cultivation_exp: 500 },
+        weight: 10,
+      },
+      // Enhancement stones - uncommon to epic
+      ENHANCEMENT_MATERIALS[1], // Uncommon enhancement stone
+      ENHANCEMENT_MATERIALS[2], // Rare enhancement stone
+      ENHANCEMENT_MATERIALS[3], // Epic enhancement stone
     ],
   },
 };

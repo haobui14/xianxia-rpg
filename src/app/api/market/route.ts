@@ -239,12 +239,27 @@ async function initializeMarket(
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerClient();
+    
+    // First check if we have a session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session) {
+      console.error('Session error in market GET:', sessionError);
+      return NextResponse.json({ 
+        error: "Not authenticated - please sign in again" 
+      }, { status: 401 });
+    }
+    
     const {
       data: { user },
+      error: userError
     } = await supabase.auth.getUser();
 
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    if (userError || !user) {
+      console.error('User error in market GET:', userError);
+      return NextResponse.json({ 
+        error: "Not authenticated - please sign in again" 
+      }, { status: 401 });
     }
 
     const characters = await characterQueries.getByUserId(user.id);
@@ -283,12 +298,27 @@ export async function POST(request: NextRequest) {
 
     // Get authenticated user
     const supabase = await createServerClient();
+    
+    // First check if we have a session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session) {
+      console.error('Session error in market POST:', sessionError);
+      return NextResponse.json({ 
+        error: "Not authenticated - please sign in again" 
+      }, { status: 401 });
+    }
+    
     const {
       data: { user },
+      error: userError
     } = await supabase.auth.getUser();
 
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    if (userError || !user) {
+      console.error('User error in market POST:', userError);
+      return NextResponse.json({ 
+        error: "Not authenticated - please sign in again" 
+      }, { status: 401 });
     }
 
     // Get character

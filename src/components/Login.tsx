@@ -16,6 +16,33 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
   const [error, setError] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
 
+  const clearAllSessions = () => {
+    try {
+      // Clear all localStorage
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('sb-') || key.includes('supabase'))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      
+      // Sign out from Supabase
+      supabase.auth.signOut();
+      
+      // Show success message
+      alert(locale === 'vi' 
+        ? 'Đã xóa phiên đăng nhập. Vui lòng đăng nhập lại.' 
+        : 'Session cleared. Please sign in again.');
+      
+      // Reload the page
+      window.location.reload();
+    } catch (err) {
+      console.error('Error clearing session:', err);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -180,6 +207,17 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
                 : locale === 'vi'
                 ? 'Chưa có tài khoản? Đăng ký'
                 : "Don't have an account? Sign up"}
+            </button>
+          </div>
+
+          {/* Clear Session Button */}
+          <div className="mt-4 text-center">
+            <button
+              onClick={clearAllSessions}
+              className="text-xs text-gray-500 hover:text-xianxia-accent transition-colors"
+              title={locale === 'vi' ? 'Xóa phiên đăng nhập cũ' : 'Clear old session'}
+            >
+              {locale === 'vi' ? '🔄 Xóa phiên cũ' : '🔄 Clear old session'}
             </button>
           </div>
         </div>

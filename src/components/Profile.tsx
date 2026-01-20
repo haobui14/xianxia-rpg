@@ -43,6 +43,7 @@ export default function Profile({ locale, onBack }: ProfileProps) {
       // Call API to delete all user data
       const response = await fetch('/api/reset-game', {
         method: 'POST',
+        credentials: 'same-origin',
       });
 
       if (!response.ok) {

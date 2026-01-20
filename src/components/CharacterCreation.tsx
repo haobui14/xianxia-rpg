@@ -28,7 +28,9 @@ export default function CharacterCreation({
 
     const checkExistingCharacter = async () => {
       try {
-        const response = await fetch('/api/get-character');
+        const response = await fetch('/api/get-character', {
+          credentials: 'same-origin',
+        });
         
         if (!response.ok) {
           console.error('Failed to fetch character:', response.status, response.statusText);
@@ -88,6 +90,7 @@ export default function CharacterCreation({
       const response = await fetch("/api/create-character", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: 'same-origin',
         body: JSON.stringify({ name, age, locale }),
       });
 
@@ -126,6 +129,7 @@ export default function CharacterCreation({
       const response = await fetch("/api/create-character", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: 'same-origin',
         body: JSON.stringify({ name, age, locale }),
       });
 
@@ -158,6 +162,7 @@ export default function CharacterCreation({
       const response = await fetch("/api/start-run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: 'same-origin',
         body: JSON.stringify({ characterId, spiritRoot, locale }),
       });
 

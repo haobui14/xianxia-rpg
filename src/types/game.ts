@@ -125,7 +125,11 @@ export interface InventoryItem {
   equipment_slot?: EquipmentSlot;
   level_requirement?: number;
   realm_requirement?: Realm;
-  
+
+  // Enhancement properties
+  enhancement_level?: number; // 0-10, default 0
+  max_enhancement?: number; // Default 10
+
   // Stat bonuses (for Equipment)
   bonus_stats?: {
     hp?: number;
@@ -279,6 +283,50 @@ export interface Enemy {
   def: number;
   behavior: CombatBehavior;
   loot_table_id?: string;
+}
+
+// Combat state management
+export interface CombatState {
+  isActive: boolean;
+  enemy: Enemy | null;
+  playerTurn: boolean;
+  turnNumber: number;
+  combatLog: CombatLogEntry[];
+}
+
+// Combat log entry for combat history display
+export interface CombatLogEntry {
+  id: string;
+  turn: number;
+  actor: 'player' | 'enemy';
+  action: 'attack' | 'qi_attack' | 'defend' | 'skill' | 'flee';
+  actionName?: string;
+  damage?: number;
+  isCritical?: boolean;
+  isMiss?: boolean;
+  isDodged?: boolean;
+  isBlocked?: boolean;
+  healAmount?: number;
+  effectText?: string;
+  timestamp: number;
+}
+
+// Combat turn result from combat.ts
+export interface CombatTurnResult {
+  narrative: string;
+  playerDamageDealt?: number;
+  playerDamageTaken?: number;
+  enemyDamageDealt?: number;
+  playerAction: CombatLogEntry;
+  enemyAction?: CombatLogEntry;
+  combatEnded: boolean;
+  victory?: boolean;
+  loot?: {
+    silver: number;
+    spirit_stones: number;
+    items: InventoryItem[];
+    exp: number;
+  };
 }
 
 // Database types

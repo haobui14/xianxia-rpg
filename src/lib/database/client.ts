@@ -14,7 +14,41 @@ if (!supabaseUrl || !supabaseAnonKey) {
  */
 export const supabase = createBrowserClient(
   supabaseUrl,
-  supabaseAnonKey
+  supabaseAnonKey,
+  {
+    auth: {
+      flowType: 'pkce',
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      persistSession: true,
+      storage: {
+        getItem: (key) => {
+          if (typeof window === 'undefined') return null;
+          try {
+            return localStorage.getItem(key);
+          } catch {
+            return null;
+          }
+        },
+        setItem: (key, value) => {
+          if (typeof window === 'undefined') return;
+          try {
+            localStorage.setItem(key, value);
+          } catch (err) {
+            console.error('Error setting storage:', err);
+          }
+        },
+        removeItem: (key) => {
+          if (typeof window === 'undefined') return;
+          try {
+            localStorage.removeItem(key);
+          } catch (err) {
+            console.error('Error removing storage:', err);
+          }
+        },
+      },
+    },
+  }
 );
 
 /**
