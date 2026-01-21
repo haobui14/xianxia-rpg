@@ -224,8 +224,17 @@ async function callOpenAI(
 
 // Forbidden modern terms that break xianxia immersion
 const FORBIDDEN_MODERN_TERMS = [
-  "hệ thống", "chỉ số", "level", "game", "điểm", "cấp độ", "bảng",
-  "system", "points", "stats", "upgrade"
+  "hệ thống",
+  "chỉ số",
+  "level",
+  "game",
+  "điểm",
+  "cấp độ",
+  "bảng",
+  "system",
+  "points",
+  "stats",
+  "upgrade",
 ];
 
 /**
@@ -253,7 +262,12 @@ export async function generateAITurn(
 ): Promise<AITurnResult> {
   const systemPrompt = buildSystemPrompt(locale);
   const gameContext = buildGameContext(state, recentNarratives, locale);
-  const userMessage = buildUserMessage(sceneContext, choiceId, locale, choiceText);
+  const userMessage = buildUserMessage(
+    sceneContext,
+    choiceId,
+    locale,
+    choiceText,
+  );
 
   // Anti-repetition: Get themes to avoid
   const themesToAvoid = getThemesToAvoid(recentNarratives);
@@ -296,7 +310,9 @@ export async function generateAITurn(
       try {
         jsonData = JSON.parse(responseText);
       } catch (parseErr) {
-        throw new Error(`Invalid JSON from AI: ${parseErr instanceof Error ? parseErr.message : 'Parse error'}`);
+        throw new Error(
+          `Invalid JSON from AI: ${parseErr instanceof Error ? parseErr.message : "Parse error"}`,
+        );
       }
 
       const validated = validateAIResponse(jsonData);

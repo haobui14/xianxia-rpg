@@ -1,55 +1,55 @@
 // Core game types based on the plan
 
-export type Locale = 'vi' | 'en';
+export type Locale = "vi" | "en";
 
 // Realm progression
-export type Realm = 'PhàmNhân' | 'LuyệnKhí' | 'TrúcCơ' | 'KếtĐan' | 'NguyênAnh';
+export type Realm = "PhàmNhân" | "LuyệnKhí" | "TrúcCơ" | "KếtĐan" | "NguyênAnh";
 
 // Spirit root elements
-export type Element = 'Kim' | 'Mộc' | 'Thủy' | 'Hỏa' | 'Thổ';
+export type Element = "Kim" | "Mộc" | "Thủy" | "Hỏa" | "Thổ";
 
 // Spirit root grade
-export type SpiritRootGrade = 'PhổThông' | 'Khá' | 'Hiếm' | 'ThiênPhẩm';
+export type SpiritRootGrade = "PhổThông" | "Khá" | "Hiếm" | "ThiênPhẩm";
 
 // Sect rank within a sect
-export type SectRank = 
-  | 'NgoạiMôn'      // Outer Disciple - Entry level
-  | 'NộiMôn'        // Inner Disciple - Core member
-  | 'ChânTruyền'    // True Disciple - Direct lineage
-  | 'TrưởngLão'     // Elder - Leadership
-  | 'ChưởngMôn';    // Sect Master - Head of sect
+export type SectRank =
+  | "NgoạiMôn" // Outer Disciple - Entry level
+  | "NộiMôn" // Inner Disciple - Core member
+  | "ChânTruyền" // True Disciple - Direct lineage
+  | "TrưởngLão" // Elder - Leadership
+  | "ChưởngMôn"; // Sect Master - Head of sect
 
 // Sect type based on focus
-export type SectType = 
-  | 'Kiếm'          // Sword cultivation
-  | 'Đan'           // Alchemy/Pills
-  | 'Trận'          // Formation
-  | 'YêuThú'        // Beast Taming
-  | 'Ma'            // Demonic cultivation
-  | 'PhậtMôn'       // Buddhist cultivation
-  | 'Tổng'          // General cultivation (mixed)
-  | 'ThươngHội';    // Merchant guild
+export type SectType =
+  | "Kiếm" // Sword cultivation
+  | "Đan" // Alchemy/Pills
+  | "Trận" // Formation
+  | "YêuThú" // Beast Taming
+  | "Ma" // Demonic cultivation
+  | "PhậtMôn" // Buddhist cultivation
+  | "Tổng" // General cultivation (mixed)
+  | "ThươngHội"; // Merchant guild
 
 // Time segments
-export type TimeSegment = 'Sáng' | 'Chiều' | 'Tối' | 'Đêm';
+export type TimeSegment = "Sáng" | "Chiều" | "Tối" | "Đêm";
 
 // Combat behavior
-export type CombatBehavior = 'Aggressive' | 'Defensive' | 'Balanced' | 'Flee';
+export type CombatBehavior = "Aggressive" | "Defensive" | "Balanced" | "Flee";
 
 // Item rarity
-export type ItemRarity = 'Common' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary';
+export type ItemRarity = "Common" | "Uncommon" | "Rare" | "Epic" | "Legendary";
 
 // Equipment slot
-export type EquipmentSlot = 
-  | 'Weapon' 
-  | 'Head' 
-  | 'Chest' 
-  | 'Legs' 
-  | 'Feet' 
-  | 'Hands' 
-  | 'Accessory' 
-  | 'Artifact'
-  | 'None';
+export type EquipmentSlot =
+  | "Weapon"
+  | "Head"
+  | "Chest"
+  | "Legs"
+  | "Feet"
+  | "Hands"
+  | "Accessory"
+  | "Artifact"
+  | "None";
 
 // Spirit Root definition
 export interface SpiritRoot {
@@ -69,9 +69,9 @@ export interface CharacterStats {
 
 // Character attributes
 export interface CharacterAttributes {
-  str: number;  // Strength
-  agi: number;  // Agility
-  int: number;  // Intelligence
+  str: number; // Strength
+  agi: number; // Agility
+  int: number; // Intelligence
   perception: number;
   luck: number;
 }
@@ -79,7 +79,7 @@ export interface CharacterAttributes {
 // Cultivation progress
 export interface CultivationProgress {
   realm: Realm;
-  realm_stage: number;  // 0-5 for MVP
+  realm_stage: number; // 0-5 for MVP
   cultivation_exp: number;
 }
 
@@ -126,7 +126,7 @@ export interface Skill {
   name_en: string;
   description: string;
   description_en: string;
-  type: 'attack' | 'defense' | 'support';
+  type: "attack" | "defense" | "support";
   element?: Element; // Optional element for elemental skills
   level: number;
   max_level: number;
@@ -152,8 +152,8 @@ export interface CultivationTechnique {
   name_en: string;
   description: string;
   description_en: string;
-  grade: 'Mortal' | 'Earth' | 'Heaven';
-  type: 'Main' | 'Support';
+  grade: "Mortal" | "Earth" | "Heaven";
+  type: "Main" | "Support";
   elements: Element[]; // Elements of the technique (e.g., ['Hỏa', 'Kim'])
   // Cultivation bonuses
   cultivation_speed_bonus: number; // Percentage bonus to cultivation exp (e.g., 10 = +10%)
@@ -168,10 +168,18 @@ export interface InventoryItem {
   name_en: string;
   description: string;
   description_en: string;
-  type: 'Medicine' | 'Material' | 'Equipment' | 'Accessory' | 'Manual' | 'Book' | 'Effect' | 'Misc';
+  type:
+    | "Medicine"
+    | "Material"
+    | "Equipment"
+    | "Accessory"
+    | "Manual"
+    | "Book"
+    | "Effect"
+    | "Misc";
   rarity: ItemRarity;
   quantity: number;
-  
+
   // Equipment properties (for Equipment type)
   equipment_slot?: EquipmentSlot;
   level_requirement?: number;
@@ -193,14 +201,14 @@ export interface InventoryItem {
     luck?: number;
     cultivation_speed?: number; // Percentage bonus
   };
-  
+
   // Effects (for consumables, artifacts)
   effects?: Record<string, any>;
-  
+
   // Teaching properties (for Book type)
   teaches_technique?: CultivationTechnique;
   teaches_skill?: Skill;
-  
+
   // Equipment state
   is_equipped?: boolean;
 }
@@ -228,7 +236,7 @@ export interface MarketState {
   };
 }
 
-// Auction state  
+// Auction state
 export interface AuctionState {
   active: boolean;
   items: MarketItem[];
@@ -288,18 +296,18 @@ export interface Choice {
 }
 
 // Event types
-export type GameEventType = 
-  | 'combat'
-  | 'combat_encounter'  // Triggers interactive combat mode with CombatView
-  | 'loot'
-  | 'breakthrough'
-  | 'status_effect'
-  | 'quest_update'
-  | 'npc_interaction'
-  | 'sect_join'
-  | 'sect_promotion'
-  | 'sect_mission'
-  | 'sect_expulsion';
+export type GameEventType =
+  | "combat"
+  | "combat_encounter" // Triggers interactive combat mode with CombatView
+  | "loot"
+  | "breakthrough"
+  | "status_effect"
+  | "quest_update"
+  | "npc_interaction"
+  | "sect_join"
+  | "sect_promotion"
+  | "sect_mission"
+  | "sect_expulsion";
 
 export interface GameEvent {
   type: GameEventType;
@@ -309,7 +317,7 @@ export interface GameEvent {
 // Proposed delta from AI
 export interface ProposedDelta {
   field: string;
-  operation: 'add' | 'subtract' | 'set' | 'multiply';
+  operation: "add" | "subtract" | "set" | "multiply";
   value: number | string | boolean | any;
   reason?: string;
 }
@@ -358,8 +366,8 @@ export interface CombatState {
 export interface CombatLogEntry {
   id: string;
   turn: number;
-  actor: 'player' | 'enemy';
-  action: 'attack' | 'qi_attack' | 'defend' | 'skill' | 'flee';
+  actor: "player" | "enemy";
+  action: "attack" | "qi_attack" | "defend" | "skill" | "flee";
   actionName?: string;
   damage?: number;
   isCritical?: boolean;
