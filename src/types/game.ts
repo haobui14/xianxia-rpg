@@ -11,6 +11,25 @@ export type Element = 'Kim' | 'Mộc' | 'Thủy' | 'Hỏa' | 'Thổ';
 // Spirit root grade
 export type SpiritRootGrade = 'PhổThông' | 'Khá' | 'Hiếm' | 'ThiênPhẩm';
 
+// Sect rank within a sect
+export type SectRank = 
+  | 'NgoạiMôn'      // Outer Disciple - Entry level
+  | 'NộiMôn'        // Inner Disciple - Core member
+  | 'ChânTruyền'    // True Disciple - Direct lineage
+  | 'TrưởngLão'     // Elder - Leadership
+  | 'ChưởngMôn';    // Sect Master - Head of sect
+
+// Sect type based on focus
+export type SectType = 
+  | 'Kiếm'          // Sword cultivation
+  | 'Đan'           // Alchemy/Pills
+  | 'Trận'          // Formation
+  | 'YêuThú'        // Beast Taming
+  | 'Ma'            // Demonic cultivation
+  | 'PhậtMôn'       // Buddhist cultivation
+  | 'Tổng'          // General cultivation (mixed)
+  | 'ThươngHội';    // Merchant guild
+
 // Time segments
 export type TimeSegment = 'Sáng' | 'Chiều' | 'Tối' | 'Đêm';
 
@@ -70,6 +89,36 @@ export interface Location {
   place: string;
 }
 
+// Sect definition
+export interface Sect {
+  id: string;
+  name: string;
+  name_en: string;
+  type: SectType;
+  element?: Element; // Primary element affinity
+  tier: number; // 1-5, 1=small local sect, 5=supreme immortal sect
+  description?: string;
+  description_en?: string;
+}
+
+// Player's sect membership state
+export interface SectMembership {
+  sect: Sect;
+  rank: SectRank;
+  contribution: number; // Sect contribution points
+  reputation: number; // Standing within sect (0-100)
+  joined_date: string; // ISO timestamp
+  missions_completed: number;
+  mentor?: string; // Name of mentor elder
+  mentor_en?: string;
+  benefits: {
+    cultivation_bonus: number; // % bonus to cultivation
+    resource_access: boolean; // Access to sect resources
+    technique_access: boolean; // Access to sect techniques
+    protection: boolean; // Sect protection from enemies
+  };
+}
+
 // Combat Skill - Used in battle
 export interface Skill {
   id: string;
@@ -77,7 +126,7 @@ export interface Skill {
   name_en: string;
   description: string;
   description_en: string;
-  type: 'Attack' | 'Defense' | 'Movement' | 'Support';
+  type: 'attack' | 'defense' | 'support';
   element?: Element; // Optional element for elemental skills
   level: number;
   max_level: number;
@@ -85,11 +134,13 @@ export interface Skill {
   damage_multiplier: number; // Base damage multiplier (1.0 = normal attack)
   qi_cost: number; // Qi required to use
   cooldown: number; // Turns before can use again
+  current_cooldown?: number; // Current cooldown remaining
   effects?: {
     stun_chance?: number; // 0-1 chance to stun
     bleed_damage?: number; // Damage over time
     defense_break?: number; // Reduce enemy defense
     heal_percent?: number; // Heal % of max HP
+    defense_boost?: number; // Temporary defense boost
     buff_stats?: Record<string, number>; // Temporary stat buffs
   };
 }
@@ -208,8 +259,12 @@ export interface GameState {
   last_stamina_regen?: string; // ISO timestamp for real-time stamina regeneration
   skills: Skill[];
   techniques: CultivationTechnique[];
-  sect?: string; // Môn phái
+  // Queue for excess skills/techniques (when at max capacity)
+  skill_queue: Skill[];
+  technique_queue: CultivationTechnique[];
+  sect?: string; // Môn phái (legacy - kept for backward compatibility)
   sect_en?: string;
+  sect_membership?: SectMembership; // Full sect membership data
   market?: MarketState;
   auction?: AuctionState;
 }
@@ -235,11 +290,16 @@ export interface Choice {
 // Event types
 export type GameEventType = 
   | 'combat'
+  | 'combat_encounter'  // Triggers interactive combat mode with CombatView
   | 'loot'
   | 'breakthrough'
   | 'status_effect'
   | 'quest_update'
-  | 'npc_interaction';
+  | 'npc_interaction'
+  | 'sect_join'
+  | 'sect_promotion'
+  | 'sect_mission'
+  | 'sect_expulsion';
 
 export interface GameEvent {
   type: GameEventType;

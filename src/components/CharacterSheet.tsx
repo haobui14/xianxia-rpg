@@ -1,19 +1,64 @@
 'use client';
 
-import { GameState } from '@/types/game';
+import { useState } from 'react';
+import { GameState, CultivationTechnique, Skill } from '@/types/game';
 import { t, Locale } from '@/lib/i18n/translations';
 import { calculateTotalAttributes, getEquipmentBonus } from '@/lib/game/equipment';
 import { getElementCompatibility, getRequiredExp, getSpiritRootBonus, getTechniqueBonus } from '@/lib/game/mechanics';
 import CultivationVisualization from './CultivationVisualization';
 import MeridianDiagram from './MeridianDiagram';
 
+// Limits for techniques and skills
+const MAX_TECHNIQUES = 5;
+const MAX_SKILLS = 6;
+const MAX_PER_TYPE = 2;
+
 interface CharacterSheetProps {
   state: GameState;
   locale: Locale;
   previousExp?: number; // For cultivation animation
+  onAbilitySwap?: (abilityType: 'technique' | 'skill', activeId: string | null, queueId: string | null, action: 'swap' | 'forget' | 'learn' | 'discard') => Promise<void>;
 }
 
-export default function CharacterSheet({ state, locale, previousExp }: CharacterSheetProps) {
+export default function CharacterSheet({ state, locale, previousExp, onAbilitySwap }: CharacterSheetProps) {
+  const [selectedTech, setSelectedTech] = useState<string | null>(null);
+  const [selectedQueueTech, setSelectedQueueTech] = useState<string | null>(null);
+  const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
+  const [selectedQueueSkill, setSelectedQueueSkill] = useState<string | null>(null);
+  const [swapLoading, setSwapLoading] = useState(false);
+
+  // Ensure queues exist
+  const techniqueQueue = state.technique_queue || [];
+  const skillQueue = state.skill_queue || [];
+
+  // Count techniques/skills by type
+  const techCountByType = (type: string) => state.techniques?.filter(t => t.type === type).length || 0;
+  const skillCountByType = (type: string) => state.skills?.filter(s => s.type === type).length || 0;
+
+  // Handle ability actions
+  const handleAbilityAction = async (
+    abilityType: 'technique' | 'skill',
+    activeId: string | null,
+    queueId: string | null,
+    action: 'swap' | 'forget' | 'learn' | 'discard'
+  ) => {
+    if (!onAbilitySwap || swapLoading) return;
+    setSwapLoading(true);
+    try {
+      await onAbilitySwap(abilityType, activeId, queueId, action);
+      // Clear selections after action
+      if (abilityType === 'technique') {
+        setSelectedTech(null);
+        setSelectedQueueTech(null);
+      } else {
+        setSelectedSkill(null);
+        setSelectedQueueSkill(null);
+      }
+    } finally {
+      setSwapLoading(false);
+    }
+  };
+
   const totalAttrs = calculateTotalAttributes(state);
   const hpBonus = getEquipmentBonus(state, 'hp');
   const qiBonus = getEquipmentBonus(state, 'qi');
@@ -134,25 +179,19 @@ export default function CharacterSheet({ state, locale, previousExp }: Character
         </div>
       </div>
 
-      {/* Sect */}
-      {state.sect && (
-        <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-          <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">
-            {locale === 'vi' ? 'Môn Phái' : 'Sect'}
-          </h2>
-          <div className="text-center">
-            <span className="text-xl font-bold text-xianxia-accent">
-              {locale === 'vi' ? state.sect : state.sect_en}
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* Cultivation Techniques */}
       <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">
-          {locale === 'vi' ? 'Công Pháp' : 'Cultivation Techniques'}
-        </h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-xianxia-gold">
+            {locale === 'vi' ? 'Công Pháp' : 'Cultivation Techniques'}
+          </h2>
+          <span className="text-sm text-gray-400">
+            {state.techniques?.length || 0}/{MAX_TECHNIQUES} 
+            {locale === 'vi' ? ' (Tối đa 2/loại)' : ' (Max 2/type)'}
+          </span>
+        </div>
+        
+        {/* Active Techniques */}
         {(!state.techniques || state.techniques.length === 0) ? (
           <div className="text-center text-gray-400 py-4">
             {locale === 'vi' ? 'Chưa có công pháp' : 'No techniques learned'}
@@ -160,7 +199,6 @@ export default function CharacterSheet({ state, locale, previousExp }: Character
         ) : (
           <div className="space-y-3">
             {state.techniques.map((tech) => {
-              // Calculate element compatibility
               const compatibility = tech.elements && tech.elements.length > 0
                 ? getElementCompatibility(state.spirit_root.elements, tech.elements)
                 : 0;
@@ -178,14 +216,27 @@ export default function CharacterSheet({ state, locale, previousExp }: Character
                 compatibility >= 0 ? (locale === 'vi' ? 'Trung bình' : 'Neutral') :
                 compatibility >= -0.15 ? (locale === 'vi' ? 'Yếu' : 'Weak') :
                 (locale === 'vi' ? 'Xung khắc' : 'Conflict');
+              
+              const isSelected = selectedTech === tech.id;
 
               return (
-                <div key={tech.id} className="p-3 bg-xianxia-darker rounded border border-xianxia-accent/20">
+                <div 
+                  key={tech.id} 
+                  className={`p-3 bg-xianxia-darker rounded border transition-all cursor-pointer ${
+                    isSelected ? 'border-red-500 bg-red-900/20' : 'border-xianxia-accent/20 hover:border-xianxia-accent/50'
+                  }`}
+                  onClick={() => onAbilitySwap && setSelectedTech(isSelected ? null : tech.id)}
+                >
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex-1">
-                      <span className="font-bold text-xianxia-accent">
-                        {locale === 'vi' ? tech.name : tech.name_en}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xianxia-accent">
+                          {locale === 'vi' ? tech.name : tech.name_en}
+                        </span>
+                        <span className="text-xs px-2 py-0.5 bg-purple-900/30 text-purple-400 rounded">
+                          {tech.type}
+                        </span>
+                      </div>
                       {tech.elements && tech.elements.length > 0 && (
                         <div className="flex gap-1 mt-1">
                           {tech.elements.map((el, idx) => (
@@ -210,45 +261,281 @@ export default function CharacterSheet({ state, locale, previousExp }: Character
                   <div className="text-sm text-gray-400">
                     {locale === 'vi' ? tech.description : tech.description_en}
                   </div>
+                  {isSelected && onAbilitySwap && (
+                    <div className="mt-2 pt-2 border-t border-red-500/30 flex gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAbilityAction('technique', tech.id, null, 'forget');
+                        }}
+                        disabled={swapLoading}
+                        className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white text-sm rounded disabled:opacity-50"
+                      >
+                        {locale === 'vi' ? '🗑️ Quên' : '🗑️ Forget'}
+                      </button>
+                      {selectedQueueTech && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAbilityAction('technique', tech.id, selectedQueueTech, 'swap');
+                          }}
+                          disabled={swapLoading}
+                          className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded disabled:opacity-50"
+                        >
+                          {locale === 'vi' ? '🔄 Hoán đổi' : '🔄 Swap'}
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Technique Queue */}
+        {techniqueQueue.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-xianxia-accent/20">
+            <h3 className="text-lg font-bold text-yellow-400 mb-3">
+              {locale === 'vi' ? '📚 Hàng Chờ Công Pháp' : '📚 Technique Queue'} ({techniqueQueue.length})
+            </h3>
+            <div className="space-y-2">
+              {techniqueQueue.map((tech) => {
+                const isSelected = selectedQueueTech === tech.id;
+                const canLearn = (state.techniques?.length || 0) < MAX_TECHNIQUES && 
+                  techCountByType(tech.type) < MAX_PER_TYPE;
+
+                return (
+                  <div 
+                    key={tech.id} 
+                    className={`p-3 bg-yellow-900/10 rounded border transition-all cursor-pointer ${
+                      isSelected ? 'border-yellow-500 bg-yellow-900/30' : 'border-yellow-500/20 hover:border-yellow-500/50'
+                    }`}
+                    onClick={() => onAbilitySwap && setSelectedQueueTech(isSelected ? null : tech.id)}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="font-bold text-yellow-400">
+                          {locale === 'vi' ? tech.name : tech.name_en}
+                        </span>
+                        <span className="text-xs ml-2 px-2 py-0.5 bg-purple-900/30 text-purple-400 rounded">
+                          {tech.type}
+                        </span>
+                        <span className="text-xs ml-2 px-2 py-0.5 bg-xianxia-gold/20 text-xianxia-gold rounded">
+                          {tech.grade}
+                        </span>
+                      </div>
+                    </div>
+                    {isSelected && onAbilitySwap && (
+                      <div className="mt-2 pt-2 border-t border-yellow-500/30 flex gap-2">
+                        {canLearn && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAbilityAction('technique', null, tech.id, 'learn');
+                            }}
+                            disabled={swapLoading}
+                            className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white text-sm rounded disabled:opacity-50"
+                          >
+                            {locale === 'vi' ? '✅ Học' : '✅ Learn'}
+                          </button>
+                        )}
+                        {selectedTech && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAbilityAction('technique', selectedTech, tech.id, 'swap');
+                            }}
+                            disabled={swapLoading}
+                            className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded disabled:opacity-50"
+                          >
+                            {locale === 'vi' ? '🔄 Hoán đổi' : '🔄 Swap'}
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAbilityAction('technique', null, tech.id, 'discard');
+                          }}
+                          disabled={swapLoading}
+                          className="px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded disabled:opacity-50"
+                        >
+                          {locale === 'vi' ? '❌ Vứt' : '❌ Discard'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
 
       {/* Skills */}
       <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">
-          {locale === 'vi' ? 'Kĩ Năng' : 'Skills'}
-        </h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-xianxia-gold">
+            {locale === 'vi' ? 'Kĩ Năng' : 'Skills'}
+          </h2>
+          <span className="text-sm text-gray-400">
+            {state.skills?.length || 0}/{MAX_SKILLS}
+            {locale === 'vi' ? ' (Tối đa 2/loại)' : ' (Max 2/type)'}
+          </span>
+        </div>
+        
+        {/* Active Skills */}
         {(!state.skills || state.skills.length === 0) ? (
           <div className="text-center text-gray-400 py-4">
             {locale === 'vi' ? 'Chưa có kĩ năng' : 'No skills learned'}
           </div>
         ) : (
           <div className="space-y-3">
-            {state.skills.map((skill) => (
-              <div key={skill.id} className="p-3 bg-xianxia-darker rounded border border-xianxia-accent/20">
-                <div className="flex justify-between items-start mb-2">
-                  <span className="font-bold text-xianxia-accent">
-                    {locale === 'vi' ? skill.name : skill.name_en}
-                  </span>
-                  <span className="text-sm text-gray-400">
-                    Lv {skill.level}/{skill.max_level}
-                  </span>
+            {state.skills.map((skill) => {
+              const isSelected = selectedSkill === skill.id;
+              
+              return (
+                <div 
+                  key={skill.id} 
+                  className={`p-3 bg-xianxia-darker rounded border transition-all cursor-pointer ${
+                    isSelected ? 'border-red-500 bg-red-900/20' : 'border-xianxia-accent/20 hover:border-xianxia-accent/50'
+                  }`}
+                  onClick={() => onAbilitySwap && setSelectedSkill(isSelected ? null : skill.id)}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <span className="font-bold text-xianxia-accent">
+                        {locale === 'vi' ? skill.name : skill.name_en}
+                      </span>
+                      <span className="text-xs ml-2 px-2 py-0.5 bg-blue-900/30 text-blue-400 rounded">
+                        {skill.type}
+                      </span>
+                    </div>
+                    <span className="text-sm text-gray-400">
+                      Lv {skill.level}/{skill.max_level}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-400 mb-2">
+                    {locale === 'vi' ? skill.description : skill.description_en}
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-gray-500 mb-2">
+                    <span>💠 {skill.qi_cost} Qi</span>
+                    <span>⏱️ {skill.cooldown} {locale === 'vi' ? 'lượt' : 'turns'}</span>
+                    <span>⚔️ x{skill.damage_multiplier.toFixed(1)}</span>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div
+                      className="bg-xianxia-accent h-2 rounded-full transition-all"
+                      style={{ width: `${(skill.level / skill.max_level) * 100}%` }}
+                    />
+                  </div>
+                  {isSelected && onAbilitySwap && (
+                    <div className="mt-2 pt-2 border-t border-red-500/30 flex gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAbilityAction('skill', skill.id, null, 'forget');
+                        }}
+                        disabled={swapLoading}
+                        className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white text-sm rounded disabled:opacity-50"
+                      >
+                        {locale === 'vi' ? '🗑️ Quên' : '🗑️ Forget'}
+                      </button>
+                      {selectedQueueSkill && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAbilityAction('skill', skill.id, selectedQueueSkill, 'swap');
+                          }}
+                          disabled={swapLoading}
+                          className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded disabled:opacity-50"
+                        >
+                          {locale === 'vi' ? '🔄 Hoán đổi' : '🔄 Swap'}
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="text-sm text-gray-400 mb-2">
-                  {locale === 'vi' ? skill.description : skill.description_en}
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-2">
-                  <div
-                    className="bg-xianxia-accent h-2 rounded-full transition-all"
-                    style={{ width: `${(skill.level / skill.max_level) * 100}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+              );
+            })}
+          </div>
+        )}
+
+        {/* Skill Queue */}
+        {skillQueue.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-xianxia-accent/20">
+            <h3 className="text-lg font-bold text-yellow-400 mb-3">
+              {locale === 'vi' ? '📚 Hàng Chờ Kĩ Năng' : '📚 Skill Queue'} ({skillQueue.length})
+            </h3>
+            <div className="space-y-2">
+              {skillQueue.map((skill) => {
+                const isSelected = selectedQueueSkill === skill.id;
+                const canLearn = (state.skills?.length || 0) < MAX_SKILLS && 
+                  skillCountByType(skill.type) < MAX_PER_TYPE;
+
+                return (
+                  <div 
+                    key={skill.id} 
+                    className={`p-3 bg-yellow-900/10 rounded border transition-all cursor-pointer ${
+                      isSelected ? 'border-yellow-500 bg-yellow-900/30' : 'border-yellow-500/20 hover:border-yellow-500/50'
+                    }`}
+                    onClick={() => onAbilitySwap && setSelectedQueueSkill(isSelected ? null : skill.id)}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="font-bold text-yellow-400">
+                          {locale === 'vi' ? skill.name : skill.name_en}
+                        </span>
+                        <span className="text-xs ml-2 px-2 py-0.5 bg-blue-900/30 text-blue-400 rounded">
+                          {skill.type}
+                        </span>
+                      </div>
+                      <span className="text-sm text-gray-400">
+                        Lv {skill.level}/{skill.max_level}
+                      </span>
+                    </div>
+                    {isSelected && onAbilitySwap && (
+                      <div className="mt-2 pt-2 border-t border-yellow-500/30 flex gap-2">
+                        {canLearn && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAbilityAction('skill', null, skill.id, 'learn');
+                            }}
+                            disabled={swapLoading}
+                            className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white text-sm rounded disabled:opacity-50"
+                          >
+                            {locale === 'vi' ? '✅ Học' : '✅ Learn'}
+                          </button>
+                        )}
+                        {selectedSkill && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAbilityAction('skill', selectedSkill, skill.id, 'swap');
+                            }}
+                            disabled={swapLoading}
+                            className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded disabled:opacity-50"
+                          >
+                            {locale === 'vi' ? '🔄 Hoán đổi' : '🔄 Swap'}
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAbilityAction('skill', null, skill.id, 'discard');
+                          }}
+                          disabled={swapLoading}
+                          className="px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded disabled:opacity-50"
+                        >
+                          {locale === 'vi' ? '❌ Vứt' : '❌ Discard'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

@@ -74,9 +74,9 @@ export const LOOT_TABLES: Record<string, LootTable> = {
   common_herbs: {
     id: 'common_herbs',
     tier: 1,
-    silverRange: [5, 20],
-    spiritStoneChance: 0.05,
-    spiritStoneRange: [1, 2],
+    silverRange: [20, 80],
+    spiritStoneChance: 0.3,
+    spiritStoneRange: [1, 5],
     entries: [
       {
         id: 'lingzhi_grass',
@@ -116,9 +116,9 @@ export const LOOT_TABLES: Record<string, LootTable> = {
   bandit_loot: {
     id: 'bandit_loot',
     tier: 1,
-    silverRange: [20, 50],
-    spiritStoneChance: 0.1,
-    spiritStoneRange: [1, 3],
+    silverRange: [50, 150],
+    spiritStoneChance: 0.4,
+    spiritStoneRange: [2, 8],
     entries: [
       {
         id: 'iron_sword',
@@ -163,9 +163,9 @@ export const LOOT_TABLES: Record<string, LootTable> = {
   cave_treasure: {
     id: 'cave_treasure',
     tier: 2,
-    silverRange: [50, 150],
-    spiritStoneChance: 0.3,
-    spiritStoneRange: [2, 5],
+    silverRange: [100, 300],
+    spiritStoneChance: 0.6,
+    spiritStoneRange: [5, 15],
     entries: [
       {
         id: 'qi_condensation_manual',
@@ -221,9 +221,9 @@ export const LOOT_TABLES: Record<string, LootTable> = {
   dungeon_boss: {
     id: 'dungeon_boss',
     tier: 3,
-    silverRange: [200, 500],
-    spiritStoneChance: 0.6,
-    spiritStoneRange: [5, 15],
+    silverRange: [300, 800],
+    spiritStoneChance: 0.8,
+    spiritStoneRange: [10, 30],
     entries: [
       {
         id: 'spirit_sword',

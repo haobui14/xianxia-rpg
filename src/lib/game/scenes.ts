@@ -674,6 +674,241 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
       },
     ],
   },
+
+  // ===== SECT-RELATED SCENES =====
+  {
+    id: 'sect_mission_board',
+    name: 'Bảng Nhiệm Vụ Tông Môn',
+    name_en: 'Sect Mission Board',
+    category: 'social',
+    tier: 1,
+    tags: ['sect', 'mission', 'reward'],
+    weight: 12,
+    getPromptContext: (state, locale) => {
+      const hasSect = !!state.sect_membership;
+      if (locale === 'vi') {
+        if (hasSect) {
+          return `Nhân vật đứng trước bảng nhiệm vụ của ${state.sect_membership?.sect.name}. Vị thế: ${state.sect_membership?.rank}. Đóng góp: ${state.sect_membership?.contribution}.`;
+        }
+        return `Nhân vật thấy bảng nhiệm vụ của một tông môn, nhưng chưa phải là đệ tử nên không thể nhận nhiệm vụ.`;
+      }
+      if (hasSect) {
+        return `The character stands before ${state.sect_membership?.sect.name_en}'s mission board. Rank: ${state.sect_membership?.rank}. Contribution: ${state.sect_membership?.contribution}.`;
+      }
+      return `The character sees a sect's mission board, but cannot accept missions as they are not a disciple.`;
+    },
+    getBaseChoices: (locale) => [
+      {
+        id: 'accept_easy_mission',
+        text: locale === 'vi' ? 'Nhận nhiệm vụ dễ' : 'Accept easy mission',
+        cost: { stamina: 1 },
+      },
+      {
+        id: 'accept_medium_mission',
+        text: locale === 'vi' ? 'Nhận nhiệm vụ trung bình' : 'Accept medium mission',
+        cost: { stamina: 2 },
+      },
+      {
+        id: 'accept_hard_mission',
+        text: locale === 'vi' ? 'Nhận nhiệm vụ khó' : 'Accept hard mission',
+        cost: { stamina: 3 },
+      },
+      {
+        id: 'leave',
+        text: locale === 'vi' ? 'Rời đi' : 'Leave',
+      },
+    ],
+  },
+
+  {
+    id: 'sect_treasury',
+    name: 'Tàng Kinh Các',
+    name_en: 'Sect Treasury',
+    category: 'social',
+    tier: 2,
+    tags: ['sect', 'treasure', 'technique'],
+    weight: 8,
+    getPromptContext: (state, locale) => {
+      const hasSect = !!state.sect_membership;
+      if (locale === 'vi') {
+        if (hasSect) {
+          const hasAccess = state.sect_membership?.benefits.technique_access;
+          return `Nhân vật đến Tàng Kinh Các của ${state.sect_membership?.sect.name}. ${hasAccess ? 'Với tư cách ' + state.sect_membership?.rank + ', ngươi có thể tham khảo các bí kíp.' : 'Tư cách chưa đủ để vào khu vực cấm.'}`;
+        }
+        return `Nhân vật thấy Tàng Kinh Các của một tông môn từ xa, nhưng không phải đệ tử nên không thể vào.`;
+      }
+      if (hasSect) {
+        const hasAccess = state.sect_membership?.benefits.technique_access;
+        return `The character arrives at ${state.sect_membership?.sect.name_en}'s Scripture Pavilion. ${hasAccess ? 'As a ' + state.sect_membership?.rank + ', you may browse the techniques.' : 'Your rank is insufficient to enter the restricted area.'}`;
+      }
+      return `The character sees a sect's Scripture Pavilion from afar, but cannot enter as they are not a disciple.`;
+    },
+    getBaseChoices: (locale) => [
+      {
+        id: 'browse_techniques',
+        text: locale === 'vi' ? 'Xem các công pháp' : 'Browse techniques',
+        cost: { time_segments: 1 },
+      },
+      {
+        id: 'study_technique',
+        text: locale === 'vi' ? 'Học một công pháp' : 'Study a technique',
+        cost: { stamina: 3, time_segments: 2 },
+      },
+      {
+        id: 'leave',
+        text: locale === 'vi' ? 'Rời đi' : 'Leave',
+      },
+    ],
+  },
+
+  {
+    id: 'sect_elder_meeting',
+    name: 'Gặp Trưởng Lão',
+    name_en: 'Meeting with Elder',
+    category: 'social',
+    tier: 2,
+    tags: ['sect', 'npc', 'important'],
+    weight: 6,
+    getPromptContext: (state, locale) => {
+      const hasSect = !!state.sect_membership;
+      if (locale === 'vi') {
+        if (hasSect) {
+          return `Một trưởng lão của ${state.sect_membership?.sect.name} muốn gặp nhân vật. Thanh danh hiện tại: ${state.sect_membership?.reputation}/100.`;
+        }
+        return `Một vị trưởng lão của tông môn gần đây chú ý đến nhân vật và muốn gặp mặt.`;
+      }
+      if (hasSect) {
+        return `An elder of ${state.sect_membership?.sect.name_en} wishes to meet the character. Current reputation: ${state.sect_membership?.reputation}/100.`;
+      }
+      return `An elder from a nearby sect has noticed the character and wishes to meet.`;
+    },
+    getBaseChoices: (locale) => [
+      {
+        id: 'meet_respectfully',
+        text: locale === 'vi' ? 'Gặp với thái độ kính cẩn' : 'Meet respectfully',
+      },
+      {
+        id: 'ask_for_guidance',
+        text: locale === 'vi' ? 'Xin chỉ điểm' : 'Ask for guidance',
+        cost: { stamina: 1 },
+      },
+      {
+        id: 'politely_decline',
+        text: locale === 'vi' ? 'Khéo léo từ chối' : 'Politely decline',
+      },
+    ],
+  },
+
+  {
+    id: 'sect_competition',
+    name: 'Tỷ Võ Đại Hội',
+    name_en: 'Sect Competition',
+    category: 'combat',
+    tier: 2,
+    tags: ['sect', 'combat', 'competition', 'reward'],
+    weight: 5,
+    minRealmStage: 1,
+    getPromptContext: (state, locale) => {
+      if (locale === 'vi') {
+        return `${state.sect_membership ? state.sect_membership.sect.name : 'Một tông môn'} đang tổ chức Tỷ Võ Đại Hội. Các đệ tử tranh đấu để thể hiện thực lực. HP: ${state.stats.hp}/${state.stats.hp_max}, Qi: ${state.stats.qi}/${state.stats.qi_max}.`;
+      }
+      return `${state.sect_membership ? state.sect_membership.sect.name_en : 'A sect'} is holding a martial arts competition. Disciples compete to prove their strength. HP: ${state.stats.hp}/${state.stats.hp_max}, Qi: ${state.stats.qi}/${state.stats.qi_max}.`;
+    },
+    getBaseChoices: (locale) => [
+      {
+        id: 'participate',
+        text: locale === 'vi' ? 'Tham gia thi đấu' : 'Participate',
+        cost: { stamina: 3 },
+      },
+      {
+        id: 'observe',
+        text: locale === 'vi' ? 'Quan sát học hỏi' : 'Observe and learn',
+        cost: { time_segments: 1 },
+      },
+      {
+        id: 'leave',
+        text: locale === 'vi' ? 'Rời đi' : 'Leave',
+      },
+    ],
+  },
+
+  {
+    id: 'sect_resource_distribution',
+    name: 'Phát Tài Nguyên Tông Môn',
+    name_en: 'Sect Resource Distribution',
+    category: 'social',
+    tier: 1,
+    tags: ['sect', 'resources', 'reward'],
+    weight: 7,
+    getPromptContext: (state, locale) => {
+      const hasSect = !!state.sect_membership;
+      if (locale === 'vi') {
+        if (hasSect) {
+          const hasAccess = state.sect_membership?.benefits.resource_access;
+          return `Đến ngày phát tài nguyên hàng tháng của ${state.sect_membership?.sect.name}. Vị thế: ${state.sect_membership?.rank}. ${hasAccess ? 'Ngươi đủ tư cách nhận tài nguyên.' : 'Ngoại môn đệ tử chỉ nhận được phần nhỏ.'}`;
+        }
+        return `Nhân vật thấy các đệ tử của một tông môn xếp hàng nhận tài nguyên hàng tháng.`;
+      }
+      if (hasSect) {
+        const hasAccess = state.sect_membership?.benefits.resource_access;
+        return `It's the monthly resource distribution day at ${state.sect_membership?.sect.name_en}. Rank: ${state.sect_membership?.rank}. ${hasAccess ? 'You qualify for full resources.' : 'Outer disciples receive only a small portion.'}`;
+      }
+      return `The character sees disciples of a sect lining up for monthly resource distribution.`;
+    },
+    getBaseChoices: (locale) => [
+      {
+        id: 'collect_resources',
+        text: locale === 'vi' ? 'Nhận tài nguyên' : 'Collect resources',
+      },
+      {
+        id: 'request_extra',
+        text: locale === 'vi' ? 'Xin thêm (dùng đóng góp)' : 'Request extra (use contribution)',
+        cost: { time_segments: 1 },
+      },
+      {
+        id: 'skip',
+        text: locale === 'vi' ? 'Bỏ qua' : 'Skip',
+      },
+    ],
+  },
+
+  {
+    id: 'rival_sect_encounter',
+    name: 'Gặp Đệ Tử Địch Môn',
+    name_en: 'Rival Sect Encounter',
+    category: 'combat',
+    tier: 2,
+    tags: ['sect', 'combat', 'rival', 'danger'],
+    weight: 8,
+    getPromptContext: (state, locale) => {
+      if (locale === 'vi') {
+        if (state.sect_membership) {
+          return `Nhân vật gặp đệ tử của tông môn đối địch với ${state.sect_membership.sect.name}. Không khí căng thẳng. HP: ${state.stats.hp}/${state.stats.hp_max}.`;
+        }
+        return `Nhân vật vô tình chứng kiến cuộc xung đột giữa đệ tử hai tông môn đối địch.`;
+      }
+      if (state.sect_membership) {
+        return `The character encounters disciples from a sect rival to ${state.sect_membership.sect.name_en}. The atmosphere is tense. HP: ${state.stats.hp}/${state.stats.hp_max}.`;
+      }
+      return `The character accidentally witnesses a conflict between disciples of two rival sects.`;
+    },
+    getBaseChoices: (locale) => [
+      {
+        id: 'confront',
+        text: locale === 'vi' ? 'Đối đầu' : 'Confront',
+        cost: { stamina: 2 },
+      },
+      {
+        id: 'avoid',
+        text: locale === 'vi' ? 'Tránh né' : 'Avoid',
+        cost: { stamina: 1 },
+      },
+      {
+        id: 'negotiate',
+        text: locale === 'vi' ? 'Thương lượng' : 'Negotiate',
+      },
+    ],
+  },
 ];
 
 /**

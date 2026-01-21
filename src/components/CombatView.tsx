@@ -13,7 +13,7 @@ interface CombatViewProps {
   locale: Locale;
   combatLog: CombatLogEntry[];
   playerTurn: boolean;
-  onAction: (action: 'attack' | 'qi_attack' | 'defend' | 'flee', skillId?: string) => void;
+  onAction: (action: 'attack' | 'qi_attack' | 'defend' | 'flee' | 'skill', skillId?: string) => void;
   onCombatEnd: () => void;
   overridePlayerHp?: number; // For test combat to track HP separately
 }
@@ -86,9 +86,9 @@ export default function CombatView({
   }, []);
 
   // Handle action button click
-  const handleAction = useCallback((action: 'attack' | 'qi_attack' | 'defend' | 'flee') => {
+  const handleAction = useCallback((action: 'attack' | 'qi_attack' | 'defend' | 'flee' | 'skill') => {
     if (!playerTurn) return;
-    onAction(action, selectedSkill || undefined);
+    onAction(action as any, selectedSkill || undefined);
     setSelectedSkill(null);
   }, [playerTurn, onAction, selectedSkill]);
 
@@ -325,13 +325,14 @@ export default function CombatView({
               </h4>
               <div className="flex flex-wrap gap-2">
                 {state.skills.map((skill) => {
-                  const canUse = state.stats.qi >= skill.qi_cost;
+                  const canUse = state.stats.qi >= skill.qi_cost && (!skill.current_cooldown || skill.current_cooldown <= 0);
+                  const onCooldown = skill.current_cooldown && skill.current_cooldown > 0;
                   return (
                     <button
                       key={skill.id}
                       onClick={() => {
                         setSelectedSkill(skill.id);
-                        handleAction('attack');
+                        handleAction('skill' as any);
                       }}
                       disabled={!playerTurn || !canUse}
                       className={`px-3 py-2 rounded border text-sm transition-all ${
@@ -340,10 +341,18 @@ export default function CombatView({
                           : 'bg-gray-800 border-gray-600 text-gray-500 cursor-not-allowed'
                       }`}
                     >
-                      {locale === 'vi' ? skill.name : skill.name_en}
-                      <span className="text-xs ml-1 opacity-70">
-                        ({skill.qi_cost} {locale === 'vi' ? 'Khí' : 'Qi'})
-                      </span>
+                      <div>{locale === 'vi' ? skill.name : skill.name_en}</div>
+                      <div className="text-xs opacity-70">
+                        {onCooldown 
+                          ? `(${locale === 'vi' ? 'Hồi chiêu' : 'Cooldown'}: ${skill.current_cooldown})`
+                          : `(${skill.qi_cost} ${locale === 'vi' ? 'Khí' : 'Qi'})`
+                        }
+                      </div>
+                      {skill.type && (
+                        <div className="text-xs opacity-50">
+                          {skill.type === 'attack' ? '⚔️' : skill.type === 'defense' ? '🛡️' : '✨'}
+                        </div>
+                      )}
                     </button>
                   );
                 })}

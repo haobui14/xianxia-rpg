@@ -6,6 +6,9 @@ import {
   ProposedDelta,
   ValidatedTurnResult,
   GameEvent,
+  SectMembership,
+  SectRank,
+  Skill,
 } from '@/types/game';
 import {
   updateStamina,
@@ -118,11 +121,20 @@ export async function POST(request: Request) {
       misplacedSkills.forEach(item => {
         const alreadyExists = state.skills.some(s => s.id === item.id || s.name === item.name);
         if (!alreadyExists) {
-          const skillType = ['Attack', 'Defense', 'Movement', 'Support'].includes(item.type) 
-            ? item.type as 'Attack' | 'Defense' | 'Movement' | 'Support'
-            : 'Support';
+          // Default skill type based on name/description or default to 'attack'
+          let skillType: 'attack' | 'defense' | 'support' = 'attack';
+          const nameLower = (item.name || item.name_en || '').toLowerCase();
+          const descLower = (item.description || item.description_en || '').toLowerCase();
           
-          const skill = {
+          if (nameLower.includes('defend') || nameLower.includes('shield') || nameLower.includes('block') ||
+              descLower.includes('defend') || descLower.includes('shield') || descLower.includes('protect')) {
+            skillType = 'defense';
+          } else if (nameLower.includes('heal') || nameLower.includes('buff') || nameLower.includes('support') ||
+                     descLower.includes('heal') || descLower.includes('buff') || descLower.includes('support')) {
+            skillType = 'support';
+          }
+          
+          const skill: Skill = {
             id: item.id,
             name: item.name,
             name_en: item.name_en || item.name,
@@ -131,7 +143,7 @@ export async function POST(request: Request) {
             type: skillType,
             level: 1,
             max_level: 10,
-            damage_multiplier: skillType === 'Attack' ? 1.5 : 1.0,
+            damage_multiplier: skillType === 'attack' ? 1.5 : 1.0,
             qi_cost: 10,
             cooldown: 2,
           };
@@ -209,9 +221,12 @@ export async function POST(request: Request) {
     } else {
       sceneContext =
         locale === 'vi'
-          ? `Tiếp tục từ lựa chọn: ${choiceId}`
-          : `Continuing from choice: ${choiceId}`;
+          ? `Tiếp tục từ lựa chọn: ${selectedChoice?.text || choiceId}`
+          : `Continuing from choice: ${selectedChoice?.text || choiceId}`;
     }
+
+    // Get the actual choice text for custom actions
+    const choiceText = selectedChoice?.text || null;
 
     // Call AI
     let aiResult;
@@ -221,7 +236,8 @@ export async function POST(request: Request) {
         recentNarratives,
         sceneContext,
         choiceId,
-        locale
+        locale,
+        choiceText
       );
     } catch (error) {
       console.error('AI generation failed, using fallback:', error);
@@ -288,6 +304,9 @@ export async function POST(request: Request) {
       // Ignore sync errors - this is optional functionality
       console.log('Table sync skipped (function not available)');
     }
+
+    // Update turn count in state
+    state.turn_count = turnNo;
 
     // Save state
     console.log(`Saving state - Skills: ${state.skills?.length || 0}, Techniques: ${state.techniques?.length || 0}`);
@@ -372,6 +391,10 @@ function applyDelta(
     applyTechniqueDelta(state, parts[1], operation, value);
   } else if (parts[0] === 'skills') {
     applySkillDelta(state, parts[1], operation, value);
+  } else if (parts[0] === 'sect') {
+    applySectDelta(state, parts[1], operation, value, events);
+  } else if (parts[0] === 'location') {
+    applyLocationDelta(state, parts[1], operation, value);
   }
 }
 
@@ -444,7 +467,7 @@ function applyInventoryDelta(
 ): void {
   if (field === 'silver') {
     if (operation === 'add') {
-      state.inventory.silver += Math.min(value as number, 500);
+      state.inventory.silver += Math.min(value as number, 1000);
     } else if (operation === 'subtract') {
       state.inventory.silver = Math.max(
         0,
@@ -453,7 +476,7 @@ function applyInventoryDelta(
     }
   } else if (field === 'spirit_stones') {
     if (operation === 'add') {
-      state.inventory.spirit_stones += Math.min(value as number, 20);
+      state.inventory.spirit_stones += Math.min(value as number, 100);
     }
   } else if (field === 'add_item') {
     // Add item to inventory - stack if duplicate
@@ -537,27 +560,50 @@ function applyTechniqueDelta(
   operation: string,
   value: any
 ): void {
+  // Constants for technique limits
+  const MAX_TECHNIQUES = 5;
+  const MAX_PER_TYPE = 2; // Max 2 Main, 2 Support (but 5 total max)
+
   if (field === 'add' && operation === 'add') {
     // Validate technique structure
     if (value && value.id && value.name && value.name_en && value.grade && value.type) {
-      // Initialize techniques array if it doesn't exist
+      // Initialize arrays if they don't exist
       if (!state.techniques) {
         state.techniques = [];
       }
+      if (!state.technique_queue) {
+        state.technique_queue = [];
+      }
       
-      // Check if technique already exists
-      const exists = state.techniques.some(t => t.id === value.id);
-      if (!exists) {
-        // Ensure elements field exists
-        if (!value.elements) {
-          value.elements = [];
-        }
-        // Ensure cultivation_speed_bonus exists (default based on grade)
-        if (value.cultivation_speed_bonus === undefined) {
-          const gradeBonus = { 'Mortal': 10, 'Earth': 20, 'Heaven': 40 };
-          value.cultivation_speed_bonus = gradeBonus[value.grade as keyof typeof gradeBonus] || 10;
-        }
+      // Check if technique already exists in active or queue
+      const existsActive = state.techniques.some(t => t.id === value.id);
+      const existsQueue = state.technique_queue.some(t => t.id === value.id);
+      if (existsActive || existsQueue) {
+        return; // Already have this technique
+      }
+
+      // Ensure elements field exists
+      if (!value.elements) {
+        value.elements = [];
+      }
+      // Ensure cultivation_speed_bonus exists (default based on grade)
+      if (value.cultivation_speed_bonus === undefined) {
+        const gradeBonus = { 'Mortal': 10, 'Earth': 20, 'Heaven': 40 };
+        value.cultivation_speed_bonus = gradeBonus[value.grade as keyof typeof gradeBonus] || 10;
+      }
+
+      // Count techniques by type
+      const techType = value.type as 'Main' | 'Support';
+      const countByType = state.techniques.filter(t => t.type === techType).length;
+      
+      // Check if we can add to active techniques
+      if (state.techniques.length < MAX_TECHNIQUES && countByType < MAX_PER_TYPE) {
         state.techniques.push(value);
+        console.log(`Added technique ${value.name} to active list (${state.techniques.length}/${MAX_TECHNIQUES})`);
+      } else {
+        // Add to queue
+        state.technique_queue.push(value);
+        console.log(`Added technique ${value.name} to queue (active full: ${state.techniques.length}/${MAX_TECHNIQUES}, type ${techType}: ${countByType}/${MAX_PER_TYPE})`);
       }
     }
   }
@@ -572,15 +618,22 @@ function applySkillDelta(
   operation: string,
   value: any
 ): void {
+  // Constants for skill limits: 6 total, max 2 per type
+  const MAX_SKILLS = 6;
+  const MAX_PER_TYPE = 2;
+
   if (field === 'add' && operation === 'add') {
     // Validate skill structure
     if (value && value.id && value.name && value.name_en && value.type) {
-      // Initialize skills array if it doesn't exist
+      // Initialize arrays if they don't exist
       if (!state.skills) {
         state.skills = [];
       }
+      if (!state.skill_queue) {
+        state.skill_queue = [];
+      }
       
-      // Check if skill already exists
+      // Check if skill already exists in active list
       const existingIndex = state.skills.findIndex(s => s.id === value.id);
       if (existingIndex >= 0) {
         // Upgrade existing skill level
@@ -590,24 +643,185 @@ function applySkillDelta(
           // Increase damage multiplier slightly on level up
           existingSkill.damage_multiplier = (existingSkill.damage_multiplier || 1) * 1.1;
         }
-      } else {
-        // Add new skill with defaults
-        state.skills.push({
-          id: value.id,
-          name: value.name,
-          name_en: value.name_en,
-          description: value.description || '',
-          description_en: value.description_en || '',
-          type: value.type,
-          element: value.element,
-          level: value.level || 1,
-          max_level: value.max_level || 10,
-          damage_multiplier: value.damage_multiplier || 1.5,
-          qi_cost: value.qi_cost || 10,
-          cooldown: value.cooldown || 1,
-          effects: value.effects,
-        });
+        return;
       }
+
+      // Check if skill exists in queue (upgrade if so)
+      const queueIndex = state.skill_queue.findIndex(s => s.id === value.id);
+      if (queueIndex >= 0) {
+        const queueSkill = state.skill_queue[queueIndex];
+        if (queueSkill.level < queueSkill.max_level) {
+          queueSkill.level += 1;
+          queueSkill.damage_multiplier = (queueSkill.damage_multiplier || 1) * 1.1;
+        }
+        return;
+      }
+
+      // Create new skill object
+      const newSkill: any = {
+        id: value.id,
+        name: value.name,
+        name_en: value.name_en,
+        description: value.description || '',
+        description_en: value.description_en || '',
+        type: value.type,
+        element: value.element,
+        level: value.level || 1,
+        max_level: value.max_level || 10,
+        damage_multiplier: value.damage_multiplier || 1.5,
+        qi_cost: value.qi_cost || 10,
+        cooldown: value.cooldown || 1,
+        effects: value.effects,
+      };
+
+      // Count skills by type (normalize to lowercase for comparison)
+      const skillType = (value.type || '').toLowerCase();
+      const countByType = state.skills.filter(s => (s.type || '').toLowerCase() === skillType).length;
+
+      // Check if we can add to active skills
+      if (state.skills.length < MAX_SKILLS && countByType < MAX_PER_TYPE) {
+        state.skills.push(newSkill);
+        console.log(`Added skill ${value.name} to active list (${state.skills.length}/${MAX_SKILLS})`);
+      } else {
+        // Add to queue
+        state.skill_queue.push(newSkill);
+        console.log(`Added skill ${value.name} to queue (active full: ${state.skills.length}/${MAX_SKILLS}, type ${skillType}: ${countByType}/${MAX_PER_TYPE})`);
+      }
+    }
+  }
+}
+
+/**
+ * Apply location-related delta (change place or region)
+ */
+function applyLocationDelta(
+  state: GameState,
+  field: string,
+  operation: string,
+  value: any
+): void {
+  if (operation === 'set') {
+    if (field === 'place' && typeof value === 'string') {
+      state.location.place = value;
+      console.log(`Location changed to: ${value}`);
+    } else if (field === 'region' && typeof value === 'string') {
+      state.location.region = value;
+      console.log(`Region changed to: ${value}`);
+    }
+  }
+}
+
+/**
+ * Apply sect-related delta (join, leave, promote, contribution)
+ */
+function applySectDelta(
+  state: GameState,
+  field: string,
+  operation: string,
+  value: any,
+  events: GameEvent[]
+): void {
+  const validRanks: SectRank[] = ['NgoạiMôn', 'NộiMôn', 'ChânTruyền', 'TrưởngLão', 'ChưởngMôn'];
+
+  if (field === 'join' && operation === 'set') {
+    // Joining a new sect
+    if (value && value.sect) {
+      const membership: SectMembership = {
+        sect: {
+          id: value.sect.id || `sect_${Date.now()}`,
+          name: value.sect.name,
+          name_en: value.sect.name_en || value.sect.name,
+          type: value.sect.type || 'Tổng',
+          element: value.sect.element,
+          tier: value.sect.tier || 1,
+          description: value.sect.description,
+          description_en: value.sect.description_en,
+        },
+        rank: (value.rank as SectRank) || 'NgoạiMôn',
+        contribution: value.contribution || 0,
+        reputation: value.reputation || 50,
+        joined_date: new Date().toISOString(),
+        missions_completed: 0,
+        mentor: value.mentor,
+        mentor_en: value.mentor_en,
+        benefits: {
+          cultivation_bonus: value.benefits?.cultivation_bonus || 5,
+          resource_access: value.benefits?.resource_access || false,
+          technique_access: value.benefits?.technique_access || false,
+          protection: value.benefits?.protection || true,
+        },
+      };
+
+      state.sect_membership = membership;
+      // Legacy support
+      state.sect = membership.sect.name;
+      state.sect_en = membership.sect.name_en;
+
+      events.push({
+        type: 'sect_join',
+        data: { sect: membership.sect, rank: membership.rank },
+      });
+      console.log(`Joined sect: ${membership.sect.name} as ${membership.rank}`);
+    }
+  } else if (field === 'leave' && operation === 'set') {
+    // Leaving the sect
+    if (state.sect_membership) {
+      const oldSect = state.sect_membership.sect.name;
+      state.sect_membership = undefined;
+      state.sect = undefined;
+      state.sect_en = undefined;
+      events.push({
+        type: 'sect_expulsion',
+        data: { sect: oldSect, reason: value?.reason || 'voluntary' },
+      });
+      console.log(`Left sect: ${oldSect}`);
+    }
+  } else if (field === 'promote' && operation === 'set') {
+    // Promotion to new rank
+    if (state.sect_membership && validRanks.includes(value as SectRank)) {
+      const oldRank = state.sect_membership.rank;
+      state.sect_membership.rank = value as SectRank;
+      
+      // Update benefits based on new rank
+      const rankBenefits: Record<SectRank, { cultivation_bonus: number; resource_access: boolean; technique_access: boolean; protection: boolean }> = {
+        'NgoạiMôn': { cultivation_bonus: 5, resource_access: false, technique_access: false, protection: true },
+        'NộiMôn': { cultivation_bonus: 10, resource_access: true, technique_access: false, protection: true },
+        'ChânTruyền': { cultivation_bonus: 20, resource_access: true, technique_access: true, protection: true },
+        'TrưởngLão': { cultivation_bonus: 30, resource_access: true, technique_access: true, protection: true },
+        'ChưởngMôn': { cultivation_bonus: 50, resource_access: true, technique_access: true, protection: true },
+      };
+      state.sect_membership.benefits = rankBenefits[value as SectRank];
+
+      events.push({
+        type: 'sect_promotion',
+        data: { oldRank, newRank: value, sect: state.sect_membership.sect.name },
+      });
+      console.log(`Promoted from ${oldRank} to ${value}`);
+    }
+  } else if (field === 'contribution' && operation === 'add') {
+    // Adding contribution points
+    if (state.sect_membership && typeof value === 'number') {
+      const maxContribution = 100; // Max contribution per turn
+      const clampedValue = Math.min(Math.abs(value), maxContribution);
+      state.sect_membership.contribution += clampedValue;
+      console.log(`Added ${clampedValue} sect contribution`);
+    }
+  } else if (field === 'reputation' && operation === 'add') {
+    // Adjusting reputation within sect
+    if (state.sect_membership && typeof value === 'number') {
+      state.sect_membership.reputation = Math.max(0, Math.min(100, state.sect_membership.reputation + value));
+      console.log(`Sect reputation changed by ${value}, now ${state.sect_membership.reputation}`);
+    }
+  } else if (field === 'mission' && operation === 'add') {
+    // Completing a mission
+    if (state.sect_membership && typeof value === 'number') {
+      state.sect_membership.missions_completed += 1;
+      state.sect_membership.contribution += value;
+      events.push({
+        type: 'sect_mission',
+        data: { reward: value, totalMissions: state.sect_membership.missions_completed },
+      });
+      console.log(`Completed sect mission, +${value} contribution`);
     }
   }
 }

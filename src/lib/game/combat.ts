@@ -110,8 +110,9 @@ function calculateDodgeChance(
 export function processCombatTurn(
   state: GameState,
   enemy: Enemy,
-  playerAction: 'attack' | 'defend' | 'qi_attack',
-  rng: DeterministicRNG
+  playerAction: 'attack' | 'defend' | 'qi_attack' | 'skill',
+  rng?: DeterministicRNG,
+  skillId?: string
 ): CombatResult {
   const events: GameEvent[] = [];
   let narrative = '';
@@ -122,7 +123,76 @@ export function processCombatTurn(
   
   // Use total attributes including equipment
   const totalAttrs = calculateTotalAttributes(state);
+  
+  // Decrease cooldowns for all skills
+  if (state.skills) {
+    state.skills.forEach(skill => {
+      if (skill.current_cooldown && skill.current_cooldown > 0) {
+        skill.current_cooldown -= 1;
+      }
+    });
+  }
 
+  if (playerAction === 'skill' && skillId) {
+    // Use a skill
+    const skill = state.skills?.find(s => s.id === skillId);
+    if (!skill) {
+      narrative += `Không tìm thấy kỹ năng! `;
+      playerAction = 'attack'; // Fall back to normal attack
+    } else if (skill.current_cooldown && skill.current_cooldown > 0) {
+      narrative += `Kỹ năng ${skill.name} đang hồi chiêu (${skill.current_cooldown} lượt)! `;
+      playerAction = 'attack'; // Fall back to normal attack
+    } else if (state.stats.qi < skill.qi_cost) {
+      narrative += `Không đủ Linh lực để dùng ${skill.name}! `;
+      playerAction = 'attack'; // Fall back to normal attack
+    } else {
+      // Use the skill
+      updateQi(state, -skill.qi_cost);
+      skill.current_cooldown = skill.cooldown;
+      
+      if (skill.type === 'attack') {
+        // Attack skill - deal damage with multiplier
+        playerDamage = Math.floor(calculateDamage(
+          10, enemy.def, totalAttrs.str, totalAttrs.perception, totalAttrs.luck, rng!
+        ) * skill.damage_multiplier);
+        enemy.hp -= playerDamage;
+        narrative += `Bạn dùng ${skill.name}, gây ${playerDamage} sát thương! `;
+        
+        // Apply additional effects
+        if (skill.effects?.stun_chance && rng!.chance(skill.effects.stun_chance)) {
+          narrative += `${enemy.name} bị choáng! `;
+          // Enemy loses next turn (implement in future)
+        }
+        if (skill.effects?.defense_break) {
+          enemy.def = Math.max(0, enemy.def - skill.effects.defense_break);
+          narrative += `Phòng thủ của ${enemy.name} giảm ${skill.effects.defense_break}! `;
+        }
+      } else if (skill.type === 'defense') {
+        // Defense skill - boost defense or heal
+        if (skill.effects?.defense_boost) {
+          narrative += `Bạn dùng ${skill.name}, tăng phòng thủ! `;
+          // Defense boost will be applied when calculating damage taken
+        }
+        if (skill.effects?.heal_percent) {
+          const healAmount = Math.floor(state.stats.hp_max * skill.effects.heal_percent);
+          updateHP(state, healAmount);
+          narrative += `Bạn dùng ${skill.name}, hồi ${healAmount} HP! `;
+        }
+      } else if (skill.type === 'support') {
+        // Support skill - buffs, debuffs, etc.
+        if (skill.effects?.heal_percent) {
+          const healAmount = Math.floor(state.stats.hp_max * skill.effects.heal_percent);
+          updateHP(state, healAmount);
+          narrative += `Bạn dùng ${skill.name}, hồi ${healAmount} HP! `;
+        }
+        if (skill.effects?.buff_stats) {
+          narrative += `Bạn dùng ${skill.name}, tăng cường thuộc tính! `;
+          // Stat buffs would need to be tracked separately
+        }
+      }
+    }
+  }
+  
   if (playerAction === 'attack') {
     // Physical attack using STR, PERCEPTION, LUCK
     playerDamage = calculateDamage(
@@ -131,7 +201,7 @@ export function processCombatTurn(
       totalAttrs.str,
       totalAttrs.perception,
       totalAttrs.luck,
-      rng
+      rng!
     );
     enemy.hp -= playerDamage;
     if (playerDamage === 0) {
@@ -151,7 +221,7 @@ export function processCombatTurn(
         totalAttrs.perception,
         totalAttrs.luck,
         enemy.def,
-        rng
+        rng!
       );
       enemy.hp -= playerDamage;
       if (playerDamage === 0) {
@@ -161,7 +231,7 @@ export function processCombatTurn(
       }
     } else {
       narrative += `Không đủ Linh lực! Bạn tấn công thường. `;
-      playerDamage = calculateDamage(10, enemy.def, totalAttrs.str, totalAttrs.perception, totalAttrs.luck, rng);
+      playerDamage = calculateDamage(10, enemy.def, totalAttrs.str, totalAttrs.perception, totalAttrs.luck, rng!);
       enemy.hp -= playerDamage;
     }
   }
@@ -185,7 +255,7 @@ export function processCombatTurn(
 
   // Check if player dodges enemy attack
   const dodgeChance = calculateDodgeChance(totalAttrs.agi, totalAttrs.perception, totalAttrs.luck);
-  if (rng.chance(dodgeChance)) {
+  if (rng!.chance(dodgeChance)) {
     narrative += `Bạn né tránh đòn tấn công của ${enemy.name}! `;
     enemyDamage = 0;
   } else {
@@ -209,7 +279,7 @@ export function processCombatTurn(
       0, // Enemy STR (uses atk instead)
       5, // Enemy perception
       5, // Enemy luck
-      rng
+      rng!
     );
 
     updateHP(state, -enemyDamage);

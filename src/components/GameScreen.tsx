@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { GameState, Choice, ValidatedTurnResult, Realm, Enemy, CombatLogEntry } from '@/types/game';
 import { t, Locale } from '@/lib/i18n/translations';
 import CharacterSheet from './CharacterSheet';
+import SectView from './SectView';
 import InventoryView from './InventoryView';
 import MarketView from './MarketView';
 import NotificationManager from './NotificationManager';
@@ -24,10 +25,12 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'game' | 'character' | 'inventory' | 'market' | 'notifications'>('game');
+  const [activeTab, setActiveTab] = useState<'game' | 'character' | 'sect' | 'inventory' | 'market' | 'notifications'>('game');
   const [breakthroughEvent, setBreakthroughEvent] = useState<BreakthroughEvent | null>(null);
   const [previousExp, setPreviousExp] = useState<number | undefined>(undefined);
   const [testCombat, setTestCombat] = useState<{ enemy: Enemy; log: CombatLogEntry[]; playerTurn: boolean; playerHp: number } | null>(null);
+  // Active combat state - triggered by AI combat_encounter events
+  const [activeCombat, setActiveCombat] = useState<{ enemy: Enemy; log: CombatLogEntry[]; playerTurn: boolean } | null>(null);
   const [customAction, setCustomAction] = useState('');
   const firstTurnStartedRef = useRef(false);
   const lastNotificationRef = useRef<number>(0);
@@ -109,6 +112,22 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       setState(result.state);
       setNarrative(result.narrative);
       setChoices(result.choices);
+
+      // Check for combat_encounter event from AI
+      const combatEncounter = result.events?.find(e => e.type === 'combat_encounter');
+      if (combatEncounter && combatEncounter.data?.enemy) {
+        const enemy = combatEncounter.data.enemy as Enemy;
+        // Ensure hp_max is set
+        if (!enemy.hp_max) {
+          enemy.hp_max = enemy.hp;
+        }
+        console.log('Combat encounter triggered:', enemy);
+        setActiveCombat({
+          enemy,
+          log: [],
+          playerTurn: true,
+        });
+      }
     } catch (err) {
       console.error('Turn error:', err);
       setError(locale === 'vi' ? 'Lỗi xử lý lượt chơi' : 'Error processing turn');
@@ -273,6 +292,34 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
     }
   }, [locale]);
 
+  // Handle ability swap (techniques/skills)
+  const handleAbilitySwap = useCallback(async (
+    abilityType: 'technique' | 'skill',
+    activeId: string | null,
+    queueId: string | null,
+    action: 'swap' | 'forget' | 'learn' | 'discard'
+  ) => {
+    try {
+      const response = await fetch('/api/swap-ability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ runId, abilityType, activeId, queueId, action }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to swap ability');
+      }
+
+      const result = await response.json();
+      setState(result.state);
+    } catch (err: any) {
+      console.error('Ability swap error:', err);
+      setError(err.message || (locale === 'vi' ? 'Lỗi hoán đổi năng lực' : 'Error swapping ability'));
+    }
+  }, [runId, locale]);
+
   // Test combat with dummy enemy
   const startTestCombat = useCallback(() => {
     if (!state) return;
@@ -296,7 +343,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
   }, [state]);
 
   // Handle test combat action
-  const handleTestCombatAction = useCallback((action: 'attack' | 'qi_attack' | 'defend' | 'flee') => {
+  const handleTestCombatAction = useCallback((action: 'attack' | 'qi_attack' | 'defend' | 'flee' | 'skill', skillId?: string) => {
     if (!testCombat || !state) return;
 
     const { enemy, log, playerHp } = testCombat;
@@ -333,6 +380,69 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         } : null);
       }, 800);
     };
+
+    // Handle skill usage
+    if (action === 'skill' && skillId) {
+      const skill = state.skills?.find(s => s.id === skillId);
+      if (skill && state.stats.qi >= skill.qi_cost && (!skill.current_cooldown || skill.current_cooldown <= 0)) {
+        // Deduct qi
+        setState(prev => prev ? {
+          ...prev,
+          stats: { ...prev.stats, qi: prev.stats.qi - skill.qi_cost }
+        } : prev);
+
+        // Calculate skill damage
+        const baseDamage = state.attrs.str * 1.5;
+        const skillDamage = Math.floor(baseDamage * skill.damage_multiplier * (0.8 + Math.random() * 0.4));
+        const playerMiss = Math.random() < 0.1;
+        const playerCrit = Math.random() < 0.15;
+        const finalDamage = playerMiss ? 0 : Math.floor(skillDamage * (playerCrit ? 1.5 : 1));
+
+        const playerLogEntry: CombatLogEntry = {
+          id: `log-${Date.now()}`,
+          turn: turnNumber,
+          actor: 'player',
+          action: 'skill',
+          damage: finalDamage,
+          isCritical: playerCrit,
+          isMiss: playerMiss,
+          timestamp: Date.now(),
+        };
+
+        const newEnemy = { ...enemy, hp: Math.max(0, enemy.hp - finalDamage) };
+        newLog.push(playerLogEntry);
+
+        // Set skill cooldown
+        setState(prev => {
+          if (!prev || !prev.skills) return prev;
+          return {
+            ...prev,
+            skills: prev.skills.map(s => s.id === skillId ? { ...s, current_cooldown: s.cooldown } : s)
+          };
+        });
+
+        if (newEnemy.hp <= 0) {
+          setTestCombat(null);
+          return;
+        }
+
+        setTestCombat(prev => prev ? { ...prev, enemy: newEnemy, log: newLog, playerTurn: false } : null);
+        applyEnemyTurn(false, playerHp, newEnemy, newLog);
+        
+        // Reduce cooldowns
+        setState(prev => {
+          if (!prev || !prev.skills) return prev;
+          return {
+            ...prev,
+            skills: prev.skills.map(s => ({
+              ...s,
+              current_cooldown: s.current_cooldown && s.current_cooldown > 0 ? s.current_cooldown - 1 : 0
+            }))
+          };
+        });
+        return;
+      }
+    }
 
     // Simple combat simulation
     if (action === 'flee') {
@@ -412,6 +522,299 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       playerHp,
     });
   }, [testCombat, state]);
+
+  // Handle active combat action (from AI combat_encounter)
+  const handleActiveCombatAction = useCallback((action: 'attack' | 'qi_attack' | 'defend' | 'flee' | 'skill', skillId?: string) => {
+    if (!activeCombat || !state) return;
+
+    const { enemy, log } = activeCombat;
+    const newLog = [...log];
+    const turnNumber = Math.floor(log.length / 2) + 1;
+
+    // Helper to apply enemy turn
+    const applyEnemyTurn = (isDefending: boolean, currentEnemy: Enemy, currentLog: CombatLogEntry[]) => {
+      setTimeout(() => {
+        const enemyDamage = Math.floor(currentEnemy.atk * (0.8 + Math.random() * 0.4));
+        const defendBonus = isDefending ? 0.5 : 1;
+        const enemyMiss = Math.random() < 0.15;
+        const enemyCrit = Math.random() < 0.1;
+        const finalDamage = enemyMiss ? 0 : Math.floor(enemyDamage * defendBonus * (enemyCrit ? 1.5 : 1));
+
+        const enemyLogEntry: CombatLogEntry = {
+          id: `log-enemy-${Date.now()}`,
+          turn: turnNumber,
+          actor: 'enemy',
+          action: 'attack',
+          damage: finalDamage,
+          isCritical: enemyCrit,
+          isMiss: enemyMiss,
+          timestamp: Date.now(),
+        };
+
+        // Apply damage to player state
+        setState(prev => {
+          if (!prev) return prev;
+          const newHp = Math.max(0, prev.stats.hp - finalDamage);
+          return {
+            ...prev,
+            stats: {
+              ...prev.stats,
+              hp: newHp,
+            },
+          };
+        });
+
+        setActiveCombat(prev => prev ? {
+          ...prev,
+          log: [...prev.log, enemyLogEntry],
+          playerTurn: true,
+        } : null);
+      }, 800);
+    };
+
+    // Handle skill usage
+    if (action === 'skill' && skillId) {
+      const skill = state.skills?.find(s => s.id === skillId);
+      if (skill && state.stats.qi >= skill.qi_cost && (!skill.current_cooldown || skill.current_cooldown <= 0)) {
+        // Deduct qi
+        setState(prev => prev ? {
+          ...prev,
+          stats: { ...prev.stats, qi: prev.stats.qi - skill.qi_cost }
+        } : prev);
+
+        // Calculate skill damage based on skill type
+        let finalDamage = 0;
+        let healAmount = 0;
+        
+        if (skill.type === 'attack') {
+          const baseDamage = state.attrs.str * 1.5;
+          const skillDamage = Math.floor(baseDamage * skill.damage_multiplier * (0.8 + Math.random() * 0.4));
+          const playerMiss = Math.random() < 0.1;
+          const playerCrit = Math.random() < 0.15;
+          finalDamage = playerMiss ? 0 : Math.floor(skillDamage * (playerCrit ? 1.5 : 1));
+        } else if (skill.type === 'defense' && skill.effects?.heal_percent) {
+          healAmount = Math.floor(state.stats.hp_max * skill.effects.heal_percent);
+          setState(prev => prev ? {
+            ...prev,
+            stats: { ...prev.stats, hp: Math.min(prev.stats.hp_max, prev.stats.hp + healAmount) }
+          } : prev);
+        } else if (skill.type === 'support' && skill.effects?.heal_percent) {
+          healAmount = Math.floor(state.stats.hp_max * skill.effects.heal_percent);
+          setState(prev => prev ? {
+            ...prev,
+            stats: { ...prev.stats, hp: Math.min(prev.stats.hp_max, prev.stats.hp + healAmount) }
+          } : prev);
+        }
+
+        const playerLogEntry: CombatLogEntry = {
+          id: `log-${Date.now()}`,
+          turn: turnNumber,
+          actor: 'player',
+          action: 'skill',
+          damage: finalDamage,
+          healAmount: healAmount,
+          isCritical: finalDamage > 0 && Math.random() < 0.15,
+          isMiss: finalDamage === 0 && skill.type === 'attack',
+          timestamp: Date.now(),
+        };
+
+        const newEnemy = { ...enemy, hp: Math.max(0, enemy.hp - finalDamage) };
+        newLog.push(playerLogEntry);
+
+        // Set skill cooldown
+        setState(prev => {
+          if (!prev || !prev.skills) return prev;
+          return {
+            ...prev,
+            skills: prev.skills.map(s => s.id === skillId ? { ...s, current_cooldown: s.cooldown } : s)
+          };
+        });
+
+        if (newEnemy.hp <= 0) {
+          setActiveCombat(null);
+          return;
+        }
+
+        setActiveCombat(prev => prev ? { ...prev, enemy: newEnemy, log: newLog, playerTurn: false } : null);
+        applyEnemyTurn(false, newEnemy, newLog);
+        
+        // Reduce cooldowns
+        setState(prev => {
+          if (!prev || !prev.skills) return prev;
+          return {
+            ...prev,
+            skills: prev.skills.map(s => ({
+              ...s,
+              current_cooldown: s.current_cooldown && s.current_cooldown > 0 ? s.current_cooldown - 1 : 0
+            }))
+          };
+        });
+        return;
+      }
+    }
+
+    // Handle flee
+    if (action === 'flee') {
+      const fleeChance = Math.random();
+      if (fleeChance > 0.5) {
+        // Successful flee
+        setActiveCombat(null);
+        return;
+      }
+      newLog.push({
+        id: `log-${Date.now()}`,
+        turn: turnNumber,
+        actor: 'player',
+        action: 'flee',
+        isMiss: true,
+        timestamp: Date.now(),
+      });
+
+      setActiveCombat(prev => prev ? { ...prev, log: newLog, playerTurn: false } : null);
+      applyEnemyTurn(false, enemy, newLog);
+      return;
+    }
+
+    if (action === 'defend') {
+      newLog.push({
+        id: `log-${Date.now()}`,
+        turn: turnNumber,
+        actor: 'player',
+        action: 'defend',
+        timestamp: Date.now(),
+      });
+
+      setActiveCombat(prev => prev ? { ...prev, log: newLog, playerTurn: false } : null);
+      applyEnemyTurn(true, enemy, newLog);
+      return;
+    }
+
+    // Attack or qi_attack
+    const baseDamage = action === 'qi_attack'
+      ? state.attrs.int * 2 + state.attrs.str
+      : state.attrs.str * 1.5;
+    const isCritical = Math.random() < 0.15;
+    const isMiss = Math.random() < 0.1;
+    const damage = isMiss ? 0 : Math.floor(baseDamage * (isCritical ? 2 : 1) - enemy.def / 2);
+
+    // Consume qi for qi_attack
+    if (action === 'qi_attack' && state.stats.qi >= 10) {
+      setState(prev => prev ? {
+        ...prev,
+        stats: {
+          ...prev.stats,
+          qi: Math.max(0, prev.stats.qi - 10),
+        },
+      } : prev);
+    }
+
+    newLog.push({
+      id: `log-${Date.now()}`,
+      turn: turnNumber,
+      actor: 'player',
+      action: action,
+      damage: Math.max(0, damage),
+      isCritical,
+      isMiss,
+      timestamp: Date.now(),
+    });
+
+    // Update enemy HP
+    const newEnemyHp = Math.max(0, enemy.hp - (isMiss ? 0 : Math.max(0, damage)));
+    const updatedEnemy = { ...enemy, hp: newEnemyHp };
+
+    // Enemy turn (if not dead)
+    if (newEnemyHp > 0) {
+      setActiveCombat({
+        enemy: updatedEnemy,
+        log: newLog,
+        playerTurn: false,
+      });
+      applyEnemyTurn(false, updatedEnemy, newLog);
+      return;
+    }
+
+    // Enemy dead - victory!
+    setActiveCombat({
+      enemy: updatedEnemy,
+      log: newLog,
+      playerTurn: true,
+    });
+  }, [activeCombat, state]);
+
+  // Handle combat end - apply loot and continue game
+  const handleActiveCombatEnd = useCallback(async () => {
+    if (!activeCombat || !state) return;
+
+    const victory = activeCombat.enemy.hp <= 0;
+    const playerDied = state.stats.hp <= 0;
+    
+    let updatedState = { ...state };
+    
+    if (victory) {
+      // Calculate loot based on enemy
+      const lootSilver = Math.floor(Math.random() * 50) + 20;
+      const lootExp = Math.floor(Math.random() * 30) + 20;
+      
+      // Update state with loot
+      updatedState = {
+        ...updatedState,
+        inventory: {
+          ...updatedState.inventory,
+          silver: updatedState.inventory.silver + lootSilver,
+        },
+        progress: {
+          ...updatedState.progress,
+          cultivation_exp: updatedState.progress.cultivation_exp + lootExp,
+        },
+      };
+
+      // Show loot notification
+      setNarrative(prev => {
+        const lootText = locale === 'vi'
+          ? `\n\n🎉 Chiến thắng! Bạn nhận được ${lootSilver} bạc và ${lootExp} điểm tu luyện.`
+          : `\n\n🎉 Victory! You received ${lootSilver} silver and ${lootExp} cultivation points.`;
+        return prev + lootText;
+      });
+    } else if (playerDied) {
+      // Player died - restore some HP to continue
+      updatedState = {
+        ...updatedState,
+        stats: {
+          ...updatedState.stats,
+          hp: Math.floor(updatedState.stats.hp_max * 0.3), // Restore 30% HP
+        },
+        inventory: {
+          ...updatedState.inventory,
+          silver: Math.max(0, updatedState.inventory.silver - 50), // Lose some silver
+        },
+      };
+      
+      setNarrative(prev => {
+        const defeatText = locale === 'vi'
+          ? `\n\n💀 Bạn bị đánh bại... May mắn thay có người qua đường cứu giúp. Bạn mất 50 bạc.`
+          : `\n\n💀 You were defeated... Fortunately, a passerby helped you. You lost 50 silver.`;
+        return prev + defeatText;
+      });
+    }
+
+    // Update local state
+    setState(updatedState);
+
+    // Save state to server
+    try {
+      await fetch(`/api/run/${runId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state: updatedState }),
+      });
+    } catch (err) {
+      console.error('Failed to save combat result:', err);
+    }
+
+    // Clear combat
+    setActiveCombat(null);
+  }, [activeCombat, state, locale, runId]);
 
   const loadRun = useCallback(async () => {
     try {
@@ -608,6 +1011,16 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
             {t(locale, 'tabCharacter')}
           </button>
           <button
+            onClick={() => setActiveTab('sect')}
+            className={`px-4 py-2 rounded-t-lg transition-colors ${
+              activeTab === 'sect'
+                ? 'bg-xianxia-accent text-white'
+                : 'bg-xianxia-dark hover:bg-xianxia-accent/20'
+            }`}
+          >
+            {locale === 'vi' ? '⛩️ Môn Phái' : '⛩️ Sect'}
+          </button>
+          <button
             onClick={() => setActiveTab('inventory')}
             className={`px-4 py-2 rounded-t-lg transition-colors ${
               activeTab === 'inventory'
@@ -798,7 +1211,8 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           </div>
         )}
 
-        {activeTab === 'character' && <CharacterSheet state={state} locale={locale} previousExp={previousExp} />}
+        {activeTab === 'character' && <CharacterSheet state={state} locale={locale} previousExp={previousExp} onAbilitySwap={handleAbilitySwap} />}
+        {activeTab === 'sect' && <SectView state={state} locale={locale} />}
         {activeTab === 'inventory' && <InventoryView state={state} locale={locale} onEquipItem={handleEquipItem} onDiscardItem={handleDiscardItem} onUseItem={handleUseItem} onEnhanceItem={handleEnhanceItem} />}
         {activeTab === 'market' && <MarketView state={state} locale={locale} onBuyItem={(id) => handleMarketAction(id, 'buy')} onSellItem={(id) => handleMarketAction(id, 'sell')} onRefreshMarket={handleRefreshMarket} onExchange={handleExchange} />}
         {activeTab === 'notifications' && userId && (
@@ -837,6 +1251,23 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
             >
               {locale === 'vi' ? 'Đóng Test Combat' : 'Close Test Combat'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Active Combat View - Triggered by AI combat_encounter */}
+      {activeCombat && state && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+          <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <CombatView
+              state={state}
+              enemy={activeCombat.enemy}
+              locale={locale}
+              combatLog={activeCombat.log}
+              playerTurn={activeCombat.playerTurn}
+              onAction={handleActiveCombatAction}
+              onCombatEnd={handleActiveCombatEnd}
+            />
           </div>
         </div>
       )}

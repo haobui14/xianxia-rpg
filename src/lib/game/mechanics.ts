@@ -78,6 +78,8 @@ export function createInitialState(
     last_stamina_regen: new Date().toISOString(),
     skills: [],
     techniques: [],
+    skill_queue: [],
+    technique_queue: [],
     sect: undefined,
     sect_en: undefined,
     market: {

@@ -107,7 +107,7 @@ function sleep(ms: number): Promise<void> {
  */
 async function callOpenAI(
   messages: OpenAIMessage[],
-  model: string = "gpt-5-mini",
+  model: string = "gpt-4.1-mini",
   options: { temperature?: number; maxRetries?: number } = {},
 ): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -222,6 +222,24 @@ async function callOpenAI(
   throw lastError || new Error("Failed after all retries");
 }
 
+// Forbidden modern terms that break xianxia immersion
+const FORBIDDEN_MODERN_TERMS = [
+  "hệ thống", "chỉ số", "level", "game", "điểm", "cấp độ", "bảng",
+  "system", "points", "stats", "upgrade"
+];
+
+/**
+ * Check narrative for modern terms that break immersion
+ */
+function checkForbiddenTerms(narrative: string, locale: Locale): void {
+  const lowerNarrative = narrative.toLowerCase();
+  for (const term of FORBIDDEN_MODERN_TERMS) {
+    if (lowerNarrative.includes(term)) {
+      console.warn(`⚠️ Modern term detected in narrative: "${term}"`);
+    }
+  }
+}
+
 /**
  * Generate AI turn result with anti-repetition
  */
@@ -231,10 +249,11 @@ export async function generateAITurn(
   sceneContext: string,
   choiceId: string | null,
   locale: Locale,
+  choiceText?: string | null,
 ): Promise<AITurnResult> {
   const systemPrompt = buildSystemPrompt(locale);
   const gameContext = buildGameContext(state, recentNarratives, locale);
-  const userMessage = buildUserMessage(sceneContext, choiceId, locale);
+  const userMessage = buildUserMessage(sceneContext, choiceId, locale, choiceText);
 
   // Anti-repetition: Get themes to avoid
   const themesToAvoid = getThemesToAvoid(recentNarratives);
@@ -252,47 +271,66 @@ export async function generateAITurn(
     },
   ];
 
-  const model = process.env.AI_MODEL || "gpt-5-mini";
+  const model = process.env.AI_MODEL || "gpt-4.1-mini";
 
-  try {
-    const responseText = await callOpenAI(messages, model, {
-      // Higher temperature for more variety after many turns
-      temperature: Math.min(0.95, 0.75 + state.turn_count * 0.01),
-    });
+  // Retry loop for JSON validation failures
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const responseText = await callOpenAI(messages, model, {
+        // Higher temperature for more variety after many turns
+        temperature: Math.min(0.95, 0.75 + state.turn_count * 0.01),
+      });
 
-    // Debug: Log the response length and preview
-    console.log(
-      `AI Response: ${responseText.length} chars, preview:`,
-      responseText.substring(0, 200),
-    );
-
-    if (!responseText || responseText.trim().length === 0) {
-      throw new Error("AI returned empty response");
-    }
-
-    const jsonData = JSON.parse(responseText);
-    const validated = validateAIResponse(jsonData);
-
-    // Post-validation: Check for excessive similarity
-    if (recentNarratives.length > 0) {
-      const similarity = calculateSimilarity(
-        validated.narrative,
-        recentNarratives[recentNarratives.length - 1],
+      // Debug: Log the response length and preview
+      console.log(
+        `AI Response: ${responseText.length} chars, preview:`,
+        responseText.substring(0, 200),
       );
-      if (similarity > 0.7) {
-        console.warn(
-          `High narrative similarity detected (${similarity.toFixed(2)}), response may be repetitive`,
+
+      if (!responseText || responseText.trim().length === 0) {
+        throw new Error("AI returned empty response");
+      }
+
+      // Parse JSON with better error handling
+      let jsonData: any;
+      try {
+        jsonData = JSON.parse(responseText);
+      } catch (parseErr) {
+        throw new Error(`Invalid JSON from AI: ${parseErr instanceof Error ? parseErr.message : 'Parse error'}`);
+      }
+
+      const validated = validateAIResponse(jsonData);
+
+      // Check for forbidden modern terms
+      checkForbiddenTerms(validated.narrative, locale);
+
+      // Post-validation: Check for excessive similarity
+      if (recentNarratives.length > 0) {
+        const similarity = calculateSimilarity(
+          validated.narrative,
+          recentNarratives[recentNarratives.length - 1],
+        );
+        if (similarity > 0.7) {
+          console.warn(
+            `High narrative similarity detected (${similarity.toFixed(2)}), response may be repetitive`,
+          );
+        }
+      }
+
+      return validated;
+    } catch (error) {
+      // Retry on first attempt, throw on second
+      if (attempt === 1) {
+        console.error("AI generation error (final attempt):", error);
+        throw new Error(
+          `Failed to generate AI response: ${error instanceof Error ? error.message : "Unknown error"}`,
         );
       }
+      console.warn("Retrying due to invalid AI output...", error);
     }
-
-    return validated;
-  } catch (error) {
-    console.error("AI generation error:", error);
-    throw new Error(
-      `Failed to generate AI response: ${error instanceof Error ? error.message : "Unknown error"}`,
-    );
   }
+
+  throw new Error("Failed to generate AI response after retries");
 }
 
 /**
