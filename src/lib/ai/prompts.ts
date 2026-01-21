@@ -2,10 +2,14 @@ import { z } from "zod";
 import {
   Locale,
   GameState,
+  GameTime,
   AITurnResult,
   Choice,
   ProposedDelta,
   GameEvent,
+  Season,
+  TimeSegment,
+  ActivityType,
 } from "@/types/game";
 import { calculateTotalAttributes } from "@/lib/game/equipment";
 import {
@@ -13,6 +17,18 @@ import {
   getSpiritRootBonus,
   getTechniqueBonus,
 } from "@/lib/game/mechanics";
+
+// Import time utilities for context building
+import {
+  getGameTimeFromState,
+  getSeason,
+  getSeasonFromMonth,
+  getSeasonName,
+  formatGameTime,
+  calculateTimeCultivationBonus,
+  getSpecialTimeBonus,
+  SEASON_ELEMENT_BONUS,
+} from "@/lib/game/time";
 
 // Zod schemas for validation
 export const ChoiceSchema = z.object({
@@ -185,8 +201,8 @@ Every turn should include at least one: spiritual phenomenon, cultivation pressu
 - No terms: level, system, game, points`,
 
     progression: isVi
-      ? "TIẾN TRIỂN: Mỗi action có kết quả (exp 15-50, items). Stamina: 1-2 thường, 3-4 khó. LUÔN có 1 lựa chọn nghỉ hồi 10-20 stamina. time_segments: 1-2."
-      : "PROGRESSION: Every action has results (exp 15-50, items). Stamina: 1-2 normal, 3-4 hard. ALWAYS 1 rest option recovering 10-20 stamina. time_segments: 1-2.",
+      ? "TIẾN TRIỂN: Mỗi action có kết quả (exp BASE 15-50, ÁP DỤNG time bonus). Stamina: 1-2 thường, 3-4 khó. LUÔN có 1 lựa chọn nghỉ hồi 10-20 stamina. time_segments: 1-2. ⚡ QUAN TRỌNG: KHI reward cultivation_exp → NHÂN với (1 + timeBonus/100). Ví dụ: base 30 exp + 25% bonus = 37-38 exp."
+      : "PROGRESSION: Every action has results (exp BASE 15-50, APPLY time bonus). Stamina: 1-2 normal, 3-4 hard. ALWAYS 1 rest option recovering 10-20 stamina. time_segments: 1-2. ⚡ IMPORTANT: When rewarding cultivation_exp → MULTIPLY by (1 + timeBonus/100). Example: base 30 exp + 25% bonus = 37-38 exp.",
 
     randomEvents: isVi
       ? `🎲 SỰ KIỆN NGẪU NHIÊN (Thường xuyên):
@@ -202,7 +218,7 @@ Every turn should include at least one: spiritual phenomenon, cultivation pressu
   
 VÍ DỤ delta cho phần thưởng:
 - Bạc: {"field": "inventory.silver", "operation": "add", "value": 200}
-- Linh thạch: {"field": "inventory.spirit_stones", "operation": "add", "value": 5}
+- Linh thạch: {"field": "inventory.spirit_stones", "operation": "add", "value": 10-50} (phổ biến hơn, thường nhiều hơn)
 - Vật phẩm: {"field": "inventory.add_item", "operation": "add", "value": {item_object}}
 
 ⚠️ QUAN TRỌNG: Sự kiện PHẢI phù hợp với địa điểm và cảnh giới!`
@@ -219,7 +235,7 @@ VÍ DỤ delta cho phần thưởng:
   
 EXAMPLE deltas for rewards:
 - Silver: {"field": "inventory.silver", "operation": "add", "value": 200}
-- Spirit stones: {"field": "inventory.spirit_stones", "operation": "add", "value": 5}
+- Spirit stones: {"field": "inventory.spirit_stones", "operation": "add", "value": 10-50} (more common, larger rewards)
 - Items: {"field": "inventory.add_item", "operation": "add", "value": {item_object}}
 
 ⚠️ IMPORTANT: Events MUST fit the location and realm!`,
@@ -555,6 +571,213 @@ Notes:
 - Experience is split according to player's chosen ratio (e.g., 50% Qi, 50% Body)
 - IF player is dual cultivating → can give body exp {"field": "progress.body_exp", "operation": "add", "value": N}
 - Describe body cultivation: forging bones, tempering tendons, opening body meridians`,
+
+    // ==========================================================
+    // CULTIVATION SIMULATOR IMMERSION RULES
+    // ==========================================================
+
+    cultivationImmersion: isVi
+      ? `🧘 MÔ TẢ TU LUYỆN SINH ĐỘNG:
+Khi người chơi tu luyện, MÔ TẢ CHI TIẾT:
+1. DÒNG CHẢY LINH KHÍ: "Linh khí thiên địa theo hơi thở chảy vào đan điền, xoay vòng theo kinh mạch..."
+2. CẢM GIÁC CƠ THỂ: "Cảm giác ấm áp/mát lạnh lan tỏa từ đan điền..."
+3. NGUYÊN TỐ LINH CĂN: Nếu có Hỏa linh căn → "Lửa nguyên tố trong huyết mạch bừng sáng..."
+4. CÔNG PHÁP ĐANG TU: Nếu có technique → mô tả cách vận công pháp đó
+5. MÔI TRƯỜNG: "Linh khí đậm đặc của [địa điểm]..."
+
+⏰ THỜI GIAN PHẢI TRÔI:
+- Mỗi lượt → time_segments: 1-4 (thường là 1-2)
+- Mô tả thời gian: "Một canh giờ trôi qua..." "Khi ánh dương tắt..."
+- Buổi thay đổi: Sáng→Chiều→Tối→Đêm
+
+🌸 MÙA ẢNH HƯỞNG TU LUYỆN:
+- Xuân: Mộc +20%, Thủy +10% - "Sinh khí mùa xuân giúp..."
+- Hạ: Hỏa +20%, Mộc +10% - "Dương khí mùa hạ bừng cháy..."
+- Thu: Kim +20%, Thổ +10% - "Khí thu sắc bén..."
+- Đông: Thủy +20%, Kim +10% - "Hàn khí mùa đông..."
+
+🌙 THỜI ĐIỂM ĐẶC BIỆT:
+- Đêm: +15% tu vi - "Âm khí cực thịnh, thích hợp nhập định..."
+- Ngày 15 (trăng tròn): +25% - "Ánh nguyệt rọi xuống, linh khí dao động..."
+- Đầu năm mới: +30% - "Thiên địa khởi đầu mới..."
+
+💡 CƠ HỘI NGỘ ĐẠO (5-15% mỗi lượt tu):
+- Khi người chơi tu luyện → có cơ hội "ngộ đạo"
+- Mô tả: "Đột nhiên, một tia linh quang lóe lên trong tâm thức..."
+- Ngộ đạo có thể: +exp bonus, hiểu được kỹ thuật mới, phát hiện vấn đề kinh mạch`
+      : `🧘 VIVID CULTIVATION DESCRIPTIONS:
+When player cultivates, DESCRIBE IN DETAIL:
+1. QI FLOW: "Spiritual energy flows into the dantian with each breath, circulating through meridians..."
+2. BODY SENSATIONS: "A warm/cool sensation spreads from the dantian..."
+3. SPIRIT ROOT ELEMENT: If Fire root → "The fire element in your blood vessels flares..."
+4. ACTIVE TECHNIQUE: If has technique → describe how they circulate that method
+5. ENVIRONMENT: "The dense spiritual energy of [location]..."
+
+⏰ TIME MUST PASS:
+- Each turn → time_segments: 1-4 (usually 1-2)
+- Describe time: "An hour passes..." "As the sun sets..."
+- Segment changes: Morning→Afternoon→Evening→Night
+
+🌸 SEASONS AFFECT CULTIVATION:
+- Spring: Wood +20%, Water +10% - "Spring vitality aids..."
+- Summer: Fire +20%, Wood +10% - "Summer yang energy blazes..."
+- Autumn: Metal +20%, Earth +10% - "Autumn's sharp qi..."
+- Winter: Water +20%, Metal +10% - "Winter's cold qi..."
+
+🌙 SPECIAL TIME BONUSES:
+- Night: +15% cultivation - "Yin energy peaks, perfect for meditation..."
+- Day 15 (full moon): +25% - "Moonlight shines down, spiritual energy fluctuates..."
+- New Year: +30% - "Heaven and earth begin anew..."
+
+⚡ APPLYING TIME BONUS TO EXP:
+- The context shows current time bonus (e.g., "Cultivation bonus: +25%")
+- MUST apply this to cultivation_exp rewards!
+- Formula: final_exp = base_exp × (1 + bonus/100)
+- Example: base 30 exp with +25% = 30 × 1.25 = 37-38 exp
+- Always mention: "Thanks to [evening/night/season] qi, you gain extra cultivation..."
+
+💡 INSIGHT CHANCES (5-15% per cultivation turn):
+- When player cultivates → chance for "enlightenment"
+- Describe: "Suddenly, a flash of insight sparks in your consciousness..."
+- Insights can: +exp bonus, comprehend new technique, discover meridian issues`,
+
+    activityGuidance: isVi
+      ? `🎯 HOẠT ĐỘNG HÀNG NGÀY:
+Người chơi có thể chọn các hoạt động:
+- Tu luyện Khí: +qi_exp, tiêu stamina, cơ hội ngộ đạo
+- Luyện Thể: +body_exp, tiêu stamina cao, tăng STR/HP
+- Thiền định: Ít exp nhưng cao cơ hội ngộ đạo, hồi stamina
+- Rèn kỹ năng: +skill_exp cho kỹ năng cụ thể
+- Khám phá: Tìm tài nguyên, gặp sự kiện, nguy hiểm
+- Nghỉ ngơi: Hồi stamina và HP nhanh
+- Giao lưu: Tăng reputation, nghe tin đồn
+- Nhiệm vụ tông môn: +contribution, +exp
+
+💰 HỆ THỐNG CỐNG HIẾN TÔNG MÔN (QUAN TRỌNG):
+Khi người chơi ở trong tông môn (sect_membership tồn tại):
+1. HOÀN THÀNH NHIỆM VỤ TÔNG MÔN:
+   - Nhiệm vụ dễ: +10-30 cống hiến
+   - Nhiệm vụ trung bình: +40-80 cống hiến
+   - Nhiệm vụ khó: +100-200 cống hiến
+   - Delta: {"field": "sect.contribution", "operation": "add", "value": N}
+
+2. TIÊU CỐNG HIẾN ĐỔI PHẦN THƯỞNG:
+   - Công pháp/kỹ năng cấp thấp: -50 cống hiến
+   - Công pháp/kỹ năng cấp trung: -150 cống hiến
+   - Công pháp/kỹ năng cấp cao: -300+ cống hiến
+   - Linh thạch (10 viên): -20 cống hiến
+   - Đan dược/vật phẩm đặc biệt: -50-200 cống hiến
+   - Vào tạng thư các/kho báu: -100 cống hiến
+   - Delta khi đổi: {"field": "sect.contribution", "operation": "subtract", "value": N} + thêm vật phẩm/công pháp
+   
+3. ĐỀ XUẤT LỰA CHỌN ĐỔI CỐNG HIẾN:
+   - Khi ở địa điểm tông môn (tạng thư các, kho báu, điện nhiệm vụ)
+   - Mỗi 5-10 lượt nếu cống hiến > 50
+   - Ví dụ: "Đổi 100 cống hiến lấy công pháp Địa cấp từ tạng thư các"
+   - Phải kiểm tra cống hiến >= chi phí trước khi cho phép
+
+4. NGƯỠNG THĂNG CẤP:
+   - Ngoại Môn → Nội Môn: 200 cống hiến + Luyện Khí giai 5+
+   - Nội Môn → Chân Truyền: 500 cống hiến + Trúc Cơ giai 1+
+   - Chân Truyền → Trưởng Lão: 1500 cống hiến + Kim Đan giai 1+
+   - Khi thăng cấp: {"field": "sect.promote", "operation": "set", "value": "cấp_mới"}
+
+⚡ THỂ LỰC QUAN TRỌNG:
+- Stamina 0-20: CHỈ cho lựa chọn nghỉ ngơi hoặc hoạt động nhẹ
+- Stamina 20-50: Hoạt động bình thường
+- Stamina 50+: Hoạt động nặng (khám phá nguy hiểm, luyện thể)
+
+🔄 NHỊP SINH HOẠT:
+- Sau 3-4 lượt hoạt động mạnh → đề xuất nghỉ ngơi
+- Sáng: Tốt cho luyện công, giao lưu
+- Chiều: Khám phá, nhiệm vụ
+- Tối: Thiền định, đọc sách
+- Đêm: Tu luyện +15% (âm khí)`
+      : `🎯 DAILY ACTIVITIES:
+Players can choose activities:
+- Qi Cultivation: +qi_exp, costs stamina, insight chance
+- Body Tempering: +body_exp, high stamina cost, increases STR/HP
+- Meditation: Low exp but high insight chance, recovers stamina
+- Skill Practice: +skill_exp for specific skills
+- Exploration: Find resources, encounter events, danger
+- Rest: Fast stamina and HP recovery
+- Socialize: Increase reputation, hear rumors
+- Sect Duty: +contribution, +exp
+
+💰 SECT CONTRIBUTION SYSTEM (IMPORTANT):
+When player is in a sect (sect_membership exists):
+1. COMPLETING SECT MISSIONS:
+   - Easy missions: +10-30 contribution
+   - Medium missions: +40-80 contribution
+   - Hard missions: +100-200 contribution
+   - Delta: {"field": "sect.contribution", "operation": "add", "value": N}
+
+2. SPENDING CONTRIBUTION FOR REWARDS:
+   - Low-tier technique/skill: -50 contribution
+   - Mid-tier technique/skill: -150 contribution
+   - High-tier technique/skill: -300+ contribution
+   - Spirit stones (10): -20 contribution
+   - Special pills/items: -50-200 contribution
+   - Access to sect library/treasury: -100 contribution
+   - Delta when exchanging: {"field": "sect.contribution", "operation": "subtract", "value": N} + add item/technique
+   
+3. OFFER CONTRIBUTION EXCHANGE CHOICES:
+   - When in sect location (library, treasury, mission hall)
+   - Every 5-10 turns if contribution > 50
+   - Example choice: "Exchange 100 contribution for Earth-tier technique from sect library"
+   - Must check contribution >= cost before allowing
+
+4. RANK PROMOTION THRESHOLDS:
+   - Outer → Inner: 200 contribution + Luyện Khí stage 5+
+   - Inner → True Disciple: 500 contribution + Trúc Cơ stage 1+
+   - True Disciple → Elder: 1500 contribution + Kim Đan stage 1+
+   - When promoting: {"field": "sect.promote", "operation": "set", "value": "new_rank"}
+
+⚡ STAMINA IS IMPORTANT:
+- Stamina 0-20: ONLY offer rest or light activities
+- Stamina 20-50: Normal activities
+- Stamina 50+: Heavy activities (dangerous exploration, body cultivation)
+
+🔄 DAILY RHYTHM:
+- After 3-4 heavy activity turns → suggest resting
+- Morning: Good for practice, socializing
+- Afternoon: Exploration, missions
+- Evening: Meditation, reading
+- Night: Cultivation +15% (yin energy)`,
+
+    worldFeelsAlive: isVi
+      ? `🌍 THẾ GIỚI SỐNG ĐỘNG:
+- NPC có cuộc sống riêng: "Đạo hữu Vương đã đột phá Trúc Cơ..."
+- Tông môn có biến động: "Nghe nói Kiếm Tông vừa chiến thắng Ma Tông..."
+- Thời tiết/mùa ảnh hưởng: "Mưa xuân khiến linh thảo đâm chồi..."
+- Tin đồn lan truyền: "Gần đây có người thấy bảo vật xuất hiện..."
+
+📅 THỜI GIAN CÓ Ý NGHĨA:
+- Tuổi tác tăng theo năm → tạo áp lực đột phá
+- Sự kiện định kỳ: Đại hội tông môn, hội chợ linh vật
+- Cơ duyên có thời hạn: "Bí cảnh sẽ đóng sau 3 ngày..."
+
+⚠️ RỦI RO THỰC SỰ:
+- Đột phá có thể thất bại → tẩu hỏa nhập ma
+- Chiến đấu quá sức → chấn thương
+- Tu luyện khi mệt → hiệu quả giảm, có thể gây hại
+- Đi vào vùng nguy hiểm không chuẩn bị → tử vong`
+      : `🌍 LIVING WORLD:
+- NPCs have their own lives: "Fellow Daoist Wang broke through to Foundation..."
+- Sects have events: "I heard Sword Sect just defeated Demon Sect..."
+- Weather/seasons affect things: "Spring rain makes spirit herbs sprout..."
+- Rumors spread: "Recently someone spotted a treasure appearing..."
+
+📅 TIME HAS MEANING:
+- Age increases each year → creates breakthrough pressure
+- Periodic events: Sect tournaments, spirit beast markets
+- Limited opportunities: "The secret realm will close in 3 days..."
+
+⚠️ REAL RISKS:
+- Breakthroughs can fail → qi deviation
+- Fighting too hard → injuries
+- Cultivating while exhausted → reduced effect, possible harm
+- Entering dangerous areas unprepared → death`,
   };
 
   const schemas = `
@@ -632,6 +855,12 @@ ${rules.enhancement}
 ${rules.storageRing}
 
 ${rules.dualCultivation}
+
+${rules.cultivationImmersion}
+
+${rules.activityGuidance}
+
+${rules.worldFeelsAlive}
 
 ${rules.progression}
 
@@ -737,6 +966,84 @@ export function buildGameContext(
       ? `Thời gian: Năm ${state.time_year}, Tháng ${state.time_month}, Ngày ${state.time_day} - ${state.time_segment}`
       : `Time: Year ${state.time_year}, Month ${state.time_month}, Day ${state.time_day} - ${state.time_segment}`,
   );
+
+  // Time-based cultivation bonuses
+  const currentSeason = getSeasonFromMonth(state.time_month);
+  const currentTime: GameTime = {
+    segment: state.time_segment as TimeSegment,
+    day: state.time_day,
+    month: state.time_month,
+    year: state.time_year,
+  };
+  const timeBonus = calculateTimeCultivationBonus(
+    currentTime,
+    state.spirit_root.elements,
+  );
+  const specialBonus = getSpecialTimeBonus(currentTime);
+
+  ctx.push(
+    locale === "vi"
+      ? `🌸 Mùa: ${currentSeason} | ⏰ Bonus tu luyện: +${timeBonus}%${specialBonus ? ` (đặc biệt +${specialBonus.bonus}%)` : ""}`
+      : `🌸 Season: ${currentSeason} | ⏰ Cultivation bonus: +${timeBonus}%${specialBonus ? ` (special +${specialBonus.bonus}%)` : ""}`,
+  );
+
+  // Current activity (if any)
+  if (state.activity?.current) {
+    const activity = state.activity.current;
+    ctx.push(
+      locale === "vi"
+        ? `🎯 Hoạt động: ${activity.type} (${activity.progress}% - ${activity.duration_segments} segments)`
+        : `🎯 Activity: ${activity.type} (${activity.progress}% - ${activity.duration_segments} segments)`,
+    );
+  }
+
+  // Lifespan info (if any)
+  if (state.lifespan) {
+    const yearsRemaining = state.lifespan.years_remaining;
+    const lifespanWarning = yearsRemaining <= 20;
+    ctx.push(
+      locale === "vi"
+        ? `${lifespanWarning ? "⚠️" : "📅"} Tuổi: ${state.lifespan.current_age}/${state.lifespan.max_lifespan} (còn ${yearsRemaining} năm)${lifespanWarning ? " - CẦN ĐỘT PHÁ!" : ""}`
+        : `${lifespanWarning ? "⚠️" : "📅"} Age: ${state.lifespan.current_age}/${state.lifespan.max_lifespan} (${yearsRemaining} years left)${lifespanWarning ? " - NEED BREAKTHROUGH!" : ""}`,
+    );
+  }
+
+  // Character condition warnings
+  if (state.condition) {
+    const warnings: string[] = [];
+    if (state.condition.fatigue > 70) {
+      warnings.push(locale === "vi" ? "Mệt mỏi cao" : "High fatigue");
+    }
+    const badMentalStates = ["agitated", "fearful", "injured", "corrupted"];
+    if (badMentalStates.includes(state.condition.mental_state)) {
+      warnings.push(
+        locale === "vi"
+          ? `Tinh thần: ${state.condition.mental_state}`
+          : `Mental: ${state.condition.mental_state}`,
+      );
+    }
+    if (state.condition.injuries && state.condition.injuries.length > 0) {
+      warnings.push(
+        locale === "vi"
+          ? `${state.condition.injuries.length} chấn thương`
+          : `${state.condition.injuries.length} injuries`,
+      );
+    }
+    if (state.condition.qi_deviation_level > 20) {
+      warnings.push(
+        locale === "vi"
+          ? `Rủi ro tẩu hỏa: ${state.condition.qi_deviation_level}%`
+          : `Qi deviation risk: ${state.condition.qi_deviation_level}%`,
+      );
+    }
+    if (warnings.length > 0) {
+      ctx.push(
+        locale === "vi"
+          ? `⚠️ Tình trạng: ${warnings.join(", ")}`
+          : `⚠️ Condition: ${warnings.join(", ")}`,
+      );
+    }
+  }
   ctx.push("");
 
   // Calculate required exp for next level
@@ -1135,6 +1442,35 @@ export function buildGameContext(
         ? `  Đóng góp: ${sect.contribution} | Thanh danh: ${sect.reputation}/100`
         : `  Contribution: ${sect.contribution} | Reputation: ${sect.reputation}/100`,
     );
+
+    // Add contribution spending hints
+    if (sect.contribution >= 50) {
+      const hints: string[] = [];
+      if (sect.contribution >= 50)
+        hints.push(
+          locale === "vi" ? "Có thể đổi vật phẩm" : "Can exchange items",
+        );
+      if (sect.contribution >= 150)
+        hints.push(
+          locale === "vi" ? "Có thể lấy công pháp" : "Can get techniques",
+        );
+      if (sect.rank === "NgoạiMôn" && sect.contribution >= 200) {
+        hints.push(
+          locale === "vi"
+            ? "Đủ điểm thăng Nội Môn!"
+            : "Ready for Inner promotion!",
+        );
+      }
+      if (sect.rank === "NộiMôn" && sect.contribution >= 500) {
+        hints.push(
+          locale === "vi"
+            ? "Đủ điểm thăng Chân Truyền!"
+            : "Ready for True Disciple!",
+        );
+      }
+      ctx.push(`  💡 ${hints.join(", ")}`);
+    }
+
     if (sect.mentor) {
       const mentorName =
         locale === "vi" ? sect.mentor : sect.mentor_en || sect.mentor;

@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { GameState, CultivationTechnique, Skill } from "@/types/game";
+import {
+  GameState,
+  CultivationTechnique,
+  Skill,
+  GameTime,
+  TimeSegment,
+} from "@/types/game";
 import { t, Locale } from "@/lib/i18n/translations";
 import {
   calculateTotalAttributes,
@@ -13,6 +19,10 @@ import {
   getSpiritRootBonus,
   getTechniqueBonus,
 } from "@/lib/game/mechanics";
+import {
+  calculateTimeCultivationBonus,
+  getSpecialTimeBonus,
+} from "@/lib/game/time";
 import CultivationVisualization from "./CultivationVisualization";
 import MeridianDiagram from "./MeridianDiagram";
 import DualCultivationView from "./DualCultivationView";
@@ -108,6 +118,19 @@ export default function CharacterSheet({
   const spiritRootMultiplier = getSpiritRootBonus(state.spirit_root.grade);
   const techniqueMultiplier = getTechniqueBonus(state);
   const totalCultivationSpeed = spiritRootMultiplier * techniqueMultiplier;
+
+  // Calculate time-based cultivation bonus
+  const currentTime: GameTime = {
+    segment: state.time_segment as TimeSegment,
+    day: state.time_day,
+    month: state.time_month,
+    year: state.time_year,
+  };
+  const timeBonus = calculateTimeCultivationBonus(
+    currentTime,
+    state.spirit_root.elements,
+  );
+  const specialBonus = getSpecialTimeBonus(currentTime);
 
   return (
     <div className="space-y-6">
@@ -228,6 +251,45 @@ export default function CharacterSheet({
                 }
                 return null;
               })()}
+              {/* Time-based cultivation bonus */}
+              {timeBonus > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-bold text-yellow-400">
+                    +{timeBonus}%
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {locale === "vi"
+                      ? "(từ thời gian/mùa)"
+                      : "(from time/season)"}
+                  </span>
+                  {specialBonus && (
+                    <span className="text-xs text-yellow-300 ml-1">
+                      {locale === "vi"
+                        ? specialBonus.reason_vi
+                        : specialBonus.reason_en}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            {/* Total Cultivation Bonus */}
+            <div className="mt-3 pt-3 border-t border-xianxia-accent/20">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-400">
+                  {locale === "vi" ? "Tổng Bonus Exp:" : "Total Exp Bonus:"}
+                </span>
+                <span className="text-xl font-bold text-xianxia-gold">
+                  +
+                  {timeBonus +
+                    (getEquipmentBonus(state, "cultivation_speed") || 0)}
+                  %
+                </span>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {locale === "vi"
+                  ? "AI sẽ tự động áp dụng bonus này vào exp rewards"
+                  : "AI will automatically apply this bonus to exp rewards"}
+              </div>
             </div>
           </div>
         </div>
@@ -770,74 +832,6 @@ export default function CharacterSheet({
                   width: `${(state.stats.stamina / state.stats.stamina_max) * 100}%`,
                 }}
               />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Attributes */}
-      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">
-          {t(locale, "attributes")}
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <div className="text-center p-3 bg-xianxia-darker rounded">
-            <div className="text-sm text-gray-400">{t(locale, "strength")}</div>
-            <div className="text-2xl font-bold text-red-400">
-              {totalAttrs.str}
-              {totalAttrs.str !== state.attrs.str && (
-                <span className="text-sm text-green-400 ml-1">
-                  +{totalAttrs.str - state.attrs.str}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="text-center p-3 bg-xianxia-darker rounded">
-            <div className="text-sm text-gray-400">{t(locale, "agility")}</div>
-            <div className="text-2xl font-bold text-green-400">
-              {totalAttrs.agi}
-              {totalAttrs.agi !== state.attrs.agi && (
-                <span className="text-sm text-green-400 ml-1">
-                  +{totalAttrs.agi - state.attrs.agi}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="text-center p-3 bg-xianxia-darker rounded">
-            <div className="text-sm text-gray-400">
-              {t(locale, "intelligence")}
-            </div>
-            <div className="text-2xl font-bold text-blue-400">
-              {totalAttrs.int}
-              {totalAttrs.int !== state.attrs.int && (
-                <span className="text-sm text-green-400 ml-1">
-                  +{totalAttrs.int - state.attrs.int}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="text-center p-3 bg-xianxia-darker rounded">
-            <div className="text-sm text-gray-400">
-              {t(locale, "perception")}
-            </div>
-            <div className="text-2xl font-bold text-purple-400">
-              {totalAttrs.perception}
-              {totalAttrs.perception !== state.attrs.perception && (
-                <span className="text-sm text-green-400 ml-1">
-                  +{totalAttrs.perception - state.attrs.perception}
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="text-center p-3 bg-xianxia-darker rounded">
-            <div className="text-sm text-gray-400">{t(locale, "luck")}</div>
-            <div className="text-2xl font-bold text-xianxia-gold">
-              {totalAttrs.luck}
-              {totalAttrs.luck !== state.attrs.luck && (
-                <span className="text-sm text-green-400 ml-1">
-                  +{totalAttrs.luck - state.attrs.luck}
-                </span>
-              )}
             </div>
           </div>
         </div>

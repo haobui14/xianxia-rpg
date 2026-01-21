@@ -18,6 +18,8 @@ import NotificationManager from "./NotificationManager";
 import DebugInventory from "./DebugInventory";
 import BreakthroughModal, { BreakthroughEvent } from "./BreakthroughModal";
 import CombatView from "./CombatView";
+import CultivatorDashboard from "./CultivatorDashboard";
+import { ActivityType } from "@/types/game";
 
 interface GameScreenProps {
   runId: string;
@@ -1320,6 +1322,35 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       });
     }
   }, [state, runId, processTurn]);
+  // Initialize market when market tab is opened
+  useEffect(() => {
+    const initMarket = async () => {
+      if (
+        activeTab === "market" &&
+        state &&
+        (!state.market || state.market.items.length === 0)
+      ) {
+        try {
+          const response = await fetch("/api/market", {
+            method: "GET",
+            credentials: "same-origin",
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            if (result.state) {
+              setState(result.state);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to initialize market:", error);
+        }
+      }
+    };
+
+    initMarket();
+  }, [activeTab, state]);
+
   // Check for full stamina and send notification
   useEffect(() => {
     if (!state || !userId) return;
@@ -1506,40 +1537,37 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         {/* Content */}
         {activeTab === "game" && (
           <div className="space-y-6">
-            {/* Quick Stats Bar */}
-            <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-400">HP: </span>
-                  <span className="font-medium text-red-400">
-                    {state.stats.hp}/{state.stats.hp_max}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-gray-400">{t(locale, "qi")}: </span>
-                  <span className="font-medium text-blue-400">
-                    {state.stats.qi}/{state.stats.qi_max}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-gray-400">
-                    {t(locale, "stamina")}:{" "}
-                  </span>
-                  <span className="font-medium text-green-400">
-                    {state.stats.stamina}/{state.stats.stamina_max}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-gray-400">
-                    {t(locale, "cultivation")}:{" "}
-                  </span>
-                  <span className="font-medium text-xianxia-gold">
-                    {t(locale, state.progress.realm)}{" "}
-                    {state.progress.realm_stage}
-                  </span>
-                </div>
-              </div>
-            </div>
+            {/* Cultivation Simulator Dashboard */}
+            <CultivatorDashboard
+              state={state}
+              locale={locale}
+              onActivityStart={(
+                activityType: ActivityType,
+                duration: number,
+              ) => {
+                // For now, translate activity selection into a choice
+                const activityChoiceText =
+                  locale === "vi"
+                    ? `Bắt đầu ${activityType} trong ${duration} canh giờ`
+                    : `Start ${activityType} for ${duration} segments`;
+                // Use processTurn directly since activity choices aren't in the choices array
+                processTurn(`activity_${activityType}_${duration}`, {
+                  id: `activity_${activityType}_${duration}`,
+                  text: activityChoiceText,
+                });
+              }}
+              onActivityInterrupt={() => {
+                const interruptText =
+                  locale === "vi"
+                    ? "Dừng hoạt động hiện tại"
+                    : "Stop current activity";
+                processTurn("interrupt_activity", {
+                  id: "interrupt_activity",
+                  text: interruptText,
+                });
+              }}
+              compact={true}
+            />
 
             {/* Narrative */}
             <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">

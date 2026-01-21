@@ -9,6 +9,11 @@ import {
   CultivationProgress,
   TimeSegment,
   Realm,
+  ActivityType,
+  GameTime,
+  CharacterCondition,
+  LifespanInfo,
+  REALM_LIFESPAN_BONUS,
 } from "@/types/game";
 // World system types imported but used via init functions
 import { DeterministicRNG } from "./rng";
@@ -30,8 +35,8 @@ export function createInitialState(
     hp_max: 100,
     qi: 0,
     qi_max: 0,
-    stamina: 999999, // Testing: Unlimited stamina
-    stamina_max: 999999,
+    stamina: 100,
+    stamina_max: 100,
   };
 
   const baseAttrs: CharacterAttributes = {
@@ -100,6 +105,39 @@ export function createInitialState(
     travel: initTravelState(),
     events: initEventState(),
     dungeon: initDungeonState(),
+
+    // Cultivation simulator systems (Phase 1)
+    activity: {
+      current: undefined,
+      available_activities: [
+        "cultivate_qi",
+        "cultivate_body",
+        "meditate",
+        "rest",
+        "explore",
+        "socialize",
+      ] as ActivityType[],
+      cooldowns: {} as Record<ActivityType, GameTime>,
+      daily_log: [],
+    },
+    condition: {
+      injuries: [],
+      qi_deviation_level: 0,
+      fatigue: 0,
+      mental_state: "calm",
+      active_effects: [],
+      enlightenment_points: 0,
+    } as CharacterCondition,
+    lifespan: {
+      base_years: 80,
+      realm_bonus: REALM_LIFESPAN_BONUS["PhàmNhân"],
+      special_bonus: 0,
+      penalty: 0,
+      current_age: age,
+      max_lifespan: 80 + REALM_LIFESPAN_BONUS["PhàmNhân"],
+      years_remaining: 80 + REALM_LIFESPAN_BONUS["PhàmNhân"] - age,
+      urgency_level: "safe",
+    } as LifespanInfo,
   };
 }
 
@@ -161,6 +199,49 @@ export function migrateGameState(state: GameState): GameState {
   // Migrate inventory max_slots if missing
   if (!state.inventory.max_slots) {
     state.inventory.max_slots = 20;
+  }
+
+  // Migrate cultivation simulator fields (Phase 1)
+  if (!state.activity) {
+    state.activity = {
+      current: undefined,
+      available_activities: [
+        "cultivate_qi",
+        "cultivate_body",
+        "meditate",
+        "rest",
+        "explore",
+        "socialize",
+      ] as ActivityType[],
+      cooldowns: {} as Record<ActivityType, GameTime>,
+      daily_log: [],
+    };
+  }
+
+  if (!state.condition) {
+    state.condition = {
+      injuries: [],
+      qi_deviation_level: 0,
+      fatigue: 0,
+      mental_state: "calm",
+      active_effects: [],
+      enlightenment_points: 0,
+    };
+  }
+
+  if (!state.lifespan) {
+    const realmBonus = REALM_LIFESPAN_BONUS[state.progress.realm] || 0;
+    const maxLifespan = 80 + realmBonus;
+    state.lifespan = {
+      base_years: 80,
+      realm_bonus: realmBonus,
+      special_bonus: 0,
+      penalty: 0,
+      current_age: state.age,
+      max_lifespan: maxLifespan,
+      years_remaining: maxLifespan - state.age,
+      urgency_level: maxLifespan - state.age <= 20 ? "warning" : "safe",
+    };
   }
 
   return state;

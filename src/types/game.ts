@@ -4,6 +4,390 @@ import { TravelState, EventState, DungeonState } from "./world";
 
 export type Locale = "vi" | "en";
 
+// =====================================================
+// TIME & ACTIVITY SYSTEM TYPES
+// =====================================================
+
+// Game time structure
+export interface GameTime {
+  day: number; // 1-30
+  month: number; // 1-12
+  year: number; // Starts at 1
+  segment: TimeSegment;
+}
+
+// Season derived from month
+export type Season = "Spring" | "Summer" | "Autumn" | "Winter";
+
+// Activity types available to player
+export type ActivityType =
+  | "cultivate_qi" // Qi cultivation meditation
+  | "cultivate_body" // Body tempering exercises
+  | "meditate" // Pure meditation (insight chance)
+  | "practice_skill" // Combat skill training
+  | "explore" // Area exploration
+  | "gather" // Resource gathering
+  | "craft_alchemy" // Pill crafting
+  | "rest" // Recovery and healing
+  | "socialize" // NPC interaction
+  | "sect_duty" // Sect missions/training
+  | "trade" // Market/trading
+  | "travel" // Moving between areas
+  | "dungeon" // Dungeon exploration
+  | "breakthrough_prep" // Preparing for breakthrough
+  | "breakthrough"; // Attempting breakthrough
+
+// Activity duration options
+export type ActivityDuration =
+  | "1_segment" // ~3 hours
+  | "half_day" // 2 segments
+  | "full_day" // 4 segments
+  | "3_days" // 12 segments
+  | "week" // 28 segments
+  | "month" // 120 segments (30 days * 4)
+  | "custom";
+
+// Activity definition
+export interface ActivityDefinition {
+  type: ActivityType;
+  name: string;
+  name_en: string;
+  description: string;
+  description_en: string;
+  icon: string;
+  category:
+    | "cultivation"
+    | "combat"
+    | "gathering"
+    | "social"
+    | "recovery"
+    | "special";
+
+  // Base costs per segment
+  base_stamina_cost: number;
+  base_qi_cost: number;
+
+  // Requirements
+  requirements?: {
+    min_realm?: Realm;
+    min_body_realm?: BodyRealm;
+    min_stamina?: number;
+    min_qi?: number;
+    required_location_type?: string[];
+    required_items?: string[];
+    in_sect?: boolean;
+    not_injured?: boolean;
+  };
+
+  // Allowed durations
+  allowed_durations: ActivityDuration[];
+
+  // Base rewards per segment
+  base_rewards: {
+    qi_exp?: number;
+    body_exp?: number;
+    skill_exp?: number;
+    insight_chance?: number; // 0-1 probability
+    stamina_recovery?: number;
+    hp_recovery?: number;
+  };
+
+  // Affected by
+  affected_by: (
+    | "technique"
+    | "location"
+    | "season"
+    | "equipment"
+    | "condition"
+  )[];
+}
+
+// Current activity state
+export interface CurrentActivity {
+  type: ActivityType;
+  started_time: GameTime;
+  target_end_time: GameTime;
+  duration_segments: number;
+  progress: number; // 0-100%
+  technique_id?: string;
+  accumulated_rewards: {
+    qi_exp: number;
+    body_exp: number;
+    skill_exp: Record<string, number>;
+    items: InventoryItem[];
+    silver: number;
+    insights: string[];
+  };
+  interruptions: number;
+  bonuses: {
+    technique: number;
+    location: number;
+    season: number;
+    equipment: number;
+    condition: number;
+    total: number;
+  };
+}
+
+// Activity history entry
+export interface ActivityLogEntry {
+  type: ActivityType;
+  started: GameTime;
+  ended: GameTime;
+  duration_segments: number;
+  outcome: "success" | "failure" | "interrupted" | "critical_success";
+  rewards_summary: string;
+}
+
+// =====================================================
+// REPUTATION SYSTEM TYPES
+// =====================================================
+
+export type ReputationRank =
+  | "hated" // < -750
+  | "hostile" // -750 to -500
+  | "unfriendly" // -500 to -100
+  | "neutral" // -100 to 100
+  | "friendly" // 100 to 500
+  | "honored" // 500 to 750
+  | "revered" // 750 to 900
+  | "exalted"; // > 900
+
+export interface ReputationEntry {
+  faction_type: "sect" | "region" | "npc" | "faction";
+  faction_id: string;
+  faction_name: string;
+  faction_name_en: string;
+  value: number; // -1000 to 1000
+  rank: ReputationRank;
+  modifiers: {
+    source: string;
+    amount: number;
+    expires?: GameTime;
+  }[];
+}
+
+// =====================================================
+// CHARACTER CONDITION TYPES
+// =====================================================
+
+export type MentalState =
+  | "enlightened" // Bonus to breakthroughs
+  | "calm" // Normal
+  | "focused" // Bonus to cultivation
+  | "agitated" // Penalty to delicate tasks
+  | "fearful" // Penalty to combat
+  | "injured" // Healing priority
+  | "corrupted"; // Demonic influence
+
+export interface Injury {
+  id: string;
+  name: string;
+  name_en: string;
+  type: "physical" | "meridian" | "soul" | "qi_deviation";
+  severity: 1 | 2 | 3 | 4 | 5; // 1=minor, 5=crippling
+  affected_stats: Partial<CharacterStats & CharacterAttributes>;
+  recovery_days: number;
+  acquired_time: GameTime;
+  can_cultivate: boolean;
+  healing_items?: string[]; // Item IDs that can help
+}
+
+export interface StatusEffect {
+  id: string;
+  name: string;
+  name_en: string;
+  type: "buff" | "debuff";
+  source: string;
+  stat_modifiers: Partial<CharacterStats & CharacterAttributes>;
+  cultivation_modifier?: number; // Percentage
+  expires: GameTime;
+  stackable: boolean;
+  stacks?: number;
+}
+
+export interface CharacterCondition {
+  injuries: Injury[];
+  qi_deviation_level: number; // 0-100
+  fatigue: number; // 0-100
+  mental_state: MentalState;
+  active_effects: StatusEffect[];
+  enlightenment_points: number;
+}
+
+// =====================================================
+// LIFESPAN SYSTEM TYPES
+// =====================================================
+
+export interface LifespanInfo {
+  base_years: number; // Mortal lifespan
+  realm_bonus: number; // From cultivation realm
+  special_bonus: number; // From items/events
+  penalty: number; // From injuries/qi deviation
+  current_age: number;
+  max_lifespan: number; // Calculated total
+  years_remaining: number;
+  urgency_level: "safe" | "caution" | "warning" | "critical";
+}
+
+// Realm lifespan bonuses
+export const REALM_LIFESPAN_BONUS: Record<Realm, number> = {
+  PhàmNhân: 0,
+  LuyệnKhí: 50,
+  TrúcCơ: 150,
+  KếtĐan: 400,
+  NguyênAnh: 1000,
+};
+
+// =====================================================
+// BREAKTHROUGH SYSTEM TYPES
+// =====================================================
+
+export interface BreakthroughPreparation {
+  target_type: "realm" | "stage" | "body_realm" | "body_stage";
+  target_realm?: Realm | BodyRealm;
+  target_stage?: number;
+
+  // Preparation items
+  pills_prepared: {
+    item: InventoryItem;
+    bonus: number;
+  }[];
+
+  // Location bonus
+  location: {
+    region: string;
+    area: string;
+    element_affinity: Element[];
+    bonus: number;
+  };
+
+  // Technique bonus
+  technique?: {
+    id: string;
+    name: string;
+    bonus: number;
+  };
+
+  // State checks
+  mental_state: MentalState;
+  mental_state_bonus: number;
+  injury_penalty: number;
+  qi_deviation_penalty: number;
+
+  // Final calculation
+  base_success_rate: number;
+  total_bonus: number;
+  final_success_rate: number;
+
+  // Requirements
+  requirements_met: boolean;
+  missing_requirements: string[];
+}
+
+export type BreakthroughOutcome =
+  | "success"
+  | "failure"
+  | "qi_deviation"
+  | "minor_injury"
+  | "major_injury"
+  | "crippled"
+  | "near_death";
+
+export interface BreakthroughResult {
+  outcome: BreakthroughOutcome;
+  from_realm: Realm | BodyRealm;
+  from_stage: number;
+  to_realm?: Realm | BodyRealm;
+  to_stage?: number;
+  narrative: string;
+  consequences: {
+    injuries?: Injury[];
+    qi_deviation_increase?: number;
+    exp_lost?: number;
+    recovery_days?: number;
+    lifespan_penalty?: number;
+  };
+  rewards?: {
+    stat_increases?: Partial<CharacterStats & CharacterAttributes>;
+    lifespan_bonus?: number;
+    new_abilities?: string[];
+  };
+}
+
+// =====================================================
+// WORLD SIMULATION TYPES
+// =====================================================
+
+export interface WorldSimulationState {
+  last_simulated_time: GameTime;
+
+  // Pending world changes to narrate
+  pending_events: WorldEvent[];
+
+  // NPC changes since last check
+  npc_changes: {
+    npc_id: string;
+    change_type:
+      | "breakthrough"
+      | "death"
+      | "moved"
+      | "joined_sect"
+      | "left_sect";
+    details: string;
+  }[];
+
+  // Rumors player has heard
+  rumors: {
+    id: string;
+    content: string;
+    content_en: string;
+    source: string;
+    game_time: GameTime;
+    verified: boolean;
+    related_to?: string; // NPC or event ID
+  }[];
+
+  // Region changes
+  region_changes: {
+    region_id: string;
+    change_type:
+      | "danger_increased"
+      | "danger_decreased"
+      | "new_sect_control"
+      | "resource_depleted"
+      | "resource_restored";
+    details: string;
+  }[];
+}
+
+export interface WorldEvent {
+  id: string;
+  type:
+    | "sect_war"
+    | "beast_tide"
+    | "treasure_appearance"
+    | "tournament"
+    | "disaster"
+    | "festival";
+  name: string;
+  name_en: string;
+  description: string;
+  description_en: string;
+  started: GameTime;
+  ends?: GameTime;
+  affected_regions: string[];
+  participation_requirements?: {
+    min_realm?: Realm;
+    sect_membership?: string;
+  };
+  rewards?: {
+    reputation?: Record<string, number>;
+    items?: InventoryItem[];
+    exp?: number;
+  };
+}
+
 // Realm progression
 export type Realm = "PhàmNhân" | "LuyệnKhí" | "TrúcCơ" | "KếtĐan" | "NguyênAnh";
 
@@ -311,6 +695,41 @@ export interface GameState {
   travel?: TravelState; // Region/area travel state
   events?: EventState; // Random events state
   dungeon?: DungeonState; // Dungeon progress state
+
+  // =====================================================
+  // CULTIVATION SIMULATOR ADDITIONS (Phase 1)
+  // =====================================================
+
+  // Activity System
+  activity?: {
+    current?: CurrentActivity;
+    available_activities: ActivityType[];
+    cooldowns: Record<ActivityType, GameTime>;
+    daily_log: ActivityLogEntry[];
+  };
+
+  // Multi-faction Reputation System
+  reputations?: Record<string, ReputationEntry>;
+
+  // Character Condition (injuries, fatigue, mental state)
+  condition?: CharacterCondition;
+
+  // Lifespan System
+  lifespan?: LifespanInfo;
+
+  // Breakthrough Preparation State
+  breakthrough_prep?: BreakthroughPreparation;
+
+  // World Simulation State
+  world_simulation?: WorldSimulationState;
+
+  // Gathered resources (separate from inventory for clarity)
+  gathered_resources?: {
+    herbs: Record<string, number>;
+    ores: Record<string, number>;
+    beast_materials: Record<string, number>;
+    essences: Record<string, number>;
+  };
 }
 
 // Choice for player
