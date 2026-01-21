@@ -444,6 +444,65 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
     [runId, locale],
   );
 
+  // Handle dual cultivation toggle
+  const handleToggleDualCultivation = useCallback(async () => {
+    try {
+      const response = await fetch("/api/dual-cultivation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ action: "toggle" }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to toggle dual cultivation");
+      }
+
+      const result = await response.json();
+      setState(result.state);
+    } catch (err: any) {
+      console.error("Dual cultivation error:", err);
+      setError(
+        err.message ||
+          (locale === "vi"
+            ? "Lỗi chuyển đổi song tu"
+            : "Error toggling dual cultivation"),
+      );
+    }
+  }, [locale]);
+
+  // Handle exp split change
+  const handleSetExpSplit = useCallback(
+    async (split: number) => {
+      try {
+        const response = await fetch("/api/dual-cultivation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ action: "set_split", split }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to set exp split");
+        }
+
+        const result = await response.json();
+        setState(result.state);
+      } catch (err: any) {
+        console.error("Exp split error:", err);
+        setError(
+          err.message ||
+            (locale === "vi"
+              ? "Lỗi cài đặt phân chia kinh nghiệm"
+              : "Error setting exp split"),
+        );
+      }
+    },
+    [locale],
+  );
+
   // Test combat with dummy enemy
   const startTestCombat = useCallback(() => {
     if (!state) return;
@@ -541,15 +600,35 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           );
 
           // Calculate skill damage
-          const baseDamage = state.attrs.str * 1.5;
-          const skillDamage = Math.floor(
-            baseDamage * skill.damage_multiplier * (0.8 + Math.random() * 0.4),
+          console.log("[Test Skill DEBUG - Full Skill]", skill);
+          console.log(
+            "[Test Skill DEBUG - damage_multiplier]",
+            skill.damage_multiplier,
+            typeof skill.damage_multiplier,
           );
+          const baseDamage = state.attrs.str * 1.5;
+          const skillDamage = baseDamage * (skill.damage_multiplier || 1);
+          console.log("[Test Skill DEBUG - Calculation]", {
+            baseDamage,
+            multiplier: skill.damage_multiplier,
+            skillDamage,
+          });
           const playerMiss = Math.random() < 0.1;
           const playerCrit = Math.random() < 0.15;
+          const rawDamage = Math.floor(skillDamage * (playerCrit ? 1.5 : 1));
           const finalDamage = playerMiss
             ? 0
-            : Math.floor(skillDamage * (playerCrit ? 1.5 : 1));
+            : Math.max(1, rawDamage - Math.floor(enemy.def / 2));
+
+          console.log("[Test Skill]", {
+            str: state.attrs.str,
+            baseDamage,
+            multiplier: skill.damage_multiplier,
+            skillDamage,
+            rawDamage,
+            enemyDef: enemy.def,
+            finalDamage,
+          });
 
           const playerLogEntry: CombatLogEntry = {
             id: `log-${Date.now()}`,
@@ -568,14 +647,41 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           };
           newLog.push(playerLogEntry);
 
-          // Set skill cooldown
+          // Set skill cooldown and grant skill exp
           setState((prev) => {
             if (!prev || !prev.skills) return prev;
             return {
               ...prev,
-              skills: prev.skills.map((s) =>
-                s.id === skillId ? { ...s, current_cooldown: s.cooldown } : s,
-              ),
+              skills: prev.skills.map((s) => {
+                if (s.id === skillId) {
+                  // Grant 5-15 exp for using skill
+                  const skillExpGain = 5 + Math.floor(Math.random() * 11);
+                  const currentExp = s.exp || 0;
+                  const maxExp = s.max_exp || s.level * 100;
+                  let newExp = currentExp + skillExpGain;
+                  let newLevel = s.level;
+                  let newMaxExp = maxExp;
+                  let newDamageMultiplier = s.damage_multiplier;
+
+                  // Handle level ups
+                  while (newExp >= newMaxExp && newLevel < s.max_level) {
+                    newExp -= newMaxExp;
+                    newLevel += 1;
+                    newMaxExp = newLevel * 100;
+                    newDamageMultiplier = newDamageMultiplier * 1.05;
+                  }
+
+                  return {
+                    ...s,
+                    current_cooldown: s.cooldown,
+                    exp: newExp,
+                    level: newLevel,
+                    max_exp: newMaxExp,
+                    damage_multiplier: newDamageMultiplier,
+                  };
+                }
+                return s;
+              }),
             };
           });
 
@@ -655,9 +761,19 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           : state.attrs.str * 1.5;
       const isCritical = Math.random() < 0.15;
       const isMiss = Math.random() < 0.1;
+      const rawDamage = Math.floor(baseDamage * (isCritical ? 2 : 1));
       const damage = isMiss
         ? 0
-        : Math.floor(baseDamage * (isCritical ? 2 : 1) - enemy.def / 2);
+        : Math.max(1, rawDamage - Math.floor(enemy.def / 2));
+
+      console.log("[Test Normal]", {
+        str: state.attrs.str,
+        baseDamage,
+        rawDamage,
+        enemyDef: enemy.def,
+        damage,
+        action,
+      });
 
       newLog.push({
         id: `log-${Date.now()}`,
@@ -789,16 +905,23 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
 
           if (skill.type === "attack") {
             const baseDamage = state.attrs.str * 1.5;
-            const skillDamage = Math.floor(
-              baseDamage *
-                skill.damage_multiplier *
-                (0.8 + Math.random() * 0.4),
-            );
+            const skillDamage = baseDamage * skill.damage_multiplier;
             const playerMiss = Math.random() < 0.1;
             const playerCrit = Math.random() < 0.15;
+            const rawDamage = Math.floor(skillDamage * (playerCrit ? 1.5 : 1));
             finalDamage = playerMiss
               ? 0
-              : Math.floor(skillDamage * (playerCrit ? 1.5 : 1));
+              : Math.max(1, rawDamage - Math.floor(activeCombat.enemy.def / 2));
+
+            console.log("[Active Skill]", {
+              str: state.attrs.str,
+              baseDamage,
+              multiplier: skill.damage_multiplier,
+              skillDamage,
+              rawDamage,
+              enemyDef: activeCombat.enemy.def,
+              finalDamage,
+            });
           } else if (skill.type === "defense" && skill.effects?.heal_percent) {
             healAmount = Math.floor(
               state.stats.hp_max * skill.effects.heal_percent,
@@ -855,14 +978,41 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           };
           newLog.push(playerLogEntry);
 
-          // Set skill cooldown
+          // Set skill cooldown and grant skill exp
           setState((prev) => {
             if (!prev || !prev.skills) return prev;
             return {
               ...prev,
-              skills: prev.skills.map((s) =>
-                s.id === skillId ? { ...s, current_cooldown: s.cooldown } : s,
-              ),
+              skills: prev.skills.map((s) => {
+                if (s.id === skillId) {
+                  // Grant 5-15 exp for using skill
+                  const skillExpGain = 5 + Math.floor(Math.random() * 11);
+                  const currentExp = s.exp || 0;
+                  const maxExp = s.max_exp || s.level * 100;
+                  let newExp = currentExp + skillExpGain;
+                  let newLevel = s.level;
+                  let newMaxExp = maxExp;
+                  let newDamageMultiplier = s.damage_multiplier;
+
+                  // Handle level ups
+                  while (newExp >= newMaxExp && newLevel < s.max_level) {
+                    newExp -= newMaxExp;
+                    newLevel += 1;
+                    newMaxExp = newLevel * 100;
+                    newDamageMultiplier = newDamageMultiplier * 1.05;
+                  }
+
+                  return {
+                    ...s,
+                    current_cooldown: s.cooldown,
+                    exp: newExp,
+                    level: newLevel,
+                    max_exp: newMaxExp,
+                    damage_multiplier: newDamageMultiplier,
+                  };
+                }
+                return s;
+              }),
             };
           });
 
@@ -940,12 +1090,22 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       const baseDamage =
         action === "qi_attack"
           ? state.attrs.int * 2 + state.attrs.str
-          : state.attrs.str * 1.5;
+          : state.attrs.str * 1.5; // Normal attack uses STR × 1.5
       const isCritical = Math.random() < 0.15;
       const isMiss = Math.random() < 0.1;
+      const rawDamage = Math.floor(baseDamage * (isCritical ? 2 : 1));
       const damage = isMiss
         ? 0
-        : Math.floor(baseDamage * (isCritical ? 2 : 1) - enemy.def / 2);
+        : Math.max(1, rawDamage - Math.floor(enemy.def / 2));
+
+      console.log("[Active Normal]", {
+        str: state.attrs.str,
+        baseDamage,
+        rawDamage,
+        enemyDef: enemy.def,
+        damage,
+        action,
+      });
 
       // Consume qi for qi_attack
       if (action === "qi_attack" && state.stats.qi >= 10) {
@@ -1280,10 +1440,10 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
     <div className="min-h-screen p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header with tabs */}
-        <div className="mb-6 flex gap-2 border-b border-xianxia-accent/30 pb-2">
+        <div className="mb-6 flex flex-wrap gap-2 border-b border-xianxia-accent/30 pb-2">
           <button
             onClick={() => setActiveTab("game")}
-            className={`px-4 py-2 rounded-t-lg transition-colors ${
+            className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
               activeTab === "game"
                 ? "bg-xianxia-accent text-white"
                 : "bg-xianxia-dark hover:bg-xianxia-accent/20"
@@ -1293,7 +1453,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           </button>
           <button
             onClick={() => setActiveTab("character")}
-            className={`px-4 py-2 rounded-t-lg transition-colors ${
+            className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
               activeTab === "character"
                 ? "bg-xianxia-accent text-white"
                 : "bg-xianxia-dark hover:bg-xianxia-accent/20"
@@ -1303,7 +1463,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           </button>
           <button
             onClick={() => setActiveTab("sect")}
-            className={`px-4 py-2 rounded-t-lg transition-colors ${
+            className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
               activeTab === "sect"
                 ? "bg-xianxia-accent text-white"
                 : "bg-xianxia-dark hover:bg-xianxia-accent/20"
@@ -1313,7 +1473,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           </button>
           <button
             onClick={() => setActiveTab("inventory")}
-            className={`px-4 py-2 rounded-t-lg transition-colors ${
+            className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
               activeTab === "inventory"
                 ? "bg-xianxia-accent text-white"
                 : "bg-xianxia-dark hover:bg-xianxia-accent/20"
@@ -1323,7 +1483,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           </button>
           <button
             onClick={() => setActiveTab("market")}
-            className={`px-4 py-2 rounded-t-lg transition-colors ${
+            className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
               activeTab === "market"
                 ? "bg-xianxia-accent text-white"
                 : "bg-xianxia-dark hover:bg-xianxia-accent/20"
@@ -1333,7 +1493,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           </button>
           <button
             onClick={() => setActiveTab("notifications")}
-            className={`px-4 py-2 rounded-t-lg transition-colors ${
+            className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
               activeTab === "notifications"
                 ? "bg-xianxia-accent text-white"
                 : "bg-xianxia-dark hover:bg-xianxia-accent/20"
@@ -1570,6 +1730,8 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
             locale={locale}
             previousExp={previousExp}
             onAbilitySwap={handleAbilitySwap}
+            onToggleDualCultivation={handleToggleDualCultivation}
+            onSetExpSplit={handleSetExpSplit}
           />
         )}
         {activeTab === "sect" && <SectView state={state} locale={locale} />}

@@ -31,6 +31,74 @@ export interface LootTable {
   spiritStoneRange: [number, number];
 }
 
+// Storage Ring items - special items that expand inventory capacity
+export const STORAGE_RING_ITEMS: LootEntry[] = [
+  {
+    id: "storage_ring_basic",
+    name: "Trữ Vật Giới (Cơ Bản)",
+    name_en: "Basic Storage Ring",
+    description:
+      "Một chiếc nhẫn trữ vật đơn giản, có thể chứa thêm 10 vật phẩm.",
+    description_en: "A simple storage ring that can hold 10 additional items.",
+    type: "Accessory",
+    rarity: "Common",
+    equipment_slot: "Accessory",
+    effects: { storage_capacity: 10 },
+    weight: 15,
+  },
+  {
+    id: "storage_ring_uncommon",
+    name: "Trữ Vật Giới (Tốt)",
+    name_en: "Uncommon Storage Ring",
+    description: "Nhẫn trữ vật chất lượng tốt, có thể chứa thêm 20 vật phẩm.",
+    description_en:
+      "Good quality storage ring that can hold 20 additional items.",
+    type: "Accessory",
+    rarity: "Uncommon",
+    equipment_slot: "Accessory",
+    effects: { storage_capacity: 20 },
+    weight: 10,
+  },
+  {
+    id: "storage_ring_rare",
+    name: "Trữ Vật Giới (Hiếm)",
+    name_en: "Rare Storage Ring",
+    description: "Nhẫn trữ vật hiếm, có thể chứa thêm 35 vật phẩm.",
+    description_en: "Rare storage ring that can hold 35 additional items.",
+    type: "Accessory",
+    rarity: "Rare",
+    equipment_slot: "Accessory",
+    effects: { storage_capacity: 35 },
+    weight: 5,
+  },
+  {
+    id: "storage_ring_epic",
+    name: "Trữ Vật Giới (Sử Thi)",
+    name_en: "Epic Storage Ring",
+    description: "Nhẫn trữ vật sử thi, có thể chứa thêm 50 vật phẩm.",
+    description_en: "Epic storage ring that can hold 50 additional items.",
+    type: "Accessory",
+    rarity: "Epic",
+    equipment_slot: "Accessory",
+    effects: { storage_capacity: 50 },
+    weight: 2,
+  },
+  {
+    id: "storage_ring_legendary",
+    name: "Vô Tận Trữ Vật Giới",
+    name_en: "Infinite Storage Ring",
+    description:
+      "Truyền thuyết nhẫn trữ vật với không gian gần như vô tận, có thể chứa thêm 100 vật phẩm.",
+    description_en:
+      "Legendary storage ring with near-infinite space, can hold 100 additional items.",
+    type: "Accessory",
+    rarity: "Legendary",
+    equipment_slot: "Accessory",
+    effects: { storage_capacity: 100 },
+    weight: 1,
+  },
+];
+
 // Enhancement materials - can be obtained from various sources
 export const ENHANCEMENT_MATERIALS: LootEntry[] = [
   {
@@ -278,6 +346,63 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       ENHANCEMENT_MATERIALS[1], // Uncommon enhancement stone
       ENHANCEMENT_MATERIALS[2], // Rare enhancement stone
       ENHANCEMENT_MATERIALS[3], // Epic enhancement stone
+      // Storage rings - uncommon and rare
+      STORAGE_RING_ITEMS[1], // Uncommon storage ring
+      STORAGE_RING_ITEMS[2], // Rare storage ring
+    ],
+  },
+
+  // Special treasure loot table with storage rings and epic items
+  ancient_treasure: {
+    id: "ancient_treasure",
+    tier: 4,
+    silverRange: [500, 1500],
+    spiritStoneChance: 1.0,
+    spiritStoneRange: [20, 50],
+    entries: [
+      {
+        id: "immortal_blade",
+        name: "Tiên Đạo Kiếm",
+        name_en: "Immortal Blade",
+        description: "Kiếm của tiên nhân cổ đại, chứa đựng sức mạnh vô song.",
+        description_en:
+          "Blade of an ancient immortal, contains unparalleled power.",
+        type: "Equipment",
+        rarity: "Epic",
+        equipment_slot: "Weapon",
+        bonus_stats: { str: 15, agi: 8, int: 5 },
+        weight: 10,
+      },
+      {
+        id: "dragon_scale_armor",
+        name: "Long Lân Giáp",
+        name_en: "Dragon Scale Armor",
+        description: "Giáp làm từ vảy rồng, phòng thủ tuyệt đỉnh.",
+        description_en: "Armor made from dragon scales, supreme defense.",
+        type: "Equipment",
+        rarity: "Epic",
+        equipment_slot: "Chest",
+        bonus_stats: { hp: 100, str: 5, qi: 50 },
+        weight: 10,
+      },
+      {
+        id: "heaven_defying_pill",
+        name: "Nghịch Thiên Đan",
+        name_en: "Heaven Defying Pill",
+        description: "Đan dược cực phẩm có thể thay đổi số phận tu luyện.",
+        description_en: "Ultimate pill that can change cultivation destiny.",
+        type: "Medicine",
+        rarity: "Legendary",
+        effects: { cultivation_exp: 2000, permanent_luck: 1 },
+        weight: 3,
+      },
+      // Enhancement stones - rare to epic
+      ENHANCEMENT_MATERIALS[2], // Rare enhancement stone
+      ENHANCEMENT_MATERIALS[3], // Epic enhancement stone
+      // Storage rings - rare to legendary
+      STORAGE_RING_ITEMS[2], // Rare storage ring
+      STORAGE_RING_ITEMS[3], // Epic storage ring
+      STORAGE_RING_ITEMS[4], // Legendary storage ring (very rare)
     ],
   },
 };

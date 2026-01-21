@@ -23,6 +23,8 @@ import {
   clampStat,
   performBreakthrough,
   canBreakthrough,
+  performBodyBreakthrough,
+  canBodyBreakthrough,
   calculateCultivationExpGain,
   advanceTime,
 } from "@/lib/game/mechanics";
@@ -327,6 +329,20 @@ export async function POST(request: Request) {
       }
     }
 
+    // Check for body cultivation breakthrough
+    if (canBodyBreakthrough(state)) {
+      const bodyBreakthroughSuccess = performBodyBreakthrough(state);
+      if (bodyBreakthroughSuccess) {
+        events.push({
+          type: "body_breakthrough",
+          data: {
+            realm: state.progress.body_realm,
+            stage: state.progress.body_stage,
+          },
+        });
+      }
+    }
+
     // Update story summary every 10 turns
     if (turnNo % 10 === 0) {
       updateStorySummary(state, aiResult.narrative, locale);
@@ -523,7 +539,49 @@ function applyProgressDelta(
     const clampedValue = Math.min(value, maxExpGain);
     // Apply spirit root bonus to cultivation exp gain
     const bonusedExp = calculateCultivationExpGain(state, clampedValue);
-    state.progress.cultivation_exp += bonusedExp;
+
+    // Check if dual cultivation is enabled
+    if (
+      state.progress.cultivation_path === "dual" &&
+      state.progress.exp_split !== undefined
+    ) {
+      // Split exp between Qi and Body based on exp_split ratio
+      const qiExpPercent = state.progress.exp_split / 100;
+      const bodyExpPercent = (100 - state.progress.exp_split) / 100;
+
+      const qiExp = Math.floor(bonusedExp * qiExpPercent);
+      const bodyExp = Math.floor(bonusedExp * bodyExpPercent);
+
+      state.progress.cultivation_exp += qiExp;
+
+      // Initialize body cultivation if not present
+      if (!state.progress.body_exp) state.progress.body_exp = 0;
+      if (!state.progress.body_realm) state.progress.body_realm = "PhàmThể";
+      if (!state.progress.body_stage) state.progress.body_stage = 0;
+
+      state.progress.body_exp += bodyExp;
+
+      console.log(
+        `Dual cultivation - Qi: ${qiExp} (${state.progress.exp_split}%), Body: ${bodyExp} (${100 - state.progress.exp_split}%)`,
+      );
+    } else {
+      // Single cultivation path - all exp goes to Qi
+      state.progress.cultivation_exp += bonusedExp;
+    }
+  } else if (field === "body_exp" && operation === "add") {
+    // Direct body exp (legacy support, but shouldn't be used with dual cultivation)
+    const maxExpGain = 50;
+    const clampedValue = Math.min(value, maxExpGain);
+
+    // Initialize body cultivation if not present
+    if (!state.progress.body_exp) state.progress.body_exp = 0;
+    if (!state.progress.body_realm) state.progress.body_realm = "PhàmThể";
+    if (!state.progress.body_stage) state.progress.body_stage = 0;
+
+    state.progress.body_exp += clampedValue;
+    console.log(
+      `Body exp gained: ${clampedValue}, total: ${state.progress.body_exp}`,
+    );
   }
 }
 
@@ -719,7 +777,34 @@ function applySkillDelta(
   const MAX_SKILLS = 6;
   const MAX_PER_TYPE = 2;
 
-  if (field === "add" && operation === "add") {
+  if (field === "gain_exp" && operation === "add") {
+    // Give exp to a specific skill
+    if (value && value.skill_id && typeof value.exp === "number") {
+      const skill = state.skills?.find((s) => s.id === value.skill_id);
+      if (skill) {
+        if (!skill.exp) skill.exp = 0;
+        if (!skill.max_exp) skill.max_exp = skill.level * 100;
+
+        const expGain = Math.min(value.exp, 50); // Cap at 50 per action
+        skill.exp += expGain;
+
+        // Handle level ups
+        while (skill.exp >= skill.max_exp && skill.level < skill.max_level) {
+          skill.exp -= skill.max_exp;
+          skill.level += 1;
+          skill.max_exp = skill.level * 100;
+          skill.damage_multiplier = (skill.damage_multiplier || 1.5) * 1.05; // +5% per level
+          console.log(`Skill ${skill.name} leveled up to ${skill.level}!`);
+        }
+
+        console.log(
+          `Skill ${skill.name} gained ${expGain} exp (${skill.exp}/${skill.max_exp})`,
+        );
+      } else {
+        console.warn(`Skill not found: ${value.skill_id}`);
+      }
+    }
+  } else if (field === "add" && operation === "add") {
     // Validate skill structure
     if (value && value.id && value.name && value.name_en && value.type) {
       // Initialize arrays if they don't exist

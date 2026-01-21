@@ -86,6 +86,10 @@ const DELTA_SCHEMA = {
   attrs:
     '{"field": "attrs.[str|agi|int|perception|luck]", "operation": "add", "value": N}',
   exp: '{"field": "progress.cultivation_exp", "operation": "add", "value": 15-50}',
+  body_exp:
+    '{"field": "progress.body_exp", "operation": "add", "value": 10-40} (only if dual cultivation enabled)',
+  skill_exp:
+    '{"field": "skills.gain_exp", "operation": "add", "value": {skill_id: "skill_id", exp: 10-30}} (when practicing skills)',
   resources:
     '{"field": "inventory.[spirit_stones|silver]", "operation": "add", "value": N}',
   location:
@@ -98,8 +102,12 @@ const ITEM_SCHEMA = {
   medicine:
     'type="Medicine", effects: {hp_restore?, qi_restore?, cultivation_exp?, permanent_[stat]?}',
   equipment:
-    'type="Equipment", equipment_slot: Weapon|Head|Chest|Legs|Feet|Hands|Accessory|Artifact, bonus_stats: {str?, agi?, int?, perception?, luck?, hp?, qi?, cultivation_speed?}',
+    'type="Equipment", equipment_slot: Weapon|Head|Chest|Legs|Feet|Hands|Accessory|Artifact, bonus_stats: {str?, agi?, int?, perception?, luck?, hp?, qi?, cultivation_speed?}, enhancement_level?: 0-10',
   book: 'type="Book", teaches_technique?: {TECHNIQUE_SCHEMA} OR teaches_skill?: {SKILL_SCHEMA}. Books teach ONE technique OR ONE skill when used.',
+  storage_ring:
+    'type="Accessory", equipment_slot: "Accessory", effects: {storage_capacity: 10-100}. Storage rings expand inventory capacity.',
+  enhancement_stone:
+    'type="Material", id: enhancement_stone_[common|uncommon|rare|epic]. Used to enhance equipment +1 to +10.',
 };
 
 const TECHNIQUE_SCHEMA =
@@ -149,16 +157,16 @@ Every turn should include at least one: spiritual phenomenon, cultivation pressu
 
   const rules = {
     role: isVi
-      ? "VAI TRÒ CỤ THỂ:\n1. KỂ CHUYỆN: 120-180 từ, đậm chất tiên hiệp\n2. LỰA CHỌN: 2-5 lựa chọn hợp lý\n3. ĐỀ XUẤT: Mọi thay đổi PHẢI nằm trong proposed_deltas"
-      : "ROLE:\n1. STORY: 120-180 words, xianxia tone\n2. CHOICES: 2-5 reasonable choices\n3. ALL changes via proposed_deltas",
+      ? "VAI TRÒ CỤ THỂ:\n1. KỂ CHUYỆN: 120-180 từ, đậm chất tiên hiệp\n2. LỰA CHỌN: 2-5 lựa chọn hợp lý\n3. ĐỀ XUẤT: Mọi thay đổi PHẢI nằm trong proposed_deltas\n4. ⚠️ NHẤT QUÁN: Mọi thứ trong narrative (vật phẩm, công pháp, kỹ năng) PHẢI có delta tương ứng"
+      : "ROLE:\n1. STORY: 120-180 words, xianxia tone\n2. CHOICES: 2-5 reasonable choices\n3. ALL changes via proposed_deltas\n4. ⚠️ CONSISTENCY: Everything in narrative (items, techniques, skills) MUST have matching delta",
 
     antiRepeat: isVi
       ? '⚠️ TRÁNH LẶP: Xem "3 LƯỢT GẦN NHẤT", tạo nội dung KHÁC BIỆT. Rừng→chợ/làng. Chiến đấu→nghỉ/tu luyện.'
       : '⚠️ AVOID REPETITION: Review "RECENT 3 TURNS", create DIFFERENT content. Forest→market/village. Combat→rest/cultivate.',
 
     elements: isVi
-      ? "NGŨ HÀNH: ThiênPhẩm x2.0 | Hiếm x1.5 | Khá x1.2 | PhổThông x1.0\nSinh: Kim→Thủy→Mộc→Hỏa→Thổ→Kim | Khắc: Kim→Mộc→Thổ→Thủy→Hỏa→Kim\nCông pháp khớp linh căn: +30% | Tương sinh: +15% | Tương khắc: -20%"
-      : "ELEMENTS: Heavenly x2.0 | Rare x1.5 | Uncommon x1.2 | Common x1.0\nGeneration: Metal→Water→Wood→Fire→Earth→Metal | Overcoming: Metal→Wood→Earth→Water→Fire→Metal\nTechnique matches root: +30% | Generation: +15% | Overcoming: -20%",
+      ? "NGŨ HÀNH: ThiênPhẩm x2.0 | Hiếm x1.5 | Khá x1.2 | PhổThông x1.0\nSinh: Kim→Thủy→Mộc→Hỏa→Thổ→Kim | Khắc: Kim→Mộc→Thổ→Thủy→Hỏa→Kim\nCông pháp khớp linh căn: +30% | Tương sinh: +15% | Tương khắc: -20%\n⭐ Công pháp KHÔNG thuộc tính (elements: []): +20% (phổ quát, không bị ảnh hưởng linh căn)"
+      : "ELEMENTS: Heavenly x2.0 | Rare x1.5 | Uncommon x1.2 | Common x1.0\nGeneration: Metal→Water→Wood→Fire→Earth→Metal | Overcoming: Metal→Wood→Earth→Water→Fire→Metal\nTechnique matches root: +30% | Generation: +15% | Overcoming: -20%\n⭐ NO-ELEMENT techniques (elements: []): +20% (universal, unaffected by spirit root)",
 
     noStats: isVi
       ? 'NGHIÊM CẤM: KHÔNG nói số trong narrative. SAI: "sức mạnh lên 8". ĐÚNG: "cảm thấy mạnh mẽ" + proposed_deltas'
@@ -180,18 +188,68 @@ Every turn should include at least one: spiritual phenomenon, cultivation pressu
       ? "TIẾN TRIỂN: Mỗi action có kết quả (exp 15-50, items). Stamina: 1-2 thường, 3-4 khó. LUÔN có 1 lựa chọn nghỉ hồi 10-20 stamina. time_segments: 1-2."
       : "PROGRESSION: Every action has results (exp 15-50, items). Stamina: 1-2 normal, 3-4 hard. ALWAYS 1 rest option recovering 10-20 stamina. time_segments: 1-2.",
 
+    randomEvents: isVi
+      ? `🎲 SỰ KIỆN NGẪU NHIÊN (Thường xuyên):
+- PHẢI có ít nhất 1-2 sự kiện ngẫu nhiên mỗi 3-5 lượt
+- Dựa trên PERCEPTION và LUCK để kích hoạt
+- Loại sự kiện:
+  • Tìm kho báu ẩn: silver (50-500), spirit stones (1-10), items
+  • Gặp NPC cho quà: vật phẩm, bạc, linh thạch
+  • Phát hiện dược liệu quý: Medicine items
+  • Nhặt được trang bị rơi: Equipment (Common-Rare)
+  • May mắn trong tu luyện: +exp bonus
+  • Sự kiện thiên tượng: rare items/techniques
+  
+VÍ DỤ delta cho phần thưởng:
+- Bạc: {"field": "inventory.silver", "operation": "add", "value": 200}
+- Linh thạch: {"field": "inventory.spirit_stones", "operation": "add", "value": 5}
+- Vật phẩm: {"field": "inventory.add_item", "operation": "add", "value": {item_object}}
+
+⚠️ QUAN TRỌNG: Sự kiện PHẢI phù hợp với địa điểm và cảnh giới!`
+      : `🎲 RANDOM EVENTS (Frequent):
+- MUST have at least 1-2 random events every 3-5 turns
+- Based on PERCEPTION and LUCK to trigger
+- Event types:
+  • Find hidden treasure: silver (50-500), spirit stones (1-10), items
+  • Meet NPC giving gifts: items, silver, spirit stones
+  • Discover rare herbs: Medicine items
+  • Find dropped equipment: Equipment (Common-Rare)
+  • Lucky cultivation: +exp bonus
+  • Heavenly phenomenon: rare items/techniques
+  
+EXAMPLE deltas for rewards:
+- Silver: {"field": "inventory.silver", "operation": "add", "value": 200}
+- Spirit stones: {"field": "inventory.spirit_stones", "operation": "add", "value": 5}
+- Items: {"field": "inventory.add_item", "operation": "add", "value": {item_object}}
+
+⚠️ IMPORTANT: Events MUST fit the location and realm!`,
+
     exploration: isVi
-      ? `🗺️ KHÁM PHÁ:
-- Di chuyển THƯỜNG XUYÊN: Sau 2-4 lượt ở cùng một nơi → đề xuất di chuyển đến địa điểm mới
-- Khi di chuyển → PHẢI thêm delta {"field": "location.place", "operation": "set", "value": "Tên địa điểm mới"}
-- Có thể đổi cả region nếu đi xa: {"field": "location.region", "operation": "set", "value": "Vùng mới"}
+      ? `🗺️ KHÁM PHÁ & DI CHUYỂN:
+⚠️ CỰC KỲ QUAN TRỌNG - LOCATION DELTAS:
+- KHI nhân vật di chuyển/đi đến nơi khác → BẮT BUỘC phải cập nhật location!
+- LUÔN LUÔN thêm delta khi narrative nói nhân vật đến địa điểm mới
+- VÍ DỤ: "Bạn đi vào rừng sâu" → PHẢI có delta: {"field": "location.place", "operation": "set", "value": "Rừng Sâu"}
+- VÍ DỤ: "Bạn đến thành phố" → PHẢI có delta: {"field": "location.place", "operation": "set", "value": "Thành Phố Vô Danh"}
+- VÍ DỤ: "Bạn vào động" → PHẢI có delta: {"field": "location.place", "operation": "set", "value": "Động Huyền Bí"}
+
+DI CHUYỂN THƯỜNG XUYÊN:
+- Sau 2-4 lượt ở cùng một nơi → đề xuất di chuyển đến địa điểm mới
+- Đổi region nếu đi xa: {"field": "location.region", "operation": "set", "value": "Vùng mới"}
 - Địa điểm phong phú: làng → rừng → động → núi → chợ → tông môn → thành phố → bí cảnh
 - Mỗi địa điểm có đặc sắc riêng, không lặp lại
 - LUÔN có lựa chọn khám phá/di chuyển đến nơi mới`
-      : `🗺️ EXPLORATION:
-- FREQUENT movement: After 2-4 turns in same location → suggest moving to new place
-- When moving → MUST add delta {"field": "location.place", "operation": "set", "value": "New Place Name"}
-- Can change region if far travel: {"field": "location.region", "operation": "set", "value": "New Region"}
+      : `🗺️ EXPLORATION & MOVEMENT:
+⚠️ CRITICAL IMPORTANT - LOCATION DELTAS:
+- WHEN character moves/goes to different place → MUST update location!
+- ALWAYS add delta when narrative says character arrives at new location
+- EXAMPLE: "You enter the deep forest" → MUST have delta: {"field": "location.place", "operation": "set", "value": "Deep Forest"}
+- EXAMPLE: "You arrive at city" → MUST have delta: {"field": "location.place", "operation": "set", "value": "Nameless City"}
+- EXAMPLE: "You enter cave" → MUST have delta: {"field": "location.place", "operation": "set", "value": "Mysterious Cave"}
+
+FREQUENT MOVEMENT:
+- After 2-4 turns in same location → suggest moving to new place
+- Change region if far travel: {"field": "location.region", "operation": "set", "value": "New Region"}
 - Diverse locations: village → forest → cave → mountain → market → sect → city → secret realm
 - Each location has unique characteristics, don't repeat
 - ALWAYS offer choice to explore/move to new place`,
@@ -216,8 +274,13 @@ Trong events array, thêm:
     }
   }
 }
+⚠️ CÂN BẰNG KẺ ĐỊCH QUAN TRỌNG:
+- XEM "⚔️ SỨC MẠNH CHIẾN ĐẤU" trong TRẠNG THÁI HIỆN TẠI để biết Physical Attack và Defense của người chơi
+- PHẢI tạo kẻ địch theo GỢI Ý CÂN BẰNG được hiển thị (HP, ATK, DEF)
+- Kẻ địch yếu: 80% stats gợi ý | Bình thường: 100% stats gợi ý | Mạnh: 120-150% stats gợi ý | Boss: 200%+ stats gợi ý
+- KHÔNG tạo địch quá yếu (ATK < Physical Attack×0.4) hay quá mạnh (HP > Physical Attack×6) trừ khi cốt truyện yêu cầu
+- Cảnh giới chỉ là tham khảo, ƯU TIÊN sử dụng stats thực tế của người chơi để cân bằng
 Lưu ý:
-- hp/atk/def dựa theo cảnh giới: PhàmNhân (hp 30-50, atk 5-10), LuyệnKhí (hp 50-80, atk 10-15), TrúcCơ (hp 80-120, atk 15-20), KếtĐan (hp 120-200, atk 20-30)
 - Narrative chỉ mô tả gặp địch, KHÔNG mô tả kết quả chiến đấu
 - KHÔNG giảm HP/Qi trong proposed_deltas khi có combat_encounter (sẽ xử lý trong combat mode)
 - Thêm một choice để "Bỏ chạy" (flee) nếu hợp lý`
@@ -240,8 +303,13 @@ In events array, add:
     }
   }
 }
+⚠️ ENEMY BALANCING IS CRITICAL:
+- CHECK "⚔️ COMBAT POWER" in CURRENT STATE to see player's Physical Attack and Defense
+- MUST create enemies according to the BALANCING SUGGESTIONS shown (HP, ATK, DEF)
+- Weak enemy: 80% of suggested stats | Normal: 100% of suggested stats | Strong: 120-150% | Boss: 200%+
+- DO NOT create enemies too weak (ATK < Physical Attack×0.4) or too strong (HP > Physical Attack×6) unless story demands
+- Realm is only reference, PRIORITIZE using player's actual stats for balancing
 Notes:
-- hp/atk/def based on realm: PhàmNhân (hp 30-50, atk 5-10), LuyệnKhí (hp 50-80, atk 10-15), TrúcCơ (hp 80-120, atk 15-20), KếtĐan (hp 120-200, atk 20-30)
 - Narrative only describes encounter, NOT combat result
 - DO NOT reduce HP/Qi in proposed_deltas when combat_encounter (handled in combat mode)
 - Add a "Flee" choice if reasonable`,
@@ -257,14 +325,236 @@ Notes:
 - Loại: Kiếm (kiếm thuật), Đan (luyện đan), Trận (trận pháp), YêuThú (thuần thú), Ma (ma đạo), PhậtMôn (phật tu), Tổng (tổng hợp), ThươngHội (thương hội)
 - Lợi ích: +cultivation_bonus, tài nguyên, công pháp, bảo hộ
 - Nhiệm vụ tông môn: Hoàn thành → +contribution, thất bại → -reputation
-- KHI gia nhập/thăng cấp → PHẢI thêm delta {"field": "sect.join/promote", ...}`
+
+🎯 QUY TRÌNH GIA NHẬP TÔNG MÔN:
+1. Khi người chơi chọn gia nhập một tông môn → Set flag: {"field": "flags.sect_joining_[tên_tông_môn]", "operation": "set", "value": true}
+2. TẠO NHIỆM VỤ gia nhập phù hợp với LOẠI TÔNG MÔN:
+   - Kiếm: Thử thách kiếm thuật, đấu võ
+   - Đan: Thu thập dược liệu, luyện đan
+   - PhậtMôn: Tu tâm dưỡng tính, giúp đỡ người khác, tụng kinh
+   - Ma: Thử thách sát tính, thu thập hồn phách
+   - Trận: Giải trận pháp, học lý thuyết
+   - YêuThú: Thuần phục linh thú
+3. TRONG KHI flag sect_joining_X = true:
+   - PHẢI tập trung vào nhiệm vụ gia nhập
+   - KHÔNG được đổi chủ đề hoặc địa điểm (trừ khi cần cho nhiệm vụ)
+   - Mỗi lượt phải tiến triển nhiệm vụ
+   - Giữ văn phong và đặc trưng của tông môn đó
+4. KHI hoàn thành nhiệm vụ:
+   - Set flag = false: {"field": "flags.sect_joining_X", "operation": "set", "value": false}
+   - Thêm sect membership CHÍNH XÁC theo format sau:
+{
+  "field": "sect.join",
+  "operation": "set",
+  "value": {
+    "sect": {
+      "id": "phat_mon",
+      "name": "Phật Môn",
+      "name_en": "Buddhist Sect",
+      "type": "PhậtMôn",
+      "tier": 2,
+      "description": "Tông môn tu Phật",
+      "description_en": "Buddhist cultivation sect"
+    },
+    "rank": "NgoạiMôn",
+    "contribution": 0,
+    "reputation": 50,
+    "mentor": "Tên sư phụ",
+    "mentor_en": "Mentor name",
+    "benefits": {
+      "cultivation_bonus": 5,
+      "resource_access": false,
+      "technique_access": false,
+      "protection": true
+    }
+  }
+}
+   
+⚠️ QUAN TRỌNG: 
+- PHẢI dùng "sect.join" KHÔNG phải "sect"
+- NẾU narrative nói tặng công pháp/kỹ năng → PHẢI thêm delta techniques.add hoặc skills.add
+- VÍ DỤ: Tặng công pháp khi gia nhập:
+{
+  "field": "techniques.add",
+  "operation": "add",
+  "value": {
+    "id": "phat_mon_tu_tam_quyet",
+    "name": "Phật Môn Tu Tâm Quyết",
+    "name_en": "Buddhist Mind Cultivation Method",
+    "description": "Công pháp tu tâm của Phật Môn",
+    "description_en": "Buddhist mind cultivation technique",
+    "grade": "Mortal",
+    "type": "Main",
+    "elements": [],
+    "cultivation_speed_bonus": 15
+  }
+}
+- VÍ DỤ: Tặng kỹ năng chiến đấu:
+{
+  "field": "skills.add",
+  "operation": "add",
+  "value": {
+    "id": "kim_cang_quyen",
+    "name": "Kim Cương Quyền",
+    "name_en": "Diamond Fist",
+    "description": "Quyền pháp cơ bản của Phật Môn",
+    "description_en": "Basic Buddhist fist technique",
+    "type": "Attack",
+    "level": 1,
+    "max_level": 10,
+    "damage_multiplier": 1.5,
+    "qi_cost": 10,
+    "cooldown": 2
+  }
+}
+- Nếu thấy flag sect_joining_* đang active → PHẢI ưu tiên hoàn thành trước!`
       : `🏛️ SECTS:
 - Joining: New disciples start as NgoạiMôn (Outer), need contribution/cultivation to rank up
 - Ranks: Outer → Inner → True Disciple → Elder → Sect Master
 - Types: Sword, Alchemy, Formation, Beast Taming, Demonic, Buddhist, General, Merchant Guild
 - Benefits: +cultivation_bonus, resources, techniques, protection
 - Sect missions: Complete → +contribution, fail → -reputation
-- WHEN joining/promoting → MUST add delta {"field": "sect.join/promote", ...}`,
+
+🎯 SECT JOINING PROCESS:
+1. When player chooses to join a sect → Set flag: {"field": "flags.sect_joining_[sect_name]", "operation": "set", "value": true}
+2. CREATE joining mission matching SECT TYPE:
+   - Sword: Sword trial, sparring
+   - Alchemy: Gather herbs, refine pills
+   - Buddhist: Cultivate mind, help others, chant sutras
+   - Demonic: Killing trial, collect souls
+   - Formation: Solve array puzzles, theory
+   - Beast Taming: Tame spirit beast
+3. WHILE flag sect_joining_X = true:
+   - MUST focus on joining mission
+   - DO NOT switch themes or locations (unless needed for mission)
+   - Each turn must progress the mission
+   - Maintain sect's style and characteristics
+4. WHEN mission complete:
+   - Set flag = false: {"field": "flags.sect_joining_X", "operation": "set", "value": false}
+   - Add sect membership EXACTLY in this format:
+{
+  "field": "sect.join",
+  "operation": "set",
+  "value": {
+    "sect": {
+      "id": "buddhist_sect",
+      "name": "Phật Môn",
+      "name_en": "Buddhist Sect",
+      "type": "PhậtMôn",
+      "tier": 2,
+      "description": "Tông môn tu Phật",
+      "description_en": "Buddhist cultivation sect"
+    },
+    "rank": "NgoạiMôn",
+    "contribution": 0,
+    "reputation": 50,
+    "mentor": "Mentor name vi",
+    "mentor_en": "Mentor name en",
+    "benefits": {
+      "cultivation_bonus": 5,
+      "resource_access": false,
+      "technique_access": false,
+      "protection": true
+    }
+  }
+}
+   
+⚠️ CRITICAL: 
+- MUST use "sect.join" NOT "sect"
+- IF narrative mentions giving techniques/skills → MUST add techniques.add or skills.add delta
+- EXAMPLE: Give technique when joining:
+{
+  "field": "techniques.add",
+  "operation": "add",
+  "value": {
+    "id": "buddhist_mind_cultivation",
+    "name": "Phật Môn Tu Tâm Quyết",
+    "name_en": "Buddhist Mind Cultivation",
+    "description": "Công pháp tu tâm của Phật Môn",
+    "description_en": "Buddhist mind cultivation technique",
+    "grade": "Mortal",
+    "type": "Main",
+    "elements": [],
+    "cultivation_speed_bonus": 15
+  }
+}
+- EXAMPLE: Give combat skill:
+{
+  "field": "skills.add",
+  "operation": "add",
+  "value": {
+    "id": "diamond_fist",
+    "name": "Kim Cương Quyền",
+    "name_en": "Diamond Fist",
+    "description": "Quyền pháp Phật Môn",
+    "description_en": "Buddhist fist technique",
+    "type": "Attack",
+    "level": 1,
+    "max_level": 10,
+    "damage_multiplier": 1.5,
+    "qi_cost": 10,
+    "cooldown": 2
+  }
+}
+- If you see sect_joining_* flag active → MUST prioritize completing it first!`,
+
+    skillPractice: isVi
+      ? `🎯 LUYỆN KỸ NĂNG:
+- Kỹ năng cần được luyện tập để tăng cấp
+- KHI người chơi chọn luyện kỹ năng → cho kinh nghiệm kỹ năng
+- Sử dụng delta: {"field": "skills.gain_exp", "operation": "add", "value": {"skill_id": "skill_id", "exp": 15-30}}
+- Ví dụ: Luyện quyền pháp 2h → {"field": "skills.gain_exp", "operation": "add", "value": {"skill_id": "diamond_fist", "exp": 25}}
+- Kỹ năng tăng cấp khi đủ exp, sức mạnh sẽ tăng theo
+- Lưu ý: skill_id phải trùng với kỹ năng hiện có`
+      : `🎯 SKILL PRACTICE:
+- Skills need practice to level up
+- WHEN player chooses to practice skills → give skill exp
+- Use delta: {"field": "skills.gain_exp", "operation": "add", "value": {"skill_id": "skill_id", "exp": 15-30}}
+- Example: Practice fist technique 2h → {"field": "skills.gain_exp", "operation": "add", "value": {"skill_id": "diamond_fist", "exp": 25}}
+- Skills level up when reaching max exp, power increases accordingly
+- Note: skill_id must match existing skill`,
+
+    enhancement: isVi
+      ? `⚒️ CƯỜNG HÓA TRANG BỊ:
+- Trang bị có thể cường hóa từ +0 đến +10
+- Cần Đá Cường Hóa: Common (+1-3), Uncommon (+4-6), Rare (+7-9), Epic (+10)
+- Tỷ lệ thành công giảm dần: +1 (100%) → +10 (35%)
+- Khi cho vật phẩm cường hóa, thêm enhancement_level vào equipment object
+- Đá Cường Hóa là vật phẩm Material hiếm, có thể tìm thấy trong rương báu, boss drop, hoặc mua`
+      : `⚒️ EQUIPMENT ENHANCEMENT:
+- Equipment can be enhanced from +0 to +10
+- Requires Enhancement Stones: Common (+1-3), Uncommon (+4-6), Rare (+7-9), Epic (+10)
+- Success rate decreases: +1 (100%) → +10 (35%)
+- When giving enhanced items, add enhancement_level to equipment object
+- Enhancement Stones are rare Material items, found in treasure chests, boss drops, or purchased`,
+
+    storageRing: isVi
+      ? `💍 TRỮ VẬT GIỚI:
+- Nhẫn trữ vật mở rộng túi đồ (thêm 10-100 ô)
+- Độ hiếm: Common (+10), Uncommon (+20), Rare (+35), Epic (+50), Legendary (+100)
+- Đeo vào slot Accessory, effects: {storage_capacity: N}
+- Là bảo vật hiếm, thường tìm trong di tích cổ, boss mạnh, hoặc thương hội lớn`
+      : `💍 STORAGE RINGS:
+- Storage rings expand inventory capacity (+10-100 slots)
+- Rarity: Common (+10), Uncommon (+20), Rare (+35), Epic (+50), Legendary (+100)
+- Worn in Accessory slot, effects: {storage_capacity: N}
+- Rare treasures, usually found in ancient ruins, powerful bosses, or major merchant guilds`,
+
+    dualCultivation: isVi
+      ? `🏋️ SONG TU (Dual Cultivation):
+- Người chơi có thể bật chế độ Song Tu để tu luyện cả Khí và Thể cùng lúc
+- Cảnh giới thể: PhàmThể → LuyệnCốt → ĐồngCân → KimCương → TháiCổ
+- Tu thể tăng HP, Sức mạnh (STR) và Thể lực (Stamina)
+- Kinh nghiệm được chia theo tỷ lệ do người chơi chọn (vd: 50% Khí, 50% Thể)
+- NẾU người chơi đang song tu → có thể cho kinh nghiệm thể {"field": "progress.body_exp", "operation": "add", "value": N}
+- Mô tả tu thể: rèn cốt, luyện cân, đả thông kinh mạch thể xác`
+      : `🏋️ DUAL CULTIVATION:
+- Players can enable Dual Cultivation to cultivate both Qi and Body simultaneously
+- Body realms: Mortal Body → Bone Forging → Copper Tendon → Diamond Body → Primordial Body
+- Body cultivation increases HP, Strength (STR) and Stamina
+- Experience is split according to player's chosen ratio (e.g., 50% Qi, 50% Body)
+- IF player is dual cultivating → can give body exp {"field": "progress.body_exp", "operation": "add", "value": N}
+- Describe body cultivation: forging bones, tempering tendons, opening body meridians`,
   };
 
   const schemas = `
@@ -274,6 +564,8 @@ ITEMS - inventory.add_item:
 - Base: ${ITEM_SCHEMA.base}
 - Medicine: ${ITEM_SCHEMA.medicine}
 - Equipment: ${ITEM_SCHEMA.equipment}
+- Storage Ring: ${ITEM_SCHEMA.storage_ring}
+- Enhancement Stone: ${ITEM_SCHEMA.enhancement_stone}
 - Book: ${ITEM_SCHEMA.book}
 - Rarity: Common|Uncommon|Rare|Epic|Legendary
 ${isVi ? '⚠️ QUAN TRỌNG: KHI câu chuyện nhắc nhặt/nhận/tìm được vật phẩm → PHẢI thêm delta {"field": "add_item", "operation": "add", "value": {item object}}' : '⚠️ IMPORTANT: WHEN narrative mentions finding/receiving/looting items → MUST add delta {"field": "add_item", "operation": "add", "value": {item object}}'}
@@ -335,6 +627,12 @@ ${rules.xianxiaLock}
 
 ${rules.sect}
 
+${rules.enhancement}
+
+${rules.storageRing}
+
+${rules.dualCultivation}
+
 ${rules.progression}
 
 ${rules.combat}
@@ -351,6 +649,60 @@ export function buildGameContext(
   locale: Locale,
 ): string {
   const ctx: string[] = [];
+
+  // Active quests/missions from flags - SHOW THIS FIRST!
+  const activeFlags = Object.entries(state.flags || {}).filter(([_, v]) => v);
+  if (activeFlags.length > 0) {
+    ctx.push(
+      locale === "vi"
+        ? "🎯 === NHIỆM VỤ ĐANG THỰC HIỆN (ƯU TIÊN CAO!) ==="
+        : "🎯 === ACTIVE MISSIONS (HIGH PRIORITY!) ===",
+    );
+    activeFlags.forEach(([flag, _]) => {
+      // Parse common flag patterns
+      if (flag.startsWith("sect_joining_")) {
+        const sectName = flag.replace("sect_joining_", "").replace(/_/g, " ");
+        ctx.push(
+          locale === "vi"
+            ? `  ⚠️ ĐANG THỰC HIỆN NHIỆM VỤ GIA NHẬP: ${sectName}`
+            : `  ⚠️ COMPLETING JOINING MISSION FOR: ${sectName}`,
+        );
+        ctx.push(
+          locale === "vi"
+            ? `     → BẮT BUỘC: Tập trung vào nhiệm vụ này, KHÔNG đổi chủ đề!`
+            : `     → REQUIRED: Focus on this mission, DO NOT switch themes!`,
+        );
+        ctx.push(
+          locale === "vi"
+            ? `     → Khi hoàn thành → thêm delta {"field": "sect", ...} và set flag này = false`
+            : `     → When complete → add delta {"field": "sect", ...} and set this flag = false`,
+        );
+      } else if (flag.startsWith("sect_mission_")) {
+        const missionId = flag.replace("sect_mission_", "");
+        ctx.push(
+          locale === "vi"
+            ? `  📜 Nhiệm vụ tông môn đang làm: ${missionId}`
+            : `  📜 Active sect mission: ${missionId}`,
+        );
+      } else if (flag.startsWith("quest_")) {
+        const questName = flag.replace("quest_", "").replace(/_/g, " ");
+        ctx.push(
+          locale === "vi"
+            ? `  🗡️ Nhiệm vụ: ${questName}`
+            : `  🗡️ Quest: ${questName}`,
+        );
+      } else {
+        ctx.push(`  • ${flag}`);
+      }
+    });
+    ctx.push("");
+    ctx.push(
+      locale === "vi"
+        ? "⚠️ LƯU Ý: Ưu tiên hoàn thành nhiệm vụ trên trước khi chuyển sang nội dung khác!"
+        : "⚠️ NOTE: Prioritize completing above missions before moving to other content!",
+    );
+    ctx.push("");
+  }
 
   // Story summary
   ctx.push(
@@ -403,10 +755,35 @@ export function buildGameContext(
       : `Cultivation: ${state.progress.realm} stage ${state.progress.realm_stage} (Exp: ${expDisplay})`,
   );
 
+  // Dual cultivation status
+  if (state.progress.cultivation_path === "dual") {
+    const bodyRealmNames: Record<string, { vi: string; en: string }> = {
+      PhàmThể: { vi: "Phàm Thể", en: "Mortal Body" },
+      LuyệnCốt: { vi: "Luyện Cốt", en: "Bone Forging" },
+      ĐồngCân: { vi: "Đồng Cân", en: "Copper Tendon" },
+      KimCương: { vi: "Kim Cương", en: "Diamond Body" },
+      TháiCổ: { vi: "Thái Cổ", en: "Primordial Body" },
+    };
+    const bodyRealm = state.progress.body_realm || "PhàmThể";
+    const bodyStage = state.progress.body_stage || 0;
+    const bodyExp = state.progress.body_exp || 0;
+    const expSplit = state.progress.exp_split ?? 50;
+    const bodyRealmName = bodyRealmNames[bodyRealm]?.[locale] || bodyRealm;
+
+    ctx.push(
+      locale === "vi"
+        ? `🏋️ Song Tu: ${bodyRealmName} tầng ${bodyStage + 1} (Body Exp: ${bodyExp}) | Chia exp: ${expSplit}% Khí / ${100 - expSplit}% Thể`
+        : `🏋️ Dual Cultivation: ${bodyRealmName} stage ${bodyStage + 1} (Body Exp: ${bodyExp}) | Split: ${expSplit}% Qi / ${100 - expSplit}% Body`,
+    );
+  }
+
   // Calculate total cultivation speed multiplier
   const spiritRootBonus = getSpiritRootBonus(state.spirit_root.grade);
   const techniqueBonus = getTechniqueBonus(state);
-  const totalMultiplier = spiritRootBonus * techniqueBonus;
+  const sectBonus = state.sect_membership?.benefits?.cultivation_bonus
+    ? 1.0 + state.sect_membership.benefits.cultivation_bonus / 100
+    : 1.0;
+  const totalMultiplier = spiritRootBonus * techniqueBonus * sectBonus;
 
   ctx.push(
     locale === "vi"
@@ -415,11 +792,19 @@ export function buildGameContext(
   );
 
   // Show total cultivation multiplier from all sources
-  ctx.push(
-    locale === "vi"
-      ? `Tốc độ tu luyện tổng hợp: x${totalMultiplier.toFixed(2)} (Linh căn x${spiritRootBonus.toFixed(1)} + Công pháp x${techniqueBonus.toFixed(2)})`
-      : `Total Cultivation Speed: x${totalMultiplier.toFixed(2)} (Spirit Root x${spiritRootBonus.toFixed(1)} + Techniques x${techniqueBonus.toFixed(2)})`,
-  );
+  if (sectBonus > 1.0) {
+    ctx.push(
+      locale === "vi"
+        ? `Tốc độ tu luyện tổng hợp: x${totalMultiplier.toFixed(2)} (Linh căn x${spiritRootBonus.toFixed(1)} + Công pháp x${techniqueBonus.toFixed(2)} + Tông môn x${sectBonus.toFixed(2)})`
+        : `Total Cultivation Speed: x${totalMultiplier.toFixed(2)} (Spirit Root x${spiritRootBonus.toFixed(1)} + Techniques x${techniqueBonus.toFixed(2)} + Sect x${sectBonus.toFixed(2)})`,
+    );
+  } else {
+    ctx.push(
+      locale === "vi"
+        ? `Tốc độ tu luyện tổng hợp: x${totalMultiplier.toFixed(2)} (Linh căn x${spiritRootBonus.toFixed(1)} + Công pháp x${techniqueBonus.toFixed(2)})`
+        : `Total Cultivation Speed: x${totalMultiplier.toFixed(2)} (Spirit Root x${spiritRootBonus.toFixed(1)} + Techniques x${techniqueBonus.toFixed(2)})`,
+    );
+  }
   ctx.push("");
 
   // Calculate total attributes including equipment bonuses
@@ -458,12 +843,57 @@ export function buildGameContext(
         : `  - Equipment bonus: STR +${totalAttrs.str - state.attrs.str}, AGI +${totalAttrs.agi - state.attrs.agi}, INT +${totalAttrs.int - state.attrs.int}, PER +${totalAttrs.perception - state.attrs.perception}, LUCK +${totalAttrs.luck - state.attrs.luck}`,
     );
   }
+
+  // Calculate derived combat stats for enemy balancing
+  const physicalAttack = Math.floor(totalAttrs.str * 1.5);
+  const qiAttack = Math.floor(totalAttrs.int * 2 + totalAttrs.str / 2);
+  const defense = Math.floor(5 + totalAttrs.agi / 3);
+  const critChance = 10 + totalAttrs.str * 0.2 + totalAttrs.luck * 0.3;
+  const evasion = Math.min(
+    75,
+    5 +
+      totalAttrs.agi * 0.5 +
+      totalAttrs.perception * 0.3 +
+      totalAttrs.luck * 0.2,
+  );
+
+  ctx.push(
+    locale === "vi"
+      ? `⚔️ SỨC MẠNH CHIẾN ĐẤU (dùng để cân bằng kẻ địch):`
+      : `⚔️ COMBAT POWER (for enemy balancing):`,
+  );
+  ctx.push(
+    locale === "vi"
+      ? `  - Tấn công vật lý: ${physicalAttack} (STR×1.5) | Tấn công khí công: ${qiAttack} (INT×2 + STR÷2)`
+      : `  - Physical Attack: ${physicalAttack} (STR×1.5) | Qi Attack: ${qiAttack} (INT×2 + STR÷2)`,
+  );
+  ctx.push(
+    locale === "vi"
+      ? `  - Phòng thủ: ${defense} | Chí mạng: ${critChance.toFixed(1)}% | Né tránh: ${evasion.toFixed(1)}%`
+      : `  - Defense: ${defense} | Critical: ${critChance.toFixed(1)}% | Evasion: ${evasion.toFixed(1)}%`,
+  );
+  ctx.push(
+    locale === "vi"
+      ? `  📊 KHI TẠO KẺ ĐỊCH: HP nên ${Math.floor(physicalAttack * 2)}-${Math.floor(physicalAttack * 4)}, ATK nên ${Math.floor(physicalAttack * 0.6)}-${Math.floor(physicalAttack * 1.2)}, DEF nên ${Math.floor(defense * 0.6)}-${Math.floor(defense * 1.2)}`
+      : `  📊 WHEN CREATING ENEMIES: HP should be ${Math.floor(physicalAttack * 2)}-${Math.floor(physicalAttack * 4)}, ATK should be ${Math.floor(physicalAttack * 0.6)}-${Math.floor(physicalAttack * 1.2)}, DEF should be ${Math.floor(defense * 0.6)}-${Math.floor(defense * 1.2)}`,
+  );
   ctx.push("");
+
+  // Resources and inventory capacity
+  const baseCapacity = state.inventory.max_slots || 20;
+  const ringCapacity = state.inventory.storage_ring?.capacity || 0;
+  const totalCapacity = baseCapacity + ringCapacity;
+  const usedSlots = state.inventory.items.length;
 
   ctx.push(
     locale === "vi"
       ? `Tài sản: ${state.inventory.silver} bạc, ${state.inventory.spirit_stones} linh thạch`
       : `Resources: ${state.inventory.silver} silver, ${state.inventory.spirit_stones} spirit stones`,
+  );
+  ctx.push(
+    locale === "vi"
+      ? `Túi đồ: ${usedSlots}/${totalCapacity} ô${state.inventory.storage_ring ? ` (💍 ${state.inventory.storage_ring.name} +${ringCapacity})` : ""}`
+      : `Inventory: ${usedSlots}/${totalCapacity} slots${state.inventory.storage_ring ? ` (💍 ${state.inventory.storage_ring.name_en} +${ringCapacity})` : ""}`,
   );
   ctx.push("");
 
@@ -477,7 +907,11 @@ export function buildGameContext(
     );
     Object.entries(state.equipped_items).forEach(([slot, item]) => {
       if (item) {
-        const name = locale === "vi" ? item.name : item.name_en;
+        const baseName = locale === "vi" ? item.name : item.name_en;
+        // Show enhancement level if enhanced
+        const enhanceLevel = item.enhancement_level || 0;
+        const name =
+          enhanceLevel > 0 ? `${baseName} +${enhanceLevel}` : baseName;
         const stats = [];
         if (item.bonus_stats) {
           if (item.bonus_stats.str) stats.push(`STR+${item.bonus_stats.str}`);
@@ -489,6 +923,10 @@ export function buildGameContext(
             stats.push(`LUCK+${item.bonus_stats.luck}`);
           if (item.bonus_stats.hp) stats.push(`HP+${item.bonus_stats.hp}`);
           if (item.bonus_stats.qi) stats.push(`Qi+${item.bonus_stats.qi}`);
+        }
+        // Show storage ring capacity
+        if (item.effects?.storage_capacity) {
+          stats.push(`+${item.effects.storage_capacity} slots`);
         }
         ctx.push(`  ${slot}: ${name} [${item.rarity}] (${stats.join(", ")})`);
       }
@@ -536,7 +974,10 @@ export function buildGameContext(
   );
   if (state.inventory.items.length > 0) {
     state.inventory.items.slice(0, 10).forEach((item) => {
-      const name = locale === "vi" ? item.name : item.name_en;
+      const baseName = locale === "vi" ? item.name : item.name_en;
+      // Show enhancement level if enhanced
+      const enhanceLevel = item.enhancement_level || 0;
+      const name = enhanceLevel > 0 ? `${baseName} +${enhanceLevel}` : baseName;
       const rarity = translateRarity(item.rarity, locale);
       const details = [];
       details.push(`x${item.quantity}`);
@@ -544,7 +985,10 @@ export function buildGameContext(
       details.push(rarity);
 
       // Show bonus stats for equipment
-      if (item.type === "Equipment" && item.bonus_stats) {
+      if (
+        (item.type === "Equipment" || item.type === "Accessory") &&
+        item.bonus_stats
+      ) {
         const stats = [];
         if (item.bonus_stats.str) stats.push(`STR+${item.bonus_stats.str}`);
         if (item.bonus_stats.agi) stats.push(`AGI+${item.bonus_stats.agi}`);
@@ -559,7 +1003,7 @@ export function buildGameContext(
           details.push(`[${translateSlot(item.equipment_slot, locale)}]`);
       }
 
-      // Show effects for consumables
+      // Show effects for consumables and storage rings
       if (item.effects && Object.keys(item.effects).length > 0) {
         const effects = [];
         if (item.effects.hp_restore)
@@ -576,6 +1020,12 @@ export function buildGameContext(
           );
         if (item.effects.cultivation_exp)
           effects.push(`+${item.effects.cultivation_exp} Exp`);
+        if (item.effects.storage_capacity)
+          effects.push(
+            locale === "vi"
+              ? `+${item.effects.storage_capacity} ô túi`
+              : `+${item.effects.storage_capacity} slots`,
+          );
         if (effects.length > 0) details.push(`(${effects.join(", ")})`);
       }
 

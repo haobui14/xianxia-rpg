@@ -1,5 +1,7 @@
 // Core game types based on the plan
 
+import { TravelState, EventState, DungeonState } from "./world";
+
 export type Locale = "vi" | "en";
 
 // Realm progression
@@ -76,11 +78,28 @@ export interface CharacterAttributes {
   luck: number;
 }
 
+// Cultivation path type
+export type CultivationPath = "qi" | "body" | "dual";
+
+// Body cultivation stages (parallel to Qi cultivation)
+export type BodyRealm =
+  | "PhàmThể"
+  | "LuyệnCốt"
+  | "ĐồngCân"
+  | "KimCương"
+  | "TháiCổ";
+
 // Cultivation progress
 export interface CultivationProgress {
   realm: Realm;
   realm_stage: number; // 0-5 for MVP
   cultivation_exp: number;
+  // Dual cultivation support
+  cultivation_path?: CultivationPath; // Default 'qi' for backward compatibility
+  body_realm?: BodyRealm; // Body cultivation realm
+  body_stage?: number; // 0-5 stages within body realm
+  body_exp?: number; // Body cultivation exp
+  exp_split?: number; // 0-100, percentage of exp going to qi cultivation (rest goes to body)
 }
 
 // Location
@@ -130,6 +149,8 @@ export interface Skill {
   element?: Element; // Optional element for elemental skills
   level: number;
   max_level: number;
+  exp?: number; // Current skill experience
+  max_exp?: number; // Experience needed for next level
   // Combat properties
   damage_multiplier: number; // Base damage multiplier (1.0 = normal attack)
   qi_cost: number; // Qi required to use
@@ -213,11 +234,22 @@ export interface InventoryItem {
   is_equipped?: boolean;
 }
 
+// Storage Ring - Expands inventory capacity
+export interface StorageRing {
+  id: string;
+  name: string;
+  name_en: string;
+  capacity: number; // Additional item slots
+  rarity: ItemRarity;
+}
+
 // Inventory
 export interface Inventory {
   silver: number;
   spirit_stones: number;
   items: InventoryItem[];
+  max_slots: number; // Base inventory slots (default 20)
+  storage_ring?: StorageRing; // Equipped storage ring for extra capacity
 }
 
 // Market item for buying/selling
@@ -253,7 +285,7 @@ export interface GameState {
   spirit_root: SpiritRoot;
   inventory: Inventory;
   equipped_items: Partial<Record<EquipmentSlot, InventoryItem>>;
-  location: Location;
+  location: Location; // Legacy - kept for backward compatibility
   time_day: number;
   time_month: number;
   time_year: number;
@@ -275,6 +307,10 @@ export interface GameState {
   sect_membership?: SectMembership; // Full sect membership data
   market?: MarketState;
   auction?: AuctionState;
+  // World system (new)
+  travel?: TravelState; // Region/area travel state
+  events?: EventState; // Random events state
+  dungeon?: DungeonState; // Dungeon progress state
 }
 
 // Choice for player
@@ -301,13 +337,21 @@ export type GameEventType =
   | "combat_encounter" // Triggers interactive combat mode with CombatView
   | "loot"
   | "breakthrough"
+  | "body_breakthrough" // Body cultivation breakthrough
   | "status_effect"
   | "quest_update"
   | "npc_interaction"
   | "sect_join"
   | "sect_promotion"
   | "sect_mission"
-  | "sect_expulsion";
+  | "sect_expulsion"
+  | "random_event" // World system random event triggered
+  | "area_discovered" // New area discovered
+  | "dungeon_enter" // Entered a dungeon
+  | "dungeon_floor_clear" // Cleared a dungeon floor
+  | "dungeon_complete" // Completed a dungeon
+  | "travel_region" // Traveled to new region
+  | "danger_warning"; // Warning about dangerous area
 
 export interface GameEvent {
   type: GameEventType;

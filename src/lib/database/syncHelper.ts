@@ -19,7 +19,7 @@ import {
 export async function syncInventoryToTables(
   runId: string,
   inventory: GameState["inventory"],
-  equippedItems: GameState["equipped_items"]
+  equippedItems: GameState["equipped_items"],
 ) {
   try {
     // Prepare inventory items
@@ -91,6 +91,7 @@ export async function loadInventoryFromTables(runId: string): Promise<{
         ...item.item_data,
         quantity: item.quantity,
       })),
+      max_slots: 20, // Default inventory capacity
     };
 
     const equippedItems: GameState["equipped_items"] = {};
@@ -112,7 +113,7 @@ export async function loadInventoryFromTables(runId: string): Promise<{
 export async function syncMarketToTables(
   worldSeed: string,
   generationQuarter: number,
-  items: any[]
+  items: any[],
 ) {
   try {
     // Use imported supabase
@@ -151,7 +152,7 @@ export async function syncMarketToTables(
  */
 export async function loadMarketFromTables(
   worldSeed: string,
-  generationQuarter: number
+  generationQuarter: number,
 ) {
   try {
     // Use imported supabase
@@ -187,7 +188,7 @@ export async function recordCombatHistory(
   playerDamageTaken: number,
   rewards: any,
   gameDate: { year: number; month: number; day: number },
-  turnNo: number
+  turnNo: number,
 ) {
   try {
     await combatQueries.recordCombat(
@@ -199,7 +200,7 @@ export async function recordCombatHistory(
       playerDamageTaken,
       rewards,
       gameDate,
-      turnNo
+      turnNo,
     );
     return { success: true };
   } catch (error) {
@@ -215,7 +216,7 @@ export async function updatePlayerStats(
   runId: string,
   characterName: string,
   state: GameState,
-  combatWins: number = 0
+  combatWins: number = 0,
 ) {
   try {
     await leaderboardQueries.updateStatistics(
@@ -227,7 +228,7 @@ export async function updatePlayerStats(
       state.inventory.spirit_stones,
       combatWins,
       state.progress.cultivation_exp,
-      0 // achievements count - would need to track this
+      0, // achievements count - would need to track this
     );
 
     return { success: true };
@@ -248,7 +249,7 @@ export async function recordMarketTransaction(
   quantity: number,
   priceSilver: number,
   priceSpiritStones: number,
-  gameDate: { year: number; month: number; day: number }
+  gameDate: { year: number; month: number; day: number },
 ) {
   try {
     await marketQueries.recordTransaction(
@@ -259,7 +260,7 @@ export async function recordMarketTransaction(
       quantity,
       priceSilver,
       priceSpiritStones,
-      gameDate
+      gameDate,
     );
     return { success: true };
   } catch (error) {
@@ -273,7 +274,7 @@ export async function recordMarketTransaction(
  */
 export async function syncSkillsToTables(
   runId: string,
-  skills: GameState["skills"]
+  skills: GameState["skills"],
 ) {
   try {
     if (!skills || skills.length === 0) return { success: true };
@@ -307,16 +308,10 @@ export async function syncSkillsToTables(
 /**
  * Direct sync for skills (fallback if RPC not available)
  */
-async function syncSkillsDirect(
-  runId: string,
-  skills: GameState["skills"]
-) {
+async function syncSkillsDirect(runId: string, skills: GameState["skills"]) {
   try {
     // Delete existing skills for this run
-    await supabase
-      .from("character_skills")
-      .delete()
-      .eq("run_id", runId);
+    await supabase.from("character_skills").delete().eq("run_id", runId);
 
     // Insert all skills
     if (skills.length > 0) {
@@ -347,7 +342,7 @@ async function syncSkillsDirect(
  */
 export async function syncTechniquesToTables(
   runId: string,
-  techniques: GameState["techniques"]
+  techniques: GameState["techniques"],
 ) {
   try {
     if (!techniques || techniques.length === 0) return { success: true };
@@ -383,14 +378,11 @@ export async function syncTechniquesToTables(
  */
 async function syncTechniquesDirect(
   runId: string,
-  techniques: GameState["techniques"]
+  techniques: GameState["techniques"],
 ) {
   try {
     // Delete existing techniques for this run
-    await supabase
-      .from("character_techniques")
-      .delete()
-      .eq("run_id", runId);
+    await supabase.from("character_techniques").delete().eq("run_id", runId);
 
     // Insert all techniques
     if (techniques.length > 0) {
@@ -418,7 +410,9 @@ async function syncTechniquesDirect(
 /**
  * Load skills from normalized tables
  */
-export async function loadSkillsFromTables(runId: string): Promise<GameState["skills"] | null> {
+export async function loadSkillsFromTables(
+  runId: string,
+): Promise<GameState["skills"] | null> {
   try {
     const { data, error } = await supabase
       .from("character_skills")
@@ -440,7 +434,9 @@ export async function loadSkillsFromTables(runId: string): Promise<GameState["sk
 /**
  * Load techniques from normalized tables
  */
-export async function loadTechniquesFromTables(runId: string): Promise<GameState["techniques"] | null> {
+export async function loadTechniquesFromTables(
+  runId: string,
+): Promise<GameState["techniques"] | null> {
   try {
     const { data, error } = await supabase
       .from("character_techniques")
@@ -462,7 +458,7 @@ export async function loadTechniquesFromTables(runId: string): Promise<GameState
 export async function fullSync(
   runId: string,
   state: GameState,
-  characterName: string
+  characterName: string,
 ) {
   await syncInventoryToTables(runId, state.inventory, state.equipped_items);
   await syncSkillsToTables(runId, state.skills);

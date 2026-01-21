@@ -1,10 +1,14 @@
-'use client';
+"use client";
 
-import { useMemo, useState, useEffect } from 'react';
-import { GameState, Realm } from '@/types/game';
-import { t, Locale } from '@/lib/i18n/translations';
-import { getRequiredExp, getSpiritRootBonus, getTechniqueBonus } from '@/lib/game/mechanics';
-import { getEquipmentBonus } from '@/lib/game/equipment';
+import { useMemo, useState, useEffect } from "react";
+import { GameState, Realm } from "@/types/game";
+import { t, Locale } from "@/lib/i18n/translations";
+import {
+  getRequiredExp,
+  getSpiritRootBonus,
+  getTechniqueBonus,
+} from "@/lib/game/mechanics";
+import { getEquipmentBonus } from "@/lib/game/equipment";
 
 interface CultivationVisualizationProps {
   state: GameState;
@@ -13,41 +17,50 @@ interface CultivationVisualizationProps {
 }
 
 // Realm color mapping
-const REALM_COLORS: Record<Realm, { primary: string; light: string; gradient: string }> = {
-  'PhàmNhân': {
-    primary: 'rgb(107, 114, 128)',
-    light: 'rgb(156, 163, 175)',
-    gradient: 'from-gray-600 to-gray-400',
+const REALM_COLORS: Record<
+  Realm,
+  { primary: string; light: string; gradient: string }
+> = {
+  PhàmNhân: {
+    primary: "rgb(107, 114, 128)",
+    light: "rgb(156, 163, 175)",
+    gradient: "from-gray-600 to-gray-400",
   },
-  'LuyệnKhí': {
-    primary: 'rgb(16, 185, 129)',
-    light: 'rgb(52, 211, 153)',
-    gradient: 'from-emerald-600 to-emerald-400',
+  LuyệnKhí: {
+    primary: "rgb(16, 185, 129)",
+    light: "rgb(52, 211, 153)",
+    gradient: "from-emerald-600 to-emerald-400",
   },
-  'TrúcCơ': {
-    primary: 'rgb(59, 130, 246)',
-    light: 'rgb(96, 165, 250)',
-    gradient: 'from-blue-600 to-blue-400',
+  TrúcCơ: {
+    primary: "rgb(59, 130, 246)",
+    light: "rgb(96, 165, 250)",
+    gradient: "from-blue-600 to-blue-400",
   },
-  'KếtĐan': {
-    primary: 'rgb(139, 92, 246)',
-    light: 'rgb(167, 139, 250)',
-    gradient: 'from-violet-600 to-violet-400',
+  KếtĐan: {
+    primary: "rgb(139, 92, 246)",
+    light: "rgb(167, 139, 250)",
+    gradient: "from-violet-600 to-violet-400",
   },
-  'NguyênAnh': {
-    primary: 'rgb(245, 158, 11)',
-    light: 'rgb(251, 191, 36)',
-    gradient: 'from-amber-500 to-yellow-400',
+  NguyênAnh: {
+    primary: "rgb(245, 158, 11)",
+    light: "rgb(251, 191, 36)",
+    gradient: "from-amber-500 to-yellow-400",
   },
 };
 
 // Realm order for progression display
-const REALM_ORDER: Realm[] = ['PhàmNhân', 'LuyệnKhí', 'TrúcCơ', 'KếtĐan', 'NguyênAnh'];
+const REALM_ORDER: Realm[] = [
+  "PhàmNhân",
+  "LuyệnKhí",
+  "TrúcCơ",
+  "KếtĐan",
+  "NguyênAnh",
+];
 
 export default function CultivationVisualization({
   state,
   locale,
-  previousExp
+  previousExp,
 }: CultivationVisualizationProps) {
   const [isAnimating, setIsAnimating] = useState(false);
   const [displayExp, setDisplayExp] = useState(state.progress.cultivation_exp);
@@ -64,13 +77,19 @@ export default function CultivationVisualization({
 
   // Check if near breakthrough (>90%)
   const isNearBreakthrough = progressPercent >= 90 && requiredExp !== Infinity;
-  const isReadyForBreakthrough = cultivation_exp >= requiredExp && requiredExp !== Infinity;
+  const isReadyForBreakthrough =
+    cultivation_exp >= requiredExp && requiredExp !== Infinity;
 
   // Calculate cultivation speed multiplier
   const spiritRootMultiplier = getSpiritRootBonus(state.spirit_root.grade);
   const techniqueMultiplier = getTechniqueBonus(state);
-  const equipmentBonus = getEquipmentBonus(state, 'cultivation_speed');
-  const totalCultivationSpeed = spiritRootMultiplier * techniqueMultiplier * (1 + equipmentBonus / 100);
+  const equipmentBonus = getEquipmentBonus(state, "cultivation_speed");
+  const sectBonus = state.sect_membership?.benefits?.cultivation_bonus || 0;
+  const totalCultivationSpeed =
+    spiritRootMultiplier *
+    techniqueMultiplier *
+    (1 + equipmentBonus / 100) *
+    (1 + sectBonus / 100);
 
   // Animate exp changes
   useEffect(() => {
@@ -114,19 +133,19 @@ export default function CultivationVisualization({
         <div
           className={`inline-block px-6 py-2 rounded-lg border-2 transition-all duration-300 ${
             isReadyForBreakthrough
-              ? 'animate-near-breakthrough border-xianxia-gold'
-              : 'border-current'
+              ? "animate-near-breakthrough border-xianxia-gold"
+              : "border-current"
           }`}
           style={{
-            borderColor: isReadyForBreakthrough ? undefined : realmColors.primary,
-            color: realmColors.primary
+            borderColor: isReadyForBreakthrough
+              ? undefined
+              : realmColors.primary,
+            color: realmColors.primary,
           }}
         >
-          <span className="text-2xl font-bold">
-            {t(locale, realm)}
-          </span>
+          <span className="text-2xl font-bold">{t(locale, realm)}</span>
           <span className="ml-2 text-lg opacity-80">
-            {locale === 'vi' ? `Tầng ${realm_stage}` : `Stage ${realm_stage}`}
+            {locale === "vi" ? `Tầng ${realm_stage}` : `Stage ${realm_stage}`}
           </span>
         </div>
       </div>
@@ -143,23 +162,30 @@ export default function CultivationVisualization({
               <div
                 className={`w-3 h-3 rounded-full transition-all duration-300 ${
                   isCurrentRealm
-                    ? 'animate-glow-pulse scale-125'
+                    ? "animate-glow-pulse scale-125"
                     : isPastRealm
-                      ? 'opacity-100'
-                      : 'opacity-30'
+                      ? "opacity-100"
+                      : "opacity-30"
                 }`}
                 style={{
-                  backgroundColor: isPastRealm || isCurrentRealm ? colors.primary : colors.light,
-                  boxShadow: isCurrentRealm ? `0 0 10px ${colors.primary}` : 'none'
+                  backgroundColor:
+                    isPastRealm || isCurrentRealm
+                      ? colors.primary
+                      : colors.light,
+                  boxShadow: isCurrentRealm
+                    ? `0 0 10px ${colors.primary}`
+                    : "none",
                 }}
                 title={t(locale, r)}
               />
               {index < REALM_ORDER.length - 1 && (
                 <div
                   className={`w-8 h-0.5 mx-1 transition-all duration-300 ${
-                    isPastRealm ? 'opacity-100' : 'opacity-30'
+                    isPastRealm ? "opacity-100" : "opacity-30"
                   }`}
-                  style={{ backgroundColor: isPastRealm ? colors.primary : '#4b5563' }}
+                  style={{
+                    backgroundColor: isPastRealm ? colors.primary : "#4b5563",
+                  }}
                 />
               )}
             </div>
@@ -174,8 +200,8 @@ export default function CultivationVisualization({
           {/* Progress Fill */}
           <div
             className={`h-full rounded-full transition-all duration-500 ease-out relative overflow-hidden ${
-              isNearBreakthrough ? 'animate-near-breakthrough' : ''
-            } ${isAnimating ? 'animate-exp-gain' : ''}`}
+              isNearBreakthrough ? "animate-near-breakthrough" : ""
+            } ${isAnimating ? "animate-exp-gain" : ""}`}
             style={{
               width: `${progressPercent}%`,
               background: `linear-gradient(90deg, ${realmColors.primary}, ${realmColors.light})`,
@@ -186,7 +212,7 @@ export default function CultivationVisualization({
               className="absolute inset-0 animate-shimmer"
               style={{
                 background: `linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)`,
-                backgroundSize: '200% 100%',
+                backgroundSize: "200% 100%",
               }}
             />
           </div>
@@ -195,33 +221,37 @@ export default function CultivationVisualization({
         {/* Exp Text Overlay */}
         <div className="absolute inset-0 flex items-center justify-center">
           <span className="text-sm font-bold text-white drop-shadow-lg">
-            {requiredExp === Infinity ? (
-              locale === 'vi' ? 'Cảnh giới tối đa' : 'Max Realm'
-            ) : (
-              `${displayExp.toLocaleString()} / ${requiredExp.toLocaleString()}`
-            )}
+            {requiredExp === Infinity
+              ? locale === "vi"
+                ? "Cảnh giới tối đa"
+                : "Max Realm"
+              : `${displayExp.toLocaleString()} / ${requiredExp.toLocaleString()}`}
           </span>
         </div>
       </div>
 
       {/* Stage Progress Indicators */}
-      {realm !== 'PhàmNhân' && (
+      {realm !== "PhàmNhân" && (
         <div className="flex justify-center gap-1">
           {Array.from({ length: 9 }, (_, i) => i + 1).map((stage) => (
             <div
               key={stage}
               className={`w-2 h-2 rounded-full transition-all duration-300 ${
                 stage < realm_stage
-                  ? ''
+                  ? ""
                   : stage === realm_stage
-                    ? 'animate-meridian-pulse'
-                    : 'opacity-30'
+                    ? "animate-meridian-pulse"
+                    : "opacity-30"
               }`}
               style={{
-                backgroundColor: stage <= realm_stage ? realmColors.primary : '#4b5563',
-                boxShadow: stage === realm_stage ? `0 0 5px ${realmColors.primary}` : 'none'
+                backgroundColor:
+                  stage <= realm_stage ? realmColors.primary : "#4b5563",
+                boxShadow:
+                  stage === realm_stage
+                    ? `0 0 5px ${realmColors.primary}`
+                    : "none",
               }}
-              title={`${locale === 'vi' ? 'Tầng' : 'Stage'} ${stage}`}
+              title={`${locale === "vi" ? "Tầng" : "Stage"} ${stage}`}
             />
           ))}
         </div>
@@ -231,7 +261,7 @@ export default function CultivationVisualization({
       <div className="flex justify-center items-center gap-4 text-sm">
         <div className="flex items-center gap-2">
           <span className="text-gray-400">
-            {locale === 'vi' ? 'Tốc độ tu luyện:' : 'Cultivation Speed:'}
+            {locale === "vi" ? "Tốc độ tu luyện:" : "Cultivation Speed:"}
           </span>
           <span
             className="font-bold text-lg"
@@ -243,10 +273,10 @@ export default function CultivationVisualization({
       </div>
 
       {/* Speed Breakdown (collapsible) */}
-      <div className="grid grid-cols-3 gap-2 text-xs text-center">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-center">
         <div className="p-2 bg-xianxia-darker rounded border border-xianxia-accent/10">
           <div className="text-gray-400 mb-1">
-            {locale === 'vi' ? 'Linh Căn' : 'Spirit Root'}
+            {locale === "vi" ? "Linh Căn" : "Spirit Root"}
           </div>
           <div className="font-bold text-green-400">
             x{spiritRootMultiplier.toFixed(2)}
@@ -254,7 +284,7 @@ export default function CultivationVisualization({
         </div>
         <div className="p-2 bg-xianxia-darker rounded border border-xianxia-accent/10">
           <div className="text-gray-400 mb-1">
-            {locale === 'vi' ? 'Công Pháp' : 'Techniques'}
+            {locale === "vi" ? "Công Pháp" : "Techniques"}
           </div>
           <div className="font-bold text-purple-400">
             x{techniqueMultiplier.toFixed(2)}
@@ -262,10 +292,18 @@ export default function CultivationVisualization({
         </div>
         <div className="p-2 bg-xianxia-darker rounded border border-xianxia-accent/10">
           <div className="text-gray-400 mb-1">
-            {locale === 'vi' ? 'Trang Bị' : 'Equipment'}
+            {locale === "vi" ? "Tông Môn" : "Sect"}
+          </div>
+          <div className="font-bold text-yellow-400">
+            {sectBonus > 0 ? `+${sectBonus}%` : "-"}
+          </div>
+        </div>
+        <div className="p-2 bg-xianxia-darker rounded border border-xianxia-accent/10">
+          <div className="text-gray-400 mb-1">
+            {locale === "vi" ? "Trang Bị" : "Equipment"}
           </div>
           <div className="font-bold text-blue-400">
-            {equipmentBonus > 0 ? `+${equipmentBonus}%` : '-'}
+            {equipmentBonus > 0 ? `+${equipmentBonus}%` : "-"}
           </div>
         </div>
       </div>
@@ -274,9 +312,9 @@ export default function CultivationVisualization({
       {isReadyForBreakthrough && (
         <div className="text-center p-3 bg-gradient-to-r from-xianxia-gold/20 via-yellow-500/30 to-xianxia-gold/20 rounded-lg border border-xianxia-gold animate-near-breakthrough">
           <span className="text-xianxia-gold font-bold">
-            {locale === 'vi'
-              ? 'Sẵn sàng đột phá cảnh giới!'
-              : 'Ready for Breakthrough!'}
+            {locale === "vi"
+              ? "Sẵn sàng đột phá cảnh giới!"
+              : "Ready for Breakthrough!"}
           </span>
         </div>
       )}

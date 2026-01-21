@@ -15,6 +15,8 @@ import {
 } from "@/lib/game/mechanics";
 import CultivationVisualization from "./CultivationVisualization";
 import MeridianDiagram from "./MeridianDiagram";
+import DualCultivationView from "./DualCultivationView";
+import CharacterStatChart from "./CharacterStatChart";
 
 // Limits for techniques and skills
 const MAX_TECHNIQUES = 5;
@@ -31,6 +33,8 @@ interface CharacterSheetProps {
     queueId: string | null,
     action: "swap" | "forget" | "learn" | "discard",
   ) => Promise<void>;
+  onToggleDualCultivation?: () => Promise<void>;
+  onSetExpSplit?: (split: number) => Promise<void>;
 }
 
 export default function CharacterSheet({
@@ -38,6 +42,8 @@ export default function CharacterSheet({
   locale,
   previousExp,
   onAbilitySwap,
+  onToggleDualCultivation,
+  onSetExpSplit,
 }: CharacterSheetProps) {
   const [selectedTech, setSelectedTech] = useState<string | null>(null);
   const [selectedQueueTech, setSelectedQueueTech] = useState<string | null>(
@@ -153,6 +159,14 @@ export default function CharacterSheet({
           </div>
         </div>
       </div>
+
+      {/* Dual Cultivation */}
+      <DualCultivationView
+        state={state}
+        locale={locale}
+        onToggleDualCultivation={onToggleDualCultivation}
+        onSetExpSplit={onSetExpSplit}
+      />
 
       {/* Spirit Root */}
       <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
@@ -539,13 +553,25 @@ export default function CharacterSheet({
                     </span>
                     <span>⚔️ x{skill.damage_multiplier.toFixed(1)}</span>
                   </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2">
-                    <div
-                      className="bg-xianxia-accent h-2 rounded-full transition-all"
-                      style={{
-                        width: `${(skill.level / skill.max_level) * 100}%`,
-                      }}
-                    />
+
+                  {/* Skill Experience Progress Bar */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs text-gray-400">
+                      <span>
+                        {locale === "vi" ? "Kinh nghiệm" : "Experience"}
+                      </span>
+                      <span>
+                        {skill.exp || 0} / {skill.max_exp || skill.level * 100}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded-full h-2">
+                      <div
+                        className="bg-xianxia-accent h-2 rounded-full transition-all"
+                        style={{
+                          width: `${((skill.exp || 0) / (skill.max_exp || skill.level * 100)) * 100}%`,
+                        }}
+                      />
+                    </div>
                   </div>
                   {isSelected && onAbilitySwap && (
                     <div className="mt-2 pt-2 border-t border-red-500/30 flex gap-2">
@@ -816,6 +842,9 @@ export default function CharacterSheet({
           </div>
         </div>
       </div>
+
+      {/* Character Stat Chart */}
+      <CharacterStatChart state={state} locale={locale} />
 
       {/* Attribute Effects Guide */}
       <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">

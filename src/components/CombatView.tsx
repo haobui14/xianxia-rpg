@@ -372,8 +372,9 @@ export default function CombatView({
                     <button
                       key={skill.id}
                       onClick={() => {
-                        setSelectedSkill(skill.id);
-                        handleAction("skill" as any);
+                        if (!playerTurn || !canUse) return;
+                        onAction("skill", skill.id);
+                        setSelectedSkill(null);
                       }}
                       disabled={!playerTurn || !canUse}
                       className={`px-3 py-2 rounded border text-sm transition-all ${

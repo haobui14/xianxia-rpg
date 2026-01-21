@@ -151,19 +151,34 @@ export function processCombatTurn(
       skill.current_cooldown = skill.cooldown;
 
       if (skill.type === "attack") {
-        // Attack skill - deal damage with multiplier
-        playerDamage = Math.floor(
-          calculateDamage(
-            10,
-            enemy.def,
-            totalAttrs.str,
-            totalAttrs.perception,
-            totalAttrs.luck,
-            rng!,
-          ) * skill.damage_multiplier,
+        // Skills: Calculate normal attack damage, then multiply by skill multiplier
+        const normalAttackDamage = calculateDamage(
+          totalAttrs.str,
+          enemy.def,
+          totalAttrs.str,
+          totalAttrs.perception,
+          totalAttrs.luck,
+          rng!,
         );
+        // Apply skill multiplier (1.5x = 50% more damage than normal attack)
+        playerDamage = Math.floor(normalAttackDamage * skill.damage_multiplier);
         enemy.hp -= playerDamage;
         narrative += `Bạn dùng ${skill.name}, gây ${playerDamage} sát thương! `;
+
+        // Grant skill exp for using it (5-15 exp per use)
+        const skillExpGain = rng!.randomInt(5, 15);
+        if (!skill.exp) skill.exp = 0;
+        if (!skill.max_exp) skill.max_exp = skill.level * 100; // 100 exp per level
+        skill.exp += skillExpGain;
+
+        // Level up skill if enough exp
+        while (skill.exp >= skill.max_exp && skill.level < skill.max_level) {
+          skill.exp -= skill.max_exp;
+          skill.level += 1;
+          skill.max_exp = skill.level * 100;
+          skill.damage_multiplier = (skill.damage_multiplier || 1.5) * 1.05; // +5% damage per level
+          narrative += `[${skill.name} lên cấp ${skill.level}!] `;
+        }
 
         // Apply additional effects
         if (
@@ -190,6 +205,23 @@ export function processCombatTurn(
           updateHP(state, healAmount);
           narrative += `Bạn dùng ${skill.name}, hồi ${healAmount} HP! `;
         }
+
+        // Grant skill exp for defense skills
+        const skillExpGain = rng!.randomInt(5, 15);
+        if (!skill.exp) skill.exp = 0;
+        if (!skill.max_exp) skill.max_exp = skill.level * 100;
+        skill.exp += skillExpGain;
+
+        while (skill.exp >= skill.max_exp && skill.level < skill.max_level) {
+          skill.exp -= skill.max_exp;
+          skill.level += 1;
+          skill.max_exp = skill.level * 100;
+          if (skill.effects?.heal_percent) {
+            skill.effects.heal_percent =
+              (skill.effects.heal_percent || 0.1) * 1.05;
+          }
+          narrative += `[${skill.name} lên cấp ${skill.level}!] `;
+        }
       } else if (skill.type === "support") {
         // Support skill - buffs, debuffs, etc.
         if (skill.effects?.heal_percent) {
@@ -203,14 +235,27 @@ export function processCombatTurn(
           narrative += `Bạn dùng ${skill.name}, tăng cường thuộc tính! `;
           // Stat buffs would need to be tracked separately
         }
+
+        // Grant skill exp for support skills
+        const skillExpGain = rng!.randomInt(5, 15);
+        if (!skill.exp) skill.exp = 0;
+        if (!skill.max_exp) skill.max_exp = skill.level * 100;
+        skill.exp += skillExpGain;
+
+        while (skill.exp >= skill.max_exp && skill.level < skill.max_level) {
+          skill.exp -= skill.max_exp;
+          skill.level += 1;
+          skill.max_exp = skill.level * 100;
+          narrative += `[${skill.name} lên cấp ${skill.level}!] `;
+        }
       }
     }
   }
 
   if (playerAction === "attack") {
-    // Physical attack using STR, PERCEPTION, LUCK
+    // Normal attack uses base STR only (skills use Physical Attack which is higher)
     playerDamage = calculateDamage(
-      10, // Base attack power
+      totalAttrs.str, // Base STR for normal attacks
       enemy.def,
       totalAttrs.str,
       totalAttrs.perception,
@@ -246,7 +291,7 @@ export function processCombatTurn(
     } else {
       narrative += `Không đủ Linh lực! Bạn tấn công thường. `;
       playerDamage = calculateDamage(
-        10,
+        totalAttrs.str, // Base STR for normal attack fallback
         enemy.def,
         totalAttrs.str,
         totalAttrs.perception,

@@ -10,7 +10,11 @@ import {
   TimeSegment,
   Realm,
 } from "@/types/game";
+// World system types imported but used via init functions
 import { DeterministicRNG } from "./rng";
+import { initTravelState } from "@/lib/world/travel";
+import { initEventState } from "@/lib/world/event-engine";
+import { initDungeonState } from "@/lib/world/dungeon-engine";
 
 /**
  * Create initial game state for a new character
@@ -48,6 +52,7 @@ export function createInitialState(
     silver: 100,
     spirit_stones: 0,
     items: [],
+    max_slots: 20, // Base inventory capacity
   };
 
   const storySummary =
@@ -91,7 +96,74 @@ export function createInitialState(
         year: 1,
       },
     },
+    // World system initialization
+    travel: initTravelState(),
+    events: initEventState(),
+    dungeon: initDungeonState(),
   };
+}
+
+/**
+ * Migrate existing game state to include world system
+ * Called when loading a save that doesn't have the new fields
+ */
+export function migrateGameState(state: GameState): GameState {
+  // Migrate travel state
+  if (!state.travel) {
+    state.travel = initTravelState();
+
+    // Try to map old location to new system
+    if (state.location) {
+      const regionMapping: Record<string, string> = {
+        "Núi Thanh Vân": "thanh_van",
+        "Azure Cloud Mountains": "thanh_van",
+        "Thanh Vân": "thanh_van",
+        "Hỏa Sơn": "hoa_son",
+        "Fire Mountain": "hoa_son",
+        "Huyền Thủy": "huyen_thuy",
+        "Mystic Waters": "huyen_thuy",
+        "Trầm Lôi": "tram_loi",
+        "Silent Thunder": "tram_loi",
+        "Vọng Linh": "vong_linh",
+        "Spirit Watch": "vong_linh",
+      };
+
+      const mappedRegion = regionMapping[state.location.region];
+      if (mappedRegion) {
+        state.travel.current_region = mappedRegion as any;
+        // Set to city area of that region
+        const areaMapping: Record<string, string> = {
+          thanh_van: "thanh_van_village",
+          hoa_son: "flame_gate_city",
+          huyen_thuy: "pearl_harbor",
+          tram_loi: "thunder_citadel",
+          vong_linh: "spirit_gate",
+        };
+        state.travel.current_area =
+          areaMapping[mappedRegion] || "thanh_van_village";
+        state.travel.discovered_areas[state.travel.current_region] = [
+          state.travel.current_area,
+        ];
+      }
+    }
+  }
+
+  // Migrate event state
+  if (!state.events) {
+    state.events = initEventState();
+  }
+
+  // Migrate dungeon state
+  if (!state.dungeon) {
+    state.dungeon = initDungeonState();
+  }
+
+  // Migrate inventory max_slots if missing
+  if (!state.inventory.max_slots) {
+    state.inventory.max_slots = 20;
+  }
+
+  return state;
 }
 
 /**
@@ -366,6 +438,9 @@ export function getTechniqueBonus(state: GameState): number {
         state.spirit_root.elements,
         technique.elements,
       );
+    } else {
+      // Techniques with no element get a universal 20% bonus
+      elementBonus = 0.2;
     }
 
     const techBonus = baseBonus + elementBonus;
@@ -401,10 +476,35 @@ export const CULTIVATION_EXP_REQUIREMENTS: Record<string, number[]> = {
 };
 
 /**
+ * Body cultivation exp requirements by realm and stage
+ * Parallel to Qi cultivation but slightly different values
+ */
+export const BODY_CULTIVATION_EXP_REQUIREMENTS: Record<string, number[]> = {
+  PhàmThể: [50], // Stage 0 -> Stage 1 (breakthrough to LuyệnCốt)
+  LuyệnCốt: [150, 300, 500, 800, 1200, 1800, 2500, 3500, 5000], // Stages 1-9
+  ĐồngCân: [6000, 8000, 10000, 12000, 15000, 18000, 22000, 27000, 33000], // Stages 1-9
+  KimCương: [40000, 50000, 60000, 75000, 90000, 110000, 130000, 160000, 200000], // Stages 1-9
+  TháiCổ: [
+    250000, 300000, 350000, 420000, 500000, 600000, 720000, 860000, 1000000,
+  ], // Stages 1-9
+};
+
+/**
  * Get required exp for next breakthrough
  */
 export function getRequiredExp(realm: Realm, stage: number): number {
   const requirements = CULTIVATION_EXP_REQUIREMENTS[realm];
+  if (!requirements || stage >= requirements.length) {
+    return Infinity; // Max level reached
+  }
+  return requirements[stage];
+}
+
+/**
+ * Get required exp for next body cultivation breakthrough
+ */
+export function getRequiredBodyExp(realm: string, stage: number): number {
+  const requirements = BODY_CULTIVATION_EXP_REQUIREMENTS[realm];
   if (!requirements || stage >= requirements.length) {
     return Infinity; // Max level reached
   }
@@ -420,7 +520,14 @@ export function calculateCultivationExpGain(
 ): number {
   const spiritRootBonus = getSpiritRootBonus(state.spirit_root.grade);
   const techniqueBonus = getTechniqueBonus(state);
-  return Math.floor(baseExp * spiritRootBonus * techniqueBonus);
+
+  // Add sect cultivation bonus if member of a sect
+  let sectBonus = 1.0;
+  if (state.sect_membership && state.sect_membership.benefits) {
+    sectBonus = 1.0 + state.sect_membership.benefits.cultivation_bonus / 100;
+  }
+
+  return Math.floor(baseExp * spiritRootBonus * techniqueBonus * sectBonus);
 }
 
 /**
@@ -544,6 +651,116 @@ export function performBreakthrough(state: GameState): boolean {
     state.attrs.str += 3;
     state.attrs.agi += 3;
     state.attrs.int += 3;
+
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Check if character can breakthrough body cultivation to next stage
+ */
+export function canBodyBreakthrough(state: GameState): boolean {
+  if (!state.progress.body_realm || !state.progress.body_exp) return false;
+
+  const realm = state.progress.body_realm;
+  const stage = state.progress.body_stage || 0;
+  const exp = state.progress.body_exp;
+
+  const requiredExp = getRequiredBodyExp(realm, stage);
+
+  if (requiredExp === Infinity) return false;
+
+  return exp >= requiredExp;
+}
+
+/**
+ * Perform body cultivation breakthrough
+ */
+export function performBodyBreakthrough(state: GameState): boolean {
+  if (!canBodyBreakthrough(state)) return false;
+
+  const realm = state.progress.body_realm || "PhàmThể";
+  const stage = state.progress.body_stage || 0;
+
+  if (realm === "PhàmThể") {
+    // Break through to Bone Forging stage 1
+    state.progress.body_realm = "LuyệnCốt";
+    state.progress.body_stage = 1;
+    state.progress.body_exp = 0;
+
+    // Body cultivation increases HP and STR primarily
+    state.stats.hp_max += 80;
+    state.stats.hp = state.stats.hp_max;
+    state.stats.stamina_max += 3;
+
+    state.attrs.str += 3;
+    state.attrs.agi += 1;
+
+    return true;
+  } else if (realm === "LuyệnCốt" && stage < 9) {
+    // Advance within Bone Forging realm
+    state.progress.body_stage = (stage || 0) + 1;
+    state.progress.body_exp = 0;
+
+    state.stats.hp_max += 40;
+    state.stats.hp = state.stats.hp_max;
+
+    state.attrs.str += 2;
+    state.attrs.agi += 1;
+
+    return true;
+  } else if (realm === "LuyệnCốt" && stage === 9) {
+    // Breakthrough to Copper Tendon
+    state.progress.body_realm = "ĐồngCân";
+    state.progress.body_stage = 1;
+    state.progress.body_exp = 0;
+
+    state.stats.hp_max += 120;
+    state.stats.hp = state.stats.hp_max;
+    state.stats.stamina_max += 5;
+
+    state.attrs.str += 4;
+    state.attrs.agi += 2;
+
+    return true;
+  } else if (realm === "ĐồngCân" && stage < 9) {
+    // Advance within Copper Tendon realm
+    state.progress.body_stage = (stage || 0) + 1;
+    state.progress.body_exp = 0;
+
+    state.stats.hp_max += 60;
+    state.stats.hp = state.stats.hp_max;
+
+    state.attrs.str += 3;
+    state.attrs.agi += 1;
+
+    return true;
+  } else if (realm === "ĐồngCân" && stage === 9) {
+    // Breakthrough to Diamond Body
+    state.progress.body_realm = "KimCương";
+    state.progress.body_stage = 1;
+    state.progress.body_exp = 0;
+
+    state.stats.hp_max += 180;
+    state.stats.hp = state.stats.hp_max;
+    state.stats.stamina_max += 8;
+
+    state.attrs.str += 5;
+    state.attrs.agi += 3;
+
+    return true;
+  } else if (realm === "KimCương" && stage < 9) {
+    // Advance within Diamond Body realm
+    state.progress.body_stage = (stage || 0) + 1;
+    state.progress.body_exp = 0;
+
+    state.stats.hp_max += 100;
+    state.stats.hp = state.stats.hp_max;
+
+    state.attrs.str += 4;
+    state.attrs.agi += 2;
 
     return true;
   }
