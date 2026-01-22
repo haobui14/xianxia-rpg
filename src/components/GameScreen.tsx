@@ -20,6 +20,9 @@ import BreakthroughModal, { BreakthroughEvent } from "./BreakthroughModal";
 import CombatView from "./CombatView";
 import CultivatorDashboard from "./CultivatorDashboard";
 import { ActivityType } from "@/types/game";
+import WorldMap from "./WorldMap";
+import EventModal from "./EventModal";
+import DungeonView from "./DungeonView";
 
 interface GameScreenProps {
   runId: string;
@@ -35,7 +38,13 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<
-    "game" | "character" | "sect" | "inventory" | "market" | "notifications"
+    | "game"
+    | "character"
+    | "sect"
+    | "inventory"
+    | "market"
+    | "notifications"
+    | "world"
   >("game");
   const [breakthroughEvent, setBreakthroughEvent] =
     useState<BreakthroughEvent | null>(null);
@@ -1165,17 +1174,86 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
 
   // Handle combat end - apply loot and continue game
   const handleActiveCombatEnd = useCallback(async () => {
-    if (!activeCombat || !state) return;
+    if (!activeCombat) return;
+
+    // Get the latest state from the server to ensure we have current dungeon progress
+    let currentState = state;
+    try {
+      const stateResponse = await fetch(`/api/run/${runId}`);
+      if (stateResponse.ok) {
+        const stateData = await stateResponse.json();
+        currentState = stateData.run.current_state;
+      }
+    } catch (err) {
+      console.error("Failed to fetch latest state:", err);
+      // Continue with existing state if fetch fails
+    }
+
+    if (!currentState) return;
 
     const victory = activeCombat.enemy.hp <= 0;
-    const playerDied = state.stats.hp <= 0;
+    const playerDied = currentState.stats.hp <= 0;
 
-    let updatedState = { ...state };
+    let updatedState = { ...currentState };
+
+    // Item translations
+    const itemTranslations: Record<string, { vi: string; en: string }> = {
+      spirit_herb: { vi: "Linh Thảo", en: "Spirit Herb" },
+      beast_core: { vi: "Yêu Đan", en: "Beast Core" },
+      spirit_jade: { vi: "Linh Ngọc", en: "Spirit Jade" },
+      phoenix_feather: { vi: "Lông Phượng Hoàng", en: "Phoenix Feather" },
+      dragon_scale: { vi: "Vảy Rồng", en: "Dragon Scale" },
+      void_crystal: { vi: "Hư Không Thạch", en: "Void Crystal" },
+      fire_token: { vi: "Hỏa Bài", en: "Fire Token" },
+      water_pearl: { vi: "Thủy Ngọc", en: "Water Pearl" },
+      thunder_seal: { vi: "Lôi Ấn", en: "Thunder Seal" },
+    };
+
+    const getItemName = (itemId: string) => {
+      const translation = itemTranslations[itemId];
+      if (translation) {
+        return locale === "vi" ? translation.vi : translation.en;
+      }
+      return itemId
+        .split("_")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+    };
 
     if (victory) {
-      // Calculate loot based on enemy
-      const lootSilver = Math.floor(Math.random() * 50) + 20;
-      const lootExp = Math.floor(Math.random() * 30) + 20;
+      // Check if we're in a dungeon for enhanced rewards
+      const isInDungeon =
+        currentState.dungeon?.dungeon_id && currentState.dungeon?.current_floor;
+
+      // Calculate loot based on enemy and dungeon status
+      let lootSilver = Math.floor(Math.random() * 50) + 20;
+      let lootExp = Math.floor(Math.random() * 30) + 20;
+      let lootSpiritStones = 0;
+      const lootItems: string[] = [];
+
+      if (isInDungeon) {
+        // Enhanced dungeon rewards
+        lootSilver = Math.floor(Math.random() * 100) + 50; // 50-150 silver
+        lootExp = Math.floor(Math.random() * 60) + 40; // 40-100 exp
+        lootSpiritStones = Math.floor(Math.random() * 3) + 1; // 1-3 spirit stones
+
+        // Chance for items based on enemy loot table
+        const itemChance = Math.random();
+        if (itemChance > 0.5) {
+          // Common herbs and materials
+          const commonDrops = ["spirit_herb", "beast_core", "spirit_jade"];
+          lootItems.push(
+            commonDrops[Math.floor(Math.random() * commonDrops.length)],
+          );
+        }
+        if (itemChance > 0.8) {
+          // Rare drops
+          const rareDrops = ["phoenix_feather", "dragon_scale", "void_crystal"];
+          lootItems.push(
+            rareDrops[Math.floor(Math.random() * rareDrops.length)],
+          );
+        }
+      }
 
       // Update state with loot
       updatedState = {
@@ -1183,6 +1261,8 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         inventory: {
           ...updatedState.inventory,
           silver: updatedState.inventory.silver + lootSilver,
+          spirit_stones:
+            updatedState.inventory.spirit_stones + lootSpiritStones,
         },
         progress: {
           ...updatedState.progress,
@@ -1190,14 +1270,61 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         },
       };
 
-      // Show loot notification
-      setNarrative((prev) => {
-        const lootText =
+      // Add items to inventory
+      if (lootItems.length > 0) {
+        for (const itemId of lootItems) {
+          const existingItem = updatedState.inventory.items.find(
+            (i) => i.id === itemId,
+          );
+          if (existingItem) {
+            existingItem.quantity = (existingItem.quantity || 1) + 1;
+          } else {
+            const viName =
+              itemTranslations[itemId]?.vi ||
+              itemId
+                .split("_")
+                .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                .join(" ");
+            const enName =
+              itemTranslations[itemId]?.en ||
+              itemId
+                .split("_")
+                .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                .join(" ");
+            updatedState.inventory.items.push({
+              id: itemId,
+              name: viName,
+              name_en: enName,
+              description: "Vật phẩm thu được từ bí cảnh",
+              description_en: "Item obtained from dungeon",
+              type: "Material",
+              quantity: 1,
+              rarity: Math.random() > 0.8 ? "Rare" : "Common",
+            });
+          }
+        }
+      }
+
+      // Build loot notification message
+      let lootText =
+        locale === "vi"
+          ? `\n\n🎉 Chiến thắng! Bạn nhận được ${lootSilver} bạc và ${lootExp} điểm tu luyện.`
+          : `\n\n🎉 Victory! You received ${lootSilver} silver and ${lootExp} cultivation points.`;
+
+      if (lootSpiritStones > 0) {
+        lootText +=
           locale === "vi"
-            ? `\n\n🎉 Chiến thắng! Bạn nhận được ${lootSilver} bạc và ${lootExp} điểm tu luyện.`
-            : `\n\n🎉 Victory! You received ${lootSilver} silver and ${lootExp} cultivation points.`;
-        return prev + lootText;
-      });
+            ? ` Và ${lootSpiritStones} Linh Thạch!`
+            : ` And ${lootSpiritStones} Spirit Stones!`;
+      }
+
+      if (lootItems.length > 0) {
+        const itemNames = lootItems.map((id) => getItemName(id)).join(", ");
+        lootText +=
+          locale === "vi" ? ` Vật phẩm: ${itemNames}` : ` Items: ${itemNames}`;
+      }
+
+      setNarrative((prev) => prev + lootText);
     } else if (playerDied) {
       // Player died - restore some HP to continue
       updatedState = {
@@ -1397,6 +1524,12 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
 
     return () => clearInterval(interval);
   }, [state?.stats.stamina, state?.stats.stamina_max, userId]);
+
+  // Debug: Log when activeCombat changes
+  useEffect(() => {
+    console.log("activeCombat state changed:", activeCombat);
+  }, [activeCombat]);
+
   const handleChoice = async (choiceId: string) => {
     const selectedChoice = choices.find((c) => c.id === choiceId);
 
@@ -1448,6 +1581,175 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
     await processTurn("custom_action", customChoice);
     setCustomAction(""); // Clear input after submission
   };
+
+  // World system handlers
+  const handleTravelArea = useCallback(
+    async (areaId: string) => {
+      try {
+        const response = await fetch("/api/travel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ action: "travel_area", destination: areaId }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to travel");
+        }
+
+        const result = await response.json();
+        if (result.success && result.state) {
+          setState(result.state);
+        }
+      } catch (err: any) {
+        // Error is displayed in UI, no need to log to console
+        setError(
+          err.message || (locale === "vi" ? "Lỗi di chuyển" : "Travel error"),
+        );
+      }
+    },
+    [locale],
+  );
+
+  const handleTravelRegion = useCallback(
+    async (regionId: string) => {
+      try {
+        const response = await fetch("/api/travel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            action: "travel_region",
+            destination: regionId,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to travel");
+        }
+
+        const result = await response.json();
+        if (result.success && result.state) {
+          setState(result.state);
+        }
+      } catch (err: any) {
+        // Error is displayed in UI, no need to log to console
+        setError(
+          err.message || (locale === "vi" ? "Lỗi di chuyển" : "Travel error"),
+        );
+      }
+    },
+    [locale],
+  );
+
+  const handleDungeonAction = useCallback(
+    async (action: string, params?: any) => {
+      try {
+        const response = await fetch("/api/dungeon", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ action, ...params }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed dungeon action");
+        }
+
+        const result = await response.json();
+        console.log("Dungeon action result:", result);
+
+        if (result.success && result.state) {
+          setState(result.state);
+        }
+
+        // Check for enemy encounter and trigger combat
+        if (result.success && result.encounter) {
+          console.log("Encounter detected:", result.encounter);
+
+          if (
+            result.encounter.type === "enemy_wave" &&
+            result.encounter.enemies &&
+            result.encounter.enemies.length > 0
+          ) {
+            // For now, trigger combat with the first enemy
+            // In the future, this could be expanded to handle multiple enemies in sequence
+            const enemy = result.encounter.enemies[0] as Enemy;
+
+            // Ensure hp_max is set
+            if (!enemy.hp_max) {
+              enemy.hp_max = enemy.hp;
+            }
+
+            console.log("Triggering dungeon combat with enemy:", enemy);
+            console.log("Player goes first:", !result.encounter.is_ambush);
+
+            setActiveCombat({
+              enemy,
+              log: [],
+              playerTurn: !result.encounter.is_ambush, // If ambush, enemy goes first
+            });
+
+            console.log("setActiveCombat called");
+          } else {
+            console.log("Encounter exists but missing enemies or wrong type");
+          }
+        } else {
+          console.log("No encounter in result");
+        }
+
+        return result;
+      } catch (err: any) {
+        // Error is displayed in UI, no need to log to console
+        setError(
+          err.message || (locale === "vi" ? "Lỗi bí cảnh" : "Dungeon error"),
+        );
+        throw err;
+      }
+    },
+    [locale],
+  );
+
+  const handleEventChoice = useCallback(
+    async (choiceId: string) => {
+      if (!state?.events?.active_event) return;
+
+      try {
+        const response = await fetch("/api/turn", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            runId,
+            choiceId: `event_${choiceId}`,
+            selectedChoice: {
+              id: `event_${choiceId}`,
+              text: locale === "vi" ? "Lựa chọn sự kiện" : "Event choice",
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to process event");
+        }
+
+        const result: ValidatedTurnResult = await response.json();
+        setState(result.state);
+        setNarrative(result.narrative);
+        setChoices(result.choices || []);
+      } catch (err: any) {
+        // Error is displayed in UI, no need to log to console
+        setError(
+          err.message || (locale === "vi" ? "Lỗi sự kiện" : "Event error"),
+        );
+      }
+    },
+    [state, runId, locale],
+  );
 
   if (loading) {
     return (
@@ -1521,6 +1823,16 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
             }`}
           >
             {locale === "vi" ? "Chợ" : "Market"}
+          </button>
+          <button
+            onClick={() => setActiveTab("world")}
+            className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
+              activeTab === "world"
+                ? "bg-xianxia-accent text-white"
+                : "bg-xianxia-dark hover:bg-xianxia-accent/20"
+            }`}
+          >
+            {locale === "vi" ? "🗺️ Thế Giới" : "🗺️ World"}
           </button>
           <button
             onClick={() => setActiveTab("notifications")}
@@ -1786,6 +2098,37 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         {activeTab === "notifications" && userId && (
           <NotificationManager userId={userId} locale={locale} />
         )}
+        {activeTab === "world" && (
+          <div className="space-y-6">
+            {/* Error Display */}
+            {error && (
+              <div className="p-4 bg-red-900/30 border border-red-500/50 rounded-lg text-red-200 flex items-center justify-between">
+                <span>{error}</span>
+                <button
+                  onClick={() => setError("")}
+                  className="ml-4 text-sm underline hover:text-red-100"
+                >
+                  {locale === "vi" ? "Đóng" : "Dismiss"}
+                </button>
+              </div>
+            )}
+
+            {/* World Map */}
+            <WorldMap
+              state={state}
+              locale={locale}
+              onTravelArea={handleTravelArea}
+              onTravelRegion={handleTravelRegion}
+            />
+
+            {/* Dungeon View (only show if in dungeon) */}
+            <DungeonView
+              state={state}
+              locale={locale}
+              onAction={handleDungeonAction}
+            />
+          </div>
+        )}
       </div>
 
       {/* Debug buttons - remove after testing */}
@@ -1846,6 +2189,16 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           event={breakthroughEvent}
           locale={locale}
           onClose={() => setBreakthroughEvent(null)}
+        />
+      )}
+
+      {/* Event Modal */}
+      {state?.events?.active_event && (
+        <EventModal
+          event={state.events.active_event}
+          state={state}
+          locale={locale}
+          onChoice={handleEventChoice}
         />
       )}
     </div>

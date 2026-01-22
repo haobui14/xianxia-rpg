@@ -327,8 +327,8 @@ export default function InventoryView({
 
       {/* Equipped Items */}
       <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">
-          {locale === "vi" ? "Đang Trang Bị" : "Currently Equipped"}
+        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold flex items-center gap-2">
+          ⚔️ {locale === "vi" ? "Đang Trang Bị" : "Currently Equipped"}
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {(
@@ -344,30 +344,48 @@ export default function InventoryView({
             ] as const
           ).map((slot) => {
             const equipped = state.equipped_items[slot];
+            const rarityColors = {
+              Legendary: "border-orange-500/50 bg-orange-900/10",
+              Epic: "border-purple-500/50 bg-purple-900/10",
+              Rare: "border-blue-500/50 bg-blue-900/10",
+              Uncommon: "border-green-500/50 bg-green-900/10",
+              Common: "border-gray-500/30 bg-gray-900/10",
+            };
             return (
               <div
                 key={slot}
-                className="p-3 bg-xianxia-darker rounded-lg border border-xianxia-accent/20"
+                className={`p-3 rounded-lg border transition-all ${
+                  equipped
+                    ? rarityColors[equipped.rarity as keyof typeof rarityColors] || "border-xianxia-accent/20 bg-xianxia-darker"
+                    : "border-dashed border-gray-700/50 bg-xianxia-darker/50"
+                }`}
               >
-                <div className="text-xs text-gray-400 mb-1">
+                <div className="text-xs text-gray-400 mb-2 font-medium">
                   {locale === "vi" ? SLOT_VI[slot] : slot}
                 </div>
                 {equipped ? (
                   <>
-                    <div className="text-sm font-semibold text-xianxia-accent truncate mb-2">
-                      {locale === "vi" ? equipped.name : equipped.name_en}
+                    <div className="text-sm font-semibold text-white mb-1 truncate" title={locale === "vi" ? equipped.name : equipped.name_en}>
+                      {getEnhancedItemName(equipped, locale)}
                     </div>
+                    {equipped.bonus_stats && (
+                      <div className="text-xs text-green-400 mb-2">
+                        {Object.entries(equipped.bonus_stats).slice(0, 2).map(([key, val]) => (
+                          <div key={key}>+{val} {key.toUpperCase()}</div>
+                        ))}
+                      </div>
+                    )}
                     {onEquipItem && (
                       <button
                         onClick={() => onEquipItem(equipped.id, "unequip")}
-                        className="w-full px-2 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 rounded text-xs transition-colors"
+                        className="w-full px-2 py-1 bg-red-600/20 hover:bg-red-600/40 text-red-300 rounded text-xs transition-colors"
                       >
                         {locale === "vi" ? "Tháo" : "Unequip"}
                       </button>
                     )}
                   </>
                 ) : (
-                  <div className="text-sm text-gray-600 italic">
+                  <div className="text-sm text-gray-600 italic text-center py-2">
                     {locale === "vi" ? "Trống" : "Empty"}
                   </div>
                 )}

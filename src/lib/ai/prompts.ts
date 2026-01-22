@@ -177,8 +177,42 @@ Every turn should include at least one: spiritual phenomenon, cultivation pressu
       : "ROLE:\n1. STORY: 120-180 words, xianxia tone\n2. CHOICES: 2-5 reasonable choices\n3. ALL changes via proposed_deltas\n4. ⚠️ CONSISTENCY: Everything in narrative (items, techniques, skills) MUST have matching delta",
 
     antiRepeat: isVi
-      ? '⚠️ TRÁNH LẶP: Xem "3 LƯỢT GẦN NHẤT", tạo nội dung KHÁC BIỆT. Rừng→chợ/làng. Chiến đấu→nghỉ/tu luyện.'
-      : '⚠️ AVOID REPETITION: Review "RECENT 3 TURNS", create DIFFERENT content. Forest→market/village. Combat→rest/cultivate.',
+      ? `🚫 NGHIÊM CẤM LẶP LẠI (CRITICAL):
+⚠️ XEM KỸ "3 LƯỢT GẦN NHẤT" - TUYỆT ĐỐI KHÔNG được làm điều tương tự!
+
+QUY TẮC BẮT BUỘC:
+1. NẾU 2 lượt liên tiếp cùng hoạt động (tu luyện/chiến đấu/nghỉ) → PHẢI đổi sang hoạt động KHÁC
+2. NẾU 3 lượt ở cùng một địa điểm → PHẢI di chuyển đến nơi MỚI (có delta location)
+3. NẾU gặp cùng loại kẻ địch 2 lần → PHẢI đổi sang sự kiện/khám phá/NPC
+4. Mỗi lượt PHẢI có điều gì đó MỚI: địa điểm mới, NPC mới, sự kiện mới, vật phẩm mới
+
+VÍ DỤ ĐÚNG:
+- Turn 1: Tu luyện tại hang động → Turn 2: Ra ngoài gặp NPC tại làng → Turn 3: Đi chợ mua đồ
+- Turn 1: Đánh yêu thú → Turn 2: Nghỉ ngơi phục hồi → Turn 3: Khám phá bí cảnh mới
+- Turn 1: Ở rừng → Turn 2: Vẫn ở rừng nhưng khám phá sâu hơn → Turn 3: Rời rừng đến núi/thành
+
+VÍ DỤ SAI (NGHIÊM CẤM):
+- ❌ Turn 1: Tu luyện → Turn 2: Tu luyện → Turn 3: Tu luyện
+- ❌ Turn 1: Đánh sói → Turn 2: Đánh hổ → Turn 3: Đánh gấu (3 lượt combat liên tiếp)
+- ❌ Turn 1-5: Tất cả ở "Rừng Sâu" không di chuyển`
+      : `🚫 REPETITION STRICTLY FORBIDDEN (CRITICAL):
+⚠️ REVIEW "RECENT 3 TURNS" CAREFULLY - ABSOLUTELY NO similar content!
+
+MANDATORY RULES:
+1. IF 2 consecutive turns same activity (cultivate/combat/rest) → MUST change to DIFFERENT activity
+2. IF 3 turns in same location → MUST move to NEW place (with location delta)
+3. IF same enemy type twice → MUST switch to event/exploration/NPC
+4. Every turn MUST have something NEW: new location, new NPC, new event, new item
+
+CORRECT EXAMPLES:
+- Turn 1: Cultivate in cave → Turn 2: Exit to meet NPC in village → Turn 3: Go to market
+- Turn 1: Fight beast → Turn 2: Rest and recover → Turn 3: Explore new secret realm
+- Turn 1: In forest → Turn 2: Still in forest but explore deeper → Turn 3: Leave forest to mountain/city
+
+WRONG EXAMPLES (FORBIDDEN):
+- ❌ Turn 1: Cultivate → Turn 2: Cultivate → Turn 3: Cultivate
+- ❌ Turn 1: Fight wolf → Turn 2: Fight tiger → Turn 3: Fight bear (3 consecutive combats)
+- ❌ Turn 1-5: All at "Deep Forest" without moving`,
 
     elements: isVi
       ? "NGŨ HÀNH: ThiênPhẩm x2.0 | Hiếm x1.5 | Khá x1.2 | PhổThông x1.0\nSinh: Kim→Thủy→Mộc→Hỏa→Thổ→Kim | Khắc: Kim→Mộc→Thổ→Thủy→Hỏa→Kim\nCông pháp khớp linh căn: +30% | Tương sinh: +15% | Tương khắc: -20%\n⭐ Công pháp KHÔNG thuộc tính (elements: []): +20% (phổ quát, không bị ảnh hưởng linh căn)"
@@ -201,8 +235,38 @@ Every turn should include at least one: spiritual phenomenon, cultivation pressu
 - No terms: level, system, game, points`,
 
     progression: isVi
-      ? "TIẾN TRIỂN: Mỗi action có kết quả (exp BASE 15-50, ÁP DỤNG time bonus). Stamina: 1-2 thường, 3-4 khó. LUÔN có 1 lựa chọn nghỉ hồi 10-20 stamina. time_segments: 1-2. ⚡ QUAN TRỌNG: KHI reward cultivation_exp → NHÂN với (1 + timeBonus/100). Ví dụ: base 30 exp + 25% bonus = 37-38 exp."
-      : "PROGRESSION: Every action has results (exp BASE 15-50, APPLY time bonus). Stamina: 1-2 normal, 3-4 hard. ALWAYS 1 rest option recovering 10-20 stamina. time_segments: 1-2. ⚡ IMPORTANT: When rewarding cultivation_exp → MULTIPLY by (1 + timeBonus/100). Example: base 30 exp + 25% bonus = 37-38 exp.",
+      ? `TIẾN TRIỂN & ĐA DẠNG HOẠT ĐỘNG:
+📊 Phần thưởng: Mỗi action có kết quả (exp BASE 15-50, ÁP DỤNG time bonus). Stamina: 1-2 thường, 3-4 khó. LUÔN có 1 lựa chọn nghỉ hồi 10-20 stamina. time_segments: 1-2. ⚡ QUAN TRỌNG: KHI reward cultivation_exp → NHÂN với (1 + timeBonus/100). Ví dụ: base 30 exp + 25% bonus = 37-38 exp.
+
+🎭 ĐA DẠNG HOẠT ĐỘNG (BẮT BUỘC):
+⚠️ XEM "3 LƯỢT GẦN NHẤT" - Nếu 2 lượt liên tiếp cùng loại hoạt động → PHẢI đổi sang hoạt động KHÁC!
+
+Các loại hoạt động luân phiên:
+1. Tu luyện (Cultivate): Hấp thụ linh khí, luyện công pháp, đột phá
+2. Chiến đấu (Combat): Gặp yêu thú, ma tu, kẻ địch
+3. Khám phá (Explore): Đi đến nơi mới, tìm kho báu, phát hiện bí mật
+4. Xã hội (Social): Gặp NPC, đối thoại, nhận nhiệm vụ, mua bán
+5. Nghỉ ngơi (Rest): Phục hồi, thiền định, suy ngẫm
+6. Sự kiện đặc biệt (Event): Thiên tượng, cơ duyên, nguy hiểm bất ngờ
+
+VÍ DỤ ĐÚNG: Tu luyện → Gặp NPC → Chiến đấu → Khám phá → Nghỉ → Mua đồ
+VÍ DỤ SAI: ❌ Tu luyện → Tu luyện → Tu luyện (3 lượt liên tiếp)`
+      : `PROGRESSION & ACTIVITY VARIETY:
+📊 Rewards: Every action has results (exp BASE 15-50, APPLY time bonus). Stamina: 1-2 normal, 3-4 hard. ALWAYS 1 rest option recovering 10-20 stamina. time_segments: 1-2. ⚡ IMPORTANT: When rewarding cultivation_exp → MULTIPLY by (1 + timeBonus/100). Example: base 30 exp + 25% bonus = 37-38 exp.
+
+🎭 ACTIVITY VARIETY (MANDATORY):
+⚠️ CHECK "RECENT 3 TURNS" - If 2 consecutive turns same activity type → MUST switch to DIFFERENT activity!
+
+Activity types to rotate:
+1. Cultivate: Absorb qi, practice techniques, breakthrough
+2. Combat: Fight beasts, demonic cultivators, enemies
+3. Explore: Go to new place, find treasure, discover secrets
+4. Social: Meet NPCs, dialogue, accept quests, trade
+5. Rest: Recover, meditate, reflect
+6. Special Event: Heavenly phenomena, fortune, unexpected danger
+
+CORRECT: Cultivate → Meet NPC → Combat → Explore → Rest → Shop
+WRONG: ❌ Cultivate → Cultivate → Cultivate (3 consecutive turns)`,
 
     randomEvents: isVi
       ? `🎲 SỰ KIỆN NGẪU NHIÊN (Thường xuyên):
@@ -241,7 +305,7 @@ EXAMPLE deltas for rewards:
 ⚠️ IMPORTANT: Events MUST fit the location and realm!`,
 
     exploration: isVi
-      ? `🗺️ KHÁM PHÁ & DI CHUYỂN:
+      ? `🗺️ KHÁM PHÁ & DI CHUYỂN (BẮT BUỘC):
 ⚠️ CỰC KỲ QUAN TRỌNG - LOCATION DELTAS:
 - KHI nhân vật di chuyển/đi đến nơi khác → BẮT BUỘC phải cập nhật location!
 - LUÔN LUÔN thêm delta khi narrative nói nhân vật đến địa điểm mới
@@ -249,13 +313,20 @@ EXAMPLE deltas for rewards:
 - VÍ DỤ: "Bạn đến thành phố" → PHẢI có delta: {"field": "location.place", "operation": "set", "value": "Thành Phố Vô Danh"}
 - VÍ DỤ: "Bạn vào động" → PHẢI có delta: {"field": "location.place", "operation": "set", "value": "Động Huyền Bí"}
 
-DI CHUYỂN THƯỜNG XUYÊN:
-- Sau 2-4 lượt ở cùng một nơi → đề xuất di chuyển đến địa điểm mới
-- Đổi region nếu đi xa: {"field": "location.region", "operation": "set", "value": "Vùng mới"}
-- Địa điểm phong phú: làng → rừng → động → núi → chợ → tông môn → thành phố → bí cảnh
-- Mỗi địa điểm có đặc sắc riêng, không lặp lại
-- LUÔN có lựa chọn khám phá/di chuyển đến nơi mới`
-      : `🗺️ EXPLORATION & MOVEMENT:
+🔥 QUY TẮC DI CHUYỂN BẮT BUỘC (CRITICAL):
+1. ⚠️ SAU 2 LƯỢT ở cùng địa điểm → Lượt thứ 3 PHẢI di chuyển hoặc có biến cố lớn (NPC xuất hiện, sự kiện đặc biệt)
+2. ⚠️ SAU 3 LƯỢT ở cùng địa điểm → TUYỆT ĐỐI PHẢI di chuyển đến nơi khác (có delta location)
+3. ⚠️ LUÔN có ít nhất 1 lựa chọn "Đi đến [Địa điểm mới]" hoặc "Khám phá khu vực lân cận"
+4. ⚠️ Mỗi địa điểm PHẢI có đặc điểm riêng biệt (kiến trúc, NPC, không khí, sự kiện)
+
+DANH SÁCH ĐỊA ĐIỂM ĐA DẠNG (luân phiên sử dụng):
+- Tự nhiên: Rừng Sâu, Núi Cao, Thung Lũng, Hồ Linh, Thác Nước, Hang Động
+- Nhân tạo: Làng Nhỏ, Thành Phố, Chợ Phiên, Tửu Quán, Khách Sạn, Trạm Dừng
+- Tu tiên: Tông Môn, Bí Cảnh, Động Tu Luyện, Bảo Tàng, Luyện Đan Phòng, Võ Đài
+- Đặc biệt: Tàn Tích Cổ, Đền Thờ Hoang, Mộ Cổ, Kết Giới Phong Ấn, Không Gian Tiểu Thế Giới
+
+⭐ MỖI LƯỢT nên gợi ý nhân vật khám phá phía trước/lên núi/xuống thung lũng/vào rừng/đến làng gần đó`
+      : `🗺️ EXPLORATION & MOVEMENT (MANDATORY):
 ⚠️ CRITICAL IMPORTANT - LOCATION DELTAS:
 - WHEN character moves/goes to different place → MUST update location!
 - ALWAYS add delta when narrative says character arrives at new location
@@ -263,12 +334,19 @@ DI CHUYỂN THƯỜNG XUYÊN:
 - EXAMPLE: "You arrive at city" → MUST have delta: {"field": "location.place", "operation": "set", "value": "Nameless City"}
 - EXAMPLE: "You enter cave" → MUST have delta: {"field": "location.place", "operation": "set", "value": "Mysterious Cave"}
 
-FREQUENT MOVEMENT:
-- After 2-4 turns in same location → suggest moving to new place
-- Change region if far travel: {"field": "location.region", "operation": "set", "value": "New Region"}
-- Diverse locations: village → forest → cave → mountain → market → sect → city → secret realm
-- Each location has unique characteristics, don't repeat
-- ALWAYS offer choice to explore/move to new place`,
+🔥 MANDATORY MOVEMENT RULES (CRITICAL):
+1. ⚠️ AFTER 2 turns in same location → Turn 3 MUST move or have major event (NPC appears, special event)
+2. ⚠️ AFTER 3 turns in same location → ABSOLUTELY MUST move to different place (with location delta)
+3. ⚠️ ALWAYS have at least 1 choice "Go to [New Location]" or "Explore nearby area"
+4. ⚠️ Each location MUST have unique characteristics (architecture, NPCs, atmosphere, events)
+
+DIVERSE LOCATION LIST (rotate usage):
+- Natural: Deep Forest, High Mountain, Valley, Spirit Lake, Waterfall, Cave
+- Man-made: Small Village, City, Market, Tavern, Inn, Rest Stop
+- Cultivation: Sect, Secret Realm, Cultivation Cave, Pavilion, Alchemy Room, Arena
+- Special: Ancient Ruins, Abandoned Temple, Ancient Tomb, Sealed Barrier, Pocket Dimension
+
+⭐ EVERY TURN should suggest character explore ahead/up mountain/down valley/into forest/to nearby village`,
 
     combat: isVi
       ? `⚔️ CHIẾN ĐẤU TƯƠNG TÁC:
@@ -778,6 +856,278 @@ When player is in a sect (sect_membership exists):
 - Fighting too hard → injuries
 - Cultivating while exhausted → reduced effect, possible harm
 - Entering dangerous areas unprepared → death`,
+
+    // ==========================================================
+    // WORLD SYSTEM RULES (5 Regions, Dungeons, Events)
+    // ==========================================================
+
+    regions: isVi
+      ? `🗺️ HỆ THỐNG VÙNG (5 VÙNG):
+Thế giới có 5 vùng chính, mỗi vùng có cấp độ, nguyên tố, và đặc điểm riêng:
+
+1️⃣ THANH VÂN (Azure Cloud) - Cấp 1 | Mộc | PhàmNhân
+   - Vùng khởi đầu, rừng xanh, làng nhỏ
+   - Kẻ địch: Sói rừng, Lợn rừng, Dây leo ma, Goblin
+   - Tài nguyên: Linh thảo, Mộc tinh, Thú đan cấp thấp
+
+2️⃣ HỎA SƠN (Fire Mountain) - Cấp 2 | Hỏa | LuyệnKhí
+   - Núi lửa, động nham thạch, hoang địa tro
+   - Kẻ địch: Thằn lằn lửa, Golem nham, Linh hồn lửa
+   - Tài nguyên: Hỏa tinh, Kim loại núi lửa, Lông phượng hoàng
+
+3️⃣ HUYỀN THỦY (Mystic Waters) - Cấp 3 | Thủy | TrúcCơ
+   - Bờ biển, đáy biển, đảo rùa rồng
+   - Kẻ địch: Rắn biển, Nguyên tố thủy, Golem san hô
+   - Tài nguyên: Ngọc trai, Thủy tinh, Vảy nhân ngư
+
+4️⃣ TRẦM LÔI (Silent Thunder) - Cấp 4 | Kim | KếtĐan
+   - Đồng bằng bão, thung lũng sấm, đài quan sát cổ
+   - Kẻ địch: Thú sấm, Nguyên tố bão, Diều hâu sét, Cấu trúc cổ
+   - Tài nguyên: Pha lê sấm, Kim tinh, Di vật cổ
+
+5️⃣ VỌNG LINH (Spirit Watch) - Cấp 5 | Thổ | NguyênAnh
+   - Cổng linh hồn, lăng mộ tổ tiên, sông hồn, điểm hư không
+   - Kẻ địch: Tu sĩ ma, Kẻ nuốt hồn, Linh âm, Sinh vật hư không
+   - Tài nguyên: Ngọc hồn, Âm tinh, Pha lê hư không
+
+📍 QUY TẮC VỀ VÙNG:
+⚠️ QUAN TRỌNG - LUÔN TẠO NỘI DUNG PHÙ HỢP VỚI VÙNG HIỆN TẠI:
+- Kiểm tra TRẠNG THÁI HIỆN TẠI để biết vùng người chơi đang ở (🗺️ Vùng: ...)
+- Mô tả phong cảnh, kẻ địch, tài nguyên phải ĐÚNG với vùng đó
+- Sử dụng nguyên tố chủ đạo của vùng trong mô tả (Hỏa Sơn → lửa/nham thạch)
+- Tạo kẻ địch phù hợp với pool của vùng (không có Golem nham ở Thanh Vân!)
+
+🚪 CẢNH BÁO MỀM (SOFT GATE):
+- Khi người chơi ở vùng cao hơn cảnh giới khuyến nghị → thêm cảnh báo
+- VÍ DỤ: "Linh khí ở đây quá mạnh, nguy hiểm với cảnh giới hiện tại của ngươi..."
+- KHÔNG chặn cứng, chỉ cảnh báo và tăng độ khó
+
+🌟 PHÙ THƯỞNG NGUYÊN TỐ:
+- Nếu người chơi có linh căn trùng với nguyên tố vùng → nhắc đến lợi thế
+- VÍ DỤ: "Hỏa linh căn của ngươi cộng hưởng với Hỏa khí ở Hỏa Sơn..."
+
+🗺️ DI CHUYỂN VÙNG:
+- Mỗi 8-15 lượt trong cùng vùng → đề xuất khám phá vùng mới
+- Vùng liền kề: Thanh Vân ↔ Hỏa Sơn, Thanh Vân ↔ Huyền Thủy, v.v.
+- Khi đi chuyển vùng, mô tả hành trình và phong cảnh thay đổi`
+      : `🗺️ REGION SYSTEM (5 REGIONS):
+The world has 5 main regions, each with tier, element, and unique characteristics:
+
+1️⃣ THANH VÂN (Azure Cloud) - Tier 1 | Wood | Mortal Realm
+   - Starting region, green forests, small villages
+   - Enemies: Forest Wolves, Wild Boars, Corrupted Vines, Goblins
+   - Resources: Spirit Herbs, Wood Essence, Low-tier Beast Cores
+
+2️⃣ HỎA SƠN (Fire Mountain) - Tier 2 | Fire | Qi Condensation
+   - Volcanic mountains, lava tunnels, ash wastelands
+   - Enemies: Fire Lizards, Magma Golems, Flame Spirits
+   - Resources: Fire Essence, Volcanic Metal, Phoenix Feathers
+
+3️⃣ HUYỀN THỦY (Mystic Waters) - Tier 3 | Water | Foundation
+   - Coastal areas, ocean depths, dragon turtle island
+   - Enemies: Sea Serpents, Water Elementals, Coral Golems
+   - Resources: Ocean Pearls, Water Essence, Mermaid Scales
+
+4️⃣ TRẦM LÔI (Silent Thunder) - Tier 4 | Metal | Golden Core
+   - Storm plains, lightning valleys, ancient observatories
+   - Enemies: Thunder Beasts, Storm Elementals, Lightning Hawks, Ancient Constructs
+   - Resources: Thunder Crystals, Metal Essence, Ancient Relics
+
+5️⃣ VỌNG LINH (Spirit Watch) - Tier 5 | Earth | Nascent Soul
+   - Spirit gates, ancestral tombs, soul river, void nexus
+   - Enemies: Ghost Cultivators, Soul Devourers, Yin Spirits, Void Creatures
+   - Resources: Soul Jade, Yin Essence, Void Crystals
+
+📍 REGION RULES:
+⚠️ CRITICAL - ALWAYS GENERATE CONTENT MATCHING CURRENT REGION:
+- Check CURRENT STATE to see player's region (🗺️ Vùng: ...)
+- Descriptions of scenery, enemies, resources MUST match that region
+- Use the region's primary element in descriptions (Fire Mountain → fire/lava themes)
+- Create enemies from the region's pool (no Magma Golems in Azure Cloud!)
+
+🚪 SOFT GATES (WARNINGS):
+- When player is in region higher than recommended realm → add warnings
+- EXAMPLE: "The spiritual energy here is too strong, dangerous for your current realm..."
+- DO NOT hard block, only warn and increase difficulty
+
+🌟 ELEMENT AFFINITY BONUS:
+- If player has spirit root matching region element → mention advantage
+- EXAMPLE: "Your Fire spirit root resonates with the Fire energy of Fire Mountain..."
+
+🗺️ REGION TRAVEL:
+- Every 8-15 turns in same region → suggest exploring new region
+- Adjacent regions: Azure Cloud ↔ Fire Mountain, Azure Cloud ↔ Mystic Waters, etc.
+- When traveling between regions, describe journey and changing scenery`,
+
+    dungeons: isVi
+      ? `🏛️ BÍ CẢNH & ĐỊA NGỤC:
+Mỗi vùng có 1 bí cảnh/địa ngục đặc biệt:
+
+1️⃣ BÍ CẢNH LINH THẢO VIÊN (Thanh Vân)
+   - 3 tầng | Bảo vật: Dược liệu hiếm, đan dược tăng linh căn
+   - Boss: Linh thọ cây cổ thụ
+
+2️⃣ LĂNG MỘ TỔ PHƯỢNG HOÀNG (Hỏa Sơn)
+   - 5 tầng | Bảo vật: Kỹ thuật hỏa, lông phượng, hỏa tinh
+   - Boss: Ma linh của Phượng Tổ
+
+3️⃣ ĐỘNG RÙNG RỒNG (Huyền Thủy)
+   - 5 tầng | Bảo vật: Bảo vật thở dưới nước, vật phẩm huyết mạch rồng
+   - Boss: Rùa Rồng Cổ Đại
+
+4️⃣ ĐỊA THIÊN KIẾP (Trầm Lôi)
+   - 7 tầng | Bảo vật: Kỹ thuật sét, kháng thiên kiếp
+   - Boss: Hóa thân Thiên Kiếp Sét
+
+5️⃣ ĐIỆN HƯ KHÔNG TỔ TIÊN (Vọng Linh)
+   - 9 tầng | Bảo vật: Trang bị huyền thoại, kỹ thuật hư không
+   - Boss: Tàn dư Hư Không Đế Quân
+
+🏛️ QUY TẮC BÍ CẢNH:
+⚠️ KHI NGƯỜI CHƠI ĐANG TRONG BÍ CẢNH (state.dungeon.dungeon_id !== null):
+1. TẬP TRUNG VÀO KHÁM PHÁ BÍ CẢNH:
+   - Mô tả tầng hiện tại, bầu không khí, nguy hiểm
+   - Tạo gặp gỡ kẻ địch phù hợp với tầng
+   - Đề xuất: khám phá, mở rương, tìm bí mật, chiến đấu boss
+
+2. HẠN CHẾ THỜI GIAN (nếu có):
+   - Kiểm tra turnsRemaining trong TRẠNG THÁI HIỆN TẠI
+   - Khi còn ≤10 lượt → CẢNH BÁO NGHIÊM TRỌNG: "Thời gian sắp hết!"
+   - Khi hết thời gian → tự động thoát, không nhận thưởng
+
+3. BOSS TẦNG:
+   - Boss phải MẠNH HƠN kẻ địch thường (HP/ATK cao gấp 2-3 lần)
+   - Mô tả boss ấn tượng, có câu thoại đe dọa
+   - Sau khi đánh bại boss → cho phép lên tầng tiếp
+
+4. HOÀN THÀNH BÍ CẢNH:
+   - Khi đánh bại boss tầng cuối → bí cảnh hoàn thành
+   - Tặng phần thưởng lớn: công pháp hiếm, trang bị epic+, tài nguyên
+   - Mô tả phần thưởng ấn tượng: "Ánh sáng thiêng rực rỡ từ rương báu..."
+
+⏱️ THOÁT SỚM:
+- Người chơi có thể thoát bí cảnh bất cứ lúc nào
+- Nếu chưa hoàn thành → KHÔNG nhận phần thưởng hoàn thành
+- Tiến độ sẽ bị mất, phải bắt đầu lại từ đầu lần sau`
+      : `🏛️ DUNGEONS & SECRET REALMS:
+Each region has 1 special dungeon/secret realm:
+
+1️⃣ SPIRIT HERB GARDEN (Azure Cloud)
+   - 3 floors | Rewards: Rare herbs, spirit root enhancement pills
+   - Boss: Ancient Tree Spirit
+
+2️⃣ PHOENIX ANCESTOR TOMB (Fire Mountain)
+   - 5 floors | Rewards: Fire techniques, phoenix feathers, flame essence
+   - Boss: Flame Specter of Phoenix Patriarch
+
+3️⃣ DRAGON TURTLE LAIR (Mystic Waters)
+   - 5 floors | Rewards: Water breathing artifact, dragon bloodline items
+   - Boss: Ancient Dragon Turtle
+
+4️⃣ HEAVENLY TRIBULATION GROUNDS (Silent Thunder)
+   - 7 floors | Rewards: Lightning techniques, tribulation resistance
+   - Boss: Lightning Tribulation Avatar
+
+5️⃣ VOID ANCESTRAL HALL (Spirit Watch)
+   - 9 floors | Rewards: Legendary equipment, void techniques
+   - Boss: Void Emperor Remnant
+
+🏛️ DUNGEON RULES:
+⚠️ WHEN PLAYER IS IN DUNGEON (state.dungeon.dungeon_id !== null):
+1. FOCUS ON DUNGEON EXPLORATION:
+   - Describe current floor, atmosphere, dangers
+   - Create encounters matching the floor theme
+   - Suggest: explore, open chests, find secrets, fight boss
+
+2. TIME LIMIT (if applicable):
+   - Check turnsRemaining in CURRENT STATE
+   - When ≤10 turns left → SEVERE WARNING: "Time is running out!"
+   - When time expires → auto-exit, no completion rewards
+
+3. FLOOR BOSSES:
+   - Bosses must be MUCH STRONGER than normal enemies (2-3x HP/ATK)
+   - Describe boss dramatically, include threatening dialogue
+   - After defeating boss → allow advancing to next floor
+
+4. DUNGEON COMPLETION:
+   - When final floor boss defeated → dungeon complete
+   - Award major rewards: rare techniques, epic+ equipment, resources
+   - Describe rewards impressively: "Divine light radiates from the treasure chest..."
+
+⏱️ EARLY EXIT:
+- Player can exit dungeon anytime
+- If not completed → NO completion rewards
+- Progress is lost, must restart from beginning next time`,
+
+    worldEvents: isVi
+      ? `📜 SỰ KIỆN NGẪU NHIÊN NÂNG CAO:
+Hệ thống sự kiện ngẫu nhiên mới với nhiều loại trigger:
+
+🎲 LOẠI SỰ KIỆN:
+1. **Sự kiện Khám phá** (40% khi khám phá):
+   - Phát hiện tài nguyên, kho báu ẩn
+   - Gặp tu sĩ bị thương (giúp/bỏ qua/cướp)
+   - Trận pháp cổ (giải được → tặng kỹ thuật)
+   - Thừa kế di sản (kỹ thuật/vật phẩm lớn)
+
+2. **Sự kiện Di chuyển** (25% khi đi chuyển):
+   - Phục kích cướp (chiến đấu/trả tiền)
+   - Đoàn thương (cơ hội giao dịch)
+   - Thời tiết khắc nghiệt (tránh/can đảm)
+   - Phát hiện cổng (lối tắt/lối vào bí cảnh)
+
+3. **Sự kiện Tu luyện** (15% khi tu luyện):
+   - Tẩu hỏa nhập ma (rủi ro vs phần thưởng)
+   - Cơ hội đột phá (exp bonus nếu thành công)
+   - Nội ma (test ý chí)
+   - Ngộ đạo (bonus đột phá lớn)
+
+⚠️ QUY TẮC SỰ KIỆN:
+- Sự kiện phải PHÙ HỢP với vùng và cảnh giới
+- Độ hiếm dựa trên vùng: Vùng cao = sự kiện hiếm hơn
+- Sự kiện có lựa chọn, mỗi lựa chọn có hậu quả khác nhau
+- Một số lựa chọn có yêu cầu (stat/vật phẩm/kỹ năng)
+- Đừng lạm dụng - 1 sự kiện mỗi 3-5 lượt là đủ
+
+📝 MÔ TẢ SỰ KIỆN:
+- Tạo câu chuyện hấp dẫn (120-180 từ)
+- Mỗi lựa chọn có hậu quả rõ ràng
+- Sử dụng rarity phù hợp (common/uncommon/rare/legendary)
+- Phần thưởng phải xứng đáng với độ hiếm và rủi ro`
+      : `📜 ADVANCED RANDOM EVENTS:
+New random event system with multiple trigger types:
+
+🎲 EVENT TYPES:
+1. **Exploration Events** (40% when exploring):
+   - Resource discovery, hidden caches
+   - Wounded cultivator (help/ignore/rob)
+   - Ancient formation (solve → technique reward)
+   - Legacy inheritance (major technique/item)
+
+2. **Travel Events** (25% when traveling):
+   - Bandit ambush (fight/pay toll)
+   - Merchant caravan (trading opportunity)
+   - Weather event (shelter/brave it)
+   - Portal discovery (shortcut/dungeon entrance)
+
+3. **Cultivation Events** (15% when cultivating):
+   - Qi deviation (risk vs reward)
+   - Breakthrough opportunity (exp bonus if success)
+   - Inner demon (willpower test)
+   - Enlightenment (major breakthrough bonus)
+
+⚠️ EVENT RULES:
+- Events must MATCH region and realm
+- Rarity based on region: Higher regions = rarer events
+- Events have choices, each choice has different outcomes
+- Some choices have requirements (stat/item/skill)
+- Don't overuse - 1 event every 3-5 turns is enough
+
+📝 EVENT DESCRIPTION:
+- Create engaging narrative (120-180 words)
+- Each choice has clear consequences
+- Use appropriate rarity (common/uncommon/rare/legendary)
+- Rewards must match rarity and risk`,
   };
 
   const schemas = `
@@ -950,22 +1300,98 @@ export function buildGameContext(
       ctx.push(narrative);
       ctx.push("");
     });
+
+    // Strong anti-repetition reminder
+    ctx.push(
+      locale === "vi"
+        ? `🚫 KIỂM TRA BẮT BUỘC TRƯỚC KHI TẠO TURN MỚI:
+1. ĐỌC KỸ 3 lượt trên - Có hoạt động nào lặp lại không? (tu luyện/chiến đấu/nghỉ)
+2. Nhân vật ở cùng địa điểm bao nhiêu lượt? Nếu ≥2 lượt → PHẢI di chuyển hoặc có sự kiện lớn
+3. Có gặp cùng loại kẻ địch/tình huống không? → PHẢI đổi sang hoạt động KHÁC
+4. Lượt mới PHẢI có điều GÌ ĐÓ MỚI (địa điểm/NPC/sự kiện/hoạt động khác biệt)
+
+⚠️ NẾU vi phạm bất kỳ điều nào → PHẢI thay đổi ngay!`
+        : `🚫 MANDATORY CHECK BEFORE CREATING NEW TURN:
+1. READ CAREFULLY above 3 turns - Any repeated activities? (cultivate/combat/rest)
+2. How many turns at same location? If ≥2 turns → MUST move or have major event
+3. Same enemy type/situation? → MUST switch to DIFFERENT activity
+4. New turn MUST have SOMETHING NEW (different location/NPC/event/activity)
+
+⚠️ IF violating any rule → MUST change immediately!`,
+    );
+    ctx.push("");
   }
 
   // Current state
   ctx.push(
     locale === "vi" ? "=== TRẠNG THÁI HIỆN TẠI ===" : "=== CURRENT STATE ===",
   );
-  ctx.push(
-    locale === "vi"
-      ? `Vị trí: ${state.location.place}, ${state.location.region}`
-      : `Location: ${state.location.place}, ${state.location.region}`,
-  );
+
+  // World location (new region system)
+  if (state.travel) {
+    const regionNames: Record<string, { vi: string; en: string }> = {
+      thanh_van: { vi: "Thanh Vân", en: "Azure Cloud" },
+      hoa_son: { vi: "Hỏa Sơn", en: "Fire Mountain" },
+      huyen_thuy: { vi: "Huyền Thủy", en: "Mystic Waters" },
+      tram_loi: { vi: "Trầm Lôi", en: "Silent Thunder" },
+      vong_linh: { vi: "Vọng Linh", en: "Spirit Watch" },
+    };
+    const region = regionNames[state.travel.current_region];
+    ctx.push(
+      locale === "vi"
+        ? `🗺️ Vùng: ${region?.vi || state.travel.current_region} (Cấp ${["thanh_van", "hoa_son", "huyen_thuy", "tram_loi", "vong_linh"].indexOf(state.travel.current_region) + 1})`
+        : `🗺️ Region: ${region?.en || state.travel.current_region} (Tier ${["thanh_van", "hoa_son", "huyen_thuy", "tram_loi", "vong_linh"].indexOf(state.travel.current_region) + 1})`,
+    );
+
+    const areaDiscovered = (state.travel.discovered_areas[state.travel.current_region] || []).length;
+    ctx.push(
+      locale === "vi"
+        ? `   Khu vực đã khám phá: ${areaDiscovered} khu vực`
+        : `   Discovered areas: ${areaDiscovered} areas`,
+    );
+  } else {
+    ctx.push(
+      locale === "vi"
+        ? `Vị trí: ${state.location.place}, ${state.location.region}`
+        : `Location: ${state.location.place}, ${state.location.region}`,
+    );
+  }
+
   ctx.push(
     locale === "vi"
       ? `Thời gian: Năm ${state.time_year}, Tháng ${state.time_month}, Ngày ${state.time_day} - ${state.time_segment}`
       : `Time: Year ${state.time_year}, Month ${state.time_month}, Day ${state.time_day} - ${state.time_segment}`,
   );
+
+  // Dungeon status
+  if (state.dungeon?.dungeon_id) {
+    ctx.push(
+      locale === "vi"
+        ? `🏛️ BÍ CẢNH ĐANG KHÁM PHÁ: Tầng ${state.dungeon.current_floor}${state.dungeon.turns_remaining ? ` (Còn ${state.dungeon.turns_remaining} lượt)` : ""}`
+        : `🏛️ IN DUNGEON: Floor ${state.dungeon.current_floor}${state.dungeon.turns_remaining ? ` (${state.dungeon.turns_remaining} turns left)` : ""}`,
+    );
+    if (state.dungeon.turns_remaining && state.dungeon.turns_remaining <= 10) {
+      ctx.push(
+        locale === "vi"
+          ? `   ⚠️ CẢNH BÁO: Sắp hết thời gian! Cần thoát ra hoặc hoàn thành nhanh!`
+          : `   ⚠️ WARNING: Time running out! Need to exit or complete quickly!`,
+      );
+    }
+  }
+
+  // Active event
+  if (state.events?.active_event) {
+    ctx.push(
+      locale === "vi"
+        ? `📜 SỰ KIỆN ĐANG DIỄN RA: ${state.events.active_event.name}`
+        : `📜 ACTIVE EVENT: ${state.events.active_event.name_en}`,
+    );
+    ctx.push(
+      locale === "vi"
+        ? `   Người chơi phải chọn một trong các lựa chọn sự kiện, KHÔNG thêm lựa chọn khác!`
+        : `   Player must choose from event options, DO NOT add other choices!`,
+    );
+  }
 
   // Time-based cultivation bonuses
   const currentSeason = getSeasonFromMonth(state.time_month);
