@@ -107,7 +107,7 @@ function sleep(ms: number): Promise<void> {
  */
 async function callOpenAI(
   messages: OpenAIMessage[],
-  model: string = "gpt-4.1-mini",
+  model: string = "gpt-5.1",
   options: { temperature?: number; maxRetries?: number } = {},
 ): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -285,7 +285,7 @@ export async function generateAITurn(
     },
   ];
 
-  const model = process.env.AI_MODEL || "gpt-4.1-mini";
+  const model = process.env.AI_MODEL || "gpt-5.1";
 
   // Retry loop for JSON validation failures
   for (let attempt = 0; attempt < 2; attempt++) {

@@ -320,7 +320,7 @@ async function syncSkillsDirect(runId: string, skills: GameState["skills"]) {
         skill_id: skill.id,
         skill_data: skill,
         current_level: skill.level,
-        experience: 0,
+        experience: skill.exp || 0,
       }));
 
       const { error } = await supabase

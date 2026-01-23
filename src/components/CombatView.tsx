@@ -363,30 +363,58 @@ export default function CombatView({
               </h4>
               <div className="flex flex-wrap gap-2">
                 {state.skills.map((skill) => {
+                  // At combat start (empty log), all skills should be available
+                  // current_cooldown is reset to 0 for fresh combat
+                  const effectiveCooldown = combatLog.length === 0 ? 0 : (skill.current_cooldown || 0);
+                  
                   const canUse =
+                    playerTurn &&
                     state.stats.qi >= skill.qi_cost &&
-                    (!skill.current_cooldown || skill.current_cooldown <= 0);
-                  const onCooldown =
-                    skill.current_cooldown && skill.current_cooldown > 0;
+                    effectiveCooldown <= 0;
+                  const onCooldown = effectiveCooldown > 0;
+                  
+                  console.log("[CombatView Skill Render]", {
+                    skillId: skill.id,
+                    skillName: skill.name,
+                    skillType: skill.type,
+                    damageMultiplier: skill.damage_multiplier,
+                    combatLogLength: combatLog.length,
+                    playerTurn,
+                    currentQi: state.stats.qi,
+                    qiCost: skill.qi_cost,
+                    currentCooldown: skill.current_cooldown,
+                    effectiveCooldown,
+                    canUse,
+                  });
+                  
                   return (
                     <button
                       key={skill.id}
                       onClick={() => {
-                        if (!playerTurn || !canUse) return;
+                        console.log("[Skill Button Clicked]", {
+                          skillId: skill.id,
+                          skillName: skill.name,
+                          canUse,
+                          playerTurn,
+                          qi: state.stats.qi,
+                          qiCost: skill.qi_cost,
+                        });
+                        if (!canUse) return;
+                        console.log("[Calling onAction with skill]", skill.id);
                         onAction("skill", skill.id);
                         setSelectedSkill(null);
                       }}
-                      disabled={!playerTurn || !canUse}
+                      disabled={!canUse}
                       className={`px-3 py-2 rounded border text-sm transition-all ${
-                        playerTurn && canUse
-                          ? "bg-purple-900/30 border-purple-500/50 hover:bg-purple-900/50 text-purple-400"
+                        canUse
+                          ? "bg-purple-900/30 border-purple-500/50 hover:bg-purple-900/50 text-purple-400 cursor-pointer"
                           : "bg-gray-800 border-gray-600 text-gray-500 cursor-not-allowed"
                       }`}
                     >
                       <div>{locale === "vi" ? skill.name : skill.name_en}</div>
                       <div className="text-xs opacity-70">
                         {onCooldown
-                          ? `(${locale === "vi" ? "Hồi chiêu" : "Cooldown"}: ${skill.current_cooldown})`
+                          ? `(${locale === "vi" ? "Hồi chiêu" : "Cooldown"}: ${effectiveCooldown})`
                           : `(${skill.qi_cost} ${locale === "vi" ? "Khí" : "Qi"})`}
                       </div>
                       {skill.type && (

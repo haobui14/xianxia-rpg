@@ -538,7 +538,7 @@ BEGIN
       v_skill->>'skill_id',
       v_skill->'skill_data',
       COALESCE((v_skill->>'current_level')::INTEGER, 1),
-      0
+      COALESCE((v_skill->'skill_data'->>'exp')::INTEGER, 0)
     );
   END LOOP;
 END;
@@ -571,7 +571,7 @@ BEGIN
       v_skill->>'skill_id',
       v_skill->'skill_data',
       COALESCE((v_skill->>'current_level')::INTEGER, 1),
-      0
+      COALESCE((v_skill->'skill_data'->>'exp')::INTEGER, 0)
     );
   END LOOP;
 END;

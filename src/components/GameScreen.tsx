@@ -514,6 +514,32 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
     [locale],
   );
 
+  // Sync skills to database after combat
+  const syncSkillsAfterCombat = useCallback(async (updatedSkills: any[]) => {
+    if (!updatedSkills) return;
+    
+    try {
+      console.log("[Sync Skills] Saving skill exp to database...", updatedSkills);
+      const response = await fetch("/api/sync-skills", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          runId,
+          skills: updatedSkills,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error("[Sync Skills] Failed to sync skills");
+      } else {
+        console.log("[Sync Skills] Successfully synced skills to database");
+      }
+    } catch (err) {
+      console.error("[Sync Skills] Error syncing skills:", err);
+    }
+  }, [runId]);
+
   // Test combat with dummy enemy
   const startTestCombat = useCallback(() => {
     if (!state) return;
@@ -547,6 +573,23 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       const { enemy, log, playerHp } = testCombat;
       const newLog = [...log];
       const turnNumber = Math.floor(log.length / 2) + 1;
+
+      // Reduce skill cooldowns at the start of player's turn (if not first turn)
+      if (log.length > 0) {
+        setState((prev) => {
+          if (!prev || !prev.skills) return prev;
+          return {
+            ...prev,
+            skills: prev.skills.map((s) => ({
+              ...s,
+              current_cooldown:
+                s.current_cooldown && s.current_cooldown > 0
+                  ? s.current_cooldown - 1
+                  : 0,
+            })),
+          };
+        });
+      }
 
       // Helper to apply enemy damage
       const applyEnemyTurn = (
@@ -595,10 +638,12 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       // Handle skill usage
       if (action === "skill" && skillId) {
         const skill = state.skills?.find((s) => s.id === skillId);
+        // At combat start (log empty), treat cooldown as 0
+        const effectiveCooldown = log.length === 0 ? 0 : (skill?.current_cooldown || 0);
         if (
           skill &&
           state.stats.qi >= skill.qi_cost &&
-          (!skill.current_cooldown || skill.current_cooldown <= 0)
+          effectiveCooldown <= 0
         ) {
           // Deduct qi
           setState((prev) =>
@@ -659,44 +704,53 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           newLog.push(playerLogEntry);
 
           // Set skill cooldown and grant skill exp
+          if (!state || !state.skills) return;
+          
+          const updatedSkills = state.skills.map((s) => {
+            if (s.id === skillId) {
+              // Grant 5-15 exp for using skill
+              const skillExpGain = 5 + Math.floor(Math.random() * 11);
+              const currentExp = s.exp || 0;
+              const maxExp = s.max_exp || s.level * 100;
+              let newExp = currentExp + skillExpGain;
+              let newLevel = s.level;
+              let newMaxExp = maxExp;
+              let newDamageMultiplier = s.damage_multiplier;
+
+              console.log("[Test Combat - Skill Exp] Granting:", skillExpGain, "Current:", currentExp);
+
+              // Handle level ups
+              while (newExp >= newMaxExp && newLevel < s.max_level) {
+                newExp -= newMaxExp;
+                newLevel += 1;
+                newMaxExp = newLevel * 100;
+                newDamageMultiplier = newDamageMultiplier * 1.05;
+              }
+
+              return {
+                ...s,
+                current_cooldown: s.cooldown,
+                exp: newExp,
+                level: newLevel,
+                max_exp: newMaxExp,
+                damage_multiplier: newDamageMultiplier,
+              };
+            }
+            return s;
+          });
+          
           setState((prev) => {
-            if (!prev || !prev.skills) return prev;
+            if (!prev) return prev;
             return {
               ...prev,
-              skills: prev.skills.map((s) => {
-                if (s.id === skillId) {
-                  // Grant 5-15 exp for using skill
-                  const skillExpGain = 5 + Math.floor(Math.random() * 11);
-                  const currentExp = s.exp || 0;
-                  const maxExp = s.max_exp || s.level * 100;
-                  let newExp = currentExp + skillExpGain;
-                  let newLevel = s.level;
-                  let newMaxExp = maxExp;
-                  let newDamageMultiplier = s.damage_multiplier;
-
-                  // Handle level ups
-                  while (newExp >= newMaxExp && newLevel < s.max_level) {
-                    newExp -= newMaxExp;
-                    newLevel += 1;
-                    newMaxExp = newLevel * 100;
-                    newDamageMultiplier = newDamageMultiplier * 1.05;
-                  }
-
-                  return {
-                    ...s,
-                    current_cooldown: s.cooldown,
-                    exp: newExp,
-                    level: newLevel,
-                    max_exp: newMaxExp,
-                    damage_multiplier: newDamageMultiplier,
-                  };
-                }
-                return s;
-              }),
+              skills: updatedSkills,
             };
           });
 
           if (newEnemy.hp <= 0) {
+            // Combat won - persist skill exp to database
+            console.log("[Test Combat] Syncing skills after victory:", updatedSkills);
+            syncSkillsAfterCombat(updatedSkills);
             setTestCombat(null);
             return;
           }
@@ -707,23 +761,10 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
               : null,
           );
           applyEnemyTurn(false, playerHp, newEnemy, newLog);
-
-          // Reduce cooldowns
-          setState((prev) => {
-            if (!prev || !prev.skills) return prev;
-            return {
-              ...prev,
-              skills: prev.skills.map((s) => ({
-                ...s,
-                current_cooldown:
-                  s.current_cooldown && s.current_cooldown > 0
-                    ? s.current_cooldown - 1
-                    : 0,
-              })),
-            };
-          });
           return;
         }
+        // If skill conditions not met, return early to prevent falling through to attack
+        return;
       }
 
       // Simple combat simulation
@@ -839,6 +880,25 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       const newLog = [...log];
       const turnNumber = Math.floor(log.length / 2) + 1;
 
+      console.log("[handleActiveCombatAction] Called", { action, skillId, logLength: log.length });
+
+      // Reduce skill cooldowns at the start of player's turn (if not first turn)
+      if (log.length > 0) {
+        setState((prev) => {
+          if (!prev || !prev.skills) return prev;
+          return {
+            ...prev,
+            skills: prev.skills.map((s) => ({
+              ...s,
+              current_cooldown:
+                s.current_cooldown && s.current_cooldown > 0
+                  ? s.current_cooldown - 1
+                  : 0,
+            })),
+          };
+        });
+      }
+
       // Helper to apply enemy turn
       const applyEnemyTurn = (
         isDefending: boolean,
@@ -895,81 +955,66 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       // Handle skill usage
       if (action === "skill" && skillId) {
         const skill = state.skills?.find((s) => s.id === skillId);
+        // At combat start (log empty), treat cooldown as 0
+        const effectiveCooldown = log.length === 0 ? 0 : (skill?.current_cooldown || 0);
         if (
           skill &&
           state.stats.qi >= skill.qi_cost &&
-          (!skill.current_cooldown || skill.current_cooldown <= 0)
+          effectiveCooldown <= 0
         ) {
-          // Deduct qi
-          setState((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  stats: { ...prev.stats, qi: prev.stats.qi - skill.qi_cost },
-                }
-              : prev,
-          );
-
           // Calculate skill damage based on skill type
           let finalDamage = 0;
           let healAmount = 0;
+          let playerMiss = false;
+          let playerCrit = false;
 
-          if (skill.type === "attack") {
+          console.log("[Active Combat - Calculating Damage]", {
+            skillType: skill.type,
+            damageMultiplier: skill.damage_multiplier,
+          });
+
+          // Default: all skills do damage unless they're pure support/defense with healing
+          const isAttackSkill = !skill.type || skill.type === "attack" || (skill.type !== "defense" && skill.type !== "support");
+          const isHealSkill = (skill.type === "defense" || skill.type === "support") && skill.effects?.heal_percent;
+
+          if (isAttackSkill || !isHealSkill) {
+            console.log("[Active Combat - Entering attack damage calculation]", { isAttackSkill, isHealSkill });
+            // Attack skills or skills without specific heal effects
             const baseDamage = state.attrs.str * 1.5;
-            const skillDamage = baseDamage * skill.damage_multiplier;
-            const playerMiss = Math.random() < 0.1;
-            const playerCrit = Math.random() < 0.15;
+            const skillDamage = baseDamage * (skill.damage_multiplier || 1.5);
+            playerMiss = Math.random() < 0.1;
+            playerCrit = Math.random() < 0.15;
             const rawDamage = Math.floor(skillDamage * (playerCrit ? 1.5 : 1));
             finalDamage = playerMiss
               ? 0
               : Math.max(1, rawDamage - Math.floor(activeCombat.enemy.def / 2));
 
-            console.log("[Active Skill]", {
+            console.log("[Active Skill - Attack Damage]", {
               str: state.attrs.str,
               baseDamage,
-              multiplier: skill.damage_multiplier,
+              multiplier: skill.damage_multiplier || 1.5,
               skillDamage,
               rawDamage,
               enemyDef: activeCombat.enemy.def,
               finalDamage,
+              playerMiss,
+              playerCrit,
             });
-          } else if (skill.type === "defense" && skill.effects?.heal_percent) {
+          }
+          
+          if (isHealSkill) {
+            console.log("[Active Combat - Defense/heal skill]");
             healAmount = Math.floor(
-              state.stats.hp_max * skill.effects.heal_percent,
-            );
-            setState((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    stats: {
-                      ...prev.stats,
-                      hp: Math.min(
-                        prev.stats.hp_max,
-                        prev.stats.hp + healAmount,
-                      ),
-                    },
-                  }
-                : prev,
-            );
-          } else if (skill.type === "support" && skill.effects?.heal_percent) {
-            healAmount = Math.floor(
-              state.stats.hp_max * skill.effects.heal_percent,
-            );
-            setState((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    stats: {
-                      ...prev.stats,
-                      hp: Math.min(
-                        prev.stats.hp_max,
-                        prev.stats.hp + healAmount,
-                      ),
-                    },
-                  }
-                : prev,
+              state.stats.hp_max * ((skill.effects?.heal_percent) ?? 0),
             );
           }
+
+          console.log("[Active Combat - Final values before log entry]", {
+            finalDamage,
+            healAmount,
+            playerMiss,
+            playerCrit,
+          });
 
           const playerLogEntry: CombatLogEntry = {
             id: `log-${Date.now()}`,
@@ -978,8 +1023,8 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
             action: "skill",
             damage: finalDamage,
             healAmount: healAmount,
-            isCritical: finalDamage > 0 && Math.random() < 0.15,
-            isMiss: finalDamage === 0 && skill.type === "attack",
+            isCritical: playerCrit,
+            isMiss: playerMiss,
             timestamp: Date.now(),
           };
 
@@ -989,45 +1034,66 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           };
           newLog.push(playerLogEntry);
 
-          // Set skill cooldown and grant skill exp
+          // Calculate skill exp gain and update skills
+          if (!state || !state.skills) return;
+          
+          const skillExpGain = 5 + Math.floor(Math.random() * 11);
+          console.log("[Active Combat - Skill Exp] Granting exp:", skillExpGain, "to skill:", skillId);
+          
+          const updatedSkills = state.skills.map((s) => {
+            if (s.id === skillId) {
+              const currentExp = s.exp || 0;
+              const maxExp = s.max_exp || s.level * 100;
+              let newExp = currentExp + skillExpGain;
+              let newLevel = s.level;
+              let newMaxExp = maxExp;
+              let newDamageMultiplier = s.damage_multiplier;
+
+              console.log("[Skill Exp] Before update:", { currentExp, maxExp, newExp });
+
+              // Handle level ups
+              while (newExp >= newMaxExp && newLevel < s.max_level) {
+                newExp -= newMaxExp;
+                newLevel += 1;
+                newMaxExp = newLevel * 100;
+                newDamageMultiplier = newDamageMultiplier * 1.05;
+                console.log("[Skill Exp] Level up!", { newLevel, newExp, newMaxExp });
+              }
+
+              console.log("[Skill Exp] After update:", { newExp, newLevel, newMaxExp });
+
+              return {
+                ...s,
+                current_cooldown: s.cooldown,
+                exp: newExp,
+                level: newLevel,
+                max_exp: newMaxExp,
+                damage_multiplier: newDamageMultiplier,
+              };
+            }
+            return s;
+          });
+
+          // Update state: deduct qi, apply healing, update skills with exp and cooldown
           setState((prev) => {
-            if (!prev || !prev.skills) return prev;
+            if (!prev) return prev;
             return {
               ...prev,
-              skills: prev.skills.map((s) => {
-                if (s.id === skillId) {
-                  // Grant 5-15 exp for using skill
-                  const skillExpGain = 5 + Math.floor(Math.random() * 11);
-                  const currentExp = s.exp || 0;
-                  const maxExp = s.max_exp || s.level * 100;
-                  let newExp = currentExp + skillExpGain;
-                  let newLevel = s.level;
-                  let newMaxExp = maxExp;
-                  let newDamageMultiplier = s.damage_multiplier;
-
-                  // Handle level ups
-                  while (newExp >= newMaxExp && newLevel < s.max_level) {
-                    newExp -= newMaxExp;
-                    newLevel += 1;
-                    newMaxExp = newLevel * 100;
-                    newDamageMultiplier = newDamageMultiplier * 1.05;
-                  }
-
-                  return {
-                    ...s,
-                    current_cooldown: s.cooldown,
-                    exp: newExp,
-                    level: newLevel,
-                    max_exp: newMaxExp,
-                    damage_multiplier: newDamageMultiplier,
-                  };
-                }
-                return s;
-              }),
+              stats: {
+                ...prev.stats,
+                qi: prev.stats.qi - skill.qi_cost,
+                hp: isHealSkill 
+                  ? Math.min(prev.stats.hp_max, prev.stats.hp + healAmount)
+                  : prev.stats.hp,
+              },
+              skills: updatedSkills,
             };
           });
 
           if (newEnemy.hp <= 0) {
+            // Combat won - persist skill exp to database
+            console.log("[Active Combat] Syncing skills after victory:", updatedSkills);
+            syncSkillsAfterCombat(updatedSkills);
             setActiveCombat(null);
             return;
           }
@@ -1038,23 +1104,10 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
               : null,
           );
           applyEnemyTurn(false, newEnemy, newLog);
-
-          // Reduce cooldowns
-          setState((prev) => {
-            if (!prev || !prev.skills) return prev;
-            return {
-              ...prev,
-              skills: prev.skills.map((s) => ({
-                ...s,
-                current_cooldown:
-                  s.current_cooldown && s.current_cooldown > 0
-                    ? s.current_cooldown - 1
-                    : 0,
-              })),
-            };
-          });
           return;
         }
+        // If skill conditions not met, return early to prevent falling through to attack
+        return;
       }
 
       // Handle flee

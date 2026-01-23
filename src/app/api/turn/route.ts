@@ -855,6 +855,7 @@ function applySkillDelta(
         damage_multiplier: value.damage_multiplier || 1.5,
         qi_cost: value.qi_cost || 10,
         cooldown: value.cooldown || 1,
+        current_cooldown: 0, // Always start with 0 cooldown
         effects: value.effects,
       };
 
