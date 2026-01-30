@@ -88,41 +88,46 @@ export default function CharacterStatChart({
 
   return (
     <div className="space-y-6">
-      {/* Primary Attributes */}
+      {/* Primary Attributes with Visual Bars */}
       <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
         <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">
           {locale === "vi" ? "Thuộc Tính Chính" : "Primary Attributes"}
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <StatBox
+        <div className="space-y-3">
+          <AttributeRow
             label={t(locale, "strength")}
             value={attrs.str}
-            color="red"
             icon="💪"
+            color="bg-red-500"
+            textColor="text-red-400"
           />
-          <StatBox
+          <AttributeRow
             label={t(locale, "agility")}
             value={attrs.agi}
-            color="green"
             icon="⚡"
+            color="bg-green-500"
+            textColor="text-green-400"
           />
-          <StatBox
+          <AttributeRow
             label={t(locale, "intelligence")}
             value={attrs.int}
-            color="blue"
             icon="🧠"
+            color="bg-blue-500"
+            textColor="text-blue-400"
           />
-          <StatBox
+          <AttributeRow
             label={t(locale, "perception")}
             value={attrs.perception}
-            color="purple"
             icon="👁️"
+            color="bg-purple-500"
+            textColor="text-purple-400"
           />
-          <StatBox
+          <AttributeRow
             label={t(locale, "luck")}
             value={attrs.luck}
-            color="yellow"
             icon="🍀"
+            color="bg-yellow-500"
+            textColor="text-yellow-400"
           />
         </div>
       </div>
@@ -254,77 +259,38 @@ export default function CharacterStatChart({
         </div>
       </div>
 
-      {/* Stat Comparison Chart */}
-      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">
-          {locale === "vi" ? "Biểu Đồ Thuộc Tính" : "Attribute Chart"}
-        </h2>
-        <div className="space-y-4">
-          <StatBar
-            label={t(locale, "strength")}
-            value={attrs.str}
-            maxValue={100}
-            color="bg-red-500"
-          />
-          <StatBar
-            label={t(locale, "agility")}
-            value={attrs.agi}
-            maxValue={100}
-            color="bg-green-500"
-          />
-          <StatBar
-            label={t(locale, "intelligence")}
-            value={attrs.int}
-            maxValue={100}
-            color="bg-blue-500"
-          />
-          <StatBar
-            label={t(locale, "perception")}
-            value={attrs.perception}
-            maxValue={100}
-            color="bg-purple-500"
-          />
-          <StatBar
-            label={t(locale, "luck")}
-            value={attrs.luck}
-            maxValue={100}
-            color="bg-yellow-500"
-          />
-        </div>
-      </div>
     </div>
   );
 }
 
 // Helper Components
-interface StatBoxProps {
+interface AttributeRowProps {
   label: string;
   value: number;
-  color: string;
   icon: string;
+  color: string;
+  textColor: string;
 }
 
-function StatBox({ label, value, color, icon }: StatBoxProps) {
-  const colorClasses: Record<string, string> = {
-    red: "border-red-400/30 text-red-400",
-    green: "border-green-400/30 text-green-400",
-    blue: "border-blue-400/30 text-blue-400",
-    purple: "border-purple-400/30 text-purple-400",
-    yellow: "border-yellow-400/30 text-yellow-400",
-  };
+function AttributeRow({ label, value, icon, color, textColor }: AttributeRowProps) {
+  const percentage = Math.min(100, (value / 100) * 100);
 
   return (
-    <div
-      className={`p-4 rounded-lg border ${colorClasses[color]} bg-xianxia-darker`}
-    >
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-sm text-gray-400">{label}</div>
-          <div className={`text-3xl font-bold ${colorClasses[color]}`}>
-            {value}
+    <div className="flex items-center gap-3">
+      <div className="text-2xl w-8">{icon}</div>
+      <div className="flex-1">
+        <div className="flex justify-between mb-1">
+          <span className="text-sm text-gray-300">{label}</span>
+          <span className={`text-lg font-bold ${textColor}`}>{value}</span>
+        </div>
+        <div className="w-full bg-xianxia-darker rounded-full h-2 border border-xianxia-accent/20">
+          <div
+            className={`${color} h-full rounded-full transition-all duration-500 relative overflow-hidden`}
+            style={{ width: `${percentage}%` }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
           </div>
         </div>
-        <div className="text-4xl opacity-50">{icon}</div>
       </div>
     </div>
   );
@@ -363,30 +329,3 @@ function DerivedStatRow({ label, value, formula, color }: DerivedStatRowProps) {
   );
 }
 
-interface StatBarProps {
-  label: string;
-  value: number;
-  maxValue: number;
-  color: string;
-}
-
-function StatBar({ label, value, maxValue, color }: StatBarProps) {
-  const percentage = Math.min(100, (value / maxValue) * 100);
-
-  return (
-    <div>
-      <div className="flex justify-between mb-1">
-        <span className="text-sm text-gray-300">{label}</span>
-        <span className="text-sm font-bold text-gray-200">{value}</span>
-      </div>
-      <div className="w-full bg-xianxia-darker rounded-full h-3 border border-xianxia-accent/20">
-        <div
-          className={`${color} h-full rounded-full transition-all duration-500 relative overflow-hidden`}
-          style={{ width: `${percentage}%` }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
-        </div>
-      </div>
-    </div>
-  );
-}

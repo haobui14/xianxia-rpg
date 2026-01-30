@@ -9,6 +9,11 @@ import {
   getTechniqueBonus,
 } from "@/lib/game/mechanics";
 import { getEquipmentBonus } from "@/lib/game/equipment";
+import {
+  calculateTimeCultivationBonus,
+  getSpecialTimeBonus,
+} from "@/lib/game/time";
+import { GameTime, TimeSegment } from "@/types/game";
 
 interface CultivationVisualizationProps {
   state: GameState;
@@ -85,11 +90,27 @@ export default function CultivationVisualization({
   const techniqueMultiplier = getTechniqueBonus(state);
   const equipmentBonus = getEquipmentBonus(state, "cultivation_speed");
   const sectBonus = state.sect_membership?.benefits?.cultivation_bonus || 0;
+
+  // Calculate time-based bonus
+  const currentTime: GameTime = {
+    segment: state.time_segment as TimeSegment,
+    day: state.time_day,
+    month: state.time_month,
+    year: state.time_year,
+  };
+  const timeBonus = calculateTimeCultivationBonus(
+    currentTime,
+    state.spirit_root.elements,
+  );
+  const specialBonus = getSpecialTimeBonus(currentTime);
+
+  // Total cultivation speed (all bonuses combined)
   const totalCultivationSpeed =
     spiritRootMultiplier *
     techniqueMultiplier *
     (1 + equipmentBonus / 100) *
-    (1 + sectBonus / 100);
+    (1 + sectBonus / 100) *
+    (1 + timeBonus / 100);
 
   // Animate exp changes
   useEffect(() => {
@@ -272,8 +293,8 @@ export default function CultivationVisualization({
         </div>
       </div>
 
-      {/* Speed Breakdown (collapsible) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-center">
+      {/* Speed Breakdown */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs text-center">
         <div className="p-2 bg-xianxia-darker rounded border border-xianxia-accent/10">
           <div className="text-gray-400 mb-1">
             {locale === "vi" ? "Linh Căn" : "Spirit Root"}
@@ -305,6 +326,19 @@ export default function CultivationVisualization({
           <div className="font-bold text-blue-400">
             {equipmentBonus > 0 ? `+${equipmentBonus}%` : "-"}
           </div>
+        </div>
+        <div className="p-2 bg-xianxia-darker rounded border border-xianxia-accent/10">
+          <div className="text-gray-400 mb-1">
+            {locale === "vi" ? "Thời Gian" : "Time"}
+          </div>
+          <div className="font-bold text-orange-400">
+            {timeBonus > 0 ? `+${timeBonus}%` : "-"}
+          </div>
+          {specialBonus && (
+            <div className="text-[10px] text-orange-300 mt-1 truncate" title={locale === "vi" ? specialBonus.reason_vi : specialBonus.reason_en}>
+              {locale === "vi" ? specialBonus.reason_vi : specialBonus.reason_en}
+            </div>
+          )}
         </div>
       </div>
 

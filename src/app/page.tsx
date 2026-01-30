@@ -14,7 +14,7 @@ export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [screen, setScreen] = useState<Screen>('login');
-  const [locale, setLocale] = useState<'vi' | 'en'>('vi');
+  const [locale, setLocale] = useState<'vi' | 'en'>('en');
   const [gameState, setGameState] = useState<{
     characterId: string;
     runId: string;
@@ -141,7 +141,7 @@ export default function Home() {
               {locale === 'vi' ? 'Hồ Sơ' : 'Profile'}
             </button>
           </div>
-          <CharacterCreation onGameStart={handleGameStart} />
+          <CharacterCreation onGameStart={handleGameStart} locale={locale} onLocaleChange={setLocale} />
         </div>
       )}
 

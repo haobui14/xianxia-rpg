@@ -19,6 +19,7 @@ const REGION_DATA: Record<RegionId, {
   color: string;
   bgColor: string;
   element: string;
+  element_en: string;
   tier: number;
   position: { x: number; y: number };
 }> = {
@@ -28,6 +29,7 @@ const REGION_DATA: Record<RegionId, {
     color: 'text-green-400',
     bgColor: 'bg-green-900/50',
     element: '🌿 Mộc',
+    element_en: '🌿 Wood',
     tier: 1,
     position: { x: 50, y: 70 },
   },
@@ -37,6 +39,7 @@ const REGION_DATA: Record<RegionId, {
     color: 'text-red-400',
     bgColor: 'bg-red-900/50',
     element: '🔥 Hỏa',
+    element_en: '🔥 Fire',
     tier: 2,
     position: { x: 20, y: 40 },
   },
@@ -46,6 +49,7 @@ const REGION_DATA: Record<RegionId, {
     color: 'text-blue-400',
     bgColor: 'bg-blue-900/50',
     element: '💧 Thủy',
+    element_en: '💧 Water',
     tier: 3,
     position: { x: 80, y: 40 },
   },
@@ -55,6 +59,7 @@ const REGION_DATA: Record<RegionId, {
     color: 'text-yellow-400',
     bgColor: 'bg-yellow-900/50',
     element: '⚡ Kim',
+    element_en: '⚡ Metal',
     tier: 4,
     position: { x: 30, y: 15 },
   },
@@ -64,6 +69,7 @@ const REGION_DATA: Record<RegionId, {
     color: 'text-purple-400',
     bgColor: 'bg-purple-900/50',
     element: '🌍 Thổ',
+    element_en: '🌍 Earth',
     tier: 5,
     position: { x: 70, y: 15 },
   },
@@ -196,7 +202,7 @@ export default function WorldMap({
                   {locale === 'vi' ? data.name : data.name_en}
                 </div>
                 <div className="text-xs text-gray-400">
-                  {data.element}
+                  {locale === 'vi' ? data.element : data.element_en}
                 </div>
                 <div className="text-xs">
                   {getTierStars(data.tier)}

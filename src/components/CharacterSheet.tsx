@@ -5,8 +5,6 @@ import {
   GameState,
   CultivationTechnique,
   Skill,
-  GameTime,
-  TimeSegment,
 } from "@/types/game";
 import { t, Locale } from "@/lib/i18n/translations";
 import {
@@ -16,13 +14,7 @@ import {
 import {
   getElementCompatibility,
   getRequiredExp,
-  getSpiritRootBonus,
-  getTechniqueBonus,
 } from "@/lib/game/mechanics";
-import {
-  calculateTimeCultivationBonus,
-  getSpecialTimeBonus,
-} from "@/lib/game/time";
 import CultivationVisualization from "./CultivationVisualization";
 import MeridianDiagram from "./MeridianDiagram";
 import DualCultivationView from "./DualCultivationView";
@@ -114,24 +106,6 @@ export default function CharacterSheet({
         : "Realm Breakthrough"
       : `${state.progress.cultivation_exp}/${requiredExp}`;
 
-  // Calculate total cultivation speed multiplier
-  const spiritRootMultiplier = getSpiritRootBonus(state.spirit_root.grade);
-  const techniqueMultiplier = getTechniqueBonus(state);
-  const totalCultivationSpeed = spiritRootMultiplier * techniqueMultiplier;
-
-  // Calculate time-based cultivation bonus
-  const currentTime: GameTime = {
-    segment: state.time_segment as TimeSegment,
-    day: state.time_day,
-    month: state.time_month,
-    year: state.time_year,
-  };
-  const timeBonus = calculateTimeCultivationBonus(
-    currentTime,
-    state.spirit_root.elements,
-  );
-  const specialBonus = getSpecialTimeBonus(currentTime);
-
   return (
     <div className="space-y-6">
       {/* Location & Time */}
@@ -208,89 +182,6 @@ export default function CharacterSheet({
             <span className="font-bold text-xianxia-gold">
               {t(locale, state.spirit_root.grade)}
             </span>
-          </div>
-          <div className="mt-3 p-3 bg-xianxia-darker rounded border border-xianxia-accent/20">
-            <div className="text-sm text-gray-400 mb-1">
-              {locale === "vi" ? "Chi tiết tốc độ:" : "Speed Breakdown:"}
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-bold text-green-400">
-                  ×{spiritRootMultiplier.toFixed(2)}
-                </span>
-                <span className="text-xs text-gray-400">
-                  {locale === "vi" ? "(từ linh căn)" : "(from spirit root)"}
-                </span>
-              </div>
-              {techniqueMultiplier > 1 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-bold text-purple-400">
-                    ×{techniqueMultiplier.toFixed(2)}
-                  </span>
-                  <span className="text-xs text-gray-400">
-                    {locale === "vi" ? "(từ công pháp)" : "(from techniques)"}
-                  </span>
-                </div>
-              )}
-              {(() => {
-                const equipBonus = getEquipmentBonus(
-                  state,
-                  "cultivation_speed",
-                );
-                if (equipBonus > 0) {
-                  return (
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-bold text-blue-400">
-                        +{equipBonus}%
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        {locale === "vi" ? "(từ trang bị)" : "(from equipment)"}
-                      </span>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
-              {/* Time-based cultivation bonus */}
-              {timeBonus > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-bold text-yellow-400">
-                    +{timeBonus}%
-                  </span>
-                  <span className="text-xs text-gray-400">
-                    {locale === "vi"
-                      ? "(từ thời gian/mùa)"
-                      : "(from time/season)"}
-                  </span>
-                  {specialBonus && (
-                    <span className="text-xs text-yellow-300 ml-1">
-                      {locale === "vi"
-                        ? specialBonus.reason_vi
-                        : specialBonus.reason_en}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-            {/* Total Cultivation Bonus */}
-            <div className="mt-3 pt-3 border-t border-xianxia-accent/20">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">
-                  {locale === "vi" ? "Tổng Bonus Exp:" : "Total Exp Bonus:"}
-                </span>
-                <span className="text-xl font-bold text-xianxia-gold">
-                  +
-                  {timeBonus +
-                    (getEquipmentBonus(state, "cultivation_speed") || 0)}
-                  %
-                </span>
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {locale === "vi"
-                  ? "AI sẽ tự động áp dụng bonus này vào exp rewards"
-                  : "AI will automatically apply this bonus to exp rewards"}
-              </div>
-            </div>
           </div>
         </div>
       </div>

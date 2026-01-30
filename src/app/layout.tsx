@@ -2,14 +2,14 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Xianxia Tu Tiên RPG",
+  title: "Xianxia RPG",
   description:
     "Text-based Xianxia cultivation RPG game powered by AI. Embark on your immortal cultivation journey.",
-  applicationName: "Tu Tiên RPG",
+  applicationName: "Xianxia RPG",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Tu Tiên RPG",
+    title: "Xianxia RPG",
   },
   formatDetection: {
     telephone: false,

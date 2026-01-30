@@ -6,12 +6,15 @@ import { t, Locale } from "@/lib/i18n/translations";
 
 interface CharacterCreationProps {
   onGameStart: (characterId: string, runId: string, locale: Locale) => void;
+  locale: Locale;
+  onLocaleChange: (locale: Locale) => void;
 }
 
 export default function CharacterCreation({
   onGameStart,
+  locale,
+  onLocaleChange,
 }: CharacterCreationProps) {
-  const [locale, setLocale] = useState<Locale>("vi");
   const [name, setName] = useState("");
   const [age, setAge] = useState(20);
   const [loading, setLoading] = useState(true);
@@ -195,7 +198,7 @@ export default function CharacterCreation({
             {/* Language Toggle */}
             <div className="flex justify-end mb-6">
               <button
-                onClick={() => setLocale(locale === "vi" ? "en" : "vi")}
+                onClick={() => onLocaleChange(locale === "vi" ? "en" : "vi")}
             className="px-4 py-2 bg-xianxia-accent/20 hover:bg-xianxia-accent/30 rounded-lg text-sm transition-colors"
           >
             {locale === "vi" ? "EN" : "VN"}
