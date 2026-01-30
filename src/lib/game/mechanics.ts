@@ -51,6 +51,10 @@ export function createInitialState(
     realm: "PhàmNhân",
     realm_stage: 0,
     cultivation_exp: 0,
+    // Body cultivation initialization
+    body_realm: "PhàmThể",
+    body_stage: 0,
+    body_exp: 0,
   };
 
   const inventory: Inventory = {
@@ -128,16 +132,21 @@ export function createInitialState(
       active_effects: [],
       enlightenment_points: 0,
     } as CharacterCondition,
-    lifespan: {
-      base_years: 80,
-      realm_bonus: REALM_LIFESPAN_BONUS["PhàmNhân"],
-      special_bonus: 0,
-      penalty: 0,
-      current_age: age,
-      max_lifespan: 80 + REALM_LIFESPAN_BONUS["PhàmNhân"],
-      years_remaining: 80 + REALM_LIFESPAN_BONUS["PhàmNhân"] - age,
-      urgency_level: "safe",
-    } as LifespanInfo,
+    lifespan: (() => {
+      const maxLifespan = 80 + REALM_LIFESPAN_BONUS["PhàmNhân"];
+      const yearsRemaining = maxLifespan - age;
+      return {
+        base_years: 80,
+        realm_bonus: REALM_LIFESPAN_BONUS["PhàmNhân"],
+        special_bonus: 0,
+        penalty: 0,
+        current_age: age,
+        max_lifespan: maxLifespan,
+        years_remaining: yearsRemaining,
+        urgency_level:
+          yearsRemaining <= 10 ? "critical" : yearsRemaining <= 20 ? "warning" : "safe",
+      } as LifespanInfo;
+    })(),
   };
 }
 
@@ -327,7 +336,21 @@ export function updateQi(state: GameState, delta: number): void {
  */
 export function advanceTime(state: GameState, segments: number = 1): void {
   const timeOrder: TimeSegment[] = ["Sáng", "Chiều", "Tối", "Đêm"];
+  // Handle English time segments by mapping them to Vietnamese
+  const englishToVietnamese: Record<string, TimeSegment> = {
+    Morning: "Sáng",
+    Afternoon: "Chiều",
+    Evening: "Tối",
+    Night: "Đêm",
+  };
+
+  // Get current index, handling both Vietnamese and English segments
   let currentIndex = timeOrder.indexOf(state.time_segment);
+  if (currentIndex === -1) {
+    // Try to map from English
+    const mappedSegment = englishToVietnamese[state.time_segment as string];
+    currentIndex = mappedSegment ? timeOrder.indexOf(mappedSegment) : 0;
+  }
 
   for (let i = 0; i < segments; i++) {
     currentIndex++;
@@ -345,6 +368,18 @@ export function advanceTime(state: GameState, segments: number = 1): void {
           state.time_month = 1;
           state.time_year++;
           state.age++; // Age increases with year
+
+          // Update lifespan info when age increases
+          if (state.lifespan) {
+            state.lifespan.current_age = state.age;
+            state.lifespan.years_remaining = state.lifespan.max_lifespan - state.age;
+            state.lifespan.urgency_level =
+              state.lifespan.years_remaining <= 10
+                ? "critical"
+                : state.lifespan.years_remaining <= 20
+                  ? "warning"
+                  : "safe";
+          }
         }
       }
     }
@@ -527,11 +562,11 @@ export function getTechniqueBonus(state: GameState): number {
  * Each realm has 9 stages (0-8)
  */
 export const CULTIVATION_EXP_REQUIREMENTS: Record<string, number[]> = {
-  PhàmNhân: [150], // Stage 0 -> Stage 1 (breakthrough to LuyệnKhí)
-  LuyệnKhí: [300, 500, 800, 1200, 1800, 2500, 3500, 5000, 7000], // Stages 1-9
-  TrúcCơ: [8000, 10000, 12000, 15000, 18000, 22000, 27000, 33000, 40000], // Stages 1-9
-  KếtĐan: [45000, 50000, 60000, 70000, 85000, 100000, 120000, 140000, 170000], // Stages 1-9
-  NguyênAnh: [200000, 230000, 270000, 320000, 380000, 450000, 530000, 620000, 750000], // Stages 1-9
+  PhàmNhân: [100], // Stage 0 -> Stage 1 (breakthrough to LuyệnKhí) - reduced from 150
+  LuyệnKhí: [200, 350, 550, 800, 1200, 1700, 2400, 3400, 4800], // Stages 1-9 - reduced ~30%
+  TrúcCơ: [5500, 7000, 8500, 10500, 13000, 16000, 19500, 24000, 29000], // Stages 1-9 - reduced ~30%
+  KếtĐan: [32000, 36000, 43000, 50000, 60000, 72000, 86000, 100000, 120000], // Stages 1-9 - reduced ~30%
+  NguyênAnh: [140000, 165000, 190000, 225000, 270000, 320000, 375000, 440000, 530000], // Stages 1-9 - reduced ~30%
 };
 
 /**
@@ -707,6 +742,40 @@ export function performBreakthrough(state: GameState): boolean {
     state.attrs.int += 3;
 
     return true;
+  } else if (realm === "KếtĐan" && realm_stage === 9) {
+    // Breakthrough to Nguyên Anh realm
+    state.progress.realm = "NguyênAnh";
+    state.progress.realm_stage = 1;
+    state.progress.cultivation_exp = 0;
+
+    // Major stat increases for realm breakthrough
+    state.stats.hp_max += 200;
+    state.stats.hp = state.stats.hp_max;
+    state.stats.qi_max += 400;
+    state.stats.qi = state.stats.qi_max;
+    state.stats.stamina_max += 10;
+
+    state.attrs.str += 5;
+    state.attrs.agi += 5;
+    state.attrs.int += 5;
+    state.attrs.perception += 4;
+
+    return true;
+  } else if (realm === "NguyênAnh" && realm_stage < 9) {
+    // Advance within Nguyên Anh realm
+    state.progress.realm_stage++;
+    state.progress.cultivation_exp = 0;
+
+    state.stats.hp_max += 100;
+    state.stats.hp = state.stats.hp_max;
+    state.stats.qi_max += 150;
+    state.stats.qi = state.stats.qi_max;
+
+    state.attrs.str += 4;
+    state.attrs.agi += 4;
+    state.attrs.int += 4;
+
+    return true;
   }
 
   return false;
@@ -815,6 +884,33 @@ export function performBodyBreakthrough(state: GameState): boolean {
 
     state.attrs.str += 4;
     state.attrs.agi += 2;
+
+    return true;
+  } else if (realm === "KimCương" && stage === 9) {
+    // Breakthrough to Thái Cổ realm
+    state.progress.body_realm = "TháiCổ";
+    state.progress.body_stage = 1;
+    state.progress.body_exp = 0;
+
+    // Major stat increases for realm breakthrough
+    state.stats.hp_max += 250;
+    state.stats.hp = state.stats.hp_max;
+    state.stats.stamina_max += 12;
+
+    state.attrs.str += 6;
+    state.attrs.agi += 4;
+
+    return true;
+  } else if (realm === "TháiCổ" && stage < 9) {
+    // Advance within Thái Cổ realm
+    state.progress.body_stage = (stage || 0) + 1;
+    state.progress.body_exp = 0;
+
+    state.stats.hp_max += 150;
+    state.stats.hp = state.stats.hp_max;
+
+    state.attrs.str += 5;
+    state.attrs.agi += 3;
 
     return true;
   }

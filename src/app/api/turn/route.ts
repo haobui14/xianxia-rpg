@@ -498,19 +498,16 @@ function applyProgressDelta(
   value: number
 ): void {
   if (field === "cultivation_exp" && operation === "add") {
-    const maxExpGain = 50;
+    const maxExpGain = 100; // Increased from 50 for faster progression
     const clampedValue = Math.min(value, maxExpGain);
     // Apply spirit root bonus to cultivation exp gain
     const bonusedExp = calculateCultivationExpGain(state, clampedValue);
 
     // Check if dual cultivation is enabled
-    if (state.progress.cultivation_path === "dual" && state.progress.exp_split !== undefined) {
-      // Split exp between Qi and Body based on exp_split ratio
-      const qiExpPercent = state.progress.exp_split / 100;
-      const bodyExpPercent = (100 - state.progress.exp_split) / 100;
-
-      const qiExp = Math.floor(bonusedExp * qiExpPercent);
-      const bodyExp = Math.floor(bonusedExp * bodyExpPercent);
+    if (state.progress.cultivation_path === "dual") {
+      // Fixed 70/30 split: 70% Qi, 30% Body
+      const qiExp = Math.floor(bonusedExp * 0.7);
+      const bodyExp = Math.floor(bonusedExp * 0.3);
 
       state.progress.cultivation_exp += qiExp;
 
@@ -521,16 +518,14 @@ function applyProgressDelta(
 
       state.progress.body_exp += bodyExp;
 
-      console.log(
-        `Dual cultivation - Qi: ${qiExp} (${state.progress.exp_split}%), Body: ${bodyExp} (${100 - state.progress.exp_split}%)`
-      );
+      console.log(`Dual cultivation - Qi: ${qiExp} (70%), Body: ${bodyExp} (30%)`);
     } else {
       // Single cultivation path - all exp goes to Qi
       state.progress.cultivation_exp += bonusedExp;
     }
   } else if (field === "body_exp" && operation === "add") {
     // Direct body exp (legacy support, but shouldn't be used with dual cultivation)
-    const maxExpGain = 50;
+    const maxExpGain = 100; // Increased from 50 for faster body cultivation
     const clampedValue = Math.min(value, maxExpGain);
 
     // Initialize body cultivation if not present
@@ -758,13 +753,19 @@ function applySkillDelta(state: GameState, field: string, operation: string, val
       }
 
       // Create new skill object
+      // Normalize type to lowercase to match the Skill interface ("attack" | "defense" | "support")
+      const normalizedType = (value.type || "attack").toLowerCase() as "attack" | "defense" | "support";
+      // Validate the type
+      const validTypes = ["attack", "defense", "support"];
+      const finalType = validTypes.includes(normalizedType) ? normalizedType : "attack";
+
       const newSkill: any = {
         id: value.id,
         name: value.name,
         name_en: value.name_en,
         description: value.description || "",
         description_en: value.description_en || "",
-        type: value.type,
+        type: finalType,
         element: value.element,
         level: value.level || 1,
         max_level: value.max_level || 10,

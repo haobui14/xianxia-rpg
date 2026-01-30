@@ -1703,7 +1703,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
     <div className="min-h-screen p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Save Status Indicator */}
-        <div className="fixed top-4 right-4 z-50">
+        <div className="fixed top-4 left-4 z-50">
           {saveStatus === "saving" && (
             <div className="flex items-center gap-2 px-3 py-2 bg-blue-900/90 border border-blue-500/50 rounded-lg text-sm text-blue-200 animate-pulse shadow-lg backdrop-blur-sm">
               <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">

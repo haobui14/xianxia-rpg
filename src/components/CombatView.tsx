@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { GameState, Enemy, CombatLogEntry, Skill } from "@/types/game";
+import { GameState, Enemy, CombatLogEntry } from "@/types/game";
 import { Locale, t } from "@/lib/i18n/translations";
 import HealthBar from "./HealthBar";
 import EnemyPortrait from "./EnemyPortrait";
 import { DamageNumberManager, DamageNumberData } from "./DamageNumber";
+import CombatMoveAnimation, { MoveType, useCombatAnimation } from "./CombatMoveAnimation";
 
 interface CombatViewProps {
   state: GameState;
@@ -39,6 +40,8 @@ export default function CombatView({
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
   const combatLogRef = useRef<HTMLDivElement>(null);
   const lastLogLengthRef = useRef(0);
+  const { currentMove, triggerAnimation, clearAnimation } = useCombatAnimation();
+  const lastProcessedLogRef = useRef<string | null>(null);
 
   // Auto-scroll combat log
   useEffect(() => {
@@ -52,6 +55,10 @@ export default function CombatView({
   useEffect(() => {
     const lastEntry = combatLog[combatLog.length - 1];
     if (!lastEntry) return;
+
+    // Prevent processing the same entry twice
+    if (lastProcessedLogRef.current === lastEntry.id) return;
+    lastProcessedLogRef.current = lastEntry.id;
 
     // Create damage number
     const newDamageNumber: DamageNumberData = {
@@ -77,6 +84,48 @@ export default function CombatView({
       setDamageNumbers((prev) => [...prev, newDamageNumber]);
     }
 
+    // Determine move animation type
+    const isPlayerMove = lastEntry.actor === "player";
+    let moveType: MoveType | null = null;
+
+    // Find skill by actionName if this was a skill action
+    const usedSkill =
+      lastEntry.action === "skill" && lastEntry.actionName
+        ? state.skills?.find(
+            (s) => s.name === lastEntry.actionName || s.name_en === lastEntry.actionName
+          )
+        : undefined;
+
+    if (lastEntry.isMiss) {
+      moveType = "miss";
+    } else if (lastEntry.isDodged) {
+      moveType = "dodge";
+    } else if (lastEntry.isCritical) {
+      moveType = "critical_hit";
+    } else if (lastEntry.action === "defend") {
+      moveType = "defend";
+    } else if (lastEntry.action === "qi_attack") {
+      moveType = "qi_attack";
+    } else if (lastEntry.action === "skill") {
+      // Determine skill type based on the skill used
+      if (usedSkill?.type === "defense") {
+        moveType = "skill_defense";
+      } else if (usedSkill?.type === "support") {
+        moveType = "skill_buff";
+      } else {
+        moveType = "skill_attack";
+      }
+    } else if (lastEntry.action === "attack") {
+      moveType = isPlayerMove ? "attack" : "enemy_attack";
+    }
+
+    // Trigger move animation
+    if (moveType) {
+      // Get skill element if applicable
+      const skillElement = usedSkill?.element as "Kim" | "Mộc" | "Thủy" | "Hỏa" | "Thổ" | undefined;
+      triggerAnimation(moveType, isPlayerMove, skillElement);
+    }
+
     // Trigger hit animation
     if (lastEntry.damage && !lastEntry.isMiss && !lastEntry.isDodged) {
       if (lastEntry.actor === "player") {
@@ -87,7 +136,7 @@ export default function CombatView({
         setTimeout(() => setPlayerHit(false), 200);
       }
     }
-  }, [combatLog]);
+  }, [combatLog, state.skills, triggerAnimation]);
 
   // Remove damage number after animation
   const handleRemoveDamageNumber = useCallback((id: string) => {
@@ -173,8 +222,16 @@ export default function CombatView({
         </div>
       </div>
 
+      {/* Combat Move Animation Overlay */}
+      <CombatMoveAnimation
+        moveType={currentMove?.type || null}
+        isPlayerMove={currentMove?.isPlayerMove ?? true}
+        skillElement={currentMove?.skillElement}
+        onComplete={clearAnimation}
+      />
+
       {/* Combat Arena */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 relative">
         {/* Player Side */}
         <div className={`relative ${playerHit ? "animate-bounce" : ""}`}>
           <div className="text-center mb-2">
@@ -339,34 +396,11 @@ export default function CombatView({
                     playerTurn && state.stats.qi >= skill.qi_cost && effectiveCooldown <= 0;
                   const onCooldown = effectiveCooldown > 0;
 
-                  console.log("[CombatView Skill Render]", {
-                    skillId: skill.id,
-                    skillName: skill.name,
-                    skillType: skill.type,
-                    damageMultiplier: skill.damage_multiplier,
-                    combatLogLength: combatLog.length,
-                    playerTurn,
-                    currentQi: state.stats.qi,
-                    qiCost: skill.qi_cost,
-                    currentCooldown: skill.current_cooldown,
-                    effectiveCooldown,
-                    canUse,
-                  });
-
                   return (
                     <button
                       key={skill.id}
                       onClick={() => {
-                        console.log("[Skill Button Clicked]", {
-                          skillId: skill.id,
-                          skillName: skill.name,
-                          canUse,
-                          playerTurn,
-                          qi: state.stats.qi,
-                          qiCost: skill.qi_cost,
-                        });
                         if (!canUse) return;
-                        console.log("[Calling onAction with skill]", skill.id);
                         onAction("skill", skill.id);
                         setSelectedSkill(null);
                       }}

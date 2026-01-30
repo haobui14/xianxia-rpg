@@ -7,7 +7,6 @@ import {
   BODY_REALM_NAMES,
   BODY_REALM_BONUSES,
   BODY_STAGE_BONUSES,
-  CULTIVATION_PATH_NAMES,
   getBodyCultivationProgress,
   getBodyExpToNext,
   getNextBodyRealm,
@@ -18,7 +17,7 @@ interface DualCultivationViewProps {
   state: GameState;
   locale: Locale;
   onToggleDualCultivation?: () => Promise<void>;
-  onSetExpSplit?: (split: number) => Promise<void>;
+  onSetExpSplit?: (split: number) => Promise<void>; // Reserved for future use (currently fixed 70/30 split)
 }
 
 // Tooltip component
@@ -46,10 +45,7 @@ export default function DualCultivationView({
   state,
   locale,
   onToggleDualCultivation,
-  onSetExpSplit,
 }: DualCultivationViewProps) {
-  const [tempSplit, setTempSplit] = useState(state.progress.exp_split ?? 100);
-  const [isAdjusting, setIsAdjusting] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
 
   const isDualMode = state.progress.cultivation_path === "dual";
@@ -58,7 +54,6 @@ export default function DualCultivationView({
   const bodyExp = state.progress.body_exp || 0;
   const bodyProgress = getBodyCultivationProgress(state.progress);
   const bodyExpNeeded = getBodyExpToNext(state.progress);
-  const expSplit = state.progress.exp_split ?? 100;
   const nextBodyRealm = getNextBodyRealm(bodyRealm);
 
   // Calculate current bonuses from body cultivation
@@ -85,18 +80,6 @@ export default function DualCultivationView({
     stamina:
       (bodyStage + 1) * BODY_STAGE_BONUSES.stamina +
       (bodyRealm !== "PhàmThể" ? BODY_REALM_BONUSES[bodyRealm].stamina : 0),
-  };
-
-  const handleSplitChange = (value: number) => {
-    setTempSplit(value);
-  };
-
-  const handleApplySplit = async () => {
-    if (onSetExpSplit) {
-      setIsAdjusting(true);
-      await onSetExpSplit(tempSplit);
-      setIsAdjusting(false);
-    }
   };
 
   const handleToggle = async () => {
@@ -182,8 +165,8 @@ export default function DualCultivationView({
               <div className="text-xs text-gray-400">
                 {isDualMode
                   ? locale === "vi"
-                    ? `Khí: ${expSplit}% | Thể: ${100 - expSplit}%`
-                    : `Qi: ${expSplit}% | Body: ${100 - expSplit}%`
+                    ? "Khí: 70% | Thể: 30%"
+                    : "Qi: 70% | Body: 30%"
                   : locale === "vi"
                     ? "Tất cả kinh nghiệm vào tu khí"
                     : "All exp goes to Qi cultivation"}
@@ -361,15 +344,15 @@ export default function DualCultivationView({
             )}
           </div>
 
-          {/* Exp Split Slider - Only show in dual mode */}
+          {/* Fixed Exp Split Display - Only show in dual mode */}
           {isDualMode && (
             <div className="p-4 bg-xianxia-darker rounded-lg border border-xianxia-accent/10 relative z-10">
               <div className="flex items-center justify-between mb-3">
                 <Tooltip
                   content={
                     locale === "vi"
-                      ? "Điều chỉnh tỷ lệ phân chia kinh nghiệm giữa Khí và Thể"
-                      : "Adjust the experience split ratio between Qi and Body cultivation"
+                      ? "Tỷ lệ phân chia kinh nghiệm cố định: 70% Khí / 30% Thể"
+                      : "Fixed experience split ratio: 70% Qi / 30% Body"
                   }
                 >
                   <div className="text-sm text-gray-400 cursor-help">
@@ -378,96 +361,40 @@ export default function DualCultivationView({
                 </Tooltip>
                 <div className="text-sm font-medium">
                   <span className="text-blue-400">
-                    {locale === "vi" ? "Khí" : "Qi"}: {tempSplit}%
+                    {locale === "vi" ? "Khí" : "Qi"}: 70%
                   </span>
                   <span className="text-gray-500 mx-2">|</span>
                   <span className="text-orange-400">
-                    {locale === "vi" ? "Thể" : "Body"}: {100 - tempSplit}%
+                    {locale === "vi" ? "Thể" : "Body"}: 30%
                   </span>
                 </div>
               </div>
 
-              {/* Slider */}
-              <div className="relative mb-4">
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="10"
-                  value={tempSplit}
-                  onChange={(e) => handleSplitChange(parseInt(e.target.value))}
-                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-xianxia-accent"
-                />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>{locale === "vi" ? "100% Thể" : "100% Body"}</span>
-                  <span>50/50</span>
-                  <span>{locale === "vi" ? "100% Khí" : "100% Qi"}</span>
-                </div>
-              </div>
-
-              {/* Visual split bar */}
-              <div className="h-4 rounded-full overflow-hidden flex mb-4 border border-xianxia-accent/20">
+              {/* Visual split bar - Fixed 70/30 */}
+              <div className="h-4 rounded-full overflow-hidden flex border border-xianxia-accent/20">
                 <div
-                  className="bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-300 relative"
-                  style={{ width: `${tempSplit}%` }}
+                  className="bg-gradient-to-r from-blue-600 to-blue-400 relative"
+                  style={{ width: "70%" }}
                 >
-                  {tempSplit > 20 && (
-                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">
-                      {locale === "vi" ? "Khí" : "Qi"}
-                    </span>
-                  )}
+                  <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">
+                    {locale === "vi" ? "Khí 70%" : "Qi 70%"}
+                  </span>
                 </div>
                 <div
-                  className="bg-gradient-to-r from-orange-400 to-orange-600 transition-all duration-300 relative"
-                  style={{ width: `${100 - tempSplit}%` }}
+                  className="bg-gradient-to-r from-orange-400 to-orange-600 relative"
+                  style={{ width: "30%" }}
                 >
-                  {100 - tempSplit > 20 && (
-                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">
-                      {locale === "vi" ? "Thể" : "Body"}
-                    </span>
-                  )}
+                  <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">
+                    {locale === "vi" ? "Thể 30%" : "Body 30%"}
+                  </span>
                 </div>
               </div>
 
-              {/* Quick presets */}
-              <div className="flex gap-2 mb-4">
-                {[
-                  { label: locale === "vi" ? "Thuần Khí" : "Pure Qi", value: 100 },
-                  { label: "70/30", value: 70 },
-                  { label: "50/50", value: 50 },
-                  { label: "30/70", value: 30 },
-                  { label: locale === "vi" ? "Thuần Thể" : "Pure Body", value: 0 },
-                ].map((preset) => (
-                  <button
-                    key={preset.value}
-                    onClick={() => handleSplitChange(preset.value)}
-                    className={`flex-1 py-1 text-xs rounded transition-colors ${
-                      tempSplit === preset.value
-                        ? "bg-xianxia-accent text-white"
-                        : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
+              <div className="mt-2 text-xs text-gray-500 text-center">
+                {locale === "vi"
+                  ? "Tỷ lệ cố định để cân bằng tiến độ hai con đường"
+                  : "Fixed ratio for balanced progression on both paths"}
               </div>
-
-              {/* Apply button */}
-              {onSetExpSplit && tempSplit !== expSplit && (
-                <button
-                  onClick={handleApplySplit}
-                  disabled={isAdjusting}
-                  className="w-full py-2 bg-xianxia-accent hover:bg-xianxia-accent/80 disabled:bg-gray-600 rounded-lg font-medium transition-all duration-300 animate-pulse"
-                >
-                  {isAdjusting
-                    ? locale === "vi"
-                      ? "⏳ Đang áp dụng..."
-                      : "⏳ Applying..."
-                    : locale === "vi"
-                      ? "✓ Áp dụng thay đổi"
-                      : "✓ Apply Changes"}
-                </button>
-              )}
             </div>
           )}
 
@@ -489,13 +416,13 @@ export default function DualCultivationView({
               </li>
               <li>
                 {locale === "vi"
-                  ? "Cân bằng 50/50 để phát triển đồng đều cả hai con đường"
-                  : "Balance 50/50 to develop both paths evenly"}
+                  ? "Tỷ lệ cố định 70% Khí / 30% Thể để cân bằng tiến độ"
+                  : "Fixed 70% Qi / 30% Body ratio for balanced progression"}
               </li>
               <li>
                 {locale === "vi"
-                  ? "Tập trung 100% Thể khi chuẩn bị cho chiến đấu khó"
-                  : "Focus 100% Body when preparing for difficult combat"}
+                  ? "Thể tu có yêu cầu EXP thấp hơn để đột phá nhanh hơn"
+                  : "Body cultivation has lower EXP requirements for faster breakthroughs"}
               </li>
             </ul>
           </div>

@@ -10,7 +10,7 @@ import {
 /**
  * Dual Cultivation System
  * Allows players to cultivate both Qi (spirit) and Body paths simultaneously
- * Experience is split based on the exp_split setting (default 100% to qi)
+ * Experience is split at a fixed 70% Qi / 30% Body ratio
  */
 
 // Body realm progression (parallel to qi cultivation)
@@ -60,6 +60,7 @@ export const CULTIVATION_PATH_NAMES: Record<CultivationPath, { vi: string; en: s
 /**
  * Initialize dual cultivation for a character
  * Preserves existing body cultivation progress if any
+ * Fixed 70/30 split: 70% Qi, 30% Body
  */
 export function initDualCultivation(progress: CultivationProgress): CultivationProgress {
   return {
@@ -69,7 +70,8 @@ export function initDualCultivation(progress: CultivationProgress): CultivationP
     body_realm: progress.body_realm || "PhàmThể",
     body_stage: progress.body_stage ?? 0,
     body_exp: progress.body_exp ?? 0,
-    exp_split: progress.exp_split ?? 50, // Keep previous split or default 50/50
+    // exp_split is now fixed at 70/30, kept for backwards compatibility
+    exp_split: 70,
   };
 }
 

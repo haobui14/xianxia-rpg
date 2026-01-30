@@ -203,11 +203,11 @@ export function validateAIResponse(data: unknown): AITurnResult {
 const DELTA_SCHEMA = {
   stats: '{"field": "stats.[hp|qi]", "operation": "subtract", "value": N}',
   attrs: '{"field": "attrs.[str|agi|int|perception|luck]", "operation": "add", "value": N}',
-  exp: '{"field": "progress.cultivation_exp", "operation": "add", "value": 15-50}',
+  exp: '{"field": "progress.cultivation_exp", "operation": "add", "value": 30-80}',
   body_exp:
-    '{"field": "progress.body_exp", "operation": "add", "value": 10-40} (only if dual cultivation enabled)',
+    '{"field": "progress.body_exp", "operation": "add", "value": 25-60} (only if dual cultivation enabled)',
   skill_exp:
-    '{"field": "skills.gain_exp", "operation": "add", "value": {skill_id: "skill_id", exp: 10-30}} (when practicing skills)',
+    '{"field": "skills.gain_exp", "operation": "add", "value": {skill_id: "skill_id", exp: 20-50}} (when practicing skills)',
   resources: '{"field": "inventory.[spirit_stones|silver]", "operation": "add", "value": N}',
   location:
     '{"field": "location.place", "operation": "set", "value": "New Place"} or {"field": "location.region", "operation": "set", "value": "New Region"}',
@@ -231,7 +231,7 @@ const TECHNIQUE_SCHEMA =
   'id, name, name_en, description, description_en, grade: Mortal|Earth|Heaven, type: Main|Support, elements: ["Kim"|"Mộc"|"Thủy"|"Hỏa"|"Thổ"], cultivation_speed_bonus, qi_recovery_bonus?, breakthrough_bonus?';
 
 const SKILL_SCHEMA =
-  "id, name, name_en, description, description_en, type: Attack|Defense|Movement|Support, element?, level, max_level, damage_multiplier, qi_cost, cooldown, effects?";
+  "id, name, name_en, description, description_en, type: attack|defense|support (LOWERCASE!), element?: Kim|Mộc|Thủy|Hỏa|Thổ, level, max_level, damage_multiplier (1.5=150% normal), qi_cost (10-50), cooldown (1-5 turns), effects?: {stun_chance?, bleed_damage?, defense_break?, heal_percent?, defense_boost?}";
 
 const SECT_SCHEMA = {
   sect: "id, name, name_en, type: Kiếm|Đan|Trận|YêuThú|Ma|PhậtMôn|Tổng|ThươngHội, element?: Kim|Mộc|Thủy|Hỏa|Thổ, tier: 1-5",
@@ -337,7 +337,7 @@ WRONG EXAMPLES (FORBIDDEN):
 
     progression: isVi
       ? `TIẾN TRIỂN & ĐA DẠNG HOẠT ĐỘNG:
-📊 Phần thưởng: Mỗi action có kết quả (exp BASE 15-50, ÁP DỤNG time bonus). Stamina: 1-2 thường, 3-4 khó. LUÔN có 1 lựa chọn nghỉ hồi 10-20 stamina. time_segments: 1-2. ⚡ QUAN TRỌNG: KHI reward cultivation_exp → NHÂN với (1 + timeBonus/100). Ví dụ: base 30 exp + 25% bonus = 37-38 exp.
+📊 Phần thưởng: Mỗi action có kết quả (exp BASE 30-80, ÁP DỤNG time bonus). Stamina: 1-2 thường, 3-4 khó. LUÔN có 1 lựa chọn nghỉ hồi 10-20 stamina. time_segments: 1-2. ⚡ QUAN TRỌNG: KHI reward cultivation_exp → NHÂN với (1 + timeBonus/100). Ví dụ: base 50 exp + 25% bonus = 62-63 exp.
 
 🎭 ĐA DẠNG HOẠT ĐỘNG (BẮT BUỘC):
 ⚠️ XEM "3 LƯỢT GẦN NHẤT" - Nếu 2 lượt liên tiếp cùng loại hoạt động → PHẢI đổi sang hoạt động KHÁC!
@@ -351,9 +351,15 @@ Các loại hoạt động luân phiên:
 6. Sự kiện đặc biệt (Event): Thiên tượng, cơ duyên, nguy hiểm bất ngờ
 
 VÍ DỤ ĐÚNG: Tu luyện → Gặp NPC → Chiến đấu → Khám phá → Nghỉ → Mua đồ
-VÍ DỤ SAI: ❌ Tu luyện → Tu luyện → Tu luyện (3 lượt liên tiếp)`
+VÍ DỤ SAI: ❌ Tu luyện → Tu luyện → Tu luyện (3 lượt liên tiếp)
+
+🔄 LỰA CHỌN ĐA DẠNG (BẮT BUỘC):
+⚠️ MỖI LỰA CHỌN PHẢI KHÁC NHAU HOÀN TOÀN - không được có 2 lựa chọn cùng loại hành động!
+- KHÔNG: 2 lựa chọn "Tu luyện" khác nhau
+- KHÔNG: 2 lựa chọn "Chiến đấu" với mục tiêu khác nhau
+- PHẢI: Mỗi lựa chọn là một LOẠI hành động khác nhau (Tu luyện, Chiến đấu, Khám phá, Xã hội, Nghỉ ngơi)`
       : `PROGRESSION & ACTIVITY VARIETY:
-📊 Rewards: Every action has results (exp BASE 15-50, APPLY time bonus). Stamina: 1-2 normal, 3-4 hard. ALWAYS 1 rest option recovering 10-20 stamina. time_segments: 1-2. ⚡ IMPORTANT: When rewarding cultivation_exp → MULTIPLY by (1 + timeBonus/100). Example: base 30 exp + 25% bonus = 37-38 exp.
+📊 Rewards: Every action has results (exp BASE 30-80, APPLY time bonus). Stamina: 1-2 normal, 3-4 hard. ALWAYS 1 rest option recovering 10-20 stamina. time_segments: 1-2. ⚡ IMPORTANT: When rewarding cultivation_exp → MULTIPLY by (1 + timeBonus/100). Example: base 50 exp + 25% bonus = 62-63 exp.
 
 🎭 ACTIVITY VARIETY (MANDATORY):
 ⚠️ CHECK "RECENT 3 TURNS" - If 2 consecutive turns same activity type → MUST switch to DIFFERENT activity!
@@ -367,7 +373,13 @@ Activity types to rotate:
 6. Special Event: Heavenly phenomena, fortune, unexpected danger
 
 CORRECT: Cultivate → Meet NPC → Combat → Explore → Rest → Shop
-WRONG: ❌ Cultivate → Cultivate → Cultivate (3 consecutive turns)`,
+WRONG: ❌ Cultivate → Cultivate → Cultivate (3 consecutive turns)
+
+🔄 CHOICE VARIETY (MANDATORY):
+⚠️ EACH CHOICE MUST BE COMPLETELY DIFFERENT - no 2 choices of same action type!
+- NO: 2 different "Cultivate" options
+- NO: 2 "Combat" choices with different targets
+- MUST: Each choice is a DIFFERENT action type (Cultivate, Combat, Explore, Social, Rest)`,
 
     randomEvents: isVi
       ? `🎲 SỰ KIỆN NGẪU NHIÊN (Thường xuyên):
@@ -594,7 +606,7 @@ Notes:
     "name_en": "Diamond Fist",
     "description": "Quyền pháp cơ bản của Phật Môn",
     "description_en": "Basic Buddhist fist technique",
-    "type": "Attack",
+    "type": "attack",
     "level": 1,
     "max_level": 10,
     "damage_multiplier": 1.5,
@@ -602,6 +614,7 @@ Notes:
     "cooldown": 2
   }
 }
+⚠️ SKILL TYPE PHẢI VIẾT THƯỜNG: "attack", "defense", "support" (KHÔNG phải Attack/Defense/Support)
 - Nếu thấy flag sect_joining_* đang active → PHẢI ưu tiên hoàn thành trước!`
       : `🏛️ SECTS:
 - Joining: New disciples start as NgoạiMôn (Outer), need contribution/cultivation to rank up
@@ -683,7 +696,7 @@ Notes:
     "name_en": "Diamond Fist",
     "description": "Quyền pháp Phật Môn",
     "description_en": "Buddhist fist technique",
-    "type": "Attack",
+    "type": "attack",
     "level": 1,
     "max_level": 10,
     "damage_multiplier": 1.5,
@@ -691,20 +704,21 @@ Notes:
     "cooldown": 2
   }
 }
+⚠️ SKILL TYPE MUST BE LOWERCASE: "attack", "defense", "support" (NOT Attack/Defense/Support)
 - If you see sect_joining_* flag active → MUST prioritize completing it first!`,
 
     skillPractice: isVi
       ? `🎯 LUYỆN KỸ NĂNG:
 - Kỹ năng cần được luyện tập để tăng cấp
 - KHI người chơi chọn luyện kỹ năng → cho kinh nghiệm kỹ năng
-- Sử dụng delta: {"field": "skills.gain_exp", "operation": "add", "value": {"skill_id": "skill_id", "exp": 15-30}}
+- Sử dụng delta: {"field": "skills.gain_exp", "operation": "add", "value": {"skill_id": "skill_id", "exp": 25-50}}
 - Ví dụ: Luyện quyền pháp 2h → {"field": "skills.gain_exp", "operation": "add", "value": {"skill_id": "diamond_fist", "exp": 25}}
 - Kỹ năng tăng cấp khi đủ exp, sức mạnh sẽ tăng theo
 - Lưu ý: skill_id phải trùng với kỹ năng hiện có`
       : `🎯 SKILL PRACTICE:
 - Skills need practice to level up
 - WHEN player chooses to practice skills → give skill exp
-- Use delta: {"field": "skills.gain_exp", "operation": "add", "value": {"skill_id": "skill_id", "exp": 15-30}}
+- Use delta: {"field": "skills.gain_exp", "operation": "add", "value": {"skill_id": "skill_id", "exp": 25-50}}
 - Example: Practice fist technique 2h → {"field": "skills.gain_exp", "operation": "add", "value": {"skill_id": "diamond_fist", "exp": 25}}
 - Skills level up when reaching max exp, power increases accordingly
 - Note: skill_id must match existing skill`,
@@ -1272,7 +1286,7 @@ OUTPUT JSON:
   "choices": [{"id": "action", "text": "...", "cost": {"stamina": N, "time_segments": N}}],
   "proposed_deltas": [
     {"field": "stats.stamina", "operation": "subtract", "value": 2},
-    {"field": "progress.cultivation_exp", "operation": "add", "value": 25},
+    {"field": "progress.cultivation_exp", "operation": "add", "value": 50},
     {"field": "add_item", "operation": "add", "value": {item_object}} ${isVi ? "← NẾU nhặt/nhận vật phẩm" : "← IF finding/receiving items"},
     {"field": "techniques.add", "operation": "add", "value": {technique_object}} ${isVi ? "← NẾU học công pháp" : "← IF learning technique"},
     {"field": "skills.add", "operation": "add", "value": {skill_object}} ${isVi ? "← NẾU học kỹ năng" : "← IF learning skill"},
@@ -2006,10 +2020,10 @@ export function buildVarietyEnforcement(
   const hints: string[] = [];
 
   if (locale === "vi") {
-    hints.push("=== YÊU CẦU ĐA DẠNG ===");
+    hints.push("=== YÊU CẦU ĐA DẠNG (BẮT BUỘC) ===");
 
     if (themesToAvoid.length > 0) {
-      hints.push(`TRÁNH các chủ đề đã xuất hiện gần đây: ${themesToAvoid.join(", ")}`);
+      hints.push(`🚫 TRÁNH các chủ đề đã xuất hiện gần đây: ${themesToAvoid.join(", ")}`);
       hints.push("Hãy tạo tình huống MỚI và KHÁC BIỆT hoàn toàn.");
     }
 
@@ -2027,11 +2041,19 @@ export function buildVarietyEnforcement(
 
     const suggestionIndex = turnCount % varietySuggestions.length;
     hints.push(`GỢI Ý TIÊN HIỆP: ${varietySuggestions[suggestionIndex]}`);
+
+    // Strong choice variety enforcement
+    hints.push(`
+⚠️ LỰA CHỌN PHẢI ĐA DẠNG:
+- Mỗi lựa chọn PHẢI là một LOẠI hành động khác nhau
+- VD: 1. Tu luyện, 2. Khám phá, 3. Xã hội, 4. Chiến đấu, 5. Nghỉ ngơi
+- ❌ SAI: Hai lựa chọn cùng "đi đến" hoặc cùng "nói chuyện"
+- ✅ ĐÚNG: Mỗi lựa chọn mở ra một hướng đi hoàn toàn khác`);
   } else {
-    hints.push("=== VARIETY REQUIREMENTS ===");
+    hints.push("=== VARIETY REQUIREMENTS (MANDATORY) ===");
 
     if (themesToAvoid.length > 0) {
-      hints.push(`AVOID themes that appeared recently: ${themesToAvoid.join(", ")}`);
+      hints.push(`🚫 AVOID themes that appeared recently: ${themesToAvoid.join(", ")}`);
       hints.push("Create a completely NEW and DIFFERENT situation.");
     }
 
@@ -2049,6 +2071,14 @@ export function buildVarietyEnforcement(
 
     const suggestionIndex = turnCount % varietySuggestions.length;
     hints.push(`XIANXIA SUGGESTION: ${varietySuggestions[suggestionIndex]}`);
+
+    // Strong choice variety enforcement
+    hints.push(`
+⚠️ CHOICES MUST BE DIVERSE:
+- Each choice MUST be a DIFFERENT type of action
+- Example: 1. Cultivate, 2. Explore, 3. Social, 4. Combat, 5. Rest
+- ❌ WRONG: Two choices both "go to" or both "talk to"
+- ✅ RIGHT: Each choice opens a completely different path`);
   }
 
   return hints.join("\n");
