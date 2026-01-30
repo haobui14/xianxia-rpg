@@ -3,12 +3,19 @@
  * Handles movement between areas and regions
  */
 
-import { TravelState, TravelResult, RegionId, Area } from '@/types/world';
-import { Realm, CharacterStats } from '@/types/game';
-import { REGIONS, getArea, getRegion, getAreasInRegion, isRegionAccessible, getStartingArea } from './regions';
+import { TravelState, TravelResult, RegionId, Area } from "@/types/world";
+import { Realm, CharacterStats } from "@/types/game";
+import {
+  REGIONS,
+  getArea,
+  getRegion,
+  getAreasInRegion,
+  isRegionAccessible,
+  getStartingArea,
+} from "./regions";
 
 // Realm order for comparison
-const REALM_ORDER: Realm[] = ['PhàmNhân', 'LuyệnKhí', 'TrúcCơ', 'KếtĐan', 'NguyênAnh'];
+const REALM_ORDER: Realm[] = ["PhàmNhân", "LuyệnKhí", "TrúcCơ", "KếtĐan", "NguyênAnh"];
 
 /**
  * Get realm index for comparison
@@ -57,8 +64,8 @@ export function canTravelToArea(
   if (!targetArea) {
     return {
       canTravel: false,
-      reason: 'Khu vực không tồn tại',
-      reason_en: 'Area does not exist',
+      reason: "Khu vực không tồn tại",
+      reason_en: "Area does not exist",
       staminaCost: 0,
     };
   }
@@ -67,8 +74,8 @@ export function canTravelToArea(
   if (targetArea.region_id !== travel.current_region) {
     return {
       canTravel: false,
-      reason: 'Khu vực ở vùng khác',
-      reason_en: 'Area is in different region',
+      reason: "Khu vực ở vùng khác",
+      reason_en: "Area is in different region",
       staminaCost: 0,
     };
   }
@@ -80,8 +87,8 @@ export function canTravelToArea(
     if (!discoveredInRegion.includes(targetAreaId)) {
       return {
         canTravel: false,
-        reason: 'Khu vực chưa được khám phá',
-        reason_en: 'Area not yet discovered',
+        reason: "Khu vực chưa được khám phá",
+        reason_en: "Area not yet discovered",
         staminaCost: 0,
       };
     }
@@ -109,14 +116,21 @@ export function canTravelToRegion(
   targetRegionId: RegionId,
   playerRealm: Realm,
   stamina: number
-): { canTravel: boolean; reason?: string; reason_en?: string; staminaCost: number; warning?: string; warning_en?: string } {
+): {
+  canTravel: boolean;
+  reason?: string;
+  reason_en?: string;
+  staminaCost: number;
+  warning?: string;
+  warning_en?: string;
+} {
   const targetRegion = REGIONS[targetRegionId];
 
   if (!targetRegion) {
     return {
       canTravel: false,
-      reason: 'Vùng không tồn tại',
-      reason_en: 'Region does not exist',
+      reason: "Vùng không tồn tại",
+      reason_en: "Region does not exist",
       staminaCost: 0,
     };
   }
@@ -125,8 +139,8 @@ export function canTravelToRegion(
   if (!isRegionAccessible(targetRegionId, travel.current_region)) {
     return {
       canTravel: false,
-      reason: 'Vùng không liền kề',
-      reason_en: 'Regions not adjacent',
+      reason: "Vùng không liền kề",
+      reason_en: "Regions not adjacent",
       staminaCost: 0,
     };
   }
@@ -197,7 +211,7 @@ export function travelToRegion(
   const areas = getAreasInRegion(targetRegionId);
 
   // Find first safe area (city) or first area
-  let entryArea = areas.find(a => a.type === 'city') || areas[0];
+  let entryArea = areas.find((a) => a.type === "city") || areas[0];
 
   // If player has visited before, go to first discovered area
   const discovered = travel.discovered_areas[targetRegionId];
@@ -232,10 +246,7 @@ export function travelToRegion(
 /**
  * Discover a new area (from exploration or events)
  */
-export function discoverArea(
-  travel: TravelState,
-  areaId: string
-): TravelState {
+export function discoverArea(travel: TravelState, areaId: string): TravelState {
   const area = getArea(areaId);
   if (!area) return travel;
 
@@ -284,7 +295,13 @@ export function getAvailableDestinations(
   stamina: number
 ): {
   areas: Array<{ area: Area; canTravel: boolean; reason?: string; staminaCost: number }>;
-  regions: Array<{ region: typeof REGIONS[RegionId]; canTravel: boolean; reason?: string; warning?: string; staminaCost: number }>;
+  regions: Array<{
+    region: (typeof REGIONS)[RegionId];
+    canTravel: boolean;
+    reason?: string;
+    warning?: string;
+    staminaCost: number;
+  }>;
 } {
   const currentArea = getArea(travel.current_area);
   const currentRegion = REGIONS[travel.current_region];
@@ -295,7 +312,7 @@ export function getAvailableDestinations(
   const allAccessibleAreaIds = new Set([...connectedAreaIds, ...discoveredAreaIds]);
 
   const areas = Array.from(allAccessibleAreaIds)
-    .map(areaId => {
+    .map((areaId) => {
       const area = getArea(areaId);
       if (!area || area.id === travel.current_area) return null;
 
@@ -307,10 +324,15 @@ export function getAvailableDestinations(
         staminaCost: check.staminaCost,
       };
     })
-    .filter(Boolean) as Array<{ area: Area; canTravel: boolean; reason?: string; staminaCost: number }>;
+    .filter(Boolean) as Array<{
+    area: Area;
+    canTravel: boolean;
+    reason?: string;
+    staminaCost: number;
+  }>;
 
   // Get adjacent regions
-  const regions = currentRegion.adjacent_regions.map(regionId => {
+  const regions = currentRegion.adjacent_regions.map((regionId) => {
     const region = REGIONS[regionId];
     const check = canTravelToRegion(travel, regionId, playerRealm, stamina);
     return {
@@ -329,7 +351,7 @@ export function getAvailableDestinations(
  * Get current location info
  */
 export function getCurrentLocationInfo(travel: TravelState): {
-  region: typeof REGIONS[RegionId];
+  region: (typeof REGIONS)[RegionId];
   area: Area;
   discoveredCount: number;
   totalAreas: number;
@@ -409,12 +431,14 @@ export function getRegionExplorationProgress(
 /**
  * Get all region exploration progress
  */
-export function getAllExplorationProgress(travel: TravelState): Record<RegionId, { discovered: number; total: number; percentage: number }> {
+export function getAllExplorationProgress(
+  travel: TravelState
+): Record<RegionId, { discovered: number; total: number; percentage: number }> {
   return {
-    thanh_van: getRegionExplorationProgress(travel, 'thanh_van'),
-    hoa_son: getRegionExplorationProgress(travel, 'hoa_son'),
-    huyen_thuy: getRegionExplorationProgress(travel, 'huyen_thuy'),
-    tram_loi: getRegionExplorationProgress(travel, 'tram_loi'),
-    vong_linh: getRegionExplorationProgress(travel, 'vong_linh'),
+    thanh_van: getRegionExplorationProgress(travel, "thanh_van"),
+    hoa_son: getRegionExplorationProgress(travel, "hoa_son"),
+    huyen_thuy: getRegionExplorationProgress(travel, "huyen_thuy"),
+    tram_loi: getRegionExplorationProgress(travel, "tram_loi"),
+    vong_linh: getRegionExplorationProgress(travel, "vong_linh"),
   };
 }

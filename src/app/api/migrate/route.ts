@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/client";
 import { runQueries, characterQueries } from "@/lib/database/queries";
-import {
-  syncInventoryToTables,
-  updatePlayerStats,
-} from "@/lib/database/syncHelper";
+import { syncInventoryToTables, updatePlayerStats } from "@/lib/database/syncHelper";
 import { GameState } from "@/types/game";
 
 /**
@@ -70,9 +67,7 @@ export async function POST(request: NextRequest) {
         } catch (error) {
           results.failed++;
           results.errors.push(
-            `Run ${run.id}: ${
-              error instanceof Error ? error.message : "Unknown error"
-            }`
+            `Run ${run.id}: ${error instanceof Error ? error.message : "Unknown error"}`
           );
         }
       }
@@ -144,9 +139,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Status check error:", error);
-    return NextResponse.json(
-      { error: "Failed to check status" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to check status" }, { status: 500 });
   }
 }

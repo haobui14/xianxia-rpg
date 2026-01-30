@@ -12,11 +12,7 @@ import {
   ActivityType,
 } from "@/types/game";
 import { calculateTotalAttributes } from "@/lib/game/equipment";
-import {
-  getRequiredExp,
-  getSpiritRootBonus,
-  getTechniqueBonus,
-} from "@/lib/game/mechanics";
+import { getRequiredExp, getSpiritRootBonus, getTechniqueBonus } from "@/lib/game/mechanics";
 
 // Import time utilities for context building
 import {
@@ -84,11 +80,118 @@ export const AITurnResultSchema = z.object({
 });
 
 /**
- * Validate AI response
+ * Validate AI response with robust error handling and auto-fixing
  */
 export function validateAIResponse(data: unknown): AITurnResult {
-  const parsed = AITurnResultSchema.parse(data);
-  return parsed as AITurnResult;
+  // Handle case where data is null or undefined
+  if (!data || typeof data !== "object") {
+    throw new Error("AI response is null or not an object");
+  }
+
+  const rawData = data as Record<string, unknown>;
+
+  // Auto-fix common AI mistakes
+  const fixedData = { ...rawData };
+
+  // Fix: narrative too short - pad with ellipsis description
+  if (typeof fixedData.narrative === "string" && fixedData.narrative.length < 50) {
+    console.warn("[AI Fix] Narrative too short, padding...");
+    fixedData.narrative =
+      fixedData.narrative +
+      " " +
+      (fixedData.locale === "vi"
+        ? "Khí thiên địa dao động nhẹ, như đang chờ đợi điều gì đó..."
+        : "The spiritual qi fluctuates gently, as if waiting for something...");
+  }
+
+  // Fix: choices is not an array or has wrong structure
+  if (!Array.isArray(fixedData.choices) || fixedData.choices.length < 2) {
+    console.warn("[AI Fix] Invalid choices array, providing defaults");
+    fixedData.choices =
+      fixedData.locale === "vi"
+        ? [
+            { id: "continue", text: "Tiếp tục" },
+            { id: "rest", text: "Nghỉ ngơi", cost: { time_segments: 1 } },
+          ]
+        : [
+            { id: "continue", text: "Continue" },
+            { id: "rest", text: "Rest", cost: { time_segments: 1 } },
+          ];
+  }
+
+  // Fix: choices missing required id/text fields
+  if (Array.isArray(fixedData.choices)) {
+    fixedData.choices = fixedData.choices.map((choice: any, index: number) => {
+      if (!choice || typeof choice !== "object") {
+        return { id: `choice_${index}`, text: `Option ${index + 1}` };
+      }
+      return {
+        ...choice,
+        id: choice.id || `choice_${index}`,
+        text: choice.text || `Option ${index + 1}`,
+      };
+    });
+  }
+
+  // Fix: proposed_deltas is not an array
+  if (!Array.isArray(fixedData.proposed_deltas)) {
+    console.warn("[AI Fix] proposed_deltas is not an array, defaulting to empty");
+    fixedData.proposed_deltas = [];
+  }
+
+  // Fix: filter out invalid deltas and fix malformed ones
+  if (Array.isArray(fixedData.proposed_deltas)) {
+    fixedData.proposed_deltas = fixedData.proposed_deltas
+      .filter((delta: any) => delta && typeof delta === "object")
+      .map((delta: any) => {
+        // Fix common AI mistakes in delta fields
+        const fixedDelta = { ...delta };
+
+        // Fix: operation typos
+        if (fixedDelta.operation === "increase" || fixedDelta.operation === "gain") {
+          fixedDelta.operation = "add";
+        }
+        if (fixedDelta.operation === "decrease" || fixedDelta.operation === "lose") {
+          fixedDelta.operation = "subtract";
+        }
+
+        // Fix: value is string instead of number for stat fields
+        if (typeof fixedDelta.value === "string" && /^\d+$/.test(fixedDelta.value)) {
+          if (
+            fixedDelta.field?.startsWith("stats.") ||
+            fixedDelta.field?.startsWith("progress.") ||
+            fixedDelta.field?.startsWith("inventory.silver") ||
+            fixedDelta.field?.startsWith("inventory.spirit_stones")
+          ) {
+            fixedDelta.value = parseInt(fixedDelta.value, 10);
+          }
+        }
+
+        return fixedDelta;
+      })
+      .filter((delta: any) => delta.field && delta.operation && delta.value !== undefined);
+  }
+
+  // Fix: events is not an array
+  if (!Array.isArray(fixedData.events)) {
+    fixedData.events = [];
+  }
+
+  // Fix: locale missing or invalid
+  if (!fixedData.locale || !["vi", "en"].includes(fixedData.locale as string)) {
+    fixedData.locale = "vi"; // Default to Vietnamese
+  }
+
+  try {
+    const parsed = AITurnResultSchema.parse(fixedData);
+    return parsed as AITurnResult;
+  } catch (zodError) {
+    console.error("[AI Validation] Zod validation failed after fixes:", zodError);
+    // Return a minimal valid response rather than throwing
+    throw new Error(
+      `AI response validation failed: ${zodError instanceof Error ? zodError.message : "Unknown error"}`
+    );
+  }
 }
 
 /**
@@ -99,15 +202,13 @@ export function validateAIResponse(data: unknown): AITurnResult {
 // Shared JSON schemas (language-agnostic)
 const DELTA_SCHEMA = {
   stats: '{"field": "stats.[hp|qi]", "operation": "subtract", "value": N}',
-  attrs:
-    '{"field": "attrs.[str|agi|int|perception|luck]", "operation": "add", "value": N}',
+  attrs: '{"field": "attrs.[str|agi|int|perception|luck]", "operation": "add", "value": N}',
   exp: '{"field": "progress.cultivation_exp", "operation": "add", "value": 15-50}',
   body_exp:
     '{"field": "progress.body_exp", "operation": "add", "value": 10-40} (only if dual cultivation enabled)',
   skill_exp:
     '{"field": "skills.gain_exp", "operation": "add", "value": {skill_id: "skill_id", exp: 10-30}} (when practicing skills)',
-  resources:
-    '{"field": "inventory.[spirit_stones|silver]", "operation": "add", "value": N}',
+  resources: '{"field": "inventory.[spirit_stones|silver]", "operation": "add", "value": N}',
   location:
     '{"field": "location.place", "operation": "set", "value": "New Place"} or {"field": "location.region", "operation": "set", "value": "New Region"}',
   sect: '{"field": "sect.[join|leave|promote|contribution]", "operation": "set|add", "value": {sect_object}|N}',
@@ -1225,7 +1326,7 @@ ${outputFormat}`;
 export function buildGameContext(
   state: GameState,
   recentNarratives: string[],
-  locale: Locale,
+  locale: Locale
 ): string {
   const ctx: string[] = [];
 
@@ -1235,7 +1336,7 @@ export function buildGameContext(
     ctx.push(
       locale === "vi"
         ? "🎯 === NHIỆM VỤ ĐANG THỰC HIỆN (ƯU TIÊN CAO!) ==="
-        : "🎯 === ACTIVE MISSIONS (HIGH PRIORITY!) ===",
+        : "🎯 === ACTIVE MISSIONS (HIGH PRIORITY!) ==="
     );
     activeFlags.forEach(([flag, _]) => {
       // Parse common flag patterns
@@ -1244,32 +1345,28 @@ export function buildGameContext(
         ctx.push(
           locale === "vi"
             ? `  ⚠️ ĐANG THỰC HIỆN NHIỆM VỤ GIA NHẬP: ${sectName}`
-            : `  ⚠️ COMPLETING JOINING MISSION FOR: ${sectName}`,
+            : `  ⚠️ COMPLETING JOINING MISSION FOR: ${sectName}`
         );
         ctx.push(
           locale === "vi"
             ? `     → BẮT BUỘC: Tập trung vào nhiệm vụ này, KHÔNG đổi chủ đề!`
-            : `     → REQUIRED: Focus on this mission, DO NOT switch themes!`,
+            : `     → REQUIRED: Focus on this mission, DO NOT switch themes!`
         );
         ctx.push(
           locale === "vi"
             ? `     → Khi hoàn thành → thêm delta {"field": "sect", ...} và set flag này = false`
-            : `     → When complete → add delta {"field": "sect", ...} and set this flag = false`,
+            : `     → When complete → add delta {"field": "sect", ...} and set this flag = false`
         );
       } else if (flag.startsWith("sect_mission_")) {
         const missionId = flag.replace("sect_mission_", "");
         ctx.push(
           locale === "vi"
             ? `  📜 Nhiệm vụ tông môn đang làm: ${missionId}`
-            : `  📜 Active sect mission: ${missionId}`,
+            : `  📜 Active sect mission: ${missionId}`
         );
       } else if (flag.startsWith("quest_")) {
         const questName = flag.replace("quest_", "").replace(/_/g, " ");
-        ctx.push(
-          locale === "vi"
-            ? `  🗡️ Nhiệm vụ: ${questName}`
-            : `  🗡️ Quest: ${questName}`,
-        );
+        ctx.push(locale === "vi" ? `  🗡️ Nhiệm vụ: ${questName}` : `  🗡️ Quest: ${questName}`);
       } else {
         ctx.push(`  • ${flag}`);
       }
@@ -1278,23 +1375,19 @@ export function buildGameContext(
     ctx.push(
       locale === "vi"
         ? "⚠️ LƯU Ý: Ưu tiên hoàn thành nhiệm vụ trên trước khi chuyển sang nội dung khác!"
-        : "⚠️ NOTE: Prioritize completing above missions before moving to other content!",
+        : "⚠️ NOTE: Prioritize completing above missions before moving to other content!"
     );
     ctx.push("");
   }
 
   // Story summary
-  ctx.push(
-    locale === "vi" ? "=== TÓM TẮT CÂU CHUYỆN ===" : "=== STORY SUMMARY ===",
-  );
+  ctx.push(locale === "vi" ? "=== TÓM TẮT CÂU CHUYỆN ===" : "=== STORY SUMMARY ===");
   ctx.push(state.story_summary);
   ctx.push("");
 
   // Recent turns
   if (recentNarratives.length > 0) {
-    ctx.push(
-      locale === "vi" ? "=== 3 LƯỢT GẦN NHẤT ===" : "=== RECENT 3 TURNS ===",
-    );
+    ctx.push(locale === "vi" ? "=== 3 LƯỢT GẦN NHẤT ===" : "=== RECENT 3 TURNS ===");
     recentNarratives.forEach((narrative, i) => {
       ctx.push(`[Turn ${state.turn_count - recentNarratives.length + i + 1}]`);
       ctx.push(narrative);
@@ -1317,15 +1410,13 @@ export function buildGameContext(
 3. Same enemy type/situation? → MUST switch to DIFFERENT activity
 4. New turn MUST have SOMETHING NEW (different location/NPC/event/activity)
 
-⚠️ IF violating any rule → MUST change immediately!`,
+⚠️ IF violating any rule → MUST change immediately!`
     );
     ctx.push("");
   }
 
   // Current state
-  ctx.push(
-    locale === "vi" ? "=== TRẠNG THÁI HIỆN TẠI ===" : "=== CURRENT STATE ===",
-  );
+  ctx.push(locale === "vi" ? "=== TRẠNG THÁI HIỆN TẠI ===" : "=== CURRENT STATE ===");
 
   // World location (new region system)
   if (state.travel) {
@@ -1340,27 +1431,28 @@ export function buildGameContext(
     ctx.push(
       locale === "vi"
         ? `🗺️ Vùng: ${region?.vi || state.travel.current_region} (Cấp ${["thanh_van", "hoa_son", "huyen_thuy", "tram_loi", "vong_linh"].indexOf(state.travel.current_region) + 1})`
-        : `🗺️ Region: ${region?.en || state.travel.current_region} (Tier ${["thanh_van", "hoa_son", "huyen_thuy", "tram_loi", "vong_linh"].indexOf(state.travel.current_region) + 1})`,
+        : `🗺️ Region: ${region?.en || state.travel.current_region} (Tier ${["thanh_van", "hoa_son", "huyen_thuy", "tram_loi", "vong_linh"].indexOf(state.travel.current_region) + 1})`
     );
 
-    const areaDiscovered = (state.travel.discovered_areas[state.travel.current_region] || []).length;
+    const areaDiscovered = (state.travel.discovered_areas[state.travel.current_region] || [])
+      .length;
     ctx.push(
       locale === "vi"
         ? `   Khu vực đã khám phá: ${areaDiscovered} khu vực`
-        : `   Discovered areas: ${areaDiscovered} areas`,
+        : `   Discovered areas: ${areaDiscovered} areas`
     );
   } else {
     ctx.push(
       locale === "vi"
         ? `Vị trí: ${state.location.place}, ${state.location.region}`
-        : `Location: ${state.location.place}, ${state.location.region}`,
+        : `Location: ${state.location.place}, ${state.location.region}`
     );
   }
 
   ctx.push(
     locale === "vi"
       ? `Thời gian: Năm ${state.time_year}, Tháng ${state.time_month}, Ngày ${state.time_day} - ${state.time_segment}`
-      : `Time: Year ${state.time_year}, Month ${state.time_month}, Day ${state.time_day} - ${state.time_segment}`,
+      : `Time: Year ${state.time_year}, Month ${state.time_month}, Day ${state.time_day} - ${state.time_segment}`
   );
 
   // Dungeon status
@@ -1368,13 +1460,13 @@ export function buildGameContext(
     ctx.push(
       locale === "vi"
         ? `🏛️ BÍ CẢNH ĐANG KHÁM PHÁ: Tầng ${state.dungeon.current_floor}${state.dungeon.turns_remaining ? ` (Còn ${state.dungeon.turns_remaining} lượt)` : ""}`
-        : `🏛️ IN DUNGEON: Floor ${state.dungeon.current_floor}${state.dungeon.turns_remaining ? ` (${state.dungeon.turns_remaining} turns left)` : ""}`,
+        : `🏛️ IN DUNGEON: Floor ${state.dungeon.current_floor}${state.dungeon.turns_remaining ? ` (${state.dungeon.turns_remaining} turns left)` : ""}`
     );
     if (state.dungeon.turns_remaining && state.dungeon.turns_remaining <= 10) {
       ctx.push(
         locale === "vi"
           ? `   ⚠️ CẢNH BÁO: Sắp hết thời gian! Cần thoát ra hoặc hoàn thành nhanh!`
-          : `   ⚠️ WARNING: Time running out! Need to exit or complete quickly!`,
+          : `   ⚠️ WARNING: Time running out! Need to exit or complete quickly!`
       );
     }
   }
@@ -1384,12 +1476,12 @@ export function buildGameContext(
     ctx.push(
       locale === "vi"
         ? `📜 SỰ KIỆN ĐANG DIỄN RA: ${state.events.active_event.name}`
-        : `📜 ACTIVE EVENT: ${state.events.active_event.name_en}`,
+        : `📜 ACTIVE EVENT: ${state.events.active_event.name_en}`
     );
     ctx.push(
       locale === "vi"
         ? `   Người chơi phải chọn một trong các lựa chọn sự kiện, KHÔNG thêm lựa chọn khác!`
-        : `   Player must choose from event options, DO NOT add other choices!`,
+        : `   Player must choose from event options, DO NOT add other choices!`
     );
   }
 
@@ -1401,16 +1493,13 @@ export function buildGameContext(
     month: state.time_month,
     year: state.time_year,
   };
-  const timeBonus = calculateTimeCultivationBonus(
-    currentTime,
-    state.spirit_root.elements,
-  );
+  const timeBonus = calculateTimeCultivationBonus(currentTime, state.spirit_root.elements);
   const specialBonus = getSpecialTimeBonus(currentTime);
 
   ctx.push(
     locale === "vi"
       ? `🌸 Mùa: ${currentSeason} | ⏰ Bonus tu luyện: +${timeBonus}%${specialBonus ? ` (đặc biệt +${specialBonus.bonus}%)` : ""}`
-      : `🌸 Season: ${currentSeason} | ⏰ Cultivation bonus: +${timeBonus}%${specialBonus ? ` (special +${specialBonus.bonus}%)` : ""}`,
+      : `🌸 Season: ${currentSeason} | ⏰ Cultivation bonus: +${timeBonus}%${specialBonus ? ` (special +${specialBonus.bonus}%)` : ""}`
   );
 
   // Current activity (if any)
@@ -1419,7 +1508,7 @@ export function buildGameContext(
     ctx.push(
       locale === "vi"
         ? `🎯 Hoạt động: ${activity.type} (${activity.progress}% - ${activity.duration_segments} segments)`
-        : `🎯 Activity: ${activity.type} (${activity.progress}% - ${activity.duration_segments} segments)`,
+        : `🎯 Activity: ${activity.type} (${activity.progress}% - ${activity.duration_segments} segments)`
     );
   }
 
@@ -1430,7 +1519,7 @@ export function buildGameContext(
     ctx.push(
       locale === "vi"
         ? `${lifespanWarning ? "⚠️" : "📅"} Tuổi: ${state.lifespan.current_age}/${state.lifespan.max_lifespan} (còn ${yearsRemaining} năm)${lifespanWarning ? " - CẦN ĐỘT PHÁ!" : ""}`
-        : `${lifespanWarning ? "⚠️" : "📅"} Age: ${state.lifespan.current_age}/${state.lifespan.max_lifespan} (${yearsRemaining} years left)${lifespanWarning ? " - NEED BREAKTHROUGH!" : ""}`,
+        : `${lifespanWarning ? "⚠️" : "📅"} Age: ${state.lifespan.current_age}/${state.lifespan.max_lifespan} (${yearsRemaining} years left)${lifespanWarning ? " - NEED BREAKTHROUGH!" : ""}`
     );
   }
 
@@ -1445,38 +1534,35 @@ export function buildGameContext(
       warnings.push(
         locale === "vi"
           ? `Tinh thần: ${state.condition.mental_state}`
-          : `Mental: ${state.condition.mental_state}`,
+          : `Mental: ${state.condition.mental_state}`
       );
     }
     if (state.condition.injuries && state.condition.injuries.length > 0) {
       warnings.push(
         locale === "vi"
           ? `${state.condition.injuries.length} chấn thương`
-          : `${state.condition.injuries.length} injuries`,
+          : `${state.condition.injuries.length} injuries`
       );
     }
     if (state.condition.qi_deviation_level > 20) {
       warnings.push(
         locale === "vi"
           ? `Rủi ro tẩu hỏa: ${state.condition.qi_deviation_level}%`
-          : `Qi deviation risk: ${state.condition.qi_deviation_level}%`,
+          : `Qi deviation risk: ${state.condition.qi_deviation_level}%`
       );
     }
     if (warnings.length > 0) {
       ctx.push(
         locale === "vi"
           ? `⚠️ Tình trạng: ${warnings.join(", ")}`
-          : `⚠️ Condition: ${warnings.join(", ")}`,
+          : `⚠️ Condition: ${warnings.join(", ")}`
       );
     }
   }
   ctx.push("");
 
   // Calculate required exp for next level
-  const requiredExp = getRequiredExp(
-    state.progress.realm,
-    state.progress.realm_stage,
-  );
+  const requiredExp = getRequiredExp(state.progress.realm, state.progress.realm_stage);
   const expDisplay =
     requiredExp === Infinity
       ? state.progress.cultivation_exp
@@ -1485,7 +1571,7 @@ export function buildGameContext(
   ctx.push(
     locale === "vi"
       ? `Tu vi: ${state.progress.realm} tầng ${state.progress.realm_stage} (Exp: ${expDisplay})`
-      : `Cultivation: ${state.progress.realm} stage ${state.progress.realm_stage} (Exp: ${expDisplay})`,
+      : `Cultivation: ${state.progress.realm} stage ${state.progress.realm_stage} (Exp: ${expDisplay})`
   );
 
   // Dual cultivation status
@@ -1506,7 +1592,7 @@ export function buildGameContext(
     ctx.push(
       locale === "vi"
         ? `🏋️ Song Tu: ${bodyRealmName} tầng ${bodyStage + 1} (Body Exp: ${bodyExp}) | Chia exp: ${expSplit}% Khí / ${100 - expSplit}% Thể`
-        : `🏋️ Dual Cultivation: ${bodyRealmName} stage ${bodyStage + 1} (Body Exp: ${bodyExp}) | Split: ${expSplit}% Qi / ${100 - expSplit}% Body`,
+        : `🏋️ Dual Cultivation: ${bodyRealmName} stage ${bodyStage + 1} (Body Exp: ${bodyExp}) | Split: ${expSplit}% Qi / ${100 - expSplit}% Body`
     );
   }
 
@@ -1521,7 +1607,7 @@ export function buildGameContext(
   ctx.push(
     locale === "vi"
       ? `Linh căn: ${state.spirit_root.elements.join("/")} - ${state.spirit_root.grade} (x${spiritRootBonus.toFixed(1)})`
-      : `Spirit Root: ${state.spirit_root.elements.join("/")} - ${state.spirit_root.grade} (x${spiritRootBonus.toFixed(1)})`,
+      : `Spirit Root: ${state.spirit_root.elements.join("/")} - ${state.spirit_root.grade} (x${spiritRootBonus.toFixed(1)})`
   );
 
   // Show total cultivation multiplier from all sources
@@ -1529,13 +1615,13 @@ export function buildGameContext(
     ctx.push(
       locale === "vi"
         ? `Tốc độ tu luyện tổng hợp: x${totalMultiplier.toFixed(2)} (Linh căn x${spiritRootBonus.toFixed(1)} + Công pháp x${techniqueBonus.toFixed(2)} + Tông môn x${sectBonus.toFixed(2)})`
-        : `Total Cultivation Speed: x${totalMultiplier.toFixed(2)} (Spirit Root x${spiritRootBonus.toFixed(1)} + Techniques x${techniqueBonus.toFixed(2)} + Sect x${sectBonus.toFixed(2)})`,
+        : `Total Cultivation Speed: x${totalMultiplier.toFixed(2)} (Spirit Root x${spiritRootBonus.toFixed(1)} + Techniques x${techniqueBonus.toFixed(2)} + Sect x${sectBonus.toFixed(2)})`
     );
   } else {
     ctx.push(
       locale === "vi"
         ? `Tốc độ tu luyện tổng hợp: x${totalMultiplier.toFixed(2)} (Linh căn x${spiritRootBonus.toFixed(1)} + Công pháp x${techniqueBonus.toFixed(2)})`
-        : `Total Cultivation Speed: x${totalMultiplier.toFixed(2)} (Spirit Root x${spiritRootBonus.toFixed(1)} + Techniques x${techniqueBonus.toFixed(2)})`,
+        : `Total Cultivation Speed: x${totalMultiplier.toFixed(2)} (Spirit Root x${spiritRootBonus.toFixed(1)} + Techniques x${techniqueBonus.toFixed(2)})`
     );
   }
   ctx.push("");
@@ -1544,17 +1630,17 @@ export function buildGameContext(
   const totalAttrs = calculateTotalAttributes(state);
 
   ctx.push(
-    `HP: ${state.stats.hp}/${state.stats.hp_max} | Qi: ${state.stats.qi}/${state.stats.qi_max} | Stamina: ${state.stats.stamina}/${state.stats.stamina_max}`,
+    `HP: ${state.stats.hp}/${state.stats.hp_max} | Qi: ${state.stats.qi}/${state.stats.qi_max} | Stamina: ${state.stats.stamina}/${state.stats.stamina_max}`
   );
 
   // Show CURRENT stats (with equipment) - THESE ARE THE REAL NUMBERS
   ctx.push(
     locale === "vi"
       ? `CHỈ SỐ HIỆN TẠI (đã bao gồm trang bị):`
-      : `CURRENT STATS (including equipment):`,
+      : `CURRENT STATS (including equipment):`
   );
   ctx.push(
-    `STR: ${totalAttrs.str} | AGI: ${totalAttrs.agi} | INT: ${totalAttrs.int} | PER: ${totalAttrs.perception} | LUCK: ${totalAttrs.luck}`,
+    `STR: ${totalAttrs.str} | AGI: ${totalAttrs.agi} | INT: ${totalAttrs.int} | PER: ${totalAttrs.perception} | LUCK: ${totalAttrs.luck}`
   );
 
   // Show base stats and equipment bonuses if different
@@ -1568,12 +1654,12 @@ export function buildGameContext(
     ctx.push(
       locale === "vi"
         ? `  - Base (không trang bị): STR ${state.attrs.str}, AGI ${state.attrs.agi}, INT ${state.attrs.int}, PER ${state.attrs.perception}, LUCK ${state.attrs.luck}`
-        : `  - Base (no equipment): STR ${state.attrs.str}, AGI ${state.attrs.agi}, INT ${state.attrs.int}, PER ${state.attrs.perception}, LUCK ${state.attrs.luck}`,
+        : `  - Base (no equipment): STR ${state.attrs.str}, AGI ${state.attrs.agi}, INT ${state.attrs.int}, PER ${state.attrs.perception}, LUCK ${state.attrs.luck}`
     );
     ctx.push(
       locale === "vi"
         ? `  - Bonus từ trang bị: STR +${totalAttrs.str - state.attrs.str}, AGI +${totalAttrs.agi - state.attrs.agi}, INT +${totalAttrs.int - state.attrs.int}, PER +${totalAttrs.perception - state.attrs.perception}, LUCK +${totalAttrs.luck - state.attrs.luck}`
-        : `  - Equipment bonus: STR +${totalAttrs.str - state.attrs.str}, AGI +${totalAttrs.agi - state.attrs.agi}, INT +${totalAttrs.int - state.attrs.int}, PER +${totalAttrs.perception - state.attrs.perception}, LUCK +${totalAttrs.luck - state.attrs.luck}`,
+        : `  - Equipment bonus: STR +${totalAttrs.str - state.attrs.str}, AGI +${totalAttrs.agi - state.attrs.agi}, INT +${totalAttrs.int - state.attrs.int}, PER +${totalAttrs.perception - state.attrs.perception}, LUCK +${totalAttrs.luck - state.attrs.luck}`
     );
   }
 
@@ -1584,31 +1670,28 @@ export function buildGameContext(
   const critChance = 10 + totalAttrs.str * 0.2 + totalAttrs.luck * 0.3;
   const evasion = Math.min(
     75,
-    5 +
-      totalAttrs.agi * 0.5 +
-      totalAttrs.perception * 0.3 +
-      totalAttrs.luck * 0.2,
+    5 + totalAttrs.agi * 0.5 + totalAttrs.perception * 0.3 + totalAttrs.luck * 0.2
   );
 
   ctx.push(
     locale === "vi"
       ? `⚔️ SỨC MẠNH CHIẾN ĐẤU (dùng để cân bằng kẻ địch):`
-      : `⚔️ COMBAT POWER (for enemy balancing):`,
+      : `⚔️ COMBAT POWER (for enemy balancing):`
   );
   ctx.push(
     locale === "vi"
       ? `  - Tấn công vật lý: ${physicalAttack} (STR×1.5) | Tấn công khí công: ${qiAttack} (INT×2 + STR÷2)`
-      : `  - Physical Attack: ${physicalAttack} (STR×1.5) | Qi Attack: ${qiAttack} (INT×2 + STR÷2)`,
+      : `  - Physical Attack: ${physicalAttack} (STR×1.5) | Qi Attack: ${qiAttack} (INT×2 + STR÷2)`
   );
   ctx.push(
     locale === "vi"
       ? `  - Phòng thủ: ${defense} | Chí mạng: ${critChance.toFixed(1)}% | Né tránh: ${evasion.toFixed(1)}%`
-      : `  - Defense: ${defense} | Critical: ${critChance.toFixed(1)}% | Evasion: ${evasion.toFixed(1)}%`,
+      : `  - Defense: ${defense} | Critical: ${critChance.toFixed(1)}% | Evasion: ${evasion.toFixed(1)}%`
   );
   ctx.push(
     locale === "vi"
       ? `  📊 KHI TẠO KẺ ĐỊCH: HP nên ${Math.floor(physicalAttack * 2)}-${Math.floor(physicalAttack * 4)}, ATK nên ${Math.floor(physicalAttack * 0.6)}-${Math.floor(physicalAttack * 1.2)}, DEF nên ${Math.floor(defense * 0.6)}-${Math.floor(defense * 1.2)}`
-      : `  📊 WHEN CREATING ENEMIES: HP should be ${Math.floor(physicalAttack * 2)}-${Math.floor(physicalAttack * 4)}, ATK should be ${Math.floor(physicalAttack * 0.6)}-${Math.floor(physicalAttack * 1.2)}, DEF should be ${Math.floor(defense * 0.6)}-${Math.floor(defense * 1.2)}`,
+      : `  📊 WHEN CREATING ENEMIES: HP should be ${Math.floor(physicalAttack * 2)}-${Math.floor(physicalAttack * 4)}, ATK should be ${Math.floor(physicalAttack * 0.6)}-${Math.floor(physicalAttack * 1.2)}, DEF should be ${Math.floor(defense * 0.6)}-${Math.floor(defense * 1.2)}`
   );
   ctx.push("");
 
@@ -1621,39 +1704,32 @@ export function buildGameContext(
   ctx.push(
     locale === "vi"
       ? `Tài sản: ${state.inventory.silver} bạc, ${state.inventory.spirit_stones} linh thạch`
-      : `Resources: ${state.inventory.silver} silver, ${state.inventory.spirit_stones} spirit stones`,
+      : `Resources: ${state.inventory.silver} silver, ${state.inventory.spirit_stones} spirit stones`
   );
   ctx.push(
     locale === "vi"
       ? `Túi đồ: ${usedSlots}/${totalCapacity} ô${state.inventory.storage_ring ? ` (💍 ${state.inventory.storage_ring.name} +${ringCapacity})` : ""}`
-      : `Inventory: ${usedSlots}/${totalCapacity} slots${state.inventory.storage_ring ? ` (💍 ${state.inventory.storage_ring.name_en} +${ringCapacity})` : ""}`,
+      : `Inventory: ${usedSlots}/${totalCapacity} slots${state.inventory.storage_ring ? ` (💍 ${state.inventory.storage_ring.name_en} +${ringCapacity})` : ""}`
   );
   ctx.push("");
 
   // Equipped items
-  const equippedCount = Object.values(state.equipped_items).filter(
-    Boolean,
-  ).length;
+  const equippedCount = Object.values(state.equipped_items).filter(Boolean).length;
   if (equippedCount > 0) {
-    ctx.push(
-      locale === "vi" ? "=== TRANG BỊ HIỆN TẠI ===" : "=== EQUIPPED ITEMS ===",
-    );
+    ctx.push(locale === "vi" ? "=== TRANG BỊ HIỆN TẠI ===" : "=== EQUIPPED ITEMS ===");
     Object.entries(state.equipped_items).forEach(([slot, item]) => {
       if (item) {
         const baseName = locale === "vi" ? item.name : item.name_en;
         // Show enhancement level if enhanced
         const enhanceLevel = item.enhancement_level || 0;
-        const name =
-          enhanceLevel > 0 ? `${baseName} +${enhanceLevel}` : baseName;
+        const name = enhanceLevel > 0 ? `${baseName} +${enhanceLevel}` : baseName;
         const stats = [];
         if (item.bonus_stats) {
           if (item.bonus_stats.str) stats.push(`STR+${item.bonus_stats.str}`);
           if (item.bonus_stats.agi) stats.push(`AGI+${item.bonus_stats.agi}`);
           if (item.bonus_stats.int) stats.push(`INT+${item.bonus_stats.int}`);
-          if (item.bonus_stats.perception)
-            stats.push(`PER+${item.bonus_stats.perception}`);
-          if (item.bonus_stats.luck)
-            stats.push(`LUCK+${item.bonus_stats.luck}`);
+          if (item.bonus_stats.perception) stats.push(`PER+${item.bonus_stats.perception}`);
+          if (item.bonus_stats.luck) stats.push(`LUCK+${item.bonus_stats.luck}`);
           if (item.bonus_stats.hp) stats.push(`HP+${item.bonus_stats.hp}`);
           if (item.bonus_stats.qi) stats.push(`Qi+${item.bonus_stats.qi}`);
         }
@@ -1703,7 +1779,7 @@ export function buildGameContext(
   ctx.push(
     locale === "vi"
       ? `Vật phẩm trong túi: ${state.inventory.items.length} món`
-      : `Inventory items: ${state.inventory.items.length} items`,
+      : `Inventory items: ${state.inventory.items.length} items`
   );
   if (state.inventory.items.length > 0) {
     state.inventory.items.slice(0, 10).forEach((item) => {
@@ -1718,22 +1794,17 @@ export function buildGameContext(
       details.push(rarity);
 
       // Show bonus stats for equipment
-      if (
-        (item.type === "Equipment" || item.type === "Accessory") &&
-        item.bonus_stats
-      ) {
+      if ((item.type === "Equipment" || item.type === "Accessory") && item.bonus_stats) {
         const stats = [];
         if (item.bonus_stats.str) stats.push(`STR+${item.bonus_stats.str}`);
         if (item.bonus_stats.agi) stats.push(`AGI+${item.bonus_stats.agi}`);
         if (item.bonus_stats.int) stats.push(`INT+${item.bonus_stats.int}`);
-        if (item.bonus_stats.perception)
-          stats.push(`PER+${item.bonus_stats.perception}`);
+        if (item.bonus_stats.perception) stats.push(`PER+${item.bonus_stats.perception}`);
         if (item.bonus_stats.luck) stats.push(`LUCK+${item.bonus_stats.luck}`);
         if (item.bonus_stats.hp) stats.push(`HP+${item.bonus_stats.hp}`);
         if (item.bonus_stats.qi) stats.push(`Qi+${item.bonus_stats.qi}`);
         if (stats.length > 0) details.push(`(${stats.join(", ")})`);
-        if (item.equipment_slot)
-          details.push(`[${translateSlot(item.equipment_slot, locale)}]`);
+        if (item.equipment_slot) details.push(`[${translateSlot(item.equipment_slot, locale)}]`);
       }
 
       // Show effects for consumables and storage rings
@@ -1743,21 +1814,20 @@ export function buildGameContext(
           effects.push(
             locale === "vi"
               ? `Hồi ${item.effects.hp_restore} HP`
-              : `Heal ${item.effects.hp_restore} HP`,
+              : `Heal ${item.effects.hp_restore} HP`
           );
         if (item.effects.qi_restore)
           effects.push(
             locale === "vi"
               ? `Hồi ${item.effects.qi_restore} Qi`
-              : `Restore ${item.effects.qi_restore} Qi`,
+              : `Restore ${item.effects.qi_restore} Qi`
           );
-        if (item.effects.cultivation_exp)
-          effects.push(`+${item.effects.cultivation_exp} Exp`);
+        if (item.effects.cultivation_exp) effects.push(`+${item.effects.cultivation_exp} Exp`);
         if (item.effects.storage_capacity)
           effects.push(
             locale === "vi"
               ? `+${item.effects.storage_capacity} ô túi`
-              : `+${item.effects.storage_capacity} slots`,
+              : `+${item.effects.storage_capacity} slots`
           );
         if (effects.length > 0) details.push(`(${effects.join(", ")})`);
       }
@@ -1768,7 +1838,7 @@ export function buildGameContext(
       ctx.push(
         locale === "vi"
           ? `  ... và ${state.inventory.items.length - 10} vật phẩm khác`
-          : `  ... and ${state.inventory.items.length - 10} more items`,
+          : `  ... and ${state.inventory.items.length - 10} more items`
       );
     }
   }
@@ -1813,17 +1883,13 @@ export function buildGameContext(
     ctx.push(
       locale === "vi"
         ? "=== CÔNG PHÁP (Tăng tốc tu luyện) ==="
-        : "=== TECHNIQUES (Cultivation Speed) ===",
+        : "=== TECHNIQUES (Cultivation Speed) ==="
     );
     state.techniques.forEach((tech) => {
       const name = locale === "vi" ? tech.name : tech.name_en;
       const elements =
-        tech.elements && tech.elements.length > 0
-          ? `[${tech.elements.join("/")}]`
-          : "";
-      const speedBonus = tech.cultivation_speed_bonus
-        ? `+${tech.cultivation_speed_bonus}%`
-        : "";
+        tech.elements && tech.elements.length > 0 ? `[${tech.elements.join("/")}]` : "";
+      const speedBonus = tech.cultivation_speed_bonus ? `+${tech.cultivation_speed_bonus}%` : "";
       const grade = translateGrade(tech.grade, locale);
       const techType = translateTechType(tech.type, locale);
       ctx.push(`  - ${name} ${elements} (${grade}, ${techType}) ${speedBonus}`);
@@ -1833,9 +1899,7 @@ export function buildGameContext(
 
   // Skills (for combat)
   if (state.skills && state.skills.length > 0) {
-    ctx.push(
-      locale === "vi" ? "=== KỸ NĂNG CHIẾN ĐẤU ===" : "=== COMBAT SKILLS ===",
-    );
+    ctx.push(locale === "vi" ? "=== KỸ NĂNG CHIẾN ĐẤU ===" : "=== COMBAT SKILLS ===");
     state.skills.forEach((skill) => {
       const name = locale === "vi" ? skill.name : skill.name_en;
       const element = skill.element ? `[${skill.element}]` : "";
@@ -1843,7 +1907,7 @@ export function buildGameContext(
       const dmg = skill.damage_multiplier ? `${skill.damage_multiplier}x` : "";
       const cost = skill.qi_cost ? `${skill.qi_cost} qi` : "";
       ctx.push(
-        `  - ${name} ${element} Lv.${skill.level}/${skill.max_level} [${skillType}] (${dmg}, ${cost})`,
+        `  - ${name} ${element} Lv.${skill.level}/${skill.max_level} [${skillType}] (${dmg}, ${cost})`
       );
     });
     ctx.push("");
@@ -1866,62 +1930,45 @@ export function buildGameContext(
     ctx.push(
       locale === "vi"
         ? `  Đóng góp: ${sect.contribution} | Thanh danh: ${sect.reputation}/100`
-        : `  Contribution: ${sect.contribution} | Reputation: ${sect.reputation}/100`,
+        : `  Contribution: ${sect.contribution} | Reputation: ${sect.reputation}/100`
     );
 
     // Add contribution spending hints
     if (sect.contribution >= 50) {
       const hints: string[] = [];
       if (sect.contribution >= 50)
-        hints.push(
-          locale === "vi" ? "Có thể đổi vật phẩm" : "Can exchange items",
-        );
+        hints.push(locale === "vi" ? "Có thể đổi vật phẩm" : "Can exchange items");
       if (sect.contribution >= 150)
-        hints.push(
-          locale === "vi" ? "Có thể lấy công pháp" : "Can get techniques",
-        );
+        hints.push(locale === "vi" ? "Có thể lấy công pháp" : "Can get techniques");
       if (sect.rank === "NgoạiMôn" && sect.contribution >= 200) {
-        hints.push(
-          locale === "vi"
-            ? "Đủ điểm thăng Nội Môn!"
-            : "Ready for Inner promotion!",
-        );
+        hints.push(locale === "vi" ? "Đủ điểm thăng Nội Môn!" : "Ready for Inner promotion!");
       }
       if (sect.rank === "NộiMôn" && sect.contribution >= 500) {
-        hints.push(
-          locale === "vi"
-            ? "Đủ điểm thăng Chân Truyền!"
-            : "Ready for True Disciple!",
-        );
+        hints.push(locale === "vi" ? "Đủ điểm thăng Chân Truyền!" : "Ready for True Disciple!");
       }
       ctx.push(`  💡 ${hints.join(", ")}`);
     }
 
     if (sect.mentor) {
-      const mentorName =
-        locale === "vi" ? sect.mentor : sect.mentor_en || sect.mentor;
-      ctx.push(
-        locale === "vi" ? `  Sư phụ: ${mentorName}` : `  Mentor: ${mentorName}`,
-      );
+      const mentorName = locale === "vi" ? sect.mentor : sect.mentor_en || sect.mentor;
+      ctx.push(locale === "vi" ? `  Sư phụ: ${mentorName}` : `  Mentor: ${mentorName}`);
     }
     ctx.push(
       locale === "vi"
         ? `  Lợi ích: Tu luyện +${sect.benefits.cultivation_bonus}%${sect.benefits.resource_access ? ", Tài nguyên" : ""}${sect.benefits.technique_access ? ", Công pháp" : ""}${sect.benefits.protection ? ", Bảo hộ" : ""}`
-        : `  Benefits: Cultivation +${sect.benefits.cultivation_bonus}%${sect.benefits.resource_access ? ", Resources" : ""}${sect.benefits.technique_access ? ", Techniques" : ""}${sect.benefits.protection ? ", Protection" : ""}`,
+        : `  Benefits: Cultivation +${sect.benefits.cultivation_bonus}%${sect.benefits.resource_access ? ", Resources" : ""}${sect.benefits.technique_access ? ", Techniques" : ""}${sect.benefits.protection ? ", Protection" : ""}`
     );
     ctx.push("");
   } else {
     ctx.push(
       locale === "vi"
         ? "=== TÔNG MÔN: Chưa gia nhập (Tản tu) ==="
-        : "=== SECT: Not joined (Rogue cultivator) ===",
+        : "=== SECT: Not joined (Rogue cultivator) ==="
     );
     ctx.push("");
   }
 
-  ctx.push(
-    locale === "vi" ? `Nhân quả: ${state.karma}` : `Karma: ${state.karma}`,
-  );
+  ctx.push(locale === "vi" ? `Nhân quả: ${state.karma}` : `Karma: ${state.karma}`);
 
   return ctx.join("\n");
 }
@@ -1933,7 +1980,7 @@ export function buildUserMessage(
   sceneContext: string,
   choiceId: string | null,
   locale: Locale,
-  choiceText?: string | null,
+  choiceText?: string | null
 ): string {
   if (choiceId) {
     // Use the actual choice text if provided (for custom actions or regular choices)
@@ -1954,7 +2001,7 @@ export function buildUserMessage(
 export function buildVarietyEnforcement(
   themesToAvoid: string[],
   turnCount: number,
-  locale: Locale,
+  locale: Locale
 ): string {
   const hints: string[] = [];
 
@@ -1962,9 +2009,7 @@ export function buildVarietyEnforcement(
     hints.push("=== YÊU CẦU ĐA DẠNG ===");
 
     if (themesToAvoid.length > 0) {
-      hints.push(
-        `TRÁNH các chủ đề đã xuất hiện gần đây: ${themesToAvoid.join(", ")}`,
-      );
+      hints.push(`TRÁNH các chủ đề đã xuất hiện gần đây: ${themesToAvoid.join(", ")}`);
       hints.push("Hãy tạo tình huống MỚI và KHÁC BIỆT hoàn toàn.");
     }
 
@@ -1986,9 +2031,7 @@ export function buildVarietyEnforcement(
     hints.push("=== VARIETY REQUIREMENTS ===");
 
     if (themesToAvoid.length > 0) {
-      hints.push(
-        `AVOID themes that appeared recently: ${themesToAvoid.join(", ")}`,
-      );
+      hints.push(`AVOID themes that appeared recently: ${themesToAvoid.join(", ")}`);
       hints.push("Create a completely NEW and DIFFERENT situation.");
     }
 

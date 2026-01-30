@@ -178,9 +178,7 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
       {
         id: "mark_location",
         text:
-          locale === "vi"
-            ? "Đánh dấu vị trí và quay lại sau"
-            : "Mark location and return later",
+          locale === "vi" ? "Đánh dấu vị trí và quay lại sau" : "Mark location and return later",
       },
     ],
   },
@@ -202,18 +200,12 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
     getBaseChoices: (locale) => [
       {
         id: "cultivate_short",
-        text:
-          locale === "vi"
-            ? "Tu luyện ngắn (1 giờ)"
-            : "Short cultivation (1 hour)",
+        text: locale === "vi" ? "Tu luyện ngắn (1 giờ)" : "Short cultivation (1 hour)",
         cost: { stamina: 1, time_segments: 1 },
       },
       {
         id: "cultivate_long",
-        text:
-          locale === "vi"
-            ? "Tu luyện sâu (4 giờ)"
-            : "Deep cultivation (4 hours)",
+        text: locale === "vi" ? "Tu luyện sâu (4 giờ)" : "Deep cultivation (4 hours)",
         cost: { stamina: 2, time_segments: 2 },
       },
       {
@@ -370,8 +362,7 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
     getBaseChoices: (locale) => [
       {
         id: "enter_ruins",
-        text:
-          locale === "vi" ? "Vào khám phá di tích" : "Enter and explore ruins",
+        text: locale === "vi" ? "Vào khám phá di tích" : "Enter and explore ruins",
         cost: { stamina: 3, time_segments: 2 },
       },
       {
@@ -381,10 +372,7 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
       },
       {
         id: "mark_and_leave",
-        text:
-          locale === "vi"
-            ? "Đánh dấu và quay lại sau"
-            : "Mark location and leave",
+        text: locale === "vi" ? "Đánh dấu và quay lại sau" : "Mark location and leave",
       },
     ],
   },
@@ -416,10 +404,7 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
       },
       {
         id: "take_ingredients",
-        text:
-          locale === "vi"
-            ? "Lấy nguyên liệu và đi"
-            : "Take ingredients and leave",
+        text: locale === "vi" ? "Lấy nguyên liệu và đi" : "Take ingredients and leave",
       },
     ],
   },
@@ -441,16 +426,12 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
     getBaseChoices: (locale) => [
       {
         id: "exchange_knowledge",
-        text:
-          locale === "vi"
-            ? "Trao đổi kinh nghiệm tu luyện"
-            : "Exchange cultivation knowledge",
+        text: locale === "vi" ? "Trao đổi kinh nghiệm tu luyện" : "Exchange cultivation knowledge",
         cost: { time_segments: 1 },
       },
       {
         id: "spar",
-        text:
-          locale === "vi" ? "Xin tỉ thí qua đường" : "Request a friendly spar",
+        text: locale === "vi" ? "Xin tỉ thí qua đường" : "Request a friendly spar",
         cost: { stamina: 2 },
       },
       {
@@ -482,10 +463,7 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
     getBaseChoices: (locale) => [
       {
         id: "bathe_cultivate",
-        text:
-          locale === "vi"
-            ? "Tắm và tu luyện trong suối"
-            : "Bathe and cultivate in the spring",
+        text: locale === "vi" ? "Tắm và tu luyện trong suối" : "Bathe and cultivate in the spring",
         cost: { stamina: 1, time_segments: 2 },
       },
       {
@@ -728,10 +706,7 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
       },
       {
         id: "accept_medium_mission",
-        text:
-          locale === "vi"
-            ? "Nhận nhiệm vụ trung bình"
-            : "Accept medium mission",
+        text: locale === "vi" ? "Nhận nhiệm vụ trung bình" : "Accept medium mission",
         cost: { stamina: 2 },
       },
       {
@@ -811,8 +786,7 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
     getBaseChoices: (locale) => [
       {
         id: "meet_respectfully",
-        text:
-          locale === "vi" ? "Gặp với thái độ kính cẩn" : "Meet respectfully",
+        text: locale === "vi" ? "Gặp với thái độ kính cẩn" : "Meet respectfully",
       },
       {
         id: "ask_for_guidance",
@@ -889,10 +863,7 @@ export const SCENE_TEMPLATES: SceneTemplate[] = [
       },
       {
         id: "request_extra",
-        text:
-          locale === "vi"
-            ? "Xin thêm (dùng đóng góp)"
-            : "Request extra (use contribution)",
+        text: locale === "vi" ? "Xin thêm (dùng đóng góp)" : "Request extra (use contribution)",
         cost: { time_segments: 1 },
       },
       {
@@ -980,7 +951,7 @@ export function getApplicableTemplates(state: GameState): SceneTemplate[] {
  */
 export function selectRandomTemplate(
   templates: SceneTemplate[],
-  rng: { random(): number },
+  rng: { random(): number }
 ): SceneTemplate | null {
   if (templates.length === 0) return null;
 

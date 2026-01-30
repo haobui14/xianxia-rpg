@@ -82,17 +82,14 @@ export default function InventoryView({
   onEnhanceItem,
   onStateUpdate,
 }: InventoryViewProps) {
-  const [activeTab, setActiveTab] = useState<"consumable" | "equipment">(
-    "consumable",
-  );
+  const [activeTab, setActiveTab] = useState<"consumable" | "equipment">("consumable");
   const [discardConfirm, setDiscardConfirm] = useState<{
     itemId: string;
     name: string;
     quantity: number;
   } | null>(null);
   const [useMessage, setUseMessage] = useState<string | null>(null);
-  const [selectedEnhanceItem, setSelectedEnhanceItem] =
-    useState<InventoryItem | null>(null);
+  const [selectedEnhanceItem, setSelectedEnhanceItem] = useState<InventoryItem | null>(null);
 
   // Sorting and filtering state
   const [sortBy, setSortBy] = useState<SortOption>("type");
@@ -106,10 +103,7 @@ export default function InventoryView({
   // Filter out techniques/skills that shouldn't be in inventory
   const validInventoryItems = useMemo(() => {
     return state.inventory.items.filter(
-      (item) =>
-        !["Main", "Support", "Attack", "Defense", "Movement"].includes(
-          item.type,
-        ),
+      (item) => !["Main", "Support", "Attack", "Defense", "Movement"].includes(item.type)
     );
   }, [state.inventory.items]);
 
@@ -129,42 +123,27 @@ export default function InventoryView({
     items = sortItems(items, sortBy, sortAscending);
 
     return items;
-  }, [
-    validInventoryItems,
-    searchQuery,
-    filterBy,
-    sortBy,
-    sortAscending,
-    locale,
-  ]);
+  }, [validInventoryItems, searchQuery, filterBy, sortBy, sortAscending, locale]);
 
   const consumableItems = useMemo(() => {
     return processedItems.filter((item) =>
-      ["Medicine", "Material", "Manual", "Misc", "Book", "Effect"].includes(
-        item.type,
-      ),
+      ["Medicine", "Material", "Manual", "Misc", "Book", "Effect"].includes(item.type)
     );
   }, [processedItems]);
 
   const equipmentItems = useMemo(() => {
-    return processedItems.filter((item) =>
-      ["Equipment", "Accessory"].includes(item.type),
-    );
+    return processedItems.filter((item) => ["Equipment", "Accessory"].includes(item.type));
   }, [processedItems]);
 
   const handleUseItem = async (itemId: string, itemName: string) => {
     if (onUseItem) {
       await onUseItem(itemId);
-      setUseMessage(
-        locale === "vi" ? `Đã sử dụng ${itemName}` : `Used ${itemName}`,
-      );
+      setUseMessage(locale === "vi" ? `Đã sử dụng ${itemName}` : `Used ${itemName}`);
       setTimeout(() => setUseMessage(null), 2000);
     }
   };
 
-  const handleEnhance = async (
-    itemId: string,
-  ): Promise<EnhancementResult | null> => {
+  const handleEnhance = async (itemId: string): Promise<EnhancementResult | null> => {
     if (!onEnhanceItem) return null;
     const result = await onEnhanceItem(itemId);
     return result;
@@ -192,18 +171,14 @@ export default function InventoryView({
             </div>
           </div>
           <div className="text-center p-4 bg-xianxia-darker rounded-lg">
-            <div className="text-sm text-gray-400">
-              {t(locale, "spiritStones")}
-            </div>
+            <div className="text-sm text-gray-400">{t(locale, "spiritStones")}</div>
             <div className="text-3xl font-bold text-xianxia-accent">
               {state.inventory.spirit_stones.toLocaleString()}
             </div>
           </div>
           {/* Inventory Capacity */}
           <div className="text-center p-4 bg-xianxia-darker rounded-lg">
-            <div className="text-sm text-gray-400">
-              {locale === "vi" ? "Túi đồ" : "Inventory"}
-            </div>
+            <div className="text-sm text-gray-400">{locale === "vi" ? "Túi đồ" : "Inventory"}</div>
             <div
               className={`text-2xl font-bold ${inventoryUsage.percentage >= 90 ? "text-red-400" : inventoryUsage.percentage >= 70 ? "text-yellow-400" : "text-green-400"}`}
             >
@@ -237,20 +212,14 @@ export default function InventoryView({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={
-                locale === "vi"
-                  ? "🔍 Tìm kiếm vật phẩm..."
-                  : "🔍 Search items..."
-              }
+              placeholder={locale === "vi" ? "🔍 Tìm kiếm vật phẩm..." : "🔍 Search items..."}
               className="w-full px-4 py-2 bg-xianxia-darker border border-xianxia-accent/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-xianxia-accent"
             />
           </div>
 
           {/* Filter dropdown */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-400">
-              {locale === "vi" ? "Lọc:" : "Filter:"}
-            </span>
+            <span className="text-sm text-gray-400">{locale === "vi" ? "Lọc:" : "Filter:"}</span>
             <select
               value={filterBy}
               onChange={(e) => setFilterBy(e.target.value as FilterOption)}
@@ -258,9 +227,7 @@ export default function InventoryView({
             >
               {(Object.keys(FILTER_LABELS) as FilterOption[]).map((filter) => (
                 <option key={filter} value={filter}>
-                  {locale === "vi"
-                    ? FILTER_LABELS[filter].vi
-                    : FILTER_LABELS[filter].en}
+                  {locale === "vi" ? FILTER_LABELS[filter].vi : FILTER_LABELS[filter].en}
                 </option>
               ))}
             </select>
@@ -268,9 +235,7 @@ export default function InventoryView({
 
           {/* Sort dropdown */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-400">
-              {locale === "vi" ? "Sắp xếp:" : "Sort:"}
-            </span>
+            <span className="text-sm text-gray-400">{locale === "vi" ? "Sắp xếp:" : "Sort:"}</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
@@ -278,9 +243,7 @@ export default function InventoryView({
             >
               {(Object.keys(SORT_LABELS) as SortOption[]).map((sort) => (
                 <option key={sort} value={sort}>
-                  {locale === "vi"
-                    ? SORT_LABELS[sort].vi
-                    : SORT_LABELS[sort].en}
+                  {locale === "vi" ? SORT_LABELS[sort].vi : SORT_LABELS[sort].en}
                 </option>
               ))}
             </select>
@@ -332,16 +295,7 @@ export default function InventoryView({
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {(
-            [
-              "Weapon",
-              "Head",
-              "Chest",
-              "Legs",
-              "Feet",
-              "Hands",
-              "Accessory",
-              "Artifact",
-            ] as const
+            ["Weapon", "Head", "Chest", "Legs", "Feet", "Hands", "Accessory", "Artifact"] as const
           ).map((slot) => {
             const equipped = state.equipped_items[slot];
             const rarityColors = {
@@ -356,7 +310,8 @@ export default function InventoryView({
                 key={slot}
                 className={`p-3 rounded-lg border transition-all ${
                   equipped
-                    ? rarityColors[equipped.rarity as keyof typeof rarityColors] || "border-xianxia-accent/20 bg-xianxia-darker"
+                    ? rarityColors[equipped.rarity as keyof typeof rarityColors] ||
+                      "border-xianxia-accent/20 bg-xianxia-darker"
                     : "border-dashed border-gray-700/50 bg-xianxia-darker/50"
                 }`}
               >
@@ -365,14 +320,21 @@ export default function InventoryView({
                 </div>
                 {equipped ? (
                   <>
-                    <div className="text-sm font-semibold text-white mb-1 truncate" title={locale === "vi" ? equipped.name : equipped.name_en}>
+                    <div
+                      className="text-sm font-semibold text-white mb-1 truncate"
+                      title={locale === "vi" ? equipped.name : equipped.name_en}
+                    >
                       {getEnhancedItemName(equipped, locale)}
                     </div>
                     {equipped.bonus_stats && (
                       <div className="text-xs text-green-400 mb-2">
-                        {Object.entries(equipped.bonus_stats).slice(0, 2).map(([key, val]) => (
-                          <div key={key}>+{val} {key.toUpperCase()}</div>
-                        ))}
+                        {Object.entries(equipped.bonus_stats)
+                          .slice(0, 2)
+                          .map(([key, val]) => (
+                            <div key={key}>
+                              +{val} {key.toUpperCase()}
+                            </div>
+                          ))}
                       </div>
                     )}
                     {onEquipItem && (
@@ -407,8 +369,7 @@ export default function InventoryView({
                 : "text-gray-400 hover:text-gray-300"
             }`}
           >
-            {locale === "vi" ? "Vật Phẩm" : "Consumables"} (
-            {consumableItems.length})
+            {locale === "vi" ? "Vật Phẩm" : "Consumables"} ({consumableItems.length})
           </button>
           <button
             onClick={() => setActiveTab("equipment")}
@@ -418,8 +379,7 @@ export default function InventoryView({
                 : "text-gray-400 hover:text-gray-300"
             }`}
           >
-            {locale === "vi" ? "Trang Bị" : "Equipment"} (
-            {equipmentItems.length})
+            {locale === "vi" ? "Trang Bị" : "Equipment"} ({equipmentItems.length})
           </button>
         </div>
 
@@ -437,7 +397,7 @@ export default function InventoryView({
                 onEquipItem,
                 setDiscardConfirm,
                 handleUseItem,
-                setSelectedEnhanceItem,
+                setSelectedEnhanceItem
               )}
             </div>
           )
@@ -453,7 +413,7 @@ export default function InventoryView({
               onEquipItem,
               setDiscardConfirm,
               handleUseItem,
-              setSelectedEnhanceItem,
+              setSelectedEnhanceItem
             )}
           </div>
         )}
@@ -475,10 +435,7 @@ export default function InventoryView({
               <button
                 onClick={() => {
                   if (onDiscardItem) {
-                    onDiscardItem(
-                      discardConfirm.itemId,
-                      discardConfirm.quantity,
-                    );
+                    onDiscardItem(discardConfirm.itemId, discardConfirm.quantity);
                   }
                   setDiscardConfirm(null);
                 }}
@@ -515,15 +472,12 @@ function renderItems(
   items: any[],
   locale: Locale,
   onEquipItem?: (itemId: string, action: "equip" | "unequip") => Promise<void>,
-  setDiscardConfirm?: (
-    confirm: { itemId: string; name: string; quantity: number } | null,
-  ) => void,
+  setDiscardConfirm?: (confirm: { itemId: string; name: string; quantity: number } | null) => void,
   onUseItem?: (itemId: string, itemName: string) => void,
-  setSelectedEnhanceItem?: (item: any) => void,
+  setSelectedEnhanceItem?: (item: any) => void
 ) {
   return items.map((item, index) => {
-    const isConsumable =
-      item.type === "Medicine" || item.type === "Book" || item.effects;
+    const isConsumable = item.type === "Medicine" || item.type === "Book" || item.effects;
     const itemName = locale === "vi" ? item.name : item.name_en;
 
     return (
@@ -539,9 +493,7 @@ function renderItems(
             </div>
             <div className="flex gap-3 mt-2 text-xs">
               <span className="px-2 py-1 bg-xianxia-accent/20 rounded">
-                {locale === "vi"
-                  ? ITEM_TYPE_VI[item.type] || item.type
-                  : item.type}
+                {locale === "vi" ? ITEM_TYPE_VI[item.type] || item.type : item.type}
               </span>
               <span
                 className={`px-2 py-1 rounded ${
@@ -556,16 +508,12 @@ function renderItems(
                           : "bg-gray-500/20 text-gray-300"
                 }`}
               >
-                {locale === "vi"
-                  ? RARITY_VI[item.rarity] || item.rarity
-                  : item.rarity}
+                {locale === "vi" ? RARITY_VI[item.rarity] || item.rarity : item.rarity}
               </span>
             </div>
           </div>
           <div className="text-right ml-4">
-            <div className="text-sm text-gray-400">
-              {locale === "vi" ? "Số lượng" : "Qty"}
-            </div>
+            <div className="text-sm text-gray-400">{locale === "vi" ? "Số lượng" : "Qty"}</div>
             <div className="text-2xl font-bold">{item.quantity}</div>
 
             <div className="flex flex-col gap-2 mt-2">
@@ -580,15 +528,14 @@ function renderItems(
               )}
 
               {/* Equip button for equipment and accessories */}
-              {(item.type === "Equipment" || item.type === "Accessory") &&
-                onEquipItem && (
-                  <button
-                    onClick={() => onEquipItem(item.id, "equip")}
-                    className="px-3 py-1 bg-xianxia-accent hover:bg-xianxia-accent/80 text-white rounded text-sm transition-colors"
-                  >
-                    {locale === "vi" ? "Trang bị" : "Equip"}
-                  </button>
-                )}
+              {(item.type === "Equipment" || item.type === "Accessory") && onEquipItem && (
+                <button
+                  onClick={() => onEquipItem(item.id, "equip")}
+                  className="px-3 py-1 bg-xianxia-accent hover:bg-xianxia-accent/80 text-white rounded text-sm transition-colors"
+                >
+                  {locale === "vi" ? "Trang bị" : "Equip"}
+                </button>
+              )}
 
               {/* Enhance button for equipment and accessories */}
               {(item.type === "Equipment" || item.type === "Accessory") &&
@@ -636,20 +583,17 @@ function renderItems(
               )}
               {item.bonus_stats.stamina && (
                 <div>
-                  {locale === "vi" ? "Thể Lực" : "Stamina"}: +
-                  {item.bonus_stats.stamina}
+                  {locale === "vi" ? "Thể Lực" : "Stamina"}: +{item.bonus_stats.stamina}
                 </div>
               )}
               {item.bonus_stats.str && (
                 <div>
-                  {locale === "vi" ? "Sức Mạnh" : "STR"}: +
-                  {item.bonus_stats.str}
+                  {locale === "vi" ? "Sức Mạnh" : "STR"}: +{item.bonus_stats.str}
                 </div>
               )}
               {item.bonus_stats.agi && (
                 <div>
-                  {locale === "vi" ? "Thân Pháp" : "AGI"}: +
-                  {item.bonus_stats.agi}
+                  {locale === "vi" ? "Thân Pháp" : "AGI"}: +{item.bonus_stats.agi}
                 </div>
               )}
               {item.bonus_stats.int && (
@@ -659,14 +603,12 @@ function renderItems(
               )}
               {item.bonus_stats.perception && (
                 <div>
-                  {locale === "vi" ? "Cảm Quan" : "PER"}: +
-                  {item.bonus_stats.perception}
+                  {locale === "vi" ? "Cảm Quan" : "PER"}: +{item.bonus_stats.perception}
                 </div>
               )}
               {item.bonus_stats.luck && (
                 <div>
-                  {locale === "vi" ? "May Mắn" : "LUCK"}: +
-                  {item.bonus_stats.luck}
+                  {locale === "vi" ? "May Mắn" : "LUCK"}: +{item.bonus_stats.luck}
                 </div>
               )}
               {item.bonus_stats.cultivation_speed && (
@@ -699,56 +641,48 @@ function renderItems(
         )}
 
         {/* Show teachings for books */}
-        {item.type === "Book" &&
-          (item.teaches_technique || item.teaches_skill) && (
-            <div className="mt-3 pt-3 border-t border-xianxia-accent/20">
-              <div className="text-sm text-yellow-400 font-semibold">
-                {locale === "vi" ? "📖 Dạy:" : "📖 Teaches:"}
-              </div>
-              {item.teaches_technique && (
-                <div className="text-sm text-gray-300 mt-1">
-                  <div className="font-semibold text-purple-400">
-                    {locale === "vi" ? "🔮 Công Pháp: " : "🔮 Technique: "}
-                    {locale === "vi"
-                      ? item.teaches_technique.name
-                      : item.teaches_technique.name_en}
-                  </div>
-                  <div className="text-xs text-gray-400 mt-1">
-                    {locale === "vi"
-                      ? item.teaches_technique.description
-                      : item.teaches_technique.description_en}
-                  </div>
-                  <div className="text-xs text-green-400 mt-1">
-                    {locale === "vi"
-                      ? "Tốc độ tu luyện:"
-                      : "Cultivation Speed:"}{" "}
-                    +{item.teaches_technique.cultivation_speed_bonus}%
-                  </div>
-                </div>
-              )}
-              {item.teaches_skill && (
-                <div className="text-sm text-gray-300 mt-1">
-                  <div className="font-semibold text-orange-400">
-                    {locale === "vi" ? "⚔️ Kỹ Năng: " : "⚔️ Skill: "}
-                    {locale === "vi"
-                      ? item.teaches_skill.name
-                      : item.teaches_skill.name_en}
-                  </div>
-                  <div className="text-xs text-gray-400 mt-1">
-                    {locale === "vi"
-                      ? item.teaches_skill.description
-                      : item.teaches_skill.description_en}
-                  </div>
-                  <div className="text-xs text-red-400 mt-1">
-                    {locale === "vi" ? "Sát thương:" : "Damage:"} ×
-                    {item.teaches_skill.damage_multiplier} |
-                    {locale === "vi" ? " Tiêu Qi:" : " Qi Cost:"}{" "}
-                    {item.teaches_skill.qi_cost}
-                  </div>
-                </div>
-              )}
+        {item.type === "Book" && (item.teaches_technique || item.teaches_skill) && (
+          <div className="mt-3 pt-3 border-t border-xianxia-accent/20">
+            <div className="text-sm text-yellow-400 font-semibold">
+              {locale === "vi" ? "📖 Dạy:" : "📖 Teaches:"}
             </div>
-          )}
+            {item.teaches_technique && (
+              <div className="text-sm text-gray-300 mt-1">
+                <div className="font-semibold text-purple-400">
+                  {locale === "vi" ? "🔮 Công Pháp: " : "🔮 Technique: "}
+                  {locale === "vi" ? item.teaches_technique.name : item.teaches_technique.name_en}
+                </div>
+                <div className="text-xs text-gray-400 mt-1">
+                  {locale === "vi"
+                    ? item.teaches_technique.description
+                    : item.teaches_technique.description_en}
+                </div>
+                <div className="text-xs text-green-400 mt-1">
+                  {locale === "vi" ? "Tốc độ tu luyện:" : "Cultivation Speed:"} +
+                  {item.teaches_technique.cultivation_speed_bonus}%
+                </div>
+              </div>
+            )}
+            {item.teaches_skill && (
+              <div className="text-sm text-gray-300 mt-1">
+                <div className="font-semibold text-orange-400">
+                  {locale === "vi" ? "⚔️ Kỹ Năng: " : "⚔️ Skill: "}
+                  {locale === "vi" ? item.teaches_skill.name : item.teaches_skill.name_en}
+                </div>
+                <div className="text-xs text-gray-400 mt-1">
+                  {locale === "vi"
+                    ? item.teaches_skill.description
+                    : item.teaches_skill.description_en}
+                </div>
+                <div className="text-xs text-red-400 mt-1">
+                  {locale === "vi" ? "Sát thương:" : "Damage:"} ×
+                  {item.teaches_skill.damage_multiplier} |
+                  {locale === "vi" ? " Tiêu Qi:" : " Qi Cost:"} {item.teaches_skill.qi_cost}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Show equipment slot */}
         {item.equipment_slot && (

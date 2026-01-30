@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 
 export default function DebugInventory() {
   const [inventory, setInventory] = useState<any>(null);
@@ -9,9 +9,9 @@ export default function DebugInventory() {
   const fetchInventory = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/get-character');
+      const response = await fetch("/api/get-character");
       const data = await response.json();
-      
+
       if (data.run?.current_state) {
         const state = data.run.current_state;
         setInventory({
@@ -24,7 +24,7 @@ export default function DebugInventory() {
         });
       }
     } catch (error) {
-      console.error('Error fetching inventory:', error);
+      console.error("Error fetching inventory:", error);
     } finally {
       setLoading(false);
     }
@@ -37,17 +37,14 @@ export default function DebugInventory() {
         disabled={loading}
         className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-lg font-semibold"
       >
-        {loading ? 'Loading...' : '🔍 Debug Inventory'}
+        {loading ? "Loading..." : "🔍 Debug Inventory"}
       </button>
 
       {inventory && (
         <div className="mt-2 bg-gray-900 border border-purple-500 rounded-lg p-4 max-w-2xl max-h-96 overflow-auto">
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-purple-400 font-bold">Debug: Current State</h3>
-            <button
-              onClick={() => setInventory(null)}
-              className="text-gray-400 hover:text-white"
-            >
+            <button onClick={() => setInventory(null)} className="text-gray-400 hover:text-white">
               ✕
             </button>
           </div>
@@ -74,7 +71,9 @@ export default function DebugInventory() {
             </div>
 
             <div>
-              <div className="text-purple-400 font-semibold">Techniques ({inventory.techniques.length}):</div>
+              <div className="text-purple-400 font-semibold">
+                Techniques ({inventory.techniques.length}):
+              </div>
               {inventory.techniques.length === 0 ? (
                 <div className="text-gray-500 ml-2">No techniques</div>
               ) : (
@@ -89,7 +88,9 @@ export default function DebugInventory() {
             </div>
 
             <div>
-              <div className="text-orange-400 font-semibold">Skills ({inventory.skills.length}):</div>
+              <div className="text-orange-400 font-semibold">
+                Skills ({inventory.skills.length}):
+              </div>
               {inventory.skills.length === 0 ? (
                 <div className="text-gray-500 ml-2">No skills</div>
               ) : (
@@ -109,13 +110,14 @@ export default function DebugInventory() {
                 <div className="text-gray-500 ml-2">Nothing equipped</div>
               ) : (
                 <div className="ml-2 space-y-1">
-                  {Object.entries(inventory.equipped_items).map(([slot, item]: [string, any]) => (
-                    item && (
-                      <div key={slot} className="text-gray-300">
-                        • {slot}: {item.name} [{item.rarity}]
-                      </div>
-                    )
-                  ))}
+                  {Object.entries(inventory.equipped_items).map(
+                    ([slot, item]: [string, any]) =>
+                      item && (
+                        <div key={slot} className="text-gray-300">
+                          • {slot}: {item.name} [{item.rarity}]
+                        </div>
+                      )
+                  )}
                 </div>
               )}
             </div>

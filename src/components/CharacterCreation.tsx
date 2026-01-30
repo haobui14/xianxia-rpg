@@ -31,18 +31,18 @@ export default function CharacterCreation({
 
     const checkExistingCharacter = async () => {
       try {
-        const response = await fetch('/api/get-character', {
-          credentials: 'same-origin',
+        const response = await fetch("/api/get-character", {
+          credentials: "same-origin",
         });
-        
+
         if (!response.ok) {
-          console.error('Failed to fetch character:', response.status, response.statusText);
+          console.error("Failed to fetch character:", response.status, response.statusText);
           setLoading(false);
           return;
         }
-        
+
         const data = await response.json();
-        
+
         if (data.character && data.run) {
           // Character exists, load it
           const character = data.character;
@@ -51,7 +51,7 @@ export default function CharacterCreation({
           setName(character.name);
           setAge(character.age);
           setLoading(false);
-          
+
           // Auto-start the game with the latest run
           onGameStart(character.id, data.run.id, locale);
         } else {
@@ -69,19 +69,13 @@ export default function CharacterCreation({
   const handleCreateCharacter = async () => {
     // Don't create if character already exists
     if (existingCharacter || characterId) {
-      setError(
-        locale === "vi"
-          ? "Nhân vật đã được tạo"
-          : "Character already exists"
-      );
+      setError(locale === "vi" ? "Nhân vật đã được tạo" : "Character already exists");
       return;
     }
 
     if (name.length < 2) {
       setError(
-        locale === "vi"
-          ? "Tên phải có ít nhất 2 ký tự"
-          : "Name must be at least 2 characters"
+        locale === "vi" ? "Tên phải có ít nhất 2 ký tự" : "Name must be at least 2 characters"
       );
       return;
     }
@@ -93,7 +87,7 @@ export default function CharacterCreation({
       const response = await fetch("/api/create-character", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: 'same-origin',
+        credentials: "same-origin",
         body: JSON.stringify({ name, age, locale }),
       });
 
@@ -107,7 +101,9 @@ export default function CharacterCreation({
       setCharacterId(data.character.id);
     } catch (err: any) {
       setError(
-        locale === "vi" ? `Lỗi tạo nhân vật: ${err.message}` : `Error creating character: ${err.message}`
+        locale === "vi"
+          ? `Lỗi tạo nhân vật: ${err.message}`
+          : `Error creating character: ${err.message}`
       );
     } finally {
       setLoading(false);
@@ -124,7 +120,7 @@ export default function CharacterCreation({
       );
       return;
     }
-    
+
     setLoading(true);
     setError("");
 
@@ -132,7 +128,7 @@ export default function CharacterCreation({
       const response = await fetch("/api/create-character", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: 'same-origin',
+        credentials: "same-origin",
         body: JSON.stringify({ name, age, locale }),
       });
 
@@ -146,8 +142,8 @@ export default function CharacterCreation({
       setCharacterId(data.character.id);
     } catch (err: any) {
       setError(
-        locale === "vi" 
-          ? `Lỗi tái tạo linh căn: ${err.message}` 
+        locale === "vi"
+          ? `Lỗi tái tạo linh căn: ${err.message}`
           : `Error regenerating spirit root: ${err.message}`
       );
     } finally {
@@ -165,7 +161,7 @@ export default function CharacterCreation({
       const response = await fetch("/api/start-run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: 'same-origin',
+        credentials: "same-origin",
         body: JSON.stringify({ characterId, spiritRoot, locale }),
       });
 
@@ -176,9 +172,7 @@ export default function CharacterCreation({
       const data = await response.json();
       onGameStart(characterId, data.run.id, locale);
     } catch (err) {
-      setError(
-        locale === "vi" ? "Lỗi bắt đầu trò chơi" : "Error starting game"
-      );
+      setError(locale === "vi" ? "Lỗi bắt đầu trò chơi" : "Error starting game");
       setLoading(false);
     }
   };
@@ -199,114 +193,108 @@ export default function CharacterCreation({
             <div className="flex justify-end mb-6">
               <button
                 onClick={() => onLocaleChange(locale === "vi" ? "en" : "vi")}
-            className="px-4 py-2 bg-xianxia-accent/20 hover:bg-xianxia-accent/30 rounded-lg text-sm transition-colors"
-          >
-            {locale === "vi" ? "EN" : "VN"}
-          </button>
-        </div>
-
-        <h1 className="text-4xl font-bold text-center mb-8 text-xianxia-gold">
-          {t(locale, "createCharacter")}
-        </h1>
-
-        {!spiritRoot ? (
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                {t(locale, "characterName")}
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 bg-xianxia-darker border border-xianxia-accent/30 rounded-lg focus:outline-none focus:border-xianxia-accent"
-                placeholder={t(locale, "enterName")}
-                disabled={loading}
-              />
+                className="px-4 py-2 bg-xianxia-accent/20 hover:bg-xianxia-accent/30 rounded-lg text-sm transition-colors"
+              >
+                {locale === "vi" ? "EN" : "VN"}
+              </button>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                {t(locale, "age")}
-              </label>
-              <input
-                type="number"
-                value={age}
-                onChange={(e) => setAge(parseInt(e.target.value) || 20)}
-                className="w-full px-4 py-3 bg-xianxia-darker border border-xianxia-accent/30 rounded-lg focus:outline-none focus:border-xianxia-accent"
-                min="15"
-                max="100"
-                disabled={loading}
-              />
-            </div>
+            <h1 className="text-4xl font-bold text-center mb-8 text-xianxia-gold">
+              {t(locale, "createCharacter")}
+            </h1>
 
-            {error && (
-              <div className="p-4 bg-red-900/30 border border-red-500/50 rounded-lg text-red-200">
-                {error}
-              </div>
-            )}
-
-            <button
-              onClick={handleCreateCharacter}
-              disabled={loading || name.length < 2}
-              className="w-full py-3 bg-xianxia-accent hover:bg-xianxia-accent/80 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
-            >
-              {loading ? t(locale, "loading") : t(locale, "createButton")}
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="p-6 bg-xianxia-darker rounded-lg border border-xianxia-gold/30">
-              <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">
-                {t(locale, "spiritRoot")}
-              </h2>
-
-              <div className="space-y-3">
+            {!spiritRoot ? (
+              <div className="space-y-6">
                 <div>
-                  <span className="text-gray-400">
-                    {t(locale, "elements")}:{" "}
-                  </span>
-                  <span className="font-medium text-xianxia-accent">
-                    {spiritRoot.elements.map((e) => t(locale, e)).join(" + ")}
-                  </span>
+                  <label className="block text-sm font-medium mb-2">
+                    {t(locale, "characterName")}
+                  </label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full px-4 py-3 bg-xianxia-darker border border-xianxia-accent/30 rounded-lg focus:outline-none focus:border-xianxia-accent"
+                    placeholder={t(locale, "enterName")}
+                    disabled={loading}
+                  />
                 </div>
 
                 <div>
-                  <span className="text-gray-400">{t(locale, "grade")}: </span>
-                  <span className="font-bold text-xianxia-gold">
-                    {t(locale, spiritRoot.grade)}
-                  </span>
+                  <label className="block text-sm font-medium mb-2">{t(locale, "age")}</label>
+                  <input
+                    type="number"
+                    value={age}
+                    onChange={(e) => setAge(parseInt(e.target.value) || 20)}
+                    className="w-full px-4 py-3 bg-xianxia-darker border border-xianxia-accent/30 rounded-lg focus:outline-none focus:border-xianxia-accent"
+                    min="15"
+                    max="100"
+                    disabled={loading}
+                  />
+                </div>
+
+                {error && (
+                  <div className="p-4 bg-red-900/30 border border-red-500/50 rounded-lg text-red-200">
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleCreateCharacter}
+                  disabled={loading || name.length < 2}
+                  className="w-full py-3 bg-xianxia-accent hover:bg-xianxia-accent/80 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
+                >
+                  {loading ? t(locale, "loading") : t(locale, "createButton")}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="p-6 bg-xianxia-darker rounded-lg border border-xianxia-gold/30">
+                  <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">
+                    {t(locale, "spiritRoot")}
+                  </h2>
+
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-gray-400">{t(locale, "elements")}: </span>
+                      <span className="font-medium text-xianxia-accent">
+                        {spiritRoot.elements.map((e) => t(locale, e)).join(" + ")}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-gray-400">{t(locale, "grade")}: </span>
+                      <span className="font-bold text-xianxia-gold">
+                        {t(locale, spiritRoot.grade)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="p-4 bg-red-900/30 border border-red-500/50 rounded-lg text-red-200">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex gap-4">
+                  <button
+                    onClick={handleRegenerateSpiritRoot}
+                    disabled={loading}
+                    className="flex-1 py-3 bg-xianxia-darker border border-xianxia-accent/50 hover:bg-xianxia-accent/20 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
+                  >
+                    {locale === "vi" ? "Tái tạo Linh Căn" : "Regenerate Spirit Root"}
+                  </button>
+
+                  <button
+                    onClick={handleStartGame}
+                    disabled={loading}
+                    className="flex-1 py-3 bg-xianxia-gold hover:bg-xianxia-gold/80 text-xianxia-darker disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-bold transition-colors"
+                  >
+                    {loading ? t(locale, "loading") : t(locale, "startJourney")}
+                  </button>
                 </div>
               </div>
-            </div>
-
-            {error && (
-              <div className="p-4 bg-red-900/30 border border-red-500/50 rounded-lg text-red-200">
-                {error}
-              </div>
             )}
-
-            <div className="flex gap-4">
-              <button
-                onClick={handleRegenerateSpiritRoot}
-                disabled={loading}
-                className="flex-1 py-3 bg-xianxia-darker border border-xianxia-accent/50 hover:bg-xianxia-accent/20 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
-              >
-                {locale === "vi"
-                  ? "Tái tạo Linh Căn"
-                  : "Regenerate Spirit Root"}
-              </button>
-
-              <button
-                onClick={handleStartGame}
-                disabled={loading}
-                className="flex-1 py-3 bg-xianxia-gold hover:bg-xianxia-gold/80 text-xianxia-darker disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-bold transition-colors"
-              >
-                {loading ? t(locale, "loading") : t(locale, "startJourney")}
-              </button>
-            </div>
-          </div>
-        )}
           </>
         )}
       </div>

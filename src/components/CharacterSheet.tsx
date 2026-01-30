@@ -1,20 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import {
-  GameState,
-  CultivationTechnique,
-  Skill,
-} from "@/types/game";
+import { GameState, CultivationTechnique, Skill } from "@/types/game";
 import { t, Locale } from "@/lib/i18n/translations";
-import {
-  calculateTotalAttributes,
-  getEquipmentBonus,
-} from "@/lib/game/equipment";
-import {
-  getElementCompatibility,
-  getRequiredExp,
-} from "@/lib/game/mechanics";
+import { calculateTotalAttributes, getEquipmentBonus } from "@/lib/game/equipment";
+import { getElementCompatibility, getRequiredExp } from "@/lib/game/mechanics";
 import CultivationVisualization from "./CultivationVisualization";
 import MeridianDiagram from "./MeridianDiagram";
 import DualCultivationView from "./DualCultivationView";
@@ -33,7 +23,7 @@ interface CharacterSheetProps {
     abilityType: "technique" | "skill",
     activeId: string | null,
     queueId: string | null,
-    action: "swap" | "forget" | "learn" | "discard",
+    action: "swap" | "forget" | "learn" | "discard"
   ) => Promise<void>;
   onToggleDualCultivation?: () => Promise<void>;
   onSetExpSplit?: (split: number) => Promise<void>;
@@ -48,13 +38,9 @@ export default function CharacterSheet({
   onSetExpSplit,
 }: CharacterSheetProps) {
   const [selectedTech, setSelectedTech] = useState<string | null>(null);
-  const [selectedQueueTech, setSelectedQueueTech] = useState<string | null>(
-    null,
-  );
+  const [selectedQueueTech, setSelectedQueueTech] = useState<string | null>(null);
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
-  const [selectedQueueSkill, setSelectedQueueSkill] = useState<string | null>(
-    null,
-  );
+  const [selectedQueueSkill, setSelectedQueueSkill] = useState<string | null>(null);
   const [swapLoading, setSwapLoading] = useState(false);
 
   // Ensure queues exist
@@ -72,7 +58,7 @@ export default function CharacterSheet({
     abilityType: "technique" | "skill",
     activeId: string | null,
     queueId: string | null,
-    action: "swap" | "forget" | "learn" | "discard",
+    action: "swap" | "forget" | "learn" | "discard"
   ) => {
     if (!onAbilitySwap || swapLoading) return;
     setSwapLoading(true);
@@ -95,10 +81,7 @@ export default function CharacterSheet({
   const hpBonus = getEquipmentBonus(state, "hp");
   const qiBonus = getEquipmentBonus(state, "qi");
   const staminaBonus = getEquipmentBonus(state, "stamina");
-  const requiredExp = getRequiredExp(
-    state.progress.realm,
-    state.progress.realm_stage,
-  );
+  const requiredExp = getRequiredExp(state.progress.realm, state.progress.realm_stage);
   const expDisplay =
     requiredExp === Infinity
       ? locale === "vi"
@@ -110,9 +93,7 @@ export default function CharacterSheet({
     <div className="space-y-6">
       {/* Location & Time */}
       <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">
-          {t(locale, "location")}
-        </h2>
+        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">{t(locale, "location")}</h2>
         <div className="space-y-2">
           <div>
             <span className="text-gray-400">{t(locale, "location")}: </span>
@@ -121,34 +102,24 @@ export default function CharacterSheet({
             </span>
           </div>
           <div>
-            <span className="text-gray-400">
-              {locale === "vi" ? "Thời gian" : "Time"}:{" "}
-            </span>
+            <span className="text-gray-400">{locale === "vi" ? "Thời gian" : "Time"}: </span>
             <span className="font-medium">
               {locale === "vi"
                 ? `Năm ${state.time_year}, Tháng ${state.time_month}, Ngày ${state.time_day}`
                 : `Year ${state.time_year}, Month ${state.time_month}, Day ${state.time_day}`}
             </span>
-            <span className="text-gray-400 ml-4">
-              {t(locale, state.time_segment)}
-            </span>
+            <span className="text-gray-400 ml-4">{t(locale, state.time_segment)}</span>
           </div>
         </div>
       </div>
 
       {/* Cultivation Progress - Enhanced Visualization */}
       <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">
-          {t(locale, "cultivation")}
-        </h2>
+        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">{t(locale, "cultivation")}</h2>
         <div className="flex flex-col lg:flex-row gap-6 items-center">
           {/* Main Cultivation Visualization */}
           <div className="flex-1 w-full">
-            <CultivationVisualization
-              state={state}
-              locale={locale}
-              previousExp={previousExp}
-            />
+            <CultivationVisualization state={state} locale={locale} previousExp={previousExp} />
           </div>
           {/* Meridian Diagram */}
           <div className="flex-shrink-0">
@@ -167,9 +138,7 @@ export default function CharacterSheet({
 
       {/* Spirit Root */}
       <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">
-          {t(locale, "spiritRoot")}
-        </h2>
+        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">{t(locale, "spiritRoot")}</h2>
         <div className="space-y-3">
           <div>
             <span className="text-gray-400">{t(locale, "elements")}: </span>
@@ -208,10 +177,7 @@ export default function CharacterSheet({
             {state.techniques.map((tech) => {
               const compatibility =
                 tech.elements && tech.elements.length > 0
-                  ? getElementCompatibility(
-                      state.spirit_root.elements,
-                      tech.elements,
-                    )
+                  ? getElementCompatibility(state.spirit_root.elements, tech.elements)
                   : 0;
 
               const compatibilityColor =
@@ -256,10 +222,7 @@ export default function CharacterSheet({
                       ? "border-red-500 bg-red-900/20"
                       : "border-xianxia-accent/20 hover:border-xianxia-accent/50"
                   }`}
-                  onClick={() =>
-                    onAbilitySwap &&
-                    setSelectedTech(isSelected ? null : tech.id)
-                  }
+                  onClick={() => onAbilitySwap && setSelectedTech(isSelected ? null : tech.id)}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex-1">
@@ -310,12 +273,7 @@ export default function CharacterSheet({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleAbilityAction(
-                            "technique",
-                            tech.id,
-                            null,
-                            "forget",
-                          );
+                          handleAbilityAction("technique", tech.id, null, "forget");
                         }}
                         disabled={swapLoading}
                         className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white text-sm rounded disabled:opacity-50"
@@ -326,12 +284,7 @@ export default function CharacterSheet({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleAbilityAction(
-                              "technique",
-                              tech.id,
-                              selectedQueueTech,
-                              "swap",
-                            );
+                            handleAbilityAction("technique", tech.id, selectedQueueTech, "swap");
                           }}
                           disabled={swapLoading}
                           className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded disabled:opacity-50"
@@ -351,8 +304,8 @@ export default function CharacterSheet({
         {techniqueQueue.length > 0 && (
           <div className="mt-4 pt-4 border-t border-xianxia-accent/20">
             <h3 className="text-lg font-bold text-yellow-400 mb-3">
-              {locale === "vi" ? "📚 Hàng Chờ Công Pháp" : "📚 Technique Queue"}{" "}
-              ({techniqueQueue.length})
+              {locale === "vi" ? "📚 Hàng Chờ Công Pháp" : "📚 Technique Queue"} (
+              {techniqueQueue.length})
             </h3>
             <div className="space-y-2">
               {techniqueQueue.map((tech) => {
@@ -370,8 +323,7 @@ export default function CharacterSheet({
                         : "border-yellow-500/20 hover:border-yellow-500/50"
                     }`}
                     onClick={() =>
-                      onAbilitySwap &&
-                      setSelectedQueueTech(isSelected ? null : tech.id)
+                      onAbilitySwap && setSelectedQueueTech(isSelected ? null : tech.id)
                     }
                   >
                     <div className="flex justify-between items-center">
@@ -393,12 +345,7 @@ export default function CharacterSheet({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleAbilityAction(
-                                "technique",
-                                null,
-                                tech.id,
-                                "learn",
-                              );
+                              handleAbilityAction("technique", null, tech.id, "learn");
                             }}
                             disabled={swapLoading}
                             className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white text-sm rounded disabled:opacity-50"
@@ -410,12 +357,7 @@ export default function CharacterSheet({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleAbilityAction(
-                                "technique",
-                                selectedTech,
-                                tech.id,
-                                "swap",
-                              );
+                              handleAbilityAction("technique", selectedTech, tech.id, "swap");
                             }}
                             disabled={swapLoading}
                             className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded disabled:opacity-50"
@@ -426,12 +368,7 @@ export default function CharacterSheet({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleAbilityAction(
-                              "technique",
-                              null,
-                              tech.id,
-                              "discard",
-                            );
+                            handleAbilityAction("technique", null, tech.id, "discard");
                           }}
                           disabled={swapLoading}
                           className="px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded disabled:opacity-50"
@@ -478,10 +415,7 @@ export default function CharacterSheet({
                       ? "border-red-500 bg-red-900/20"
                       : "border-xianxia-accent/20 hover:border-xianxia-accent/50"
                   }`}
-                  onClick={() =>
-                    onAbilitySwap &&
-                    setSelectedSkill(isSelected ? null : skill.id)
-                  }
+                  onClick={() => onAbilitySwap && setSelectedSkill(isSelected ? null : skill.id)}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div>
@@ -510,9 +444,7 @@ export default function CharacterSheet({
                   {/* Skill Experience Progress Bar */}
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs text-gray-400">
-                      <span>
-                        {locale === "vi" ? "Kinh nghiệm" : "Experience"}
-                      </span>
+                      <span>{locale === "vi" ? "Kinh nghiệm" : "Experience"}</span>
                       <span>
                         {skill.exp || 0} / {skill.max_exp || skill.level * 100}
                       </span>
@@ -531,12 +463,7 @@ export default function CharacterSheet({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleAbilityAction(
-                            "skill",
-                            skill.id,
-                            null,
-                            "forget",
-                          );
+                          handleAbilityAction("skill", skill.id, null, "forget");
                         }}
                         disabled={swapLoading}
                         className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white text-sm rounded disabled:opacity-50"
@@ -547,12 +474,7 @@ export default function CharacterSheet({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleAbilityAction(
-                              "skill",
-                              skill.id,
-                              selectedQueueSkill,
-                              "swap",
-                            );
+                            handleAbilityAction("skill", skill.id, selectedQueueSkill, "swap");
                           }}
                           disabled={swapLoading}
                           className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded disabled:opacity-50"
@@ -572,8 +494,7 @@ export default function CharacterSheet({
         {skillQueue.length > 0 && (
           <div className="mt-4 pt-4 border-t border-xianxia-accent/20">
             <h3 className="text-lg font-bold text-yellow-400 mb-3">
-              {locale === "vi" ? "📚 Hàng Chờ Kĩ Năng" : "📚 Skill Queue"} (
-              {skillQueue.length})
+              {locale === "vi" ? "📚 Hàng Chờ Kĩ Năng" : "📚 Skill Queue"} ({skillQueue.length})
             </h3>
             <div className="space-y-2">
               {skillQueue.map((skill) => {
@@ -591,8 +512,7 @@ export default function CharacterSheet({
                         : "border-yellow-500/20 hover:border-yellow-500/50"
                     }`}
                     onClick={() =>
-                      onAbilitySwap &&
-                      setSelectedQueueSkill(isSelected ? null : skill.id)
+                      onAbilitySwap && setSelectedQueueSkill(isSelected ? null : skill.id)
                     }
                   >
                     <div className="flex justify-between items-center">
@@ -614,12 +534,7 @@ export default function CharacterSheet({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleAbilityAction(
-                                "skill",
-                                null,
-                                skill.id,
-                                "learn",
-                              );
+                              handleAbilityAction("skill", null, skill.id, "learn");
                             }}
                             disabled={swapLoading}
                             className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white text-sm rounded disabled:opacity-50"
@@ -631,12 +546,7 @@ export default function CharacterSheet({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleAbilityAction(
-                                "skill",
-                                selectedSkill,
-                                skill.id,
-                                "swap",
-                              );
+                              handleAbilityAction("skill", selectedSkill, skill.id, "swap");
                             }}
                             disabled={swapLoading}
                             className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded disabled:opacity-50"
@@ -647,12 +557,7 @@ export default function CharacterSheet({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleAbilityAction(
-                              "skill",
-                              null,
-                              skill.id,
-                              "discard",
-                            );
+                            handleAbilityAction("skill", null, skill.id, "discard");
                           }}
                           disabled={swapLoading}
                           className="px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded disabled:opacity-50"
@@ -671,9 +576,7 @@ export default function CharacterSheet({
 
       {/* Stats */}
       <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">
-          {t(locale, "stats")}
-        </h2>
+        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">{t(locale, "stats")}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <div className="flex justify-between">
@@ -762,11 +665,7 @@ export default function CharacterSheet({
                       ? "Tỷ lệ chí mạng (+0.2% mỗi điểm)"
                       : "Critical hit chance (+0.2% per point)"}
                   </li>
-                  <li>
-                    {locale === "vi"
-                      ? "HP tối đa (gián tiếp)"
-                      : "Max HP (indirect)"}
-                  </li>
+                  <li>{locale === "vi" ? "HP tối đa (gián tiếp)" : "Max HP (indirect)"}</li>
                 </ul>
               </div>
             </div>
@@ -782,17 +681,11 @@ export default function CharacterSheet({
                   {locale === "vi" ? "Ảnh Hưởng:" : "Affects:"}
                 </div>
                 <ul className="space-y-1 list-disc list-inside">
-                  <li>
-                    {locale === "vi" ? "Tốc độ tấn công" : "Attack speed"}
-                  </li>
+                  <li>{locale === "vi" ? "Tốc độ tấn công" : "Attack speed"}</li>
                   <li>{locale === "vi" ? "Tỷ lệ né tránh" : "Evasion rate"}</li>
+                  <li>{locale === "vi" ? "Tốc độ di chuyển" : "Movement speed"}</li>
                   <li>
-                    {locale === "vi" ? "Tốc độ di chuyển" : "Movement speed"}
-                  </li>
-                  <li>
-                    {locale === "vi"
-                      ? "Thứ tự hành động trong chiến đấu"
-                      : "Combat turn order"}
+                    {locale === "vi" ? "Thứ tự hành động trong chiến đấu" : "Combat turn order"}
                   </li>
                 </ul>
               </div>
@@ -810,9 +703,7 @@ export default function CharacterSheet({
                 </div>
                 <ul className="space-y-1 list-disc list-inside">
                   <li>
-                    {locale === "vi"
-                      ? "Sát thương khí công (×2 INT)"
-                      : "Qi attack damage (×2 INT)"}
+                    {locale === "vi" ? "Sát thương khí công (×2 INT)" : "Qi attack damage (×2 INT)"}
                   </li>
                   <li>{locale === "vi" ? "Khí tối đa" : "Max Qi"}</li>
                   <li>
@@ -820,14 +711,8 @@ export default function CharacterSheet({
                       ? "Tỷ lệ chí mạng khí công (+0.3%)"
                       : "Qi critical chance (+0.3%)"}
                   </li>
-                  <li>
-                    {locale === "vi" ? "Hiệu quả hồi khí" : "Qi regeneration"}
-                  </li>
-                  <li>
-                    {locale === "vi"
-                      ? "Hiểu biết công pháp"
-                      : "Technique comprehension"}
-                  </li>
+                  <li>{locale === "vi" ? "Hiệu quả hồi khí" : "Qi regeneration"}</li>
+                  <li>{locale === "vi" ? "Hiểu biết công pháp" : "Technique comprehension"}</li>
                 </ul>
               </div>
             </div>
@@ -844,25 +729,11 @@ export default function CharacterSheet({
                 </div>
                 <ul className="space-y-1 list-disc list-inside">
                   <li>
-                    {locale === "vi"
-                      ? "Phát hiện cơ hội ẩn"
-                      : "Hidden opportunity detection"}
+                    {locale === "vi" ? "Phát hiện cơ hội ẩn" : "Hidden opportunity detection"}
                   </li>
-                  <li>
-                    {locale === "vi"
-                      ? "Chất lượng vật phẩm rơi"
-                      : "Loot quality"}
-                  </li>
-                  <li>
-                    {locale === "vi"
-                      ? "Tỷ lệ gặp sự kiện quý hiếm"
-                      : "Rare event chance"}
-                  </li>
-                  <li>
-                    {locale === "vi"
-                      ? "Nhận biết nguy hiểm"
-                      : "Danger awareness"}
-                  </li>
+                  <li>{locale === "vi" ? "Chất lượng vật phẩm rơi" : "Loot quality"}</li>
+                  <li>{locale === "vi" ? "Tỷ lệ gặp sự kiện quý hiếm" : "Rare event chance"}</li>
+                  <li>{locale === "vi" ? "Nhận biết nguy hiểm" : "Danger awareness"}</li>
                 </ul>
               </div>
             </div>
@@ -878,25 +749,13 @@ export default function CharacterSheet({
                   {locale === "vi" ? "Ảnh Hưởng:" : "Affects:"}
                 </div>
                 <ul className="space-y-1 list-disc list-inside">
+                  <li>{locale === "vi" ? "Tỷ lệ rơi vật phẩm quý" : "Rare item drop rate"}</li>
+                  <li>{locale === "vi" ? "Cơ duyên và gặp gỡ" : "Fortuitous encounters"}</li>
                   <li>
-                    {locale === "vi"
-                      ? "Tỷ lệ rơi vật phẩm quý"
-                      : "Rare item drop rate"}
+                    {locale === "vi" ? "Kết quả sự kiện ngẫu nhiên" : "Random event outcomes"}
                   </li>
                   <li>
-                    {locale === "vi"
-                      ? "Cơ duyên và gặp gỡ"
-                      : "Fortuitous encounters"}
-                  </li>
-                  <li>
-                    {locale === "vi"
-                      ? "Kết quả sự kiện ngẫu nhiên"
-                      : "Random event outcomes"}
-                  </li>
-                  <li>
-                    {locale === "vi"
-                      ? "Thành công đột phá cảnh giới"
-                      : "Breakthrough success rate"}
+                    {locale === "vi" ? "Thành công đột phá cảnh giới" : "Breakthrough success rate"}
                   </li>
                 </ul>
               </div>
@@ -910,9 +769,7 @@ export default function CharacterSheet({
         <div className="grid grid-cols-2 gap-4 text-center">
           <div>
             <div className="text-sm text-gray-400">{t(locale, "karma")}</div>
-            <div className="text-xl font-bold text-xianxia-accent">
-              {state.karma}
-            </div>
+            <div className="text-xl font-bold text-xianxia-accent">{state.karma}</div>
           </div>
           <div>
             <div className="text-sm text-gray-400">Age</div>

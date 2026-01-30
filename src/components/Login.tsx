@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { supabase } from '@/lib/database/client';
-import { Locale } from '@/lib/i18n/translations';
+import { useState } from "react";
+import { supabase } from "@/lib/database/client";
+import { Locale } from "@/lib/i18n/translations";
 
 interface LoginProps {
   locale: Locale;
@@ -10,10 +10,10 @@ interface LoginProps {
 }
 
 export default function Login({ locale, onLocaleChange }: LoginProps) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
 
   const clearAllSessions = () => {
@@ -22,31 +22,33 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith('sb-') || key.includes('supabase'))) {
+        if (key && (key.startsWith("sb-") || key.includes("supabase"))) {
           keysToRemove.push(key);
         }
       }
-      keysToRemove.forEach(key => localStorage.removeItem(key));
-      
+      keysToRemove.forEach((key) => localStorage.removeItem(key));
+
       // Sign out from Supabase
       supabase.auth.signOut();
-      
+
       // Show success message
-      alert(locale === 'vi' 
-        ? 'Đã xóa phiên đăng nhập. Vui lòng đăng nhập lại.' 
-        : 'Session cleared. Please sign in again.');
-      
+      alert(
+        locale === "vi"
+          ? "Đã xóa phiên đăng nhập. Vui lòng đăng nhập lại."
+          : "Session cleared. Please sign in again."
+      );
+
       // Reload the page
       window.location.reload();
     } catch (err) {
-      console.error('Error clearing session:', err);
+      console.error("Error clearing session:", err);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       if (isSignUp) {
@@ -62,14 +64,14 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
         // Otherwise, they need to check their email
         if (data.session) {
           // User is logged in immediately (email confirmation disabled)
-          console.log('User signed up and logged in:', data.user?.email);
+          console.log("User signed up and logged in:", data.user?.email);
           // The onAuthStateChange in page.tsx will handle the redirect
         } else {
           // User needs to confirm email
           alert(
-            locale === 'vi'
-              ? 'Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản.'
-              : 'Sign up successful! Please check your email to confirm your account.'
+            locale === "vi"
+              ? "Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản."
+              : "Sign up successful! Please check your email to confirm your account."
           );
           setLoading(false);
         }
@@ -82,15 +84,12 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
 
         if (error) throw error;
 
-        console.log('User signed in:', data.user?.email);
+        console.log("User signed in:", data.user?.email);
         // The onAuthStateChange in page.tsx will handle the redirect
       }
     } catch (err: any) {
-      console.error('Auth error:', err);
-      setError(
-        err.message ||
-          (locale === 'vi' ? 'Lỗi xác thực' : 'Authentication error')
-      );
+      console.error("Auth error:", err);
+      setError(err.message || (locale === "vi" ? "Lỗi xác thực" : "Authentication error"));
       setLoading(false);
     }
   };
@@ -101,20 +100,20 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
         {/* Language Toggle */}
         <div className="flex justify-end mb-6">
           <button
-            onClick={() => onLocaleChange(locale === 'vi' ? 'en' : 'vi')}
+            onClick={() => onLocaleChange(locale === "vi" ? "en" : "vi")}
             className="px-4 py-2 bg-xianxia-accent/20 hover:bg-xianxia-accent/30 rounded-lg text-sm transition-colors"
           >
-            {locale === 'vi' ? 'EN' : 'VN'}
+            {locale === "vi" ? "EN" : "VN"}
           </button>
         </div>
 
         {/* Title */}
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold mb-2 text-xianxia-gold">
-            {locale === 'vi' ? 'Tu Tiên RPG' : 'Xianxia RPG'}
+            {locale === "vi" ? "Tu Tiên RPG" : "Xianxia RPG"}
           </h1>
           <p className="text-xianxia-accent text-lg">
-            {locale === 'vi' ? 'Hành Trình Tu Luyện' : 'Journey of Cultivation'}
+            {locale === "vi" ? "Hành Trình Tu Luyện" : "Journey of Cultivation"}
           </p>
         </div>
 
@@ -122,18 +121,18 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
         <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-8 shadow-2xl">
           <h2 className="text-2xl font-bold text-center mb-6 text-xianxia-gold">
             {isSignUp
-              ? locale === 'vi'
-                ? 'Đăng Ký'
-                : 'Sign Up'
-              : locale === 'vi'
-              ? 'Đăng Nhập'
-              : 'Sign In'}
+              ? locale === "vi"
+                ? "Đăng Ký"
+                : "Sign Up"
+              : locale === "vi"
+                ? "Đăng Nhập"
+                : "Sign In"}
           </h2>
 
           <p className="text-gray-400 text-center mb-6 text-sm">
-            {locale === 'vi'
-              ? 'Đăng nhập để lưu tiến trình tu luyện của bạn'
-              : 'Sign in to save your cultivation progress'}
+            {locale === "vi"
+              ? "Đăng nhập để lưu tiến trình tu luyện của bạn"
+              : "Sign in to save your cultivation progress"}
           </p>
 
           {error && (
@@ -150,7 +149,7 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 bg-xianxia-darker border border-xianxia-accent/30 rounded-lg focus:outline-none focus:border-xianxia-accent"
-                placeholder={locale === 'vi' ? 'email@example.com' : 'email@example.com'}
+                placeholder={locale === "vi" ? "email@example.com" : "email@example.com"}
                 disabled={loading}
                 required
               />
@@ -158,14 +157,14 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
 
             <div>
               <label className="block text-sm font-medium mb-2">
-                {locale === 'vi' ? 'Mật khẩu' : 'Password'}
+                {locale === "vi" ? "Mật khẩu" : "Password"}
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 bg-xianxia-darker border border-xianxia-accent/30 rounded-lg focus:outline-none focus:border-xianxia-accent"
-                placeholder={locale === 'vi' ? 'Tối thiểu 6 ký tự' : 'Minimum 6 characters'}
+                placeholder={locale === "vi" ? "Tối thiểu 6 ký tự" : "Minimum 6 characters"}
                 disabled={loading}
                 required
                 minLength={6}
@@ -178,16 +177,16 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
               className="w-full py-3 bg-xianxia-gold hover:bg-xianxia-gold/80 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-bold transition-colors text-xianxia-darker"
             >
               {loading
-                ? locale === 'vi'
-                  ? 'Đang xử lý...'
-                  : 'Processing...'
+                ? locale === "vi"
+                  ? "Đang xử lý..."
+                  : "Processing..."
                 : isSignUp
-                ? locale === 'vi'
-                  ? 'Đăng Ký'
-                  : 'Sign Up'
-                : locale === 'vi'
-                ? 'Đăng Nhập'
-                : 'Sign In'}
+                  ? locale === "vi"
+                    ? "Đăng Ký"
+                    : "Sign Up"
+                  : locale === "vi"
+                    ? "Đăng Nhập"
+                    : "Sign In"}
             </button>
           </form>
 
@@ -195,18 +194,18 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
             <button
               onClick={() => {
                 setIsSignUp(!isSignUp);
-                setError('');
+                setError("");
               }}
               disabled={loading}
               className="text-sm text-xianxia-accent hover:text-xianxia-gold transition-colors"
             >
               {isSignUp
-                ? locale === 'vi'
-                  ? 'Đã có tài khoản? Đăng nhập'
-                  : 'Already have an account? Sign in'
-                : locale === 'vi'
-                ? 'Chưa có tài khoản? Đăng ký'
-                : "Don't have an account? Sign up"}
+                ? locale === "vi"
+                  ? "Đã có tài khoản? Đăng nhập"
+                  : "Already have an account? Sign in"
+                : locale === "vi"
+                  ? "Chưa có tài khoản? Đăng ký"
+                  : "Don't have an account? Sign up"}
             </button>
           </div>
 
@@ -215,9 +214,9 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
             <button
               onClick={clearAllSessions}
               className="text-xs text-gray-500 hover:text-xianxia-accent transition-colors"
-              title={locale === 'vi' ? 'Xóa phiên đăng nhập cũ' : 'Clear old session'}
+              title={locale === "vi" ? "Xóa phiên đăng nhập cũ" : "Clear old session"}
             >
-              {locale === 'vi' ? '🔄 Xóa phiên cũ' : '🔄 Clear old session'}
+              {locale === "vi" ? "🔄 Xóa phiên cũ" : "🔄 Clear old session"}
             </button>
           </div>
         </div>
@@ -226,15 +225,15 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
         <div className="mt-8 space-y-3 text-sm text-gray-400">
           <div className="flex items-center gap-2">
             <span className="text-xianxia-accent">✓</span>
-            <span>{locale === 'vi' ? 'Lưu tiến trình tự động' : 'Auto-save progress'}</span>
+            <span>{locale === "vi" ? "Lưu tiến trình tự động" : "Auto-save progress"}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xianxia-accent">✓</span>
-            <span>{locale === 'vi' ? 'Chơi trên mọi thiết bị' : 'Play on any device'}</span>
+            <span>{locale === "vi" ? "Chơi trên mọi thiết bị" : "Play on any device"}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xianxia-accent">✓</span>
-            <span>{locale === 'vi' ? 'Kể chuyện bằng AI' : 'AI-powered storytelling'}</span>
+            <span>{locale === "vi" ? "Kể chuyện bằng AI" : "AI-powered storytelling"}</span>
           </div>
         </div>
       </div>

@@ -17,30 +17,29 @@ export async function proxy(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
-          );
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({
             request,
           });
           cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
+            response.cookies.set(name, value, options)
           );
         },
       },
-    },
+    }
   );
 
   // Refresh session if expired - this will automatically handle refresh tokens
   const { error } = await supabase.auth.getUser();
-  
+
   // If there's an auth error, clear the cookies
   if (error) {
-    const cookieNames = request.cookies.getAll().map(c => c.name).filter(name => 
-      name.startsWith('sb-') || name.includes('supabase')
-    );
-    
-    cookieNames.forEach(name => {
+    const cookieNames = request.cookies
+      .getAll()
+      .map((c) => c.name)
+      .filter((name) => name.startsWith("sb-") || name.includes("supabase"));
+
+    cookieNames.forEach((name) => {
       response.cookies.delete(name);
     });
   }

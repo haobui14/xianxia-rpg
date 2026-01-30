@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { GameState } from '@/types/game';
-import { RandomEvent, EventChoice } from '@/types/world';
-import { Locale } from '@/lib/i18n/translations';
+import { useState } from "react";
+import { GameState } from "@/types/game";
+import { RandomEvent, EventChoice } from "@/types/world";
+import { Locale } from "@/lib/i18n/translations";
 
 interface EventModalProps {
   event: RandomEvent | null;
@@ -14,32 +14,26 @@ interface EventModalProps {
 }
 
 const RARITY_COLORS: Record<string, string> = {
-  common: 'text-gray-400',
-  uncommon: 'text-green-400',
-  rare: 'text-blue-400',
-  legendary: 'text-purple-400',
+  common: "text-gray-400",
+  uncommon: "text-green-400",
+  rare: "text-blue-400",
+  legendary: "text-purple-400",
 };
 
 const RARITY_BG: Record<string, string> = {
-  common: 'bg-gray-900/50',
-  uncommon: 'bg-green-900/50',
-  rare: 'bg-blue-900/50',
-  legendary: 'bg-purple-900/50',
+  common: "bg-gray-900/50",
+  uncommon: "bg-green-900/50",
+  rare: "bg-blue-900/50",
+  legendary: "bg-purple-900/50",
 };
 
-export default function EventModal({
-  event,
-  state,
-  locale,
-  onChoice,
-  onClose,
-}: EventModalProps) {
+export default function EventModal({ event, state, locale, onChoice, onClose }: EventModalProps) {
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   if (!event) return null;
 
-  const narrative = locale === 'vi' ? event.narrative : event.narrative_en;
+  const narrative = locale === "vi" ? event.narrative : event.narrative_en;
 
   const handleChoiceClick = async (choiceId: string) => {
     setSelectedChoice(choiceId);
@@ -61,12 +55,12 @@ export default function EventModal({
 
     // Check stat requirement
     if (req.stat) {
-      const parts = req.stat.key.split('.');
+      const parts = req.stat.key.split(".");
       let value: any = state;
       for (const part of parts) {
         value = value?.[part];
       }
-      if (typeof value !== 'number' || value < req.stat.min) {
+      if (typeof value !== "number" || value < req.stat.min) {
         return {
           available: false,
           reason: `Requires ${parts[parts.length - 1]} >= ${req.stat.min}`,
@@ -76,7 +70,7 @@ export default function EventModal({
 
     // Check item requirement
     if (req.item) {
-      const hasItem = state.inventory.items.some(item => item.id === req.item);
+      const hasItem = state.inventory.items.some((item) => item.id === req.item);
       if (!hasItem) {
         return { available: false, reason: `Requires item: ${req.item}` };
       }
@@ -84,7 +78,7 @@ export default function EventModal({
 
     // Check skill requirement
     if (req.skill) {
-      const hasSkill = state.skills.some(skill => skill.id === req.skill);
+      const hasSkill = state.skills.some((skill) => skill.id === req.skill);
       if (!hasSkill) {
         return { available: false, reason: `Requires skill: ${req.skill}` };
       }
@@ -92,7 +86,7 @@ export default function EventModal({
 
     // Check realm requirement
     if (req.realm) {
-      const realms = ['PhàmNhân', 'LuyệnKhí', 'TrúcCơ', 'KếtĐan', 'NguyênAnh'];
+      const realms = ["PhàmNhân", "LuyệnKhí", "TrúcCơ", "KếtĐan", "NguyênAnh"];
       const playerIndex = realms.indexOf(state.progress.realm);
       const requiredIndex = realms.indexOf(req.realm);
       if (playerIndex < requiredIndex) {
@@ -114,12 +108,14 @@ export default function EventModal({
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div className={`max-w-2xl w-full ${RARITY_BG[event.rarity]} border-2 ${RARITY_COLORS[event.rarity]} rounded-lg shadow-2xl`}>
+      <div
+        className={`max-w-2xl w-full ${RARITY_BG[event.rarity]} border-2 ${RARITY_COLORS[event.rarity]} rounded-lg shadow-2xl`}
+      >
         {/* Header */}
         <div className="p-4 border-b border-gray-700">
           <div className="flex items-center justify-between mb-2">
             <h2 className={`text-2xl font-bold ${RARITY_COLORS[event.rarity]}`}>
-              {locale === 'vi' ? event.name : event.name_en}
+              {locale === "vi" ? event.name : event.name_en}
             </h2>
             {onClose && (
               <button
@@ -131,7 +127,9 @@ export default function EventModal({
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className={`text-xs px-2 py-1 rounded ${RARITY_BG[event.rarity]} ${RARITY_COLORS[event.rarity]}`}>
+            <span
+              className={`text-xs px-2 py-1 rounded ${RARITY_BG[event.rarity]} ${RARITY_COLORS[event.rarity]}`}
+            >
               {event.rarity.toUpperCase()}
             </span>
             {event.element_affinity && (
@@ -144,15 +142,13 @@ export default function EventModal({
 
         {/* Narrative */}
         <div className="p-6 bg-xianxia-darker/50">
-          <div className="text-gray-200 leading-relaxed whitespace-pre-wrap">
-            {narrative}
-          </div>
+          <div className="text-gray-200 leading-relaxed whitespace-pre-wrap">{narrative}</div>
         </div>
 
         {/* Choices */}
         <div className="p-4 space-y-2">
           <div className="text-sm text-gray-400 mb-3">
-            {locale === 'vi' ? 'Lựa chọn của ngươi:' : 'Your choice:'}
+            {locale === "vi" ? "Lựa chọn của ngươi:" : "Your choice:"}
           </div>
           {event.choices.map((choice) => {
             const { available, reason } = isChoiceAvailable(choice);
@@ -168,20 +164,18 @@ export default function EventModal({
                 className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
                   available
                     ? selectedChoice === choice.id
-                      ? 'bg-xianxia-accent/20 border-xianxia-accent'
-                      : 'bg-xianxia-dark border-gray-700 hover:border-xianxia-accent/50 hover:bg-xianxia-dark/80'
-                    : 'bg-gray-900/50 border-gray-800 opacity-50 cursor-not-allowed'
+                      ? "bg-xianxia-accent/20 border-xianxia-accent"
+                      : "bg-xianxia-dark border-gray-700 hover:border-xianxia-accent/50 hover:bg-xianxia-dark/80"
+                    : "bg-gray-900/50 border-gray-800 opacity-50 cursor-not-allowed"
                 }`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className={`font-medium ${available ? 'text-white' : 'text-gray-500'}`}>
-                      {locale === 'vi' ? choice.text : choice.text_en}
+                    <div className={`font-medium ${available ? "text-white" : "text-gray-500"}`}>
+                      {locale === "vi" ? choice.text : choice.text_en}
                     </div>
                     {!available && reason && (
-                      <div className="text-xs text-red-400 mt-1">
-                        {reason}
-                      </div>
+                      <div className="text-xs text-red-400 mt-1">{reason}</div>
                     )}
                   </div>
                   {selectedChoice === choice.id && isProcessing && (
@@ -199,17 +193,19 @@ export default function EventModal({
         <div className="p-4 bg-xianxia-darker/30 border-t border-gray-700 text-xs text-gray-400 space-y-1">
           {event.realm_requirement && (
             <div>
-              {locale === 'vi' ? '💫 Yêu cầu tu vi tối thiểu' : '💫 Minimum realm required'}: {event.realm_requirement}
+              {locale === "vi" ? "💫 Yêu cầu tu vi tối thiểu" : "💫 Minimum realm required"}:{" "}
+              {event.realm_requirement}
             </div>
           )}
           {event.regions && (
             <div>
-              {locale === 'vi' ? '🗺️ Vùng' : '🗺️ Regions'}: {event.regions.join(', ')}
+              {locale === "vi" ? "🗺️ Vùng" : "🗺️ Regions"}: {event.regions.join(", ")}
             </div>
           )}
           {event.cooldown_turns && (
             <div>
-              {locale === 'vi' ? '⏱️ Thời gian hồi' : '⏱️ Cooldown'}: {event.cooldown_turns} {locale === 'vi' ? 'lượt' : 'turns'}
+              {locale === "vi" ? "⏱️ Thời gian hồi" : "⏱️ Cooldown"}: {event.cooldown_turns}{" "}
+              {locale === "vi" ? "lượt" : "turns"}
             </div>
           )}
         </div>

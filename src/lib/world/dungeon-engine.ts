@@ -9,12 +9,12 @@ import {
   DungeonReward,
   DungeonActionResult,
   EnemyWave,
-} from '@/types/world';
-import { GameState, Realm, InventoryItem } from '@/types/game';
-import { getDungeonById, getDungeonFloor, canEnterDungeon as checkCanEnter } from './dungeons';
+} from "@/types/world";
+import { GameState, Realm, InventoryItem } from "@/types/game";
+import { getDungeonById, getDungeonFloor, canEnterDungeon as checkCanEnter } from "./dungeons";
 
 // Realm order for comparison
-const REALM_ORDER: Realm[] = ['PhàmNhân', 'LuyệnKhí', 'TrúcCơ', 'KếtĐan', 'NguyênAnh'];
+const REALM_ORDER: Realm[] = ["PhàmNhân", "LuyệnKhí", "TrúcCơ", "KếtĐan", "NguyênAnh"];
 
 /**
  * Initialize dungeon state
@@ -68,8 +68,8 @@ export function canEnterDungeon(
   if (!dungeon) {
     return {
       canEnter: false,
-      reason: 'Dungeon không tồn tại',
-      reason_en: 'Dungeon does not exist',
+      reason: "Dungeon không tồn tại",
+      reason_en: "Dungeon does not exist",
     };
   }
 
@@ -77,14 +77,14 @@ export function canEnterDungeon(
   if (state.dungeon?.dungeon_id) {
     return {
       canEnter: false,
-      reason: 'Đang ở trong dungeon khác',
-      reason_en: 'Already in another dungeon',
+      reason: "Đang ở trong dungeon khác",
+      reason_en: "Already in another dungeon",
     };
   }
 
   // Check dungeon-specific requirements
-  const playerItems = state.inventory.items.map(item => item.id);
-  const playerFlags = Object.keys(state.flags).filter(k => state.flags[k]);
+  const playerItems = state.inventory.items.map((item) => item.id);
+  const playerFlags = Object.keys(state.flags).filter((k) => state.flags[k]);
 
   return checkCanEnter(
     dungeon,
@@ -102,7 +102,10 @@ export function canEnterDungeon(
 export function enterDungeon(
   dungeonId: string,
   dungeonState: DungeonState
-): { newState: DungeonState; entryCost: { silver: number; spirit_stones: number; item?: string } | null } {
+): {
+  newState: DungeonState;
+  entryCost: { silver: number; spirit_stones: number; item?: string } | null;
+} {
   const dungeon = getDungeonById(dungeonId);
   if (!dungeon) {
     return { newState: dungeonState, entryCost: null };
@@ -113,7 +116,9 @@ export function enterDungeon(
   const previousCompletion = dungeonState.completed_dungeons[dungeonId];
   if (previousCompletion && dungeonState.unlocked_shortcuts.length > 0) {
     // Can start from any unlocked shortcut floor
-    const maxShortcut = Math.max(...dungeonState.unlocked_shortcuts.filter(f => f <= dungeon.floors.length));
+    const maxShortcut = Math.max(
+      ...dungeonState.unlocked_shortcuts.filter((f) => f <= dungeon.floors.length)
+    );
     if (maxShortcut > 1) {
       startFloor = maxShortcut;
     }
@@ -145,13 +150,10 @@ export function enterDungeon(
 /**
  * Exit dungeon (voluntary or forced)
  */
-export function exitDungeon(
-  dungeonState: DungeonState,
-  completed: boolean = false
-): DungeonState {
+export function exitDungeon(dungeonState: DungeonState, completed: boolean = false): DungeonState {
   const dungeon = getCurrentDungeon(dungeonState);
 
-  let newCompletedDungeons = { ...dungeonState.completed_dungeons };
+  const newCompletedDungeons = { ...dungeonState.completed_dungeons };
 
   if (completed && dungeon) {
     const existing = newCompletedDungeons[dungeon.id];
@@ -251,10 +253,7 @@ export function tickDungeonTime(dungeonState: DungeonState): {
 /**
  * Collect a chest
  */
-export function collectChest(
-  dungeonState: DungeonState,
-  chestId: string
-): DungeonState {
+export function collectChest(dungeonState: DungeonState, chestId: string): DungeonState {
   if (dungeonState.collected_chests.includes(chestId)) {
     return dungeonState;
   }
@@ -268,10 +267,7 @@ export function collectChest(
 /**
  * Discover a secret
  */
-export function discoverSecret(
-  dungeonState: DungeonState,
-  secretId: string
-): DungeonState {
+export function discoverSecret(dungeonState: DungeonState, secretId: string): DungeonState {
   if (dungeonState.discovered_secrets.includes(secretId)) {
     return dungeonState;
   }
@@ -285,10 +281,7 @@ export function discoverSecret(
 /**
  * Unlock a shortcut
  */
-export function unlockShortcut(
-  dungeonState: DungeonState,
-  floorNumber: number
-): DungeonState {
+export function unlockShortcut(dungeonState: DungeonState, floorNumber: number): DungeonState {
   if (dungeonState.unlocked_shortcuts.includes(floorNumber)) {
     return dungeonState;
   }
@@ -320,7 +313,7 @@ export function getRandomEnemyWave(
   if (!floor) return null;
 
   // Filter waves by spawn chance
-  const possibleWaves = floor.enemy_waves.filter(wave => rng() < wave.spawn_chance);
+  const possibleWaves = floor.enemy_waves.filter((wave) => rng() < wave.spawn_chance);
 
   if (possibleWaves.length === 0) return null;
 
@@ -394,10 +387,7 @@ export function isDungeonComplete(dungeonState: DungeonState): boolean {
 
   // Check if on final floor and boss defeated
   const finalFloor = dungeon.floors[dungeon.floors.length - 1];
-  return (
-    dungeonState.current_floor === finalFloor.floor_number &&
-    dungeonState.boss_defeated
-  );
+  return dungeonState.current_floor === finalFloor.floor_number && dungeonState.boss_defeated;
 }
 
 /**
@@ -439,8 +429,8 @@ export function getAvailableChests(dungeonState: DungeonState): {
   const floor = getCurrentFloor(dungeonState);
   if (!floor) return { regular: 0, hidden: 0, collected: 0 };
 
-  const collectedOnFloor = dungeonState.collected_chests.filter(
-    id => id.startsWith(`floor_${dungeonState.current_floor}_`)
+  const collectedOnFloor = dungeonState.collected_chests.filter((id) =>
+    id.startsWith(`floor_${dungeonState.current_floor}_`)
   ).length;
 
   return {
@@ -460,18 +450,24 @@ export function canUnlockShortcut(
 ): { canUnlock: boolean; reason?: string } {
   const floor = getCurrentFloor(dungeonState);
   if (!floor || !floor.has_shortcut) {
-    return { canUnlock: false, reason: 'No shortcut on this floor' };
+    return { canUnlock: false, reason: "No shortcut on this floor" };
   }
 
   if (dungeonState.unlocked_shortcuts.includes(floor.floor_number)) {
-    return { canUnlock: false, reason: 'Shortcut already unlocked' };
+    return { canUnlock: false, reason: "Shortcut already unlocked" };
   }
 
   if (floor.shortcut_requirements) {
-    if (floor.shortcut_requirements.item && !playerItems.includes(floor.shortcut_requirements.item)) {
+    if (
+      floor.shortcut_requirements.item &&
+      !playerItems.includes(floor.shortcut_requirements.item)
+    ) {
       return { canUnlock: false, reason: `Requires item: ${floor.shortcut_requirements.item}` };
     }
-    if (floor.shortcut_requirements.skill && !playerSkills.includes(floor.shortcut_requirements.skill)) {
+    if (
+      floor.shortcut_requirements.skill &&
+      !playerSkills.includes(floor.shortcut_requirements.skill)
+    ) {
       return { canUnlock: false, reason: `Requires skill: ${floor.shortcut_requirements.skill}` };
     }
   }
@@ -485,18 +481,18 @@ export function canUnlockShortcut(
 export function getDifficultyRating(
   dungeonId: string,
   playerRealm: Realm
-): 'easy' | 'normal' | 'hard' | 'deadly' {
+): "easy" | "normal" | "hard" | "deadly" {
   const dungeon = getDungeonById(dungeonId);
-  if (!dungeon) return 'normal';
+  if (!dungeon) return "normal";
 
   const playerIndex = REALM_ORDER.indexOf(playerRealm);
   const recommendedIndex = REALM_ORDER.indexOf(dungeon.recommended_realm);
   const diff = playerIndex - recommendedIndex;
 
-  if (diff >= 2) return 'easy';
-  if (diff >= 0) return 'normal';
-  if (diff >= -1) return 'hard';
-  return 'deadly';
+  if (diff >= 2) return "easy";
+  if (diff >= 0) return "normal";
+  if (diff >= -1) return "hard";
+  return "deadly";
 }
 
 /**

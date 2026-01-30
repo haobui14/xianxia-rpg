@@ -11,10 +11,7 @@ import {
 } from "@/lib/database/syncHelper";
 
 // Generate market items using AI-like logic
-function generateMarketItems(
-  state: GameState,
-  rng: DeterministicRNG,
-): MarketItem[] {
+function generateMarketItems(state: GameState, rng: DeterministicRNG): MarketItem[] {
   const items: MarketItem[] = [];
   const itemCount = rng.randomInt(8, 15);
 
@@ -40,10 +37,7 @@ function generateMarketItems(
   return items;
 }
 
-function selectRarity(
-  weights: Record<string, number>,
-  rng: DeterministicRNG,
-): string {
+function selectRarity(weights: Record<string, number>, rng: DeterministicRNG): string {
   const total = Object.values(weights).reduce((a, b) => a + b, 0);
   let roll = rng.random() * total;
 
@@ -59,18 +53,9 @@ function generateEquipment(
   id: number,
   rarity: string,
   rng: DeterministicRNG,
-  realm: string,
+  realm: string
 ): MarketItem {
-  const slots = [
-    "Weapon",
-    "Head",
-    "Chest",
-    "Legs",
-    "Feet",
-    "Hands",
-    "Accessory",
-    "Artifact",
-  ];
+  const slots = ["Weapon", "Head", "Chest", "Legs", "Feet", "Hands", "Accessory", "Artifact"];
   const slot = slots[rng.randomInt(0, slots.length - 1)];
 
   const rarityMultiplier =
@@ -86,15 +71,7 @@ function generateEquipment(
 
   const bonus_stats: any = {};
   const statCount = rng.randomInt(1, 3);
-  const availableStats = [
-    "str",
-    "agi",
-    "int",
-    "perception",
-    "luck",
-    "hp",
-    "qi",
-  ];
+  const availableStats = ["str", "agi", "int", "perception", "luck", "hp", "qi"];
 
   for (let i = 0; i < statCount; i++) {
     const stat = availableStats[rng.randomInt(0, availableStats.length - 1)];
@@ -117,9 +94,7 @@ function generateEquipment(
     bonus_stats,
     price_silver: rng.randomInt(basePriceSilver, basePriceSilver * 2),
     price_spirit_stones:
-      basePriceStones > 0
-        ? rng.randomInt(basePriceStones, basePriceStones * 2)
-        : 0,
+      basePriceStones > 0 ? rng.randomInt(basePriceStones, basePriceStones * 2) : 0,
   };
 }
 
@@ -127,7 +102,7 @@ function generateConsumable(
   id: number,
   rarity: string,
   rng: DeterministicRNG,
-  realm: string,
+  realm: string
 ): MarketItem {
   const types = [
     {
@@ -183,8 +158,7 @@ function generateConsumable(
     quantity: rng.randomInt(1, 5),
     effects,
     price_silver: rng.randomInt(30, 80) * rarityMultiplier,
-    price_spirit_stones:
-      rarityMultiplier > 2 ? rng.randomInt(1, rarityMultiplier) : 0,
+    price_spirit_stones: rarityMultiplier > 2 ? rng.randomInt(1, rarityMultiplier) : 0,
   };
 }
 
@@ -192,7 +166,7 @@ function generateConsumable(
 async function initializeMarket(
   state: GameState,
   worldSeed: string,
-  runId: string,
+  runId: string
 ): Promise<GameState> {
   const generationMonth = state.time_year * 12 + state.time_month;
 
@@ -239,35 +213,41 @@ async function initializeMarket(
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerClient();
-    
+
     // First check if we have a session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
     if (sessionError || !session) {
-      console.error('Session error in market GET:', sessionError);
-      return NextResponse.json({ 
-        error: "Not authenticated - please sign in again" 
-      }, { status: 401 });
+      console.error("Session error in market GET:", sessionError);
+      return NextResponse.json(
+        {
+          error: "Not authenticated - please sign in again",
+        },
+        { status: 401 }
+      );
     }
-    
+
     const {
       data: { user },
-      error: userError
+      error: userError,
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      console.error('User error in market GET:', userError);
-      return NextResponse.json({ 
-        error: "Not authenticated - please sign in again" 
-      }, { status: 401 });
+      console.error("User error in market GET:", userError);
+      return NextResponse.json(
+        {
+          error: "Not authenticated - please sign in again",
+        },
+        { status: 401 }
+      );
     }
 
     const characters = await characterQueries.getByUserId(user.id);
     if (characters.length === 0) {
-      return NextResponse.json(
-        { error: "Character not found" },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "Character not found" }, { status: 404 });
     }
 
     const character = characters[0];
@@ -285,10 +265,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, state });
   } catch (error) {
     console.error("Market init error:", error);
-    return NextResponse.json(
-      { error: "Failed to initialize market" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to initialize market" }, { status: 500 });
   }
 }
 
@@ -298,36 +275,42 @@ export async function POST(request: NextRequest) {
 
     // Get authenticated user
     const supabase = await createServerClient();
-    
+
     // First check if we have a session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
     if (sessionError || !session) {
-      console.error('Session error in market POST:', sessionError);
-      return NextResponse.json({ 
-        error: "Not authenticated - please sign in again" 
-      }, { status: 401 });
+      console.error("Session error in market POST:", sessionError);
+      return NextResponse.json(
+        {
+          error: "Not authenticated - please sign in again",
+        },
+        { status: 401 }
+      );
     }
-    
+
     const {
       data: { user },
-      error: userError
+      error: userError,
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      console.error('User error in market POST:', userError);
-      return NextResponse.json({ 
-        error: "Not authenticated - please sign in again" 
-      }, { status: 401 });
+      console.error("User error in market POST:", userError);
+      return NextResponse.json(
+        {
+          error: "Not authenticated - please sign in again",
+        },
+        { status: 401 }
+      );
     }
 
     // Get character
     const characters = await characterQueries.getByUserId(user.id);
     if (characters.length === 0) {
-      return NextResponse.json(
-        { error: "Character not found" },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "Character not found" }, { status: 404 });
     }
 
     const character = characters[0];
@@ -349,10 +332,7 @@ export async function POST(request: NextRequest) {
       const REFRESH_COST = 20;
 
       if (state.inventory.spirit_stones < REFRESH_COST) {
-        return NextResponse.json(
-          { error: "Not enough spirit stones (need 20)" },
-          { status: 400 },
-        );
+        return NextResponse.json({ error: "Not enough spirit stones (need 20)" }, { status: 400 });
       }
 
       // Deduct spirit stones
@@ -381,10 +361,7 @@ export async function POST(request: NextRequest) {
       }
 
       if (state.inventory.spirit_stones < stonesToExchange) {
-        return NextResponse.json(
-          { error: "Not enough spirit stones" },
-          { status: 400 },
-        );
+        return NextResponse.json({ error: "Not enough spirit stones" }, { status: 400 });
       }
 
       // Exchange
@@ -398,29 +375,19 @@ export async function POST(request: NextRequest) {
 
       // Check affordability
       if (item.price_silver && state.inventory.silver < item.price_silver) {
-        return NextResponse.json(
-          { error: "Not enough silver" },
-          { status: 400 },
-        );
+        return NextResponse.json({ error: "Not enough silver" }, { status: 400 });
       }
-      if (
-        item.price_spirit_stones &&
-        state.inventory.spirit_stones < item.price_spirit_stones
-      ) {
-        return NextResponse.json(
-          { error: "Not enough spirit stones" },
-          { status: 400 },
-        );
+      if (item.price_spirit_stones && state.inventory.spirit_stones < item.price_spirit_stones) {
+        return NextResponse.json({ error: "Not enough spirit stones" }, { status: 400 });
       }
 
       // Deduct currency
       if (item.price_silver) state.inventory.silver -= item.price_silver;
-      if (item.price_spirit_stones)
-        state.inventory.spirit_stones -= item.price_spirit_stones;
+      if (item.price_spirit_stones) state.inventory.spirit_stones -= item.price_spirit_stones;
 
       // Add to inventory
       const existingItem = state.inventory.items.find(
-        (inv) => inv.id === item.id && inv.type === item.type,
+        (inv) => inv.id === item.id && inv.type === item.type
       );
 
       if (existingItem) {
@@ -444,7 +411,7 @@ export async function POST(request: NextRequest) {
         item.quantity,
         item.price_silver || 0,
         item.price_spirit_stones || 0,
-        { year: state.time_year, month: state.time_month, day: state.time_day },
+        { year: state.time_year, month: state.time_month, day: state.time_day }
       );
     } else if (action === "sell") {
       const itemIndex = state.inventory.items.findIndex((i) => i.id === itemId);
@@ -475,16 +442,11 @@ export async function POST(request: NextRequest) {
       }
 
       // Record transaction in history
-      await recordMarketTransaction(
-        run.id,
-        "sell",
-        item.id,
-        item.name,
-        1,
-        sellPrice,
-        0,
-        { year: state.time_year, month: state.time_month, day: state.time_day },
-      );
+      await recordMarketTransaction(run.id, "sell", item.id, item.name, 1, sellPrice, 0, {
+        year: state.time_year,
+        month: state.time_month,
+        day: state.time_day,
+      });
     }
 
     await runQueries.update(run.id, state);
@@ -495,10 +457,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, state });
   } catch (error) {
     console.error("Market error:", error);
-    return NextResponse.json(
-      { error: "Market operation failed" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Market operation failed" }, { status: 500 });
   }
 }
 
@@ -508,7 +467,6 @@ function shouldRegenerateMarket(state: GameState): boolean {
   const { next_regeneration } = state.market;
   return (
     state.time_year > next_regeneration.year ||
-    (state.time_year === next_regeneration.year &&
-      state.time_month >= next_regeneration.month)
+    (state.time_year === next_regeneration.year && state.time_month >= next_regeneration.month)
   );
 }

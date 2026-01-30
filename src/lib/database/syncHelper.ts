@@ -6,11 +6,7 @@
 
 import { supabase } from "./client";
 import { GameState } from "@/types/game";
-import {
-  marketQueries,
-  combatQueries,
-  leaderboardQueries,
-} from "./extendedQueries";
+import { marketQueries, combatQueries, leaderboardQueries } from "./extendedQueries";
 
 /**
  * Sync inventory from JSONB to normalized tables
@@ -19,7 +15,7 @@ import {
 export async function syncInventoryToTables(
   runId: string,
   inventory: GameState["inventory"],
-  equippedItems: GameState["equipped_items"],
+  equippedItems: GameState["equipped_items"]
 ) {
   try {
     // Prepare inventory items
@@ -96,8 +92,7 @@ export async function loadInventoryFromTables(runId: string): Promise<{
 
     const equippedItems: GameState["equipped_items"] = {};
     (equippedData || []).forEach((eq: any) => {
-      equippedItems[eq.slot as keyof GameState["equipped_items"]] =
-        eq.item_data;
+      equippedItems[eq.slot as keyof GameState["equipped_items"]] = eq.item_data;
     });
 
     return { inventory, equippedItems };
@@ -113,7 +108,7 @@ export async function loadInventoryFromTables(runId: string): Promise<{
 export async function syncMarketToTables(
   worldSeed: string,
   generationQuarter: number,
-  items: any[],
+  items: any[]
 ) {
   try {
     // Use imported supabase
@@ -150,10 +145,7 @@ export async function syncMarketToTables(
 /**
  * Load market listings from tables
  */
-export async function loadMarketFromTables(
-  worldSeed: string,
-  generationQuarter: number,
-) {
+export async function loadMarketFromTables(worldSeed: string, generationQuarter: number) {
   try {
     // Use imported supabase
 
@@ -188,7 +180,7 @@ export async function recordCombatHistory(
   playerDamageTaken: number,
   rewards: any,
   gameDate: { year: number; month: number; day: number },
-  turnNo: number,
+  turnNo: number
 ) {
   try {
     await combatQueries.recordCombat(
@@ -200,7 +192,7 @@ export async function recordCombatHistory(
       playerDamageTaken,
       rewards,
       gameDate,
-      turnNo,
+      turnNo
     );
     return { success: true };
   } catch (error) {
@@ -216,7 +208,7 @@ export async function updatePlayerStats(
   runId: string,
   characterName: string,
   state: GameState,
-  combatWins: number = 0,
+  combatWins: number = 0
 ) {
   try {
     await leaderboardQueries.updateStatistics(
@@ -228,7 +220,7 @@ export async function updatePlayerStats(
       state.inventory.spirit_stones,
       combatWins,
       state.progress.cultivation_exp,
-      0, // achievements count - would need to track this
+      0 // achievements count - would need to track this
     );
 
     return { success: true };
@@ -249,7 +241,7 @@ export async function recordMarketTransaction(
   quantity: number,
   priceSilver: number,
   priceSpiritStones: number,
-  gameDate: { year: number; month: number; day: number },
+  gameDate: { year: number; month: number; day: number }
 ) {
   try {
     await marketQueries.recordTransaction(
@@ -260,7 +252,7 @@ export async function recordMarketTransaction(
       quantity,
       priceSilver,
       priceSpiritStones,
-      gameDate,
+      gameDate
     );
     return { success: true };
   } catch (error) {
@@ -272,10 +264,7 @@ export async function recordMarketTransaction(
 /**
  * Sync skills from JSONB state to normalized table
  */
-export async function syncSkillsToTables(
-  runId: string,
-  skills: GameState["skills"],
-) {
+export async function syncSkillsToTables(runId: string, skills: GameState["skills"]) {
   try {
     if (!skills || skills.length === 0) return { success: true };
 
@@ -323,9 +312,7 @@ async function syncSkillsDirect(runId: string, skills: GameState["skills"]) {
         experience: skill.exp || 0,
       }));
 
-      const { error } = await supabase
-        .from("character_skills")
-        .insert(skillRecords);
+      const { error } = await supabase.from("character_skills").insert(skillRecords);
 
       if (error) throw error;
     }
@@ -340,10 +327,7 @@ async function syncSkillsDirect(runId: string, skills: GameState["skills"]) {
 /**
  * Sync techniques from JSONB state to normalized table
  */
-export async function syncTechniquesToTables(
-  runId: string,
-  techniques: GameState["techniques"],
-) {
+export async function syncTechniquesToTables(runId: string, techniques: GameState["techniques"]) {
   try {
     if (!techniques || techniques.length === 0) return { success: true };
 
@@ -376,10 +360,7 @@ export async function syncTechniquesToTables(
 /**
  * Direct sync for techniques (fallback if RPC not available)
  */
-async function syncTechniquesDirect(
-  runId: string,
-  techniques: GameState["techniques"],
-) {
+async function syncTechniquesDirect(runId: string, techniques: GameState["techniques"]) {
   try {
     // Delete existing techniques for this run
     await supabase.from("character_techniques").delete().eq("run_id", runId);
@@ -393,9 +374,7 @@ async function syncTechniquesDirect(
         mastery_level: 1,
       }));
 
-      const { error } = await supabase
-        .from("character_techniques")
-        .insert(techRecords);
+      const { error } = await supabase.from("character_techniques").insert(techRecords);
 
       if (error) throw error;
     }
@@ -410,14 +389,9 @@ async function syncTechniquesDirect(
 /**
  * Load skills from normalized tables
  */
-export async function loadSkillsFromTables(
-  runId: string,
-): Promise<GameState["skills"] | null> {
+export async function loadSkillsFromTables(runId: string): Promise<GameState["skills"] | null> {
   try {
-    const { data, error } = await supabase
-      .from("character_skills")
-      .select("*")
-      .eq("run_id", runId);
+    const { data, error } = await supabase.from("character_skills").select("*").eq("run_id", runId);
 
     if (error) throw error;
 
@@ -435,7 +409,7 @@ export async function loadSkillsFromTables(
  * Load techniques from normalized tables
  */
 export async function loadTechniquesFromTables(
-  runId: string,
+  runId: string
 ): Promise<GameState["techniques"] | null> {
   try {
     const { data, error } = await supabase
@@ -455,11 +429,7 @@ export async function loadTechniquesFromTables(
 /**
  * Full sync - sync entire game state to tables
  */
-export async function fullSync(
-  runId: string,
-  state: GameState,
-  characterName: string,
-) {
+export async function fullSync(runId: string, state: GameState, characterName: string) {
   await syncInventoryToTables(runId, state.inventory, state.equipped_items);
   await syncSkillsToTables(runId, state.skills);
   await syncTechniquesToTables(runId, state.techniques);

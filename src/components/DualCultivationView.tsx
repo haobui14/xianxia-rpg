@@ -1,20 +1,45 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { GameState } from '@/types/game';
-import { Locale } from '@/lib/i18n/translations';
+import { useState } from "react";
+import { GameState } from "@/types/game";
+import { Locale } from "@/lib/i18n/translations";
 import {
   BODY_REALM_NAMES,
+  BODY_REALM_BONUSES,
+  BODY_STAGE_BONUSES,
   CULTIVATION_PATH_NAMES,
   getBodyCultivationProgress,
   getBodyExpToNext,
-} from '@/lib/game/dual-cultivation';
+  getNextBodyRealm,
+} from "@/lib/game/dual-cultivation";
+import ParticleEffect from "./ParticleEffect";
 
 interface DualCultivationViewProps {
   state: GameState;
   locale: Locale;
   onToggleDualCultivation?: () => Promise<void>;
   onSetExpSplit?: (split: number) => Promise<void>;
+}
+
+// Tooltip component
+function Tooltip({ content, children }: { content: string; children: React.ReactNode }) {
+  const [isVisible, setIsVisible] = useState(false);
+
+  return (
+    <div
+      className="relative inline-block"
+      onMouseEnter={() => setIsVisible(true)}
+      onMouseLeave={() => setIsVisible(false)}
+    >
+      {children}
+      {isVisible && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-xianxia-darker border border-xianxia-accent/30 rounded-lg text-xs text-gray-200 whitespace-nowrap z-50 animate-fade-in shadow-lg max-w-xs">
+          {content}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-xianxia-darker" />
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function DualCultivationView({
@@ -25,14 +50,42 @@ export default function DualCultivationView({
 }: DualCultivationViewProps) {
   const [tempSplit, setTempSplit] = useState(state.progress.exp_split ?? 100);
   const [isAdjusting, setIsAdjusting] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
 
-  const isDualMode = state.progress.cultivation_path === 'dual';
-  const bodyRealm = state.progress.body_realm || 'PhàmThể';
+  const isDualMode = state.progress.cultivation_path === "dual";
+  const bodyRealm = state.progress.body_realm || "PhàmThể";
   const bodyStage = state.progress.body_stage || 0;
   const bodyExp = state.progress.body_exp || 0;
   const bodyProgress = getBodyCultivationProgress(state.progress);
   const bodyExpNeeded = getBodyExpToNext(state.progress);
   const expSplit = state.progress.exp_split ?? 100;
+  const nextBodyRealm = getNextBodyRealm(bodyRealm);
+
+  // Calculate current bonuses from body cultivation
+  const currentBonuses = {
+    hp:
+      bodyStage * BODY_STAGE_BONUSES.hp +
+      (bodyRealm !== "PhàmThể" ? BODY_REALM_BONUSES[bodyRealm].hp : 0),
+    str:
+      Math.floor(bodyStage * BODY_STAGE_BONUSES.str) +
+      (bodyRealm !== "PhàmThể" ? BODY_REALM_BONUSES[bodyRealm].str : 0),
+    stamina:
+      bodyStage * BODY_STAGE_BONUSES.stamina +
+      (bodyRealm !== "PhàmThể" ? BODY_REALM_BONUSES[bodyRealm].stamina : 0),
+  };
+
+  // Calculate next stage bonuses
+  const nextStageBonuses = {
+    hp:
+      (bodyStage + 1) * BODY_STAGE_BONUSES.hp +
+      (bodyRealm !== "PhàmThể" ? BODY_REALM_BONUSES[bodyRealm].hp : 0),
+    str:
+      Math.floor((bodyStage + 1) * BODY_STAGE_BONUSES.str) +
+      (bodyRealm !== "PhàmThể" ? BODY_REALM_BONUSES[bodyRealm].str : 0),
+    stamina:
+      (bodyStage + 1) * BODY_STAGE_BONUSES.stamina +
+      (bodyRealm !== "PhàmThể" ? BODY_REALM_BONUSES[bodyRealm].stamina : 0),
+  };
 
   const handleSplitChange = (value: number) => {
     setTempSplit(value);
@@ -46,216 +99,433 @@ export default function DualCultivationView({
     }
   };
 
-  // Get realm colors
-  const getBodyRealmColor = (realm: string): string => {
-    switch (realm) {
-      case 'PhàmThể': return 'text-gray-400';
-      case 'LuyệnCốt': return 'text-yellow-600';
-      case 'ĐồngCân': return 'text-orange-500';
-      case 'KimCương': return 'text-cyan-400';
-      case 'TháiCổ': return 'text-purple-500';
-      default: return 'text-gray-400';
+  const handleToggle = async () => {
+    if (onToggleDualCultivation) {
+      setIsToggling(true);
+      await onToggleDualCultivation();
+      setIsToggling(false);
     }
   };
 
+  // Get realm colors
+  const getBodyRealmColor = (realm: string): string => {
+    switch (realm) {
+      case "PhàmThể":
+        return "text-gray-400";
+      case "LuyệnCốt":
+        return "text-yellow-600";
+      case "ĐồngCân":
+        return "text-orange-500";
+      case "KimCương":
+        return "text-cyan-400";
+      case "TháiCổ":
+        return "text-purple-500";
+      default:
+        return "text-gray-400";
+    }
+  };
+
+  const getBodyRealmBgColor = (realm: string): string => {
+    switch (realm) {
+      case "PhàmThể":
+        return "from-gray-600 to-gray-400";
+      case "LuyệnCốt":
+        return "from-yellow-600 to-yellow-400";
+      case "ĐồngCân":
+        return "from-orange-600 to-orange-400";
+      case "KimCương":
+        return "from-cyan-600 to-cyan-400";
+      case "TháiCổ":
+        return "from-purple-600 to-purple-400";
+      default:
+        return "from-gray-600 to-gray-400";
+    }
+  };
+
+  // Check if ready for body breakthrough
+  const isReadyForBodyBreakthrough =
+    bodyStage >= 5 && bodyExp >= bodyExpNeeded && nextBodyRealm !== null;
+
   return (
-    <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-      <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">
-        {locale === 'vi' ? '🔄 Tu Luyện Song Đạo' : '🔄 Dual Cultivation'}
+    <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6 relative overflow-hidden">
+      {/* Background particles for dual mode */}
+      {isDualMode && (
+        <ParticleEffect
+          type="cultivation"
+          isActive={true}
+          intensity="low"
+          colors={["#f97316", "#8b5cf6"]}
+        />
+      )}
+
+      <h2 className="text-2xl font-bold mb-4 text-xianxia-gold relative z-10">
+        {locale === "vi" ? "🔄 Tu Luyện Song Đạo" : "🔄 Dual Cultivation"}
       </h2>
 
-      {/* Dual Cultivation Toggle */}
-      <div className="mb-6 p-4 bg-xianxia-darker rounded-lg">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <div className="font-semibold">
-              {locale === 'vi' ? 'Chế độ tu luyện' : 'Cultivation Mode'}
-            </div>
-            <div className="text-sm text-gray-400">
-              {isDualMode
-                ? (locale === 'vi'
-                    ? 'Song tu cả khí và thể, kinh nghiệm được chia đôi'
-                    : 'Cultivating both Qi and Body, experience is split')
-                : (locale === 'vi'
-                    ? 'Chỉ tu khí, tập trung vào linh lực'
-                    : 'Qi only, focus on spiritual energy')}
+      {/* Status Summary Card */}
+      <div className="mb-6 p-4 bg-gradient-to-r from-purple-900/30 to-orange-900/30 rounded-lg border border-purple-500/30 relative z-10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-3 h-3 rounded-full ${isDualMode ? "bg-green-500 animate-pulse" : "bg-gray-500"}`}
+            />
+            <div>
+              <div className="font-semibold text-white">
+                {isDualMode
+                  ? locale === "vi"
+                    ? "Song Tu Đang Hoạt Động"
+                    : "Dual Cultivation Active"
+                  : locale === "vi"
+                    ? "Chỉ Tu Khí"
+                    : "Qi Cultivation Only"}
+              </div>
+              <div className="text-xs text-gray-400">
+                {isDualMode
+                  ? locale === "vi"
+                    ? `Khí: ${expSplit}% | Thể: ${100 - expSplit}%`
+                    : `Qi: ${expSplit}% | Body: ${100 - expSplit}%`
+                  : locale === "vi"
+                    ? "Tất cả kinh nghiệm vào tu khí"
+                    : "All exp goes to Qi cultivation"}
+              </div>
             </div>
           </div>
           {onToggleDualCultivation && (
-            <button
-              onClick={onToggleDualCultivation}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            <Tooltip
+              content={
                 isDualMode
-                  ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                  : 'bg-gray-600 hover:bg-gray-500 text-white'
-              }`}
+                  ? locale === "vi"
+                    ? "Tắt song tu (giữ tiến độ thể chất)"
+                    : "Disable dual (keeps body progress)"
+                  : locale === "vi"
+                    ? "Bật song tu để tăng sức mạnh vật lý"
+                    : "Enable dual to increase physical power"
+              }
             >
-              {isDualMode
-                ? (locale === 'vi' ? '✓ Song Tu' : '✓ Dual Mode')
-                : (locale === 'vi' ? 'Bật Song Tu' : 'Enable Dual')}
-            </button>
+              <button
+                onClick={handleToggle}
+                disabled={isToggling}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
+                  isDualMode
+                    ? "bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/30"
+                    : "bg-gray-700 hover:bg-gray-600 text-white border border-gray-600"
+                } ${isToggling ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                {isToggling
+                  ? locale === "vi"
+                    ? "..."
+                    : "..."
+                  : isDualMode
+                    ? locale === "vi"
+                      ? "✓ Đang Song Tu"
+                      : "✓ Dual Active"
+                    : locale === "vi"
+                      ? "Kích Hoạt"
+                      : "Activate"}
+              </button>
+            </Tooltip>
           )}
         </div>
       </div>
 
-      {/* Body Cultivation Progress (only show in dual mode) */}
-      {isDualMode && (
+      {/* Body Cultivation Progress - Always show if has any progress */}
+      {(isDualMode || bodyExp > 0 || bodyStage > 0 || bodyRealm !== "PhàmThể") && (
         <>
           {/* Body Realm Display */}
-          <div className="mb-6 p-4 bg-xianxia-darker rounded-lg">
+          <div
+            className={`mb-6 p-4 bg-xianxia-darker rounded-lg relative z-10 ${isReadyForBodyBreakthrough ? "animate-breakthrough-ready border-2 border-orange-500" : "border border-xianxia-accent/10"}`}
+          >
             <div className="flex items-center justify-between mb-3">
               <div>
-                <div className="text-sm text-gray-400">
-                  {locale === 'vi' ? 'Cảnh giới thể chất' : 'Body Realm'}
-                </div>
-                <div className={`text-xl font-bold ${getBodyRealmColor(bodyRealm)}`}>
-                  {BODY_REALM_NAMES[bodyRealm][locale === 'vi' ? 'vi' : 'en']} {bodyStage + 1}
+                <Tooltip
+                  content={
+                    locale === "vi"
+                      ? "Cảnh giới tu thể - tăng HP, Sức mạnh và Thể lực"
+                      : "Body cultivation realm - increases HP, STR and Stamina"
+                  }
+                >
+                  <div className="text-sm text-gray-400 cursor-help">
+                    {locale === "vi" ? "🏋️ Cảnh Giới Thể Chất" : "🏋️ Body Realm"}
+                  </div>
+                </Tooltip>
+                <div
+                  className={`text-xl font-bold ${getBodyRealmColor(bodyRealm)} flex items-center gap-2`}
+                >
+                  {BODY_REALM_NAMES[bodyRealm][locale === "vi" ? "vi" : "en"]}
+                  <span className="text-lg opacity-80">
+                    {locale === "vi" ? `Tầng ${bodyStage + 1}` : `Stage ${bodyStage + 1}`}
+                  </span>
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-sm text-gray-400">
-                  {locale === 'vi' ? 'Kinh nghiệm thể chất' : 'Body Exp'}
+                  {locale === "vi" ? "Tiến Độ" : "Progress"}
                 </div>
                 <div className="text-lg font-semibold text-orange-400">
-                  {bodyExp} / {bodyExpNeeded === Infinity ? '∞' : bodyExpNeeded}
+                  {bodyExp.toLocaleString()} /{" "}
+                  {bodyExpNeeded === Infinity ? "∞" : bodyExpNeeded.toLocaleString()}
                 </div>
               </div>
             </div>
 
             {/* Body Progress Bar */}
-            <div className="relative h-4 bg-gray-700 rounded-full overflow-hidden">
+            <div className="relative h-5 bg-gray-700 rounded-full overflow-hidden mb-3">
               <div
-                className="h-full bg-gradient-to-r from-orange-600 to-red-500 transition-all duration-500"
+                className={`h-full bg-gradient-to-r ${getBodyRealmBgColor(bodyRealm)} transition-all duration-500 relative`}
                 style={{ width: `${bodyProgress}%` }}
-              />
-              <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow">
+              >
+                {/* Shimmer effect */}
+                <div
+                  className="absolute inset-0 animate-shimmer"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)",
+                    backgroundSize: "200% 100%",
+                  }}
+                />
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow-lg">
                 {bodyProgress}%
               </div>
             </div>
 
+            {/* Stage indicators */}
+            <div className="flex justify-center gap-1 mb-3">
+              {Array.from({ length: 5 }, (_, i) => (
+                <div
+                  key={i}
+                  className={`w-3 h-3 rounded-full transition-all ${
+                    i < bodyStage
+                      ? `bg-gradient-to-r ${getBodyRealmBgColor(bodyRealm)}`
+                      : i === bodyStage
+                        ? "bg-orange-500 animate-pulse"
+                        : "bg-gray-600"
+                  }`}
+                  title={`${locale === "vi" ? "Tầng" : "Stage"} ${i + 1}`}
+                />
+              ))}
+            </div>
+
             {/* Body Bonuses Display */}
-            <div className="mt-3 grid grid-cols-3 gap-2 text-center text-sm">
-              <div className="p-2 bg-red-900/30 rounded">
-                <div className="text-red-400">HP</div>
-                <div className="font-bold">
-                  +{bodyStage * 5 + (bodyRealm === 'PhàmThể' ? 0 : 10)}
-                </div>
-              </div>
-              <div className="p-2 bg-orange-900/30 rounded">
-                <div className="text-orange-400">{locale === 'vi' ? 'Sức mạnh' : 'STR'}</div>
-                <div className="font-bold">
-                  +{Math.floor(bodyStage * 0.5 + (bodyRealm === 'PhàmThể' ? 0 : 1))}
-                </div>
-              </div>
-              <div className="p-2 bg-green-900/30 rounded">
-                <div className="text-green-400">{locale === 'vi' ? 'Thể lực' : 'Stamina'}</div>
-                <div className="font-bold">
-                  +{bodyStage * 2 + (bodyRealm === 'PhàmThể' ? 0 : 5)}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Exp Split Slider */}
-          <div className="p-4 bg-xianxia-darker rounded-lg">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-sm text-gray-400">
-                {locale === 'vi' ? 'Phân chia kinh nghiệm' : 'Experience Split'}
-              </div>
-              <div className="text-sm">
-                <span className="text-blue-400">{locale === 'vi' ? 'Khí' : 'Qi'}: {tempSplit}%</span>
-                <span className="text-gray-500 mx-2">|</span>
-                <span className="text-orange-400">{locale === 'vi' ? 'Thể' : 'Body'}: {100 - tempSplit}%</span>
-              </div>
-            </div>
-
-            {/* Slider */}
-            <div className="relative mb-4">
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="10"
-                value={tempSplit}
-                onChange={(e) => handleSplitChange(parseInt(e.target.value))}
-                className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-xianxia-accent"
-              />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>{locale === 'vi' ? '100% Thể' : '100% Body'}</span>
-                <span>50/50</span>
-                <span>{locale === 'vi' ? '100% Khí' : '100% Qi'}</span>
-              </div>
-            </div>
-
-            {/* Visual split bar */}
-            <div className="h-3 rounded-full overflow-hidden flex mb-4">
-              <div
-                className="bg-gradient-to-r from-blue-600 to-blue-400 transition-all"
-                style={{ width: `${tempSplit}%` }}
-              />
-              <div
-                className="bg-gradient-to-r from-orange-400 to-orange-600 transition-all"
-                style={{ width: `${100 - tempSplit}%` }}
-              />
-            </div>
-
-            {/* Apply button */}
-            {onSetExpSplit && tempSplit !== expSplit && (
-              <button
-                onClick={handleApplySplit}
-                disabled={isAdjusting}
-                className="w-full py-2 bg-xianxia-accent hover:bg-xianxia-accent/80 disabled:bg-gray-600 rounded-lg font-medium transition-colors"
+            <div className="grid grid-cols-3 gap-2 text-center text-sm">
+              <Tooltip
+                content={
+                  locale === "vi"
+                    ? `Hiện tại: +${currentBonuses.hp} HP | Tầng sau: +${nextStageBonuses.hp} HP`
+                    : `Current: +${currentBonuses.hp} HP | Next stage: +${nextStageBonuses.hp} HP`
+                }
               >
-                {isAdjusting
-                  ? (locale === 'vi' ? 'Đang áp dụng...' : 'Applying...')
-                  : (locale === 'vi' ? 'Áp dụng thay đổi' : 'Apply Changes')}
-              </button>
+                <div className="p-2 bg-red-900/30 rounded cursor-help hover:bg-red-900/50 transition-colors">
+                  <div className="text-red-400 text-xs">HP</div>
+                  <div className="font-bold text-red-300">+{currentBonuses.hp}</div>
+                </div>
+              </Tooltip>
+              <Tooltip
+                content={
+                  locale === "vi"
+                    ? `Hiện tại: +${currentBonuses.str} STR | Tầng sau: +${nextStageBonuses.str} STR`
+                    : `Current: +${currentBonuses.str} STR | Next stage: +${nextStageBonuses.str} STR`
+                }
+              >
+                <div className="p-2 bg-orange-900/30 rounded cursor-help hover:bg-orange-900/50 transition-colors">
+                  <div className="text-orange-400 text-xs">
+                    {locale === "vi" ? "Sức mạnh" : "STR"}
+                  </div>
+                  <div className="font-bold text-orange-300">+{currentBonuses.str}</div>
+                </div>
+              </Tooltip>
+              <Tooltip
+                content={
+                  locale === "vi"
+                    ? `Hiện tại: +${currentBonuses.stamina} Stamina | Tầng sau: +${nextStageBonuses.stamina} Stamina`
+                    : `Current: +${currentBonuses.stamina} Stamina | Next stage: +${nextStageBonuses.stamina} Stamina`
+                }
+              >
+                <div className="p-2 bg-green-900/30 rounded cursor-help hover:bg-green-900/50 transition-colors">
+                  <div className="text-green-400 text-xs">
+                    {locale === "vi" ? "Thể lực" : "Stamina"}
+                  </div>
+                  <div className="font-bold text-green-300">+{currentBonuses.stamina}</div>
+                </div>
+              </Tooltip>
+            </div>
+
+            {/* Breakthrough Ready Alert */}
+            {isReadyForBodyBreakthrough && nextBodyRealm && (
+              <div className="mt-3 p-2 bg-orange-500/20 rounded-lg text-center border border-orange-500/50">
+                <span className="text-orange-400 font-bold animate-pulse">
+                  ⚡ {locale === "vi" ? "Sẵn sàng đột phá" : "Ready for Breakthrough"}:{" "}
+                  {BODY_REALM_NAMES[nextBodyRealm][locale === "vi" ? "vi" : "en"]} ⚡
+                </span>
+              </div>
             )}
           </div>
 
-          {/* Info box */}
-          <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg text-sm text-blue-200">
-            <div className="font-semibold mb-1">
-              {locale === 'vi' ? '💡 Lợi ích Song Tu:' : '💡 Dual Cultivation Benefits:'}
+          {/* Exp Split Slider - Only show in dual mode */}
+          {isDualMode && (
+            <div className="p-4 bg-xianxia-darker rounded-lg border border-xianxia-accent/10 relative z-10">
+              <div className="flex items-center justify-between mb-3">
+                <Tooltip
+                  content={
+                    locale === "vi"
+                      ? "Điều chỉnh tỷ lệ phân chia kinh nghiệm giữa Khí và Thể"
+                      : "Adjust the experience split ratio between Qi and Body cultivation"
+                  }
+                >
+                  <div className="text-sm text-gray-400 cursor-help">
+                    {locale === "vi" ? "⚖️ Phân Chia Kinh Nghiệm" : "⚖️ Experience Split"}
+                  </div>
+                </Tooltip>
+                <div className="text-sm font-medium">
+                  <span className="text-blue-400">
+                    {locale === "vi" ? "Khí" : "Qi"}: {tempSplit}%
+                  </span>
+                  <span className="text-gray-500 mx-2">|</span>
+                  <span className="text-orange-400">
+                    {locale === "vi" ? "Thể" : "Body"}: {100 - tempSplit}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Slider */}
+              <div className="relative mb-4">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="10"
+                  value={tempSplit}
+                  onChange={(e) => handleSplitChange(parseInt(e.target.value))}
+                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-xianxia-accent"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>{locale === "vi" ? "100% Thể" : "100% Body"}</span>
+                  <span>50/50</span>
+                  <span>{locale === "vi" ? "100% Khí" : "100% Qi"}</span>
+                </div>
+              </div>
+
+              {/* Visual split bar */}
+              <div className="h-4 rounded-full overflow-hidden flex mb-4 border border-xianxia-accent/20">
+                <div
+                  className="bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-300 relative"
+                  style={{ width: `${tempSplit}%` }}
+                >
+                  {tempSplit > 20 && (
+                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">
+                      {locale === "vi" ? "Khí" : "Qi"}
+                    </span>
+                  )}
+                </div>
+                <div
+                  className="bg-gradient-to-r from-orange-400 to-orange-600 transition-all duration-300 relative"
+                  style={{ width: `${100 - tempSplit}%` }}
+                >
+                  {100 - tempSplit > 20 && (
+                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">
+                      {locale === "vi" ? "Thể" : "Body"}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick presets */}
+              <div className="flex gap-2 mb-4">
+                {[
+                  { label: locale === "vi" ? "Thuần Khí" : "Pure Qi", value: 100 },
+                  { label: "70/30", value: 70 },
+                  { label: "50/50", value: 50 },
+                  { label: "30/70", value: 30 },
+                  { label: locale === "vi" ? "Thuần Thể" : "Pure Body", value: 0 },
+                ].map((preset) => (
+                  <button
+                    key={preset.value}
+                    onClick={() => handleSplitChange(preset.value)}
+                    className={`flex-1 py-1 text-xs rounded transition-colors ${
+                      tempSplit === preset.value
+                        ? "bg-xianxia-accent text-white"
+                        : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Apply button */}
+              {onSetExpSplit && tempSplit !== expSplit && (
+                <button
+                  onClick={handleApplySplit}
+                  disabled={isAdjusting}
+                  className="w-full py-2 bg-xianxia-accent hover:bg-xianxia-accent/80 disabled:bg-gray-600 rounded-lg font-medium transition-all duration-300 animate-pulse"
+                >
+                  {isAdjusting
+                    ? locale === "vi"
+                      ? "⏳ Đang áp dụng..."
+                      : "⏳ Applying..."
+                    : locale === "vi"
+                      ? "✓ Áp dụng thay đổi"
+                      : "✓ Apply Changes"}
+                </button>
+              )}
             </div>
-            <ul className="list-disc list-inside text-xs space-y-1">
+          )}
+
+          {/* Info box */}
+          <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg text-sm text-blue-200 relative z-10">
+            <div className="font-semibold mb-2">
+              {locale === "vi" ? "💡 Hướng Dẫn Song Tu:" : "💡 Dual Cultivation Guide:"}
+            </div>
+            <ul className="list-disc list-inside text-xs space-y-1 text-gray-300">
               <li>
-                {locale === 'vi'
-                  ? 'Tu thể tăng HP, Sức mạnh và Thể lực'
-                  : 'Body cultivation increases HP, STR and Stamina'}
+                {locale === "vi"
+                  ? "Tu thể tăng HP, Sức mạnh (ATK) và Thể lực (Stamina max)"
+                  : "Body cultivation increases HP, STR (ATK) and Stamina (max)"}
               </li>
               <li>
-                {locale === 'vi'
-                  ? 'Cân bằng giữa sức mạnh vật lý và linh lực'
-                  : 'Balance between physical strength and spiritual power'}
+                {locale === "vi"
+                  ? "Tiến độ thể chất được giữ lại khi tắt song tu"
+                  : "Body progress is preserved when disabling dual cultivation"}
               </li>
               <li>
-                {locale === 'vi'
-                  ? 'Điều chỉnh tỷ lệ theo chiến thuật của bạn'
-                  : 'Adjust the ratio based on your strategy'}
+                {locale === "vi"
+                  ? "Cân bằng 50/50 để phát triển đồng đều cả hai con đường"
+                  : "Balance 50/50 to develop both paths evenly"}
+              </li>
+              <li>
+                {locale === "vi"
+                  ? "Tập trung 100% Thể khi chuẩn bị cho chiến đấu khó"
+                  : "Focus 100% Body when preparing for difficult combat"}
               </li>
             </ul>
           </div>
         </>
       )}
 
-      {/* Show prompt to enable dual cultivation */}
-      {!isDualMode && (
-        <div className="p-4 bg-purple-900/20 border border-purple-500/30 rounded-lg text-center">
+      {/* Show prompt to enable dual cultivation - only if no body progress */}
+      {!isDualMode && bodyExp === 0 && bodyStage === 0 && bodyRealm === "PhàmThể" && (
+        <div className="p-4 bg-purple-900/20 border border-purple-500/30 rounded-lg text-center relative z-10">
           <div className="text-lg mb-2">
-            {locale === 'vi' ? '🏋️ Khai mở con đường Tu Thể?' : '🏋️ Unlock Body Cultivation Path?'}
+            {locale === "vi" ? "🏋️ Khai Mở Con Đường Tu Thể?" : "🏋️ Unlock Body Cultivation Path?"}
           </div>
           <p className="text-sm text-gray-400 mb-4">
-            {locale === 'vi'
-              ? 'Tu luyện thể chất song song với tu khí để tăng HP, Sức mạnh và Thể lực.'
-              : 'Cultivate your body alongside Qi to increase HP, Strength and Stamina.'}
+            {locale === "vi"
+              ? "Tu luyện thể chất song song với tu khí để tăng HP, Sức mạnh và Thể lực. Phù hợp với người chơi thích chiến đấu cận chiến."
+              : "Cultivate your body alongside Qi to increase HP, Strength and Stamina. Great for melee combat focused players."}
           </p>
           {onToggleDualCultivation && (
             <button
-              onClick={onToggleDualCultivation}
-              className="px-6 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium transition-colors"
+              onClick={handleToggle}
+              disabled={isToggling}
+              className="px-6 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 rounded-lg font-medium transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/30"
             >
-              {locale === 'vi' ? 'Bắt đầu Song Tu' : 'Start Dual Cultivation'}
+              {isToggling
+                ? locale === "vi"
+                  ? "⏳ Đang kích hoạt..."
+                  : "⏳ Activating..."
+                : locale === "vi"
+                  ? "🔓 Bắt đầu Song Tu"
+                  : "🔓 Start Dual Cultivation"}
             </button>
           )}
         </div>

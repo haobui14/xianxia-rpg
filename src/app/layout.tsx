@@ -14,15 +14,19 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
-  keywords: [
-    "xianxia",
-    "rpg",
-    "cultivation",
-    "game",
-    "tu tiên",
-    "ai game",
-    "text rpg",
-  ],
+
+  keywords: ["xianxia", "rpg", "cultivation", "game", "tu tiên", "ai game", "text rpg"],
+  icons: {
+    icon: [
+      { url: "/icons/icon-48x48.png", sizes: "48x48", type: "image/png" },
+      { url: "/icons/icon-96x96.png", sizes: "96x96", type: "image/png" },
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icons/icon-152x152.png", sizes: "152x152", type: "image/png" },
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+    ],
+  },
 };
 
 export const viewport: Viewport = {
@@ -33,11 +37,7 @@ export const viewport: Viewport = {
   userScalable: true,
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>{children}</body>

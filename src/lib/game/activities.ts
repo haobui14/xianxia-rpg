@@ -48,14 +48,7 @@ export const ACTIVITY_DEFINITIONS: Record<ActivityType, ActivityDefinition> = {
       min_stamina: 10,
       not_injured: false, // Can cultivate while injured but with penalty
     },
-    allowed_durations: [
-      "1_segment",
-      "half_day",
-      "full_day",
-      "3_days",
-      "week",
-      "month",
-    ],
+    allowed_durations: ["1_segment", "half_day", "full_day", "3_days", "week", "month"],
     base_rewards: {
       qi_exp: 15,
       insight_chance: 0.05,
@@ -374,7 +367,7 @@ export function getActivityDefinition(type: ActivityType): ActivityDefinition {
 export function calculateActivityCost(
   type: ActivityType,
   durationSegments: number,
-  state: GameState,
+  state: GameState
 ): {
   stamina: number;
   qi: number;
@@ -416,7 +409,7 @@ export function calculateActivityCost(
 export function canPerformActivity(
   type: ActivityType,
   state: GameState,
-  locale: Locale,
+  locale: Locale
 ): {
   canPerform: boolean;
   reasons: string[];
@@ -430,52 +423,40 @@ export function canPerformActivity(
     reasons.push(
       locale === "vi"
         ? `Cần ít nhất ${reqs.min_stamina} thể lực`
-        : `Need at least ${reqs.min_stamina} stamina`,
+        : `Need at least ${reqs.min_stamina} stamina`
     );
   }
 
   // Check qi
   if (reqs?.min_qi && state.stats.qi < reqs.min_qi) {
     reasons.push(
-      locale === "vi"
-        ? `Cần ít nhất ${reqs.min_qi} khí`
-        : `Need at least ${reqs.min_qi} qi`,
+      locale === "vi" ? `Cần ít nhất ${reqs.min_qi} khí` : `Need at least ${reqs.min_qi} qi`
     );
   }
 
   // Check realm
   if (reqs?.min_realm) {
-    const realmOrder: Realm[] = [
-      "PhàmNhân",
-      "LuyệnKhí",
-      "TrúcCơ",
-      "KếtĐan",
-      "NguyênAnh",
-    ];
+    const realmOrder: Realm[] = ["PhàmNhân", "LuyệnKhí", "TrúcCơ", "KếtĐan", "NguyênAnh"];
     const currentIndex = realmOrder.indexOf(state.progress.realm);
     const requiredIndex = realmOrder.indexOf(reqs.min_realm);
     if (currentIndex < requiredIndex) {
       reasons.push(
         locale === "vi"
           ? `Cần đạt cảnh giới ${reqs.min_realm}`
-          : `Need to reach ${reqs.min_realm} realm`,
+          : `Need to reach ${reqs.min_realm} realm`
       );
     }
   }
 
   // Check sect membership
   if (reqs?.in_sect && !state.sect_membership) {
-    reasons.push(
-      locale === "vi" ? "Cần gia nhập môn phái" : "Need to join a sect",
-    );
+    reasons.push(locale === "vi" ? "Cần gia nhập môn phái" : "Need to join a sect");
   }
 
   // Check injuries
   if (reqs?.not_injured && state.condition?.injuries?.length) {
     reasons.push(
-      locale === "vi"
-        ? "Không thể thực hiện khi bị thương"
-        : "Cannot perform while injured",
+      locale === "vi" ? "Không thể thực hiện khi bị thương" : "Cannot perform while injured"
     );
   }
 
@@ -488,12 +469,10 @@ export function canPerformActivity(
   // Check required items
   if (reqs?.required_items?.length) {
     const hasItems = reqs.required_items.every((itemId) =>
-      state.inventory.items.some((item) => item.id === itemId),
+      state.inventory.items.some((item) => item.id === itemId)
     );
     if (!hasItems) {
-      reasons.push(
-        locale === "vi" ? "Thiếu vật phẩm cần thiết" : "Missing required items",
-      );
+      reasons.push(locale === "vi" ? "Thiếu vật phẩm cần thiết" : "Missing required items");
     }
   }
 
@@ -520,10 +499,7 @@ interface ActivityBonuses {
 /**
  * Calculate all bonuses for an activity
  */
-export function calculateActivityBonuses(
-  type: ActivityType,
-  state: GameState,
-): ActivityBonuses {
+export function calculateActivityBonuses(type: ActivityType, state: GameState): ActivityBonuses {
   const def = getActivityDefinition(type);
   const bonuses: ActivityBonuses = {
     technique: 0,
@@ -548,10 +524,7 @@ export function calculateActivityBonuses(
 
   // Season + time segment bonus
   if (def.affected_by.includes("season")) {
-    bonuses.season = calculateTimeCultivationBonus(
-      time,
-      state.spirit_root.elements,
-    );
+    bonuses.season = calculateTimeCultivationBonus(time, state.spirit_root.elements);
   }
 
   // Location bonus (from travel state or location_cultivation_bonuses)
@@ -603,12 +576,9 @@ export function calculateActivityBonuses(
     }[state.condition.mental_state || "calm"];
 
     // Qi deviation penalty
-    const qiDeviationPenalty = -Math.floor(
-      (state.condition.qi_deviation_level || 0) / 5,
-    );
+    const qiDeviationPenalty = -Math.floor((state.condition.qi_deviation_level || 0) / 5);
 
-    bonuses.condition =
-      injuryPenalty + fatiguePenalty + mentalBonus + qiDeviationPenalty;
+    bonuses.condition = injuryPenalty + fatiguePenalty + mentalBonus + qiDeviationPenalty;
   }
 
   // Special time bonuses
@@ -625,7 +595,7 @@ export function calculateActivityBonuses(
       bonuses.season +
       bonuses.equipment +
       bonuses.condition +
-      bonuses.special,
+      bonuses.special
   );
 
   return bonuses;
@@ -637,7 +607,7 @@ export function calculateActivityBonuses(
 export function calculateExpectedRewards(
   type: ActivityType,
   durationSegments: number,
-  state: GameState,
+  state: GameState
 ): {
   qi_exp: number;
   body_exp: number;
@@ -654,22 +624,11 @@ export function calculateExpectedRewards(
   const baseRewards = def.base_rewards;
 
   return {
-    qi_exp: Math.floor(
-      (baseRewards.qi_exp || 0) * durationSegments * multiplier,
-    ),
-    body_exp: Math.floor(
-      (baseRewards.body_exp || 0) * durationSegments * multiplier,
-    ),
-    skill_exp: Math.floor(
-      (baseRewards.skill_exp || 0) * durationSegments * multiplier,
-    ),
-    insight_chance: Math.min(
-      1,
-      (baseRewards.insight_chance || 0) * durationSegments,
-    ),
-    stamina_recovery: Math.floor(
-      (baseRewards.stamina_recovery || 0) * durationSegments,
-    ),
+    qi_exp: Math.floor((baseRewards.qi_exp || 0) * durationSegments * multiplier),
+    body_exp: Math.floor((baseRewards.body_exp || 0) * durationSegments * multiplier),
+    skill_exp: Math.floor((baseRewards.skill_exp || 0) * durationSegments * multiplier),
+    insight_chance: Math.min(1, (baseRewards.insight_chance || 0) * durationSegments),
+    stamina_recovery: Math.floor((baseRewards.stamina_recovery || 0) * durationSegments),
     hp_recovery: Math.floor((baseRewards.hp_recovery || 0) * durationSegments),
     bonuses,
   };
@@ -686,7 +645,7 @@ export function startActivity(
   state: GameState,
   type: ActivityType,
   durationSegments: number,
-  techniqueId?: string,
+  techniqueId?: string
 ): {
   newState: GameState;
   activity: CurrentActivity;
@@ -720,8 +679,7 @@ export function startActivity(
       ...state.activity,
       current: activity,
       available_activities: state.activity?.available_activities || [],
-      cooldowns:
-        state.activity?.cooldowns || ({} as Record<ActivityType, GameTime>),
+      cooldowns: state.activity?.cooldowns || ({} as Record<ActivityType, GameTime>),
       daily_log: state.activity?.daily_log || [],
     },
   };
@@ -734,7 +692,7 @@ export function startActivity(
  */
 export function processActivityProgress(
   state: GameState,
-  segmentsPassed: number = 1,
+  segmentsPassed: number = 1
 ): {
   newState: GameState;
   completed: boolean;
@@ -754,11 +712,7 @@ export function processActivityProgress(
 
   const activity = state.activity.current;
   const def = getActivityDefinition(activity.type);
-  const expectedRewards = calculateExpectedRewards(
-    activity.type,
-    segmentsPassed,
-    state,
-  );
+  const expectedRewards = calculateExpectedRewards(activity.type, segmentsPassed, state);
 
   // Accumulate rewards
   const newAccumulatedRewards = {
@@ -771,10 +725,7 @@ export function processActivityProgress(
   };
 
   // Check for insight
-  if (
-    Math.random() <
-    expectedRewards.insight_chance / activity.duration_segments
-  ) {
+  if (Math.random() < expectedRewards.insight_chance / activity.duration_segments) {
     newAccumulatedRewards.insights.push(generateInsight(activity.type, state));
   }
 
@@ -783,7 +734,7 @@ export function processActivityProgress(
     100,
     (((activity.progress / 100) * activity.duration_segments + segmentsPassed) /
       activity.duration_segments) *
-      100,
+      100
   );
 
   const completed = newProgress >= 100;
@@ -802,11 +753,11 @@ export function processActivityProgress(
       ...newStats,
       stamina: Math.min(
         state.stats.stamina_max,
-        newStats.stamina + expectedRewards.stamina_recovery,
+        newStats.stamina + expectedRewards.stamina_recovery
       ),
       hp: Math.min(
         state.stats.hp_max,
-        (newStats.hp || state.stats.hp) + expectedRewards.hp_recovery,
+        (newStats.hp || state.stats.hp) + expectedRewards.hp_recovery
       ),
     };
   }
@@ -845,9 +796,7 @@ export function processActivityProgress(
       ...newState,
       activity: {
         ...newState.activity!,
-        daily_log: [...(newState.activity?.daily_log || []), logEntry].slice(
-          -20,
-        ),
+        daily_log: [...(newState.activity?.daily_log || []), logEntry].slice(-20),
       },
     };
 
@@ -855,11 +804,7 @@ export function processActivityProgress(
       newState,
       completed: true,
       rewards: newAccumulatedRewards,
-      narrative_context: generateActivityNarrative(
-        activity,
-        newAccumulatedRewards,
-        state,
-      ),
+      narrative_context: generateActivityNarrative(activity, newAccumulatedRewards, state),
     };
   }
 
@@ -875,7 +820,7 @@ export function processActivityProgress(
  */
 export function interruptActivity(
   state: GameState,
-  reason: string,
+  reason: string
 ): {
   newState: GameState;
   partialRewards: CurrentActivity["accumulated_rewards"];
@@ -905,9 +850,7 @@ export function interruptActivity(
     type: activity.type,
     started: activity.started_time,
     ended: getGameTimeFromState(newState),
-    duration_segments: Math.floor(
-      (activity.progress / 100) * activity.duration_segments,
-    ),
+    duration_segments: Math.floor((activity.progress / 100) * activity.duration_segments),
     outcome: "interrupted",
     rewards_summary: `Interrupted: ${reason}. ${formatRewardsSummary(partialRewards)}`,
   };
@@ -933,7 +876,7 @@ export function interruptActivity(
  */
 function applyActivityRewards(
   state: GameState,
-  rewards: CurrentActivity["accumulated_rewards"],
+  rewards: CurrentActivity["accumulated_rewards"]
 ): GameState {
   let newState = { ...state };
 
@@ -1023,18 +966,9 @@ function generateInsight(type: ActivityType, state: GameState): string {
       "Nhìn thấu được một đạo lý nhỏ",
       "Cảm nhận sự hài hòa của thiên địa",
     ],
-    practice_skill: [
-      "Động tác trở nên mượt mà hơn",
-      "Hiểu thêm về tinh túy của chiêu thức",
-    ],
-    explore: [
-      "Phát hiện một con đường mòn ẩn giấu",
-      "Nghe được tin đồn thú vị",
-    ],
-    gather: [
-      "Nhận ra loại dược liệu hiếm",
-      "Hiểu thêm về đặc tính của thảo dược",
-    ],
+    practice_skill: ["Động tác trở nên mượt mà hơn", "Hiểu thêm về tinh túy của chiêu thức"],
+    explore: ["Phát hiện một con đường mòn ẩn giấu", "Nghe được tin đồn thú vị"],
+    gather: ["Nhận ra loại dược liệu hiếm", "Hiểu thêm về đặc tính của thảo dược"],
     craft_alchemy: [
       "Lĩnh ngộ được một bí quyết luyện đan",
       "Hiểu thêm về sự cân bằng của dược tính",
@@ -1050,25 +984,20 @@ function generateInsight(type: ActivityType, state: GameState): string {
   };
 
   const pool = insights[type] || [];
-  return (
-    pool[Math.floor(Math.random() * pool.length)] || "Có điều gì đó lạ lùng..."
-  );
+  return pool[Math.floor(Math.random() * pool.length)] || "Có điều gì đó lạ lùng...";
 }
 
 /**
  * Format rewards summary for logging
  */
-function formatRewardsSummary(
-  rewards: CurrentActivity["accumulated_rewards"],
-): string {
+function formatRewardsSummary(rewards: CurrentActivity["accumulated_rewards"]): string {
   const parts: string[] = [];
 
   if (rewards.qi_exp > 0) parts.push(`+${rewards.qi_exp} tu vi`);
   if (rewards.body_exp > 0) parts.push(`+${rewards.body_exp} thể tu`);
   if (rewards.silver > 0) parts.push(`+${rewards.silver} bạc`);
   if (rewards.items.length > 0) parts.push(`+${rewards.items.length} vật phẩm`);
-  if (rewards.insights.length > 0)
-    parts.push(`${rewards.insights.length} ngộ đạo`);
+  if (rewards.insights.length > 0) parts.push(`${rewards.insights.length} ngộ đạo`);
 
   return parts.join(", ") || "Không có phần thưởng";
 }
@@ -1079,7 +1008,7 @@ function formatRewardsSummary(
 function generateActivityNarrative(
   activity: CurrentActivity,
   rewards: CurrentActivity["accumulated_rewards"],
-  state: GameState,
+  state: GameState
 ): string {
   const def = getActivityDefinition(activity.type);
 
@@ -1108,7 +1037,7 @@ function generateActivityNarrative(
 function generateProgressNarrative(
   activity: CurrentActivity,
   progress: number,
-  state: GameState,
+  state: GameState
 ): string {
   const def = getActivityDefinition(activity.type);
 
@@ -1128,7 +1057,7 @@ function generateProgressNarrative(
  */
 export function getAvailableActivities(
   state: GameState,
-  locale: Locale,
+  locale: Locale
 ): {
   type: ActivityType;
   definition: ActivityDefinition;

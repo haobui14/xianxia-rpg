@@ -1,4 +1,4 @@
-import seedrandom from 'seedrandom';
+import seedrandom from "seedrandom";
 
 /**
  * Deterministic random number generator using seed
@@ -35,7 +35,7 @@ export class DeterministicRNG {
    * Roll dice notation (e.g., "2d6" for 2 six-sided dice)
    */
   rollDice(notation: string): number {
-    const [count, sides] = notation.split('d').map(Number);
+    const [count, sides] = notation.split("d").map(Number);
     let total = 0;
     for (let i = 0; i < count; i++) {
       total += this.randomInt(1, sides);

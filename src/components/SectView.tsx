@@ -45,9 +45,7 @@ export default function SectView({ state, locale }: SectViewProps) {
           <div className="text-3xl font-bold text-xianxia-accent mb-2">
             {locale === "vi" ? state.sect : state.sect_en}
           </div>
-          <div className="text-sm text-gray-400">
-            {locale === "vi" ? "Thành viên" : "Member"}
-          </div>
+          <div className="text-sm text-gray-400">{locale === "vi" ? "Thành viên" : "Member"}</div>
         </div>
       </div>
     );
@@ -106,10 +104,13 @@ export default function SectView({ state, locale }: SectViewProps) {
     },
   };
 
+  // Calculate days since joined based on game time, not real time
+  const currentGameDay = (state.time_year - 1) * 360 + (state.time_month - 1) * 30 + state.time_day;
+
   const joinedDate = new Date(joined_date);
-  const daysSinceJoined = Math.floor(
-    (Date.now() - joinedDate.getTime()) / (1000 * 60 * 60 * 24),
-  );
+  const joinedGameDay = Math.floor(joinedDate.getTime() / (1000 * 60 * 60 * 24));
+
+  const daysSinceJoined = Math.max(0, currentGameDay - joinedGameDay);
 
   return (
     <div className="space-y-6">
@@ -120,9 +121,7 @@ export default function SectView({ state, locale }: SectViewProps) {
             {locale === "vi" ? sect.name : sect.name_en}
           </h1>
           <div className="text-sm text-gray-400 mb-4">
-            {locale === "vi"
-              ? sectTypeNames.vi[sect.type]
-              : sectTypeNames.en[sect.type]}
+            {locale === "vi" ? sectTypeNames.vi[sect.type] : sectTypeNames.en[sect.type]}
             {sect.element && ` • ${sect.element}`}
             {" • "}
             {locale === "vi" ? `Cấp ${sect.tier}` : `Tier ${sect.tier}`}
@@ -144,9 +143,7 @@ export default function SectView({ state, locale }: SectViewProps) {
           </h2>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-gray-400">
-                {locale === "vi" ? "Chức vụ:" : "Rank:"}
-              </span>
+              <span className="text-gray-400">{locale === "vi" ? "Chức vụ:" : "Rank:"}</span>
               <span className="text-xianxia-accent font-bold">
                 {locale === "vi" ? rankNames.vi[rank] : rankNames.en[rank]}
               </span>
@@ -162,19 +159,13 @@ export default function SectView({ state, locale }: SectViewProps) {
                 {locale === "vi" ? "Ngày gia nhập:" : "Joined:"}
               </span>
               <span className="text-gray-300">
-                {locale === "vi"
-                  ? `${daysSinceJoined} ngày trước`
-                  : `${daysSinceJoined} days ago`}
+                {locale === "vi" ? `${daysSinceJoined} ngày trước` : `${daysSinceJoined} days ago`}
               </span>
             </div>
             {mentor && (
               <div className="flex justify-between">
-                <span className="text-gray-400">
-                  {locale === "vi" ? "Sư phụ:" : "Mentor:"}
-                </span>
-                <span className="text-purple-400">
-                  {locale === "vi" ? mentor : mentor_en}
-                </span>
+                <span className="text-gray-400">{locale === "vi" ? "Sư phụ:" : "Mentor:"}</span>
+                <span className="text-purple-400">{locale === "vi" ? mentor : mentor_en}</span>
               </div>
             )}
           </div>
@@ -194,9 +185,7 @@ export default function SectView({ state, locale }: SectViewProps) {
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">
-                {locale === "vi"
-                  ? "Nhiệm vụ hoàn thành:"
-                  : "Missions Completed:"}
+                {locale === "vi" ? "Nhiệm vụ hoàn thành:" : "Missions Completed:"}
               </span>
               <span className="text-blue-400">{missions_completed}</span>
             </div>
@@ -214,13 +203,7 @@ export default function SectView({ state, locale }: SectViewProps) {
             className={`p-4 rounded-lg border ${benefits.cultivation_bonus > 0 ? "border-green-500/50 bg-green-900/20" : "border-gray-600 bg-gray-800/20"}`}
           >
             <div className="flex items-center justify-between">
-              <span
-                className={
-                  benefits.cultivation_bonus > 0
-                    ? "text-green-400"
-                    : "text-gray-400"
-                }
-              >
+              <span className={benefits.cultivation_bonus > 0 ? "text-green-400" : "text-gray-400"}>
                 ✨ {locale === "vi" ? "Tu luyện tăng tốc" : "Cultivation Bonus"}
               </span>
               <span
@@ -239,11 +222,7 @@ export default function SectView({ state, locale }: SectViewProps) {
             className={`p-4 rounded-lg border ${benefits.resource_access ? "border-blue-500/50 bg-blue-900/20" : "border-gray-600 bg-gray-800/20"}`}
           >
             <div className="flex items-center justify-between">
-              <span
-                className={
-                  benefits.resource_access ? "text-blue-400" : "text-gray-400"
-                }
-              >
+              <span className={benefits.resource_access ? "text-blue-400" : "text-gray-400"}>
                 💎 {locale === "vi" ? "Kho tài nguyên" : "Resource Access"}
               </span>
               <span
@@ -264,13 +243,7 @@ export default function SectView({ state, locale }: SectViewProps) {
             className={`p-4 rounded-lg border ${benefits.technique_access ? "border-purple-500/50 bg-purple-900/20" : "border-gray-600 bg-gray-800/20"}`}
           >
             <div className="flex items-center justify-between">
-              <span
-                className={
-                  benefits.technique_access
-                    ? "text-purple-400"
-                    : "text-gray-400"
-                }
-              >
+              <span className={benefits.technique_access ? "text-purple-400" : "text-gray-400"}>
                 📖 {locale === "vi" ? "Tàng kinh các" : "Technique Library"}
               </span>
               <span
@@ -291,11 +264,7 @@ export default function SectView({ state, locale }: SectViewProps) {
             className={`p-4 rounded-lg border ${benefits.protection ? "border-red-500/50 bg-red-900/20" : "border-gray-600 bg-gray-800/20"}`}
           >
             <div className="flex items-center justify-between">
-              <span
-                className={
-                  benefits.protection ? "text-red-400" : "text-gray-400"
-                }
-              >
+              <span className={benefits.protection ? "text-red-400" : "text-gray-400"}>
                 🛡️ {locale === "vi" ? "Sự bảo vệ" : "Sect Protection"}
               </span>
               <span

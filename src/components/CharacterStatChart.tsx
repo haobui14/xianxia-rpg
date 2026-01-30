@@ -79,10 +79,7 @@ function calculateDerivedStats(state: GameState): DerivedStats {
   };
 }
 
-export default function CharacterStatChart({
-  state,
-  locale,
-}: CharacterStatChartProps) {
+export default function CharacterStatChart({ state, locale }: CharacterStatChartProps) {
   const attrs = calculateTotalAttributes(state);
   const derived = calculateDerivedStats(state);
 
@@ -147,9 +144,7 @@ export default function CharacterStatChart({
           <DerivedStatRow
             label={locale === "vi" ? "Tấn Công Khí Công" : "Qi Attack"}
             value={derived.qiAttack.toString()}
-            formula={
-              locale === "vi" ? "INT × 2 + STR ÷ 2" : "INT × 2 + STR ÷ 2"
-            }
+            formula={locale === "vi" ? "INT × 2 + STR ÷ 2" : "INT × 2 + STR ÷ 2"}
             color="blue"
           />
           <DerivedStatRow
@@ -161,11 +156,7 @@ export default function CharacterStatChart({
           <DerivedStatRow
             label={locale === "vi" ? "Tỷ Lệ Chí Mạng" : "Critical Chance"}
             value={`${derived.criticalChance.toFixed(1)}%`}
-            formula={
-              locale === "vi"
-                ? "10% + STR×0.2% + LUCK×0.3%"
-                : "10% + STR×0.2% + LUCK×0.3%"
-            }
+            formula={locale === "vi" ? "10% + STR×0.2% + LUCK×0.3%" : "10% + STR×0.2% + LUCK×0.3%"}
             color="orange"
           />
           <DerivedStatRow
@@ -177,11 +168,7 @@ export default function CharacterStatChart({
           <DerivedStatRow
             label={locale === "vi" ? "CM Khí Công" : "Qi Critical"}
             value={`${derived.qiCriticalChance.toFixed(1)}%`}
-            formula={
-              locale === "vi"
-                ? "15% + INT×0.3% + LUCK×0.4%"
-                : "15% + INT×0.3% + LUCK×0.4%"
-            }
+            formula={locale === "vi" ? "15% + INT×0.3% + LUCK×0.4%" : "15% + INT×0.3% + LUCK×0.4%"}
             color="cyan"
           />
           <DerivedStatRow
@@ -245,9 +232,7 @@ export default function CharacterStatChart({
           <DerivedStatRow
             label={locale === "vi" ? "Thưởng Đột Phá" : "Breakthrough Bonus"}
             value={`+${derived.breakthroughBonus.toFixed(1)}%`}
-            formula={
-              locale === "vi" ? "INT×1% + LUCK×1.5%" : "INT×1% + LUCK×1.5%"
-            }
+            formula={locale === "vi" ? "INT×1% + LUCK×1.5%" : "INT×1% + LUCK×1.5%"}
             color="gold"
           />
           <DerivedStatRow
@@ -258,7 +243,6 @@ export default function CharacterStatChart({
           />
         </div>
       </div>
-
     </div>
   );
 }
@@ -320,12 +304,9 @@ function DerivedStatRow({ label, value, formula, color }: DerivedStatRowProps) {
     <div className="p-3 rounded bg-xianxia-darker border border-xianxia-accent/20">
       <div className="flex justify-between items-center mb-1">
         <span className="text-gray-300">{label}</span>
-        <span className={`text-xl font-bold ${colorClasses[color]}`}>
-          {value}
-        </span>
+        <span className={`text-xl font-bold ${colorClasses[color]}`}>{value}</span>
       </div>
       <div className="text-xs text-gray-500">{formula}</div>
     </div>
   );
 }
-

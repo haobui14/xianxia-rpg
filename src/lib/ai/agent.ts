@@ -50,9 +50,7 @@ const NARRATIVE_THEMES = [
 function extractThemes(narrative: string): string[] {
   const lowerNarrative = narrative.toLowerCase();
   return NARRATIVE_THEMES.filter(
-    (theme) =>
-      lowerNarrative.includes(theme) ||
-      lowerNarrative.includes(themeVietnamese(theme)),
+    (theme) => lowerNarrative.includes(theme) || lowerNarrative.includes(themeVietnamese(theme))
   );
 }
 
@@ -108,7 +106,7 @@ function sleep(ms: number): Promise<void> {
 async function callOpenAI(
   messages: OpenAIMessage[],
   model: string = "gpt-5.1",
-  options: { temperature?: number; maxRetries?: number } = {},
+  options: { temperature?: number; maxRetries?: number } = {}
 ): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
   const apiBase = process.env.OPENAI_API_BASE || "https://api.openai.com/v1";
@@ -161,9 +159,7 @@ async function callOpenAI(
         // Rate limit - wait and retry
         if (response.status === 429) {
           const waitTime = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
-          console.log(
-            `Rate limited, waiting ${waitTime}ms before retry ${attempt + 1}`,
-          );
+          console.log(`Rate limited, waiting ${waitTime}ms before retry ${attempt + 1}`);
           await sleep(waitTime);
           continue;
         }
@@ -172,12 +168,10 @@ async function callOpenAI(
         if (response.status >= 500) {
           const waitTime = Math.pow(2, attempt) * 500;
           console.log(
-            `Server error ${response.status}, waiting ${waitTime}ms before retry ${attempt + 1}`,
+            `Server error ${response.status}, waiting ${waitTime}ms before retry ${attempt + 1}`
           );
           await sleep(waitTime);
-          lastError = new Error(
-            `OpenAI API error: ${response.status} - ${error}`,
-          );
+          lastError = new Error(`OpenAI API error: ${response.status} - ${error}`);
           continue;
         }
 
@@ -191,7 +185,7 @@ async function callOpenAI(
       // Log token usage and completion status
       if (data.usage) {
         console.log(
-          `AI tokens used: ${data.usage.total_tokens} (prompt: ${data.usage.prompt_tokens}, completion: ${data.usage.completion_tokens}), finish: ${finishReason}`,
+          `AI tokens used: ${data.usage.total_tokens} (prompt: ${data.usage.prompt_tokens}, completion: ${data.usage.completion_tokens}), finish: ${finishReason}`
         );
       }
 
@@ -211,9 +205,7 @@ async function callOpenAI(
 
       if (attempt < maxRetries - 1) {
         const waitTime = Math.pow(2, attempt) * 500;
-        console.log(
-          `Attempt ${attempt + 1} failed, retrying in ${waitTime}ms...`,
-        );
+        console.log(`Attempt ${attempt + 1} failed, retrying in ${waitTime}ms...`);
         await sleep(waitTime);
       }
     }
@@ -258,24 +250,15 @@ export async function generateAITurn(
   sceneContext: string,
   choiceId: string | null,
   locale: Locale,
-  choiceText?: string | null,
+  choiceText?: string | null
 ): Promise<AITurnResult> {
   const systemPrompt = buildSystemPrompt(locale);
   const gameContext = buildGameContext(state, recentNarratives, locale);
-  const userMessage = buildUserMessage(
-    sceneContext,
-    choiceId,
-    locale,
-    choiceText,
-  );
+  const userMessage = buildUserMessage(sceneContext, choiceId, locale, choiceText);
 
   // Anti-repetition: Get themes to avoid
   const themesToAvoid = getThemesToAvoid(recentNarratives);
-  const varietyHint = buildVarietyEnforcement(
-    themesToAvoid,
-    recentNarratives.length,
-    locale,
-  );
+  const varietyHint = buildVarietyEnforcement(themesToAvoid, recentNarratives.length, locale);
 
   const messages: OpenAIMessage[] = [
     { role: "system", content: systemPrompt },
@@ -298,7 +281,7 @@ export async function generateAITurn(
       // Debug: Log the response length and preview
       console.log(
         `AI Response: ${responseText.length} chars, preview:`,
-        responseText.substring(0, 200),
+        responseText.substring(0, 200)
       );
 
       if (!responseText || responseText.trim().length === 0) {
@@ -311,7 +294,7 @@ export async function generateAITurn(
         jsonData = JSON.parse(responseText);
       } catch (parseErr) {
         throw new Error(
-          `Invalid JSON from AI: ${parseErr instanceof Error ? parseErr.message : "Parse error"}`,
+          `Invalid JSON from AI: ${parseErr instanceof Error ? parseErr.message : "Parse error"}`
         );
       }
 
@@ -324,11 +307,11 @@ export async function generateAITurn(
       if (recentNarratives.length > 0) {
         const similarity = calculateSimilarity(
           validated.narrative,
-          recentNarratives[recentNarratives.length - 1],
+          recentNarratives[recentNarratives.length - 1]
         );
         if (similarity > 0.7) {
           console.warn(
-            `High narrative similarity detected (${similarity.toFixed(2)}), response may be repetitive`,
+            `High narrative similarity detected (${similarity.toFixed(2)}), response may be repetitive`
           );
         }
       }
@@ -339,7 +322,7 @@ export async function generateAITurn(
       if (attempt === 1) {
         console.error("AI generation error (final attempt):", error);
         throw new Error(
-          `Failed to generate AI response: ${error instanceof Error ? error.message : "Unknown error"}`,
+          `Failed to generate AI response: ${error instanceof Error ? error.message : "Unknown error"}`
         );
       }
       console.warn("Retrying due to invalid AI output...", error);
@@ -357,13 +340,13 @@ function calculateSimilarity(text1: string, text2: string): number {
     text1
       .toLowerCase()
       .split(/\s+/)
-      .filter((w) => w.length > 3),
+      .filter((w) => w.length > 3)
   );
   const words2 = new Set(
     text2
       .toLowerCase()
       .split(/\s+/)
-      .filter((w) => w.length > 3),
+      .filter((w) => w.length > 3)
   );
 
   const intersection = new Set([...words1].filter((w) => words2.has(w)));
@@ -375,10 +358,7 @@ function calculateSimilarity(text1: string, text2: string): number {
 /**
  * Fallback AI response for when API fails
  */
-export function getFallbackResponse(
-  state: GameState,
-  locale: Locale,
-): AITurnResult {
+export function getFallbackResponse(state: GameState, locale: Locale): AITurnResult {
   if (locale === "vi") {
     return {
       locale: "vi",

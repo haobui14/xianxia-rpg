@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
     if (!action || !validActions.includes(action)) {
       return NextResponse.json(
         { error: `Invalid action. Use one of: ${validActions.join(", ")}` },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -181,10 +181,7 @@ export async function POST(request: NextRequest) {
     // Get character
     const characters = await characterQueries.getByUserId(user.id);
     if (characters.length === 0) {
-      return NextResponse.json(
-        { error: "Character not found" },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "Character not found" }, { status: 404 });
     }
 
     const character = characters[0];
@@ -192,19 +189,14 @@ export async function POST(request: NextRequest) {
     // Get current run
     const runs = await runQueries.getByCharacterId(character.id);
     if (runs.length === 0) {
-      return NextResponse.json(
-        { error: "No active run found" },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "No active run found" }, { status: 404 });
     }
 
     const run = runs[0];
-    let state = migrateGameState(run.current_state as GameState);
+    const state = migrateGameState(run.current_state as GameState);
 
     // Create RNG for this action
-    const rng = new DeterministicRNG(
-      `${run.world_seed}-dungeon-${state.turn_count}-${Date.now()}`,
-    );
+    const rng = new DeterministicRNG(`${run.world_seed}-dungeon-${state.turn_count}-${Date.now()}`);
 
     // Handle different actions
     switch (action) {
@@ -224,28 +216,20 @@ export async function POST(request: NextRequest) {
             floors: d.floors.length,
             recommended_realm: d.recommended_realm,
             difficulty: getDifficultyRating(d.id, state.progress.realm),
-            cleared_before:
-              state.dungeon?.completed_dungeons[d.id] !== undefined,
-            times_cleared:
-              state.dungeon?.completed_dungeons[d.id]?.times_cleared || 0,
+            cleared_before: state.dungeon?.completed_dungeons[d.id] !== undefined,
+            times_cleared: state.dungeon?.completed_dungeons[d.id]?.times_cleared || 0,
           })),
         });
       }
 
       case "get_info": {
         if (!dungeon_id) {
-          return NextResponse.json(
-            { error: "dungeon_id required" },
-            { status: 400 },
-          );
+          return NextResponse.json({ error: "dungeon_id required" }, { status: 400 });
         }
 
         const dungeon = getDungeonById(dungeon_id);
         if (!dungeon) {
-          return NextResponse.json(
-            { error: "Dungeon not found" },
-            { status: 404 },
-          );
+          return NextResponse.json({ error: "Dungeon not found" }, { status: 404 });
         }
 
         const canEnter = canEnterDungeon(dungeon_id, state);
@@ -276,10 +260,7 @@ export async function POST(request: NextRequest) {
 
       case "enter": {
         if (!dungeon_id) {
-          return NextResponse.json(
-            { error: "dungeon_id required" },
-            { status: 400 },
-          );
+          return NextResponse.json({ error: "dungeon_id required" }, { status: 400 });
         }
 
         const canEnter = canEnterDungeon(dungeon_id, state);
@@ -289,23 +270,18 @@ export async function POST(request: NextRequest) {
               success: false,
               error: canEnter.reason_en || canEnter.reason,
             },
-            { status: 400 },
+            { status: 400 }
           );
         }
 
-        const { newState, entryCost } = enterDungeon(
-          dungeon_id,
-          state.dungeon!,
-        );
+        const { newState, entryCost } = enterDungeon(dungeon_id, state.dungeon!);
 
         // Deduct entry cost
         if (entryCost) {
           state.inventory.silver -= entryCost.silver;
           state.inventory.spirit_stones -= entryCost.spirit_stones;
           if (entryCost.item) {
-            const itemIndex = state.inventory.items.findIndex(
-              (i) => i.id === entryCost.item,
-            );
+            const itemIndex = state.inventory.items.findIndex((i) => i.id === entryCost.item);
             if (itemIndex !== -1) {
               if (state.inventory.items[itemIndex].quantity > 1) {
                 state.inventory.items[itemIndex].quantity--;
@@ -351,7 +327,7 @@ export async function POST(request: NextRequest) {
               success: false,
               error: "Not in a dungeon",
             },
-            { status: 400 },
+            { status: 400 }
           );
         }
 
@@ -398,7 +374,7 @@ export async function POST(request: NextRequest) {
               success: false,
               error: "Not in a dungeon",
             },
-            { status: 400 },
+            { status: 400 }
           );
         }
 
@@ -429,7 +405,7 @@ export async function POST(request: NextRequest) {
               success: false,
               error: "Not in a dungeon",
             },
-            { status: 400 },
+            { status: 400 }
           );
         }
 
@@ -454,9 +430,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check for enemy encounter
-        const enemyWave = getRandomEnemyWave(state.dungeon!, () =>
-          rng.random(),
-        );
+        const enemyWave = getRandomEnemyWave(state.dungeon!, () => rng.random());
 
         let encounter = null;
         if (enemyWave) {
@@ -464,7 +438,7 @@ export async function POST(request: NextRequest) {
           // Use cultivation stage as approximate level (1-9 for each realm)
           const playerLevel = state.progress?.realm_stage || 1;
           const enemies = enemyWave.enemies.map((enemyId) =>
-            generateEnemyFromId(enemyId, playerLevel),
+            generateEnemyFromId(enemyId, playerLevel)
           );
 
           encounter = {
@@ -492,7 +466,7 @@ export async function POST(request: NextRequest) {
               success: false,
               error: "Not in a dungeon",
             },
-            { status: 400 },
+            { status: 400 }
           );
         }
 
@@ -515,7 +489,7 @@ export async function POST(request: NextRequest) {
               success: false,
               error: "Not in a dungeon",
             },
-            { status: 400 },
+            { status: 400 }
           );
         }
 
@@ -526,7 +500,7 @@ export async function POST(request: NextRequest) {
               success: false,
               error: "Already at final floor",
             },
-            { status: 400 },
+            { status: 400 }
           );
         }
 
@@ -556,15 +530,12 @@ export async function POST(request: NextRequest) {
               success: false,
               error: "Not in a dungeon",
             },
-            { status: 400 },
+            { status: 400 }
           );
         }
 
         if (!chest_id) {
-          return NextResponse.json(
-            { error: "chest_id required" },
-            { status: 400 },
-          );
+          return NextResponse.json({ error: "chest_id required" }, { status: 400 });
         }
 
         if (state.dungeon!.collected_chests.includes(chest_id)) {
@@ -573,7 +544,7 @@ export async function POST(request: NextRequest) {
               success: false,
               error: "Chest already collected",
             },
-            { status: 400 },
+            { status: 400 }
           );
         }
 
@@ -582,8 +553,7 @@ export async function POST(request: NextRequest) {
         // Generate loot (simplified - would use loot tables in full implementation)
         const loot = {
           silver: Math.floor(rng.random() * 100) + 50,
-          spirit_stones:
-            rng.random() > 0.7 ? Math.floor(rng.random() * 10) + 1 : 0,
+          spirit_stones: rng.random() > 0.7 ? Math.floor(rng.random() * 10) + 1 : 0,
         };
 
         state.inventory.silver += loot.silver;
@@ -606,15 +576,12 @@ export async function POST(request: NextRequest) {
               success: false,
               error: "Not in a dungeon",
             },
-            { status: 400 },
+            { status: 400 }
           );
         }
 
         if (!secret_id) {
-          return NextResponse.json(
-            { error: "secret_id required" },
-            { status: 400 },
-          );
+          return NextResponse.json({ error: "secret_id required" }, { status: 400 });
         }
 
         state.dungeon = discoverSecret(state.dungeon!, secret_id);
@@ -636,17 +603,13 @@ export async function POST(request: NextRequest) {
               success: false,
               error: "Not in a dungeon",
             },
-            { status: 400 },
+            { status: 400 }
           );
         }
 
         const playerItems = state.inventory.items.map((i) => i.id);
         const playerSkills = state.skills.map((s) => s.id);
-        const canUnlock = canUnlockShortcut(
-          state.dungeon!,
-          playerItems,
-          playerSkills,
-        );
+        const canUnlock = canUnlockShortcut(state.dungeon!, playerItems, playerSkills);
 
         if (!canUnlock.canUnlock) {
           return NextResponse.json(
@@ -654,14 +617,11 @@ export async function POST(request: NextRequest) {
               success: false,
               error: canUnlock.reason,
             },
-            { status: 400 },
+            { status: 400 }
           );
         }
 
-        state.dungeon = unlockShortcut(
-          state.dungeon!,
-          state.dungeon!.current_floor,
-        );
+        state.dungeon = unlockShortcut(state.dungeon!, state.dungeon!.current_floor);
 
         // Save to database
         await runQueries.update(run.id, state);
@@ -680,7 +640,7 @@ export async function POST(request: NextRequest) {
               success: false,
               error: "Not in a dungeon",
             },
-            { status: 400 },
+            { status: 400 }
           );
         }
 
@@ -702,9 +662,6 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error("Dungeon error:", error);
-    return NextResponse.json(
-      { error: "Failed to process dungeon action" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to process dungeon action" }, { status: 500 });
   }
 }

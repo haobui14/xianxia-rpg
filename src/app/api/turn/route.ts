@@ -1,9 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  runQueries,
-  turnLogQueries,
-  characterQueries,
-} from "@/lib/database/queries";
+import { runQueries, turnLogQueries, characterQueries } from "@/lib/database/queries";
 import { generateAITurn, getFallbackResponse } from "@/lib/ai/agent";
 import {
   GameState,
@@ -29,10 +25,7 @@ import {
   advanceTime,
 } from "@/lib/game/mechanics";
 import { createTurnRNG } from "@/lib/game/rng";
-import {
-  getApplicableTemplates,
-  selectRandomTemplate,
-} from "@/lib/game/scenes";
+import { getApplicableTemplates, selectRandomTemplate } from "@/lib/game/scenes";
 import { generateLoot, validateLoot } from "@/lib/game/loot";
 import {
   recordCombatHistory,
@@ -97,20 +90,18 @@ export async function POST(request: Request) {
     const skillTypes = ["Attack", "Defense", "Movement"];
 
     const misplacedTechniques = state.inventory.items.filter((item) =>
-      techniqueTypes.includes(item.type),
+      techniqueTypes.includes(item.type)
     );
-    const misplacedSkills = state.inventory.items.filter((item) =>
-      skillTypes.includes(item.type),
-    );
+    const misplacedSkills = state.inventory.items.filter((item) => skillTypes.includes(item.type));
 
     if (misplacedTechniques.length > 0) {
       console.log(
-        `Found ${misplacedTechniques.length} techniques incorrectly stored as items, migrating...`,
+        `Found ${misplacedTechniques.length} techniques incorrectly stored as items, migrating...`
       );
       misplacedTechniques.forEach((item) => {
         // Check if not already in techniques array
         const alreadyExists = state.techniques.some(
-          (t) => t.id === item.id || t.name === item.name,
+          (t) => t.id === item.id || t.name === item.name
         );
         if (!alreadyExists) {
           // Convert item to technique format
@@ -146,21 +137,15 @@ export async function POST(request: Request) {
 
     if (misplacedSkills.length > 0) {
       console.log(
-        `Found ${misplacedSkills.length} skills incorrectly stored as items, migrating...`,
+        `Found ${misplacedSkills.length} skills incorrectly stored as items, migrating...`
       );
       misplacedSkills.forEach((item) => {
-        const alreadyExists = state.skills.some(
-          (s) => s.id === item.id || s.name === item.name,
-        );
+        const alreadyExists = state.skills.some((s) => s.id === item.id || s.name === item.name);
         if (!alreadyExists) {
           // Default skill type based on name/description or default to 'attack'
           let skillType: "attack" | "defense" | "support" = "attack";
           const nameLower = (item.name || item.name_en || "").toLowerCase();
-          const descLower = (
-            item.description ||
-            item.description_en ||
-            ""
-          ).toLowerCase();
+          const descLower = (item.description || item.description_en || "").toLowerCase();
 
           if (
             nameLower.includes("defend") ||
@@ -203,12 +188,10 @@ export async function POST(request: Request) {
     // Remove misplaced techniques/skills from inventory
     if (misplacedTechniques.length > 0 || misplacedSkills.length > 0) {
       state.inventory.items = state.inventory.items.filter(
-        (item) =>
-          !techniqueTypes.includes(item.type) &&
-          !skillTypes.includes(item.type),
+        (item) => !techniqueTypes.includes(item.type) && !skillTypes.includes(item.type)
       );
       console.log(
-        `Cleaned up inventory, removed ${misplacedTechniques.length + misplacedSkills.length} misplaced items`,
+        `Cleaned up inventory, removed ${misplacedTechniques.length + misplacedSkills.length} misplaced items`
       );
     }
 
@@ -228,12 +211,7 @@ export async function POST(request: Request) {
     const events: GameEvent[] = [];
     if (selectedChoice && selectedChoice.cost) {
       if (selectedChoice.cost.stamina) {
-        applyStatDelta(
-          state,
-          "stamina",
-          "subtract",
-          selectedChoice.cost.stamina,
-        );
+        applyStatDelta(state, "stamina", "subtract", selectedChoice.cost.stamina);
         // Update last_stamina_regen timestamp when stamina changes
         state.last_stamina_regen = new Date().toISOString();
       }
@@ -241,15 +219,12 @@ export async function POST(request: Request) {
         applyStatDelta(state, "qi", "subtract", selectedChoice.cost.qi);
       }
       if (selectedChoice.cost.silver) {
-        state.inventory.silver = Math.max(
-          0,
-          state.inventory.silver - selectedChoice.cost.silver,
-        );
+        state.inventory.silver = Math.max(0, state.inventory.silver - selectedChoice.cost.silver);
       }
       if (selectedChoice.cost.spirit_stones) {
         state.inventory.spirit_stones = Math.max(
           0,
-          state.inventory.spirit_stones - selectedChoice.cost.spirit_stones,
+          state.inventory.spirit_stones - selectedChoice.cost.spirit_stones
         );
       }
       if (selectedChoice.cost.time_segments) {
@@ -264,13 +239,10 @@ export async function POST(request: Request) {
       const applicableTemplates = getApplicableTemplates(state);
 
       // Filter out recently used scene types to increase variety
-      const filteredTemplates = applicableTemplates.filter(
-        (t) => !recentSceneTypes.includes(t.id),
-      );
+      const filteredTemplates = applicableTemplates.filter((t) => !recentSceneTypes.includes(t.id));
 
       // Use filtered templates if available, otherwise fall back to all
-      const templatesToUse =
-        filteredTemplates.length > 2 ? filteredTemplates : applicableTemplates;
+      const templatesToUse = filteredTemplates.length > 2 ? filteredTemplates : applicableTemplates;
       const template = selectRandomTemplate(templatesToUse, rng);
 
       if (template) {
@@ -301,7 +273,7 @@ export async function POST(request: Request) {
         sceneContext,
         choiceId,
         locale,
-        choiceText,
+        choiceText
       );
     } catch (error) {
       console.error("AI generation failed, using fallback:", error);
@@ -365,7 +337,7 @@ export async function POST(request: Request) {
             month: state.time_month,
             day: state.time_day,
           },
-          turnNo,
+          turnNo
         );
       }
     }
@@ -373,9 +345,7 @@ export async function POST(request: Request) {
     // Update leaderboard statistics
     const character = await characterQueries.getById(run.character_id);
     if (character) {
-      const combatWins = combatEvents.filter(
-        (e) => e.data.victory === true,
-      ).length;
+      const combatWins = combatEvents.filter((e) => e.data.victory === true).length;
       await updatePlayerStats(runId, character.name, state, combatWins);
     }
 
@@ -392,11 +362,24 @@ export async function POST(request: Request) {
     // Update turn count in state
     state.turn_count = turnNo;
 
-    // Save state
+    // Save state with retry logic
     console.log(
-      `Saving state - Skills: ${state.skills?.length || 0}, Techniques: ${state.techniques?.length || 0}`,
+      `Saving state - Skills: ${state.skills?.length || 0}, Techniques: ${state.techniques?.length || 0}`
     );
-    await runQueries.update(runId, state);
+    const saveResult = await runQueries.update(runId, state);
+
+    // Track save status in response
+    if (!saveResult.success) {
+      console.error(`[Turn] State save failed: ${saveResult.error}`);
+      // Add save failure event to notify frontend
+      events.push({
+        type: "status_effect",
+        data: {
+          type: "save_warning",
+          message: saveResult.error || "Failed to save progress",
+        },
+      });
+    }
 
     // Save turn log with scene type for future anti-repetition
     await turnLogQueries.create(runId, turnNo, choiceId, aiResult.narrative, {
@@ -404,22 +387,20 @@ export async function POST(request: Request) {
       sceneType: selectedSceneType,
     });
 
-    // Return result
+    // Return result with save status
     const result: ValidatedTurnResult = {
       narrative: aiResult.narrative,
       choices: aiResult.choices,
       state,
       events,
       turn_no: turnNo,
+      saveStatus: saveResult,
     };
 
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error processing turn:", error);
-    return NextResponse.json(
-      { error: "Failed to process turn" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to process turn" }, { status: 500 });
   }
 }
 
@@ -430,7 +411,7 @@ function applyValidatedDeltas(
   state: GameState,
   deltas: ProposedDelta[],
   rng: any,
-  events: GameEvent[],
+  events: GameEvent[]
 ): void {
   for (const delta of deltas) {
     try {
@@ -444,20 +425,12 @@ function applyValidatedDeltas(
 /**
  * Apply a single delta with validation
  */
-function applyDelta(
-  state: GameState,
-  delta: ProposedDelta,
-  rng: any,
-  events: GameEvent[],
-): void {
+function applyDelta(state: GameState, delta: ProposedDelta, rng: any, events: GameEvent[]): void {
   const { field, operation, value } = delta;
 
   // Log skill/technique additions
   if (field.startsWith("skills.") || field.startsWith("techniques.")) {
-    console.log(
-      `Applying delta: ${field} ${operation}`,
-      value?.name || value?.id,
-    );
+    console.log(`Applying delta: ${field} ${operation}`, value?.name || value?.id);
   }
 
   // Parse field path (e.g., "stats.hp", "inventory.silver")
@@ -484,12 +457,7 @@ function applyDelta(
   }
 }
 
-function applyStatDelta(
-  state: GameState,
-  stat: string,
-  operation: string,
-  value: number,
-): void {
+function applyStatDelta(state: GameState, stat: string, operation: string, value: number): void {
   const maxChange = 100; // Max change per turn
   const clampedValue = clampStat(value, -maxChange, maxChange);
 
@@ -513,12 +481,7 @@ function applyStatDelta(
   }
 }
 
-function applyAttrDelta(
-  state: GameState,
-  attr: string,
-  operation: string,
-  value: number,
-): void {
+function applyAttrDelta(state: GameState, attr: string, operation: string, value: number): void {
   const maxChange = 5; // Max attr change per turn
   const clampedValue = clampStat(value, 0, maxChange);
 
@@ -532,7 +495,7 @@ function applyProgressDelta(
   state: GameState,
   field: string,
   operation: string,
-  value: number,
+  value: number
 ): void {
   if (field === "cultivation_exp" && operation === "add") {
     const maxExpGain = 50;
@@ -541,10 +504,7 @@ function applyProgressDelta(
     const bonusedExp = calculateCultivationExpGain(state, clampedValue);
 
     // Check if dual cultivation is enabled
-    if (
-      state.progress.cultivation_path === "dual" &&
-      state.progress.exp_split !== undefined
-    ) {
+    if (state.progress.cultivation_path === "dual" && state.progress.exp_split !== undefined) {
       // Split exp between Qi and Body based on exp_split ratio
       const qiExpPercent = state.progress.exp_split / 100;
       const bodyExpPercent = (100 - state.progress.exp_split) / 100;
@@ -562,7 +522,7 @@ function applyProgressDelta(
       state.progress.body_exp += bodyExp;
 
       console.log(
-        `Dual cultivation - Qi: ${qiExp} (${state.progress.exp_split}%), Body: ${bodyExp} (${100 - state.progress.exp_split}%)`,
+        `Dual cultivation - Qi: ${qiExp} (${state.progress.exp_split}%), Body: ${bodyExp} (${100 - state.progress.exp_split}%)`
       );
     } else {
       // Single cultivation path - all exp goes to Qi
@@ -579,9 +539,7 @@ function applyProgressDelta(
     if (!state.progress.body_stage) state.progress.body_stage = 0;
 
     state.progress.body_exp += clampedValue;
-    console.log(
-      `Body exp gained: ${clampedValue}, total: ${state.progress.body_exp}`,
-    );
+    console.log(`Body exp gained: ${clampedValue}, total: ${state.progress.body_exp}`);
   }
 }
 
@@ -591,16 +549,13 @@ function applyInventoryDelta(
   operation: string,
   value: any,
   rng: any,
-  events: GameEvent[],
+  events: GameEvent[]
 ): void {
   if (field === "silver") {
     if (operation === "add") {
       state.inventory.silver += Math.min(value as number, 1000);
     } else if (operation === "subtract") {
-      state.inventory.silver = Math.max(
-        0,
-        state.inventory.silver - (value as number),
-      );
+      state.inventory.silver = Math.max(0, state.inventory.silver - (value as number));
     }
   } else if (field === "spirit_stones") {
     if (operation === "add") {
@@ -610,19 +565,15 @@ function applyInventoryDelta(
     // Add item to inventory - stack if duplicate
     if (typeof value === "object" && value.id) {
       // Validate: Don't add techniques/skills to inventory (they have their own arrays)
-      if (
-        ["Main", "Support", "Attack", "Defense", "Movement"].includes(
-          value.type,
-        )
-      ) {
+      if (["Main", "Support", "Attack", "Defense", "Movement"].includes(value.type)) {
         console.warn(
-          `Ignoring ${value.type} type item in inventory.add_item - should use techniques/skills delta instead`,
+          `Ignoring ${value.type} type item in inventory.add_item - should use techniques/skills delta instead`
         );
         return;
       }
 
       const existingItem = state.inventory.items.find(
-        (item) => item.id === value.id && item.type === value.type,
+        (item) => item.id === value.id && item.type === value.type
       );
 
       if (existingItem) {
@@ -644,18 +595,14 @@ function applyInventoryDelta(
   } else if (field === "loot") {
     // Generate loot from table
     if (typeof value === "string") {
-      const loot = generateLoot(
-        value,
-        rng,
-        state.progress.realm === "PhàmNhân" ? "vi" : "en",
-      );
+      const loot = generateLoot(value, rng, state.progress.realm === "PhàmNhân" ? "vi" : "en");
       state.inventory.silver += loot.silver;
       state.inventory.spirit_stones += loot.spiritStones;
 
       // Stack items properly
       loot.items.forEach((item) => {
         const existingItem = state.inventory.items.find(
-          (inv) => inv.id === item.id && inv.type === item.type,
+          (inv) => inv.id === item.id && inv.type === item.type
         );
 
         if (existingItem) {
@@ -677,11 +624,7 @@ function applyInventoryDelta(
   }
 }
 
-function applyKarmaDelta(
-  state: GameState,
-  operation: string,
-  value: number,
-): void {
+function applyKarmaDelta(state: GameState, operation: string, value: number): void {
   const maxChange = 20;
   const clampedValue = clampStat(value, -maxChange, maxChange);
 
@@ -692,26 +635,14 @@ function applyKarmaDelta(
   }
 }
 
-function applyTechniqueDelta(
-  state: GameState,
-  field: string,
-  operation: string,
-  value: any,
-): void {
+function applyTechniqueDelta(state: GameState, field: string, operation: string, value: any): void {
   // Constants for technique limits
   const MAX_TECHNIQUES = 5;
   const MAX_PER_TYPE = 2; // Max 2 Main, 2 Support (but 5 total max)
 
   if (field === "add" && operation === "add") {
     // Validate technique structure
-    if (
-      value &&
-      value.id &&
-      value.name &&
-      value.name_en &&
-      value.grade &&
-      value.type
-    ) {
+    if (value && value.id && value.name && value.name_en && value.grade && value.type) {
       // Initialize arrays if they don't exist
       if (!state.techniques) {
         state.techniques = [];
@@ -734,30 +665,24 @@ function applyTechniqueDelta(
       // Ensure cultivation_speed_bonus exists (default based on grade)
       if (value.cultivation_speed_bonus === undefined) {
         const gradeBonus = { Mortal: 10, Earth: 20, Heaven: 40 };
-        value.cultivation_speed_bonus =
-          gradeBonus[value.grade as keyof typeof gradeBonus] || 10;
+        value.cultivation_speed_bonus = gradeBonus[value.grade as keyof typeof gradeBonus] || 10;
       }
 
       // Count techniques by type
       const techType = value.type as "Main" | "Support";
-      const countByType = state.techniques.filter(
-        (t) => t.type === techType,
-      ).length;
+      const countByType = state.techniques.filter((t) => t.type === techType).length;
 
       // Check if we can add to active techniques
-      if (
-        state.techniques.length < MAX_TECHNIQUES &&
-        countByType < MAX_PER_TYPE
-      ) {
+      if (state.techniques.length < MAX_TECHNIQUES && countByType < MAX_PER_TYPE) {
         state.techniques.push(value);
         console.log(
-          `Added technique ${value.name} to active list (${state.techniques.length}/${MAX_TECHNIQUES})`,
+          `Added technique ${value.name} to active list (${state.techniques.length}/${MAX_TECHNIQUES})`
         );
       } else {
         // Add to queue
         state.technique_queue.push(value);
         console.log(
-          `Added technique ${value.name} to queue (active full: ${state.techniques.length}/${MAX_TECHNIQUES}, type ${techType}: ${countByType}/${MAX_PER_TYPE})`,
+          `Added technique ${value.name} to queue (active full: ${state.techniques.length}/${MAX_TECHNIQUES}, type ${techType}: ${countByType}/${MAX_PER_TYPE})`
         );
       }
     }
@@ -767,12 +692,7 @@ function applyTechniqueDelta(
 /**
  * Apply skill delta (combat skills)
  */
-function applySkillDelta(
-  state: GameState,
-  field: string,
-  operation: string,
-  value: any,
-): void {
+function applySkillDelta(state: GameState, field: string, operation: string, value: any): void {
   // Constants for skill limits: 6 total, max 2 per type
   const MAX_SKILLS = 6;
   const MAX_PER_TYPE = 2;
@@ -797,9 +717,7 @@ function applySkillDelta(
           console.log(`Skill ${skill.name} leveled up to ${skill.level}!`);
         }
 
-        console.log(
-          `Skill ${skill.name} gained ${expGain} exp (${skill.exp}/${skill.max_exp})`,
-        );
+        console.log(`Skill ${skill.name} gained ${expGain} exp (${skill.exp}/${skill.max_exp})`);
       } else {
         console.warn(`Skill not found: ${value.skill_id}`);
       }
@@ -823,8 +741,7 @@ function applySkillDelta(
         if (existingSkill.level < existingSkill.max_level) {
           existingSkill.level += 1;
           // Increase damage multiplier slightly on level up
-          existingSkill.damage_multiplier =
-            (existingSkill.damage_multiplier || 1) * 1.1;
+          existingSkill.damage_multiplier = (existingSkill.damage_multiplier || 1) * 1.1;
         }
         return;
       }
@@ -835,8 +752,7 @@ function applySkillDelta(
         const queueSkill = state.skill_queue[queueIndex];
         if (queueSkill.level < queueSkill.max_level) {
           queueSkill.level += 1;
-          queueSkill.damage_multiplier =
-            (queueSkill.damage_multiplier || 1) * 1.1;
+          queueSkill.damage_multiplier = (queueSkill.damage_multiplier || 1) * 1.1;
         }
         return;
       }
@@ -862,20 +778,20 @@ function applySkillDelta(
       // Count skills by type (normalize to lowercase for comparison)
       const skillType = (value.type || "").toLowerCase();
       const countByType = state.skills.filter(
-        (s) => (s.type || "").toLowerCase() === skillType,
+        (s) => (s.type || "").toLowerCase() === skillType
       ).length;
 
       // Check if we can add to active skills
       if (state.skills.length < MAX_SKILLS && countByType < MAX_PER_TYPE) {
         state.skills.push(newSkill);
         console.log(
-          `Added skill ${value.name} to active list (${state.skills.length}/${MAX_SKILLS})`,
+          `Added skill ${value.name} to active list (${state.skills.length}/${MAX_SKILLS})`
         );
       } else {
         // Add to queue
         state.skill_queue.push(newSkill);
         console.log(
-          `Added skill ${value.name} to queue (active full: ${state.skills.length}/${MAX_SKILLS}, type ${skillType}: ${countByType}/${MAX_PER_TYPE})`,
+          `Added skill ${value.name} to queue (active full: ${state.skills.length}/${MAX_SKILLS}, type ${skillType}: ${countByType}/${MAX_PER_TYPE})`
         );
       }
     }
@@ -885,12 +801,7 @@ function applySkillDelta(
 /**
  * Apply location-related delta (change place or region)
  */
-function applyLocationDelta(
-  state: GameState,
-  field: string,
-  operation: string,
-  value: any,
-): void {
+function applyLocationDelta(state: GameState, field: string, operation: string, value: any): void {
   if (operation === "set") {
     if (field === "place" && typeof value === "string") {
       state.location.place = value;
@@ -910,15 +821,9 @@ function applySectDelta(
   field: string,
   operation: string,
   value: any,
-  events: GameEvent[],
+  events: GameEvent[]
 ): void {
-  const validRanks: SectRank[] = [
-    "NgoạiMôn",
-    "NộiMôn",
-    "ChânTruyền",
-    "TrưởngLão",
-    "ChưởngMôn",
-  ];
+  const validRanks: SectRank[] = ["NgoạiMôn", "NộiMôn", "ChânTruyền", "TrưởngLão", "ChưởngMôn"];
 
   if (field === "join" && operation === "set") {
     // Joining a new sect
@@ -1045,11 +950,9 @@ function applySectDelta(
     if (state.sect_membership && typeof value === "number") {
       state.sect_membership.reputation = Math.max(
         0,
-        Math.min(100, state.sect_membership.reputation + value),
+        Math.min(100, state.sect_membership.reputation + value)
       );
-      console.log(
-        `Sect reputation changed by ${value}, now ${state.sect_membership.reputation}`,
-      );
+      console.log(`Sect reputation changed by ${value}, now ${state.sect_membership.reputation}`);
     }
   } else if (field === "mission" && operation === "add") {
     // Completing a mission
@@ -1071,11 +974,7 @@ function applySectDelta(
 /**
  * Update story summary
  */
-function updateStorySummary(
-  state: GameState,
-  recentNarrative: string,
-  locale: string,
-): void {
+function updateStorySummary(state: GameState, recentNarrative: string, locale: string): void {
   // Simple summary update (in production, could use AI to summarize)
   const prefix =
     locale === "vi"

@@ -1,12 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import {
-  GameState,
-  ActivityType,
-  ActivityDuration,
-  Locale,
-} from "@/types/game";
+import { GameState, ActivityType, ActivityDuration, Locale } from "@/types/game";
 import {
   getAvailableActivities,
   getActivityDefinition,
@@ -39,9 +34,7 @@ export default function ActivitySelector({
   onCancel,
   disabled = false,
 }: ActivitySelectorProps) {
-  const [selectedActivity, setSelectedActivity] = useState<ActivityType | null>(
-    null,
-  );
+  const [selectedActivity, setSelectedActivity] = useState<ActivityType | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<string>("1_segment");
   const [showDetails, setShowDetails] = useState(false);
 
@@ -65,25 +58,19 @@ export default function ActivitySelector({
           "meditate",
           "breakthrough_prep",
           "breakthrough",
-        ].includes(a.type),
+        ].includes(a.type)
       ),
-      training: activities.filter((a) =>
-        ["practice_skill", "sect_duty"].includes(a.type),
-      ),
+      training: activities.filter((a) => ["practice_skill", "sect_duty"].includes(a.type)),
       exploration: activities.filter((a) =>
-        ["explore", "gather", "travel", "dungeon"].includes(a.type),
+        ["explore", "gather", "travel", "dungeon"].includes(a.type)
       ),
       social: activities.filter((a) => ["socialize", "trade"].includes(a.type)),
-      recovery: activities.filter((a) =>
-        ["rest", "craft_alchemy"].includes(a.type),
-      ),
+      recovery: activities.filter((a) => ["rest", "craft_alchemy"].includes(a.type)),
     };
   }, [activities]);
 
   // Get selected activity details
-  const selectedDef = selectedActivity
-    ? getActivityDefinition(selectedActivity)
-    : null;
+  const selectedDef = selectedActivity ? getActivityDefinition(selectedActivity) : null;
   const durationOption = getDurationOption(selectedDuration);
   const durationSegments = durationOption?.segments || 1;
 
@@ -95,11 +82,7 @@ export default function ActivitySelector({
 
   const rewards = useMemo(() => {
     if (!selectedActivity) return null;
-    return calculateExpectedRewards(
-      selectedActivity,
-      durationSegments,
-      gameState,
-    );
+    return calculateExpectedRewards(selectedActivity, durationSegments, gameState);
   }, [selectedActivity, durationSegments, gameState]);
 
   // Check if can start activity
@@ -127,9 +110,7 @@ export default function ActivitySelector({
           {locale === "vi" ? "Chọn hoạt động" : "Select Activity"}
         </h2>
         <div className="text-sm text-gray-400">
-          <span className="text-amber-300">
-            {formatGameTime(currentTime, locale)}
-          </span>
+          <span className="text-amber-300">{formatGameTime(currentTime, locale)}</span>
           <span className="ml-2 text-emerald-400">({seasonName})</span>
         </div>
       </div>
@@ -138,9 +119,7 @@ export default function ActivitySelector({
       <div className="flex gap-4 mb-4 text-sm">
         <div className="flex items-center gap-1">
           <span className="text-yellow-500">⚡</span>
-          <span className="text-gray-300">
-            {locale === "vi" ? "Thể lực" : "Stamina"}:
-          </span>
+          <span className="text-gray-300">{locale === "vi" ? "Thể lực" : "Stamina"}:</span>
           <span
             className={`font-bold ${gameState.stats.stamina < 20 ? "text-red-400" : "text-green-400"}`}
           >
@@ -149,9 +128,7 @@ export default function ActivitySelector({
         </div>
         <div className="flex items-center gap-1">
           <span className="text-blue-400">💠</span>
-          <span className="text-gray-300">
-            {locale === "vi" ? "Khí" : "Qi"}:
-          </span>
+          <span className="text-gray-300">{locale === "vi" ? "Khí" : "Qi"}:</span>
           <span
             className={`font-bold ${gameState.stats.qi < 10 ? "text-red-400" : "text-blue-400"}`}
           >
@@ -168,13 +145,12 @@ export default function ActivitySelector({
               {groupLabels[groupKey][locale]}
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {groupActivities.map(
-                ({ type, definition, canPerform, reasons }) => (
-                  <button
-                    key={type}
-                    onClick={() => setSelectedActivity(type)}
-                    disabled={!canPerform || disabled}
-                    className={`
+              {groupActivities.map(({ type, definition, canPerform, reasons }) => (
+                <button
+                  key={type}
+                  onClick={() => setSelectedActivity(type)}
+                  disabled={!canPerform || disabled}
+                  className={`
                     p-2 rounded-lg text-left transition-all
                     ${
                       selectedActivity === type
@@ -183,28 +159,23 @@ export default function ActivitySelector({
                     }
                     ${!canPerform ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
                   `}
-                    title={!canPerform ? reasons.join(", ") : undefined}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{definition.icon}</span>
-                      <span
-                        className={`text-sm font-medium ${
-                          selectedActivity === type
-                            ? "text-amber-300"
-                            : "text-gray-200"
-                        }`}
-                      >
-                        {locale === "vi" ? definition.name : definition.name_en}
-                      </span>
-                    </div>
-                    {!canPerform && (
-                      <div className="text-xs text-red-400 mt-1 truncate">
-                        {reasons[0]}
-                      </div>
-                    )}
-                  </button>
-                ),
-              )}
+                  title={!canPerform ? reasons.join(", ") : undefined}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{definition.icon}</span>
+                    <span
+                      className={`text-sm font-medium ${
+                        selectedActivity === type ? "text-amber-300" : "text-gray-200"
+                      }`}
+                    >
+                      {locale === "vi" ? definition.name : definition.name_en}
+                    </span>
+                  </div>
+                  {!canPerform && (
+                    <div className="text-xs text-red-400 mt-1 truncate">{reasons[0]}</div>
+                  )}
+                </button>
+              ))}
             </div>
           </div>
         ))}
@@ -218,9 +189,7 @@ export default function ActivitySelector({
           </h3>
           <div className="flex flex-wrap gap-2">
             {DURATION_OPTIONS.filter((opt) =>
-              selectedDef.allowed_durations.includes(
-                opt.id as ActivityDuration,
-              ),
+              selectedDef.allowed_durations.includes(opt.id as ActivityDuration)
             ).map((opt) => (
               <button
                 key={opt.id}
@@ -254,9 +223,7 @@ export default function ActivitySelector({
                 {costs.stamina > 0 && (
                   <div
                     className={`flex justify-between ${
-                      gameState.stats.stamina < costs.stamina
-                        ? "text-red-400"
-                        : "text-gray-300"
+                      gameState.stats.stamina < costs.stamina ? "text-red-400" : "text-gray-300"
                     }`}
                   >
                     <span>⚡ {locale === "vi" ? "Thể lực" : "Stamina"}</span>
@@ -266,9 +233,7 @@ export default function ActivitySelector({
                 {costs.qi > 0 && (
                   <div
                     className={`flex justify-between ${
-                      gameState.stats.qi < costs.qi
-                        ? "text-red-400"
-                        : "text-gray-300"
+                      gameState.stats.qi < costs.qi ? "text-red-400" : "text-gray-300"
                     }`}
                   >
                     <span>💠 {locale === "vi" ? "Khí" : "Qi"}</span>
@@ -314,9 +279,7 @@ export default function ActivitySelector({
                 )}
                 {rewards.insight_chance > 0 && (
                   <div className="flex justify-between text-cyan-300">
-                    <span>
-                      💡 {locale === "vi" ? "Cơ hội ngộ đạo" : "Insight Chance"}
-                    </span>
+                    <span>💡 {locale === "vi" ? "Cơ hội ngộ đạo" : "Insight Chance"}</span>
                     <span>{Math.round(rewards.insight_chance * 100)}%</span>
                   </div>
                 )}
@@ -341,31 +304,17 @@ export default function ActivitySelector({
           {showDetails && (
             <div className="mt-2 p-2 bg-gray-800/50 rounded text-xs space-y-1">
               <div className="flex justify-between">
-                <span className="text-gray-400">
-                  {locale === "vi" ? "Công pháp" : "Technique"}
-                </span>
+                <span className="text-gray-400">{locale === "vi" ? "Công pháp" : "Technique"}</span>
                 <span
-                  className={
-                    rewards.bonuses.technique >= 0
-                      ? "text-green-400"
-                      : "text-red-400"
-                  }
+                  className={rewards.bonuses.technique >= 0 ? "text-green-400" : "text-red-400"}
                 >
                   {rewards.bonuses.technique >= 0 ? "+" : ""}
                   {rewards.bonuses.technique}%
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">
-                  {locale === "vi" ? "Địa điểm" : "Location"}
-                </span>
-                <span
-                  className={
-                    rewards.bonuses.location >= 0
-                      ? "text-green-400"
-                      : "text-red-400"
-                  }
-                >
+                <span className="text-gray-400">{locale === "vi" ? "Địa điểm" : "Location"}</span>
+                <span className={rewards.bonuses.location >= 0 ? "text-green-400" : "text-red-400"}>
                   {rewards.bonuses.location >= 0 ? "+" : ""}
                   {rewards.bonuses.location}%
                 </span>
@@ -374,27 +323,15 @@ export default function ActivitySelector({
                 <span className="text-gray-400">
                   {locale === "vi" ? "Mùa + Thời gian" : "Season + Time"}
                 </span>
-                <span
-                  className={
-                    rewards.bonuses.season >= 0
-                      ? "text-green-400"
-                      : "text-red-400"
-                  }
-                >
+                <span className={rewards.bonuses.season >= 0 ? "text-green-400" : "text-red-400"}>
                   {rewards.bonuses.season >= 0 ? "+" : ""}
                   {rewards.bonuses.season}%
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">
-                  {locale === "vi" ? "Trang bị" : "Equipment"}
-                </span>
+                <span className="text-gray-400">{locale === "vi" ? "Trang bị" : "Equipment"}</span>
                 <span
-                  className={
-                    rewards.bonuses.equipment >= 0
-                      ? "text-green-400"
-                      : "text-red-400"
-                  }
+                  className={rewards.bonuses.equipment >= 0 ? "text-green-400" : "text-red-400"}
                 >
                   {rewards.bonuses.equipment >= 0 ? "+" : ""}
                   {rewards.bonuses.equipment}%
@@ -405,11 +342,7 @@ export default function ActivitySelector({
                   {locale === "vi" ? "Trạng thái" : "Condition"}
                 </span>
                 <span
-                  className={
-                    rewards.bonuses.condition >= 0
-                      ? "text-green-400"
-                      : "text-red-400"
-                  }
+                  className={rewards.bonuses.condition >= 0 ? "text-green-400" : "text-red-400"}
                 >
                   {rewards.bonuses.condition >= 0 ? "+" : ""}
                   {rewards.bonuses.condition}%

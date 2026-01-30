@@ -20,7 +20,7 @@ function calculateDamage(
   str: number, // Character STR for physical damage
   perception: number, // Affects accuracy
   luck: number, // Affects crit chance
-  rng: DeterministicRNG,
+  rng: DeterministicRNG
 ): number {
   // Accuracy check based on perception
   const accuracyBonus = perception * 0.01; // Each perception = +1% accuracy
@@ -51,7 +51,7 @@ function calculateQiDamage(
   perception: number,
   luck: number,
   def: number,
-  rng: DeterministicRNG,
+  rng: DeterministicRNG
 ): number {
   // Accuracy check - qi attacks more accurate due to INT
   const accuracyBonus = (perception + intStat) * 0.01;
@@ -80,7 +80,7 @@ function calculateDefense(
   baseDefense: number,
   agiStat: number,
   luck: number,
-  isDefending: boolean,
+  isDefending: boolean
 ): number {
   const agiBonus = Math.floor(agiStat / 3);
   const luckBonus = Math.floor(luck / 10); // LUCK provides small defense bonus
@@ -91,11 +91,7 @@ function calculateDefense(
 /**
  * Calculate dodge chance
  */
-function calculateDodgeChance(
-  agiStat: number,
-  perception: number,
-  luck: number,
-): number {
+function calculateDodgeChance(agiStat: number, perception: number, luck: number): number {
   // AGI is primary, perception and luck secondary
   const baseChance = 0.05; // 5% base dodge
   const agiBonus = agiStat * 0.01; // Each AGI = +1% dodge
@@ -112,7 +108,7 @@ export function processCombatTurn(
   enemy: Enemy,
   playerAction: "attack" | "defend" | "qi_attack" | "skill",
   rng?: DeterministicRNG,
-  skillId?: string,
+  skillId?: string
 ): CombatResult {
   const events: GameEvent[] = [];
   let narrative = "";
@@ -158,7 +154,7 @@ export function processCombatTurn(
           totalAttrs.str,
           totalAttrs.perception,
           totalAttrs.luck,
-          rng!,
+          rng!
         );
         // Apply skill multiplier (1.5x = 50% more damage than normal attack)
         playerDamage = Math.floor(normalAttackDamage * skill.damage_multiplier);
@@ -181,10 +177,7 @@ export function processCombatTurn(
         }
 
         // Apply additional effects
-        if (
-          skill.effects?.stun_chance &&
-          rng!.chance(skill.effects.stun_chance)
-        ) {
+        if (skill.effects?.stun_chance && rng!.chance(skill.effects.stun_chance)) {
           narrative += `${enemy.name} bị choáng! `;
           // Enemy loses next turn (implement in future)
         }
@@ -199,9 +192,7 @@ export function processCombatTurn(
           // Defense boost will be applied when calculating damage taken
         }
         if (skill.effects?.heal_percent) {
-          const healAmount = Math.floor(
-            state.stats.hp_max * skill.effects.heal_percent,
-          );
+          const healAmount = Math.floor(state.stats.hp_max * skill.effects.heal_percent);
           updateHP(state, healAmount);
           narrative += `Bạn dùng ${skill.name}, hồi ${healAmount} HP! `;
         }
@@ -217,17 +208,14 @@ export function processCombatTurn(
           skill.level += 1;
           skill.max_exp = skill.level * 100;
           if (skill.effects?.heal_percent) {
-            skill.effects.heal_percent =
-              (skill.effects.heal_percent || 0.1) * 1.05;
+            skill.effects.heal_percent = (skill.effects.heal_percent || 0.1) * 1.05;
           }
           narrative += `[${skill.name} lên cấp ${skill.level}!] `;
         }
       } else if (skill.type === "support") {
         // Support skill - buffs, debuffs, etc.
         if (skill.effects?.heal_percent) {
-          const healAmount = Math.floor(
-            state.stats.hp_max * skill.effects.heal_percent,
-          );
+          const healAmount = Math.floor(state.stats.hp_max * skill.effects.heal_percent);
           updateHP(state, healAmount);
           narrative += `Bạn dùng ${skill.name}, hồi ${healAmount} HP! `;
         }
@@ -260,7 +248,7 @@ export function processCombatTurn(
       totalAttrs.str,
       totalAttrs.perception,
       totalAttrs.luck,
-      rng!,
+      rng!
     );
     enemy.hp -= playerDamage;
     if (playerDamage === 0) {
@@ -280,7 +268,7 @@ export function processCombatTurn(
         totalAttrs.perception,
         totalAttrs.luck,
         enemy.def,
-        rng!,
+        rng!
       );
       enemy.hp -= playerDamage;
       if (playerDamage === 0) {
@@ -296,7 +284,7 @@ export function processCombatTurn(
         totalAttrs.str,
         totalAttrs.perception,
         totalAttrs.luck,
-        rng!,
+        rng!
       );
       enemy.hp -= playerDamage;
     }
@@ -320,11 +308,7 @@ export function processCombatTurn(
   }
 
   // Check if player dodges enemy attack
-  const dodgeChance = calculateDodgeChance(
-    totalAttrs.agi,
-    totalAttrs.perception,
-    totalAttrs.luck,
-  );
+  const dodgeChance = calculateDodgeChance(totalAttrs.agi, totalAttrs.perception, totalAttrs.luck);
   if (rng!.chance(dodgeChance)) {
     narrative += `Bạn né tránh đòn tấn công của ${enemy.name}! `;
     enemyDamage = 0;
@@ -335,14 +319,13 @@ export function processCombatTurn(
       5, // Base player defense
       totalAttrs.agi,
       totalAttrs.luck,
-      playerAction === "defend",
+      playerAction === "defend"
     );
 
     // Factor in equipped items' defense bonuses
     const hpBonus = getEquipmentBonus(state, "hp");
     const agiBonus = getEquipmentBonus(state, "agi");
-    const equipmentDefenseBonus =
-      Math.floor(hpBonus / 20) + Math.floor(agiBonus / 3);
+    const equipmentDefenseBonus = Math.floor(hpBonus / 20) + Math.floor(agiBonus / 3);
 
     enemyDamage = calculateDamage(
       enemyAtk,
@@ -350,7 +333,7 @@ export function processCombatTurn(
       0, // Enemy STR (uses atk instead)
       5, // Enemy perception
       5, // Enemy luck
-      rng!,
+      rng!
     );
 
     updateHP(state, -enemyDamage);
@@ -400,7 +383,7 @@ export function processCombatTurn(
 export function generateEnemy(
   state: GameState,
   difficulty: "easy" | "medium" | "hard",
-  rng: DeterministicRNG,
+  rng: DeterministicRNG
 ): Enemy {
   const realmMultiplier =
     {
@@ -475,7 +458,7 @@ export function resolveCompleteCombat(
   state: GameState,
   enemy: Enemy,
   rng: DeterministicRNG,
-  locale: "vi" | "en",
+  locale: "vi" | "en"
 ): { victory: boolean; narrative: string; events: GameEvent[] } {
   let rounds = 0;
   const maxRounds = 20;
@@ -512,9 +495,7 @@ export function resolveCompleteCombat(
         : `\nVictory! You have defeated ${enemy.name_en || enemy.name}.`;
   } else if (state.stats.hp <= 0) {
     narrative +=
-      locale === "vi"
-        ? `\nThất bại... Bạn bị đánh bại.`
-        : `\nDefeat... You have been defeated.`;
+      locale === "vi" ? `\nThất bại... Bạn bị đánh bại.` : `\nDefeat... You have been defeated.`;
   }
 
   return { victory, narrative, events };

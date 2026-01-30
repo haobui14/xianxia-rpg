@@ -53,11 +53,7 @@ const QI_PATHS = [
   { from: 5, to: 9 },
 ];
 
-export default function MeridianDiagram({
-  state,
-  locale,
-  size = "medium",
-}: MeridianDiagramProps) {
+export default function MeridianDiagram({ state, locale, size = "medium" }: MeridianDiagramProps) {
   const { realm, realm_stage } = state.progress;
   const spiritElements = state.spirit_root.elements;
 
@@ -143,8 +139,7 @@ export default function MeridianDiagram({
         {QI_PATHS.map((path, index) => {
           const fromPoint = MERIDIAN_POINTS.find((p) => p.id === path.from)!;
           const toPoint = MERIDIAN_POINTS.find((p) => p.id === path.to)!;
-          const isActive =
-            path.from <= activePointCount && path.to <= activePointCount;
+          const isActive = path.from <= activePointCount && path.to <= activePointCount;
 
           return (
             <line
@@ -179,21 +174,9 @@ export default function MeridianDiagram({
                 cx={point.x}
                 cy={point.y}
                 r={pointRadius / 2}
-                fill={
-                  isActive
-                    ? isDantian
-                      ? secondaryColor
-                      : primaryColor
-                    : "#374151"
-                }
+                fill={isActive ? (isDantian ? secondaryColor : primaryColor) : "#374151"}
                 className={isActive ? "animate-meridian-pulse" : ""}
-                filter={
-                  isActive
-                    ? isDantian
-                      ? "url(#strongGlow)"
-                      : "url(#glow)"
-                    : undefined
-                }
+                filter={isActive ? (isDantian ? "url(#strongGlow)" : "url(#glow)") : undefined}
                 style={{
                   transformOrigin: `${point.x}px ${point.y}px`,
                 }}
@@ -215,10 +198,7 @@ export default function MeridianDiagram({
 
         {/* Particles rising from dantian when cultivating */}
         {activePointCount > 0 && (
-          <g
-            className="animate-particle-spin"
-            style={{ transformOrigin: "50px 58px" }}
-          >
+          <g className="animate-particle-spin" style={{ transformOrigin: "50px 58px" }}>
             {[0, 1, 2].map((i) => (
               <circle
                 key={`particle-${i}`}
@@ -236,10 +216,7 @@ export default function MeridianDiagram({
       {/* Legend */}
       <div className="mt-2 text-xs text-center space-y-1">
         <div className="flex items-center justify-center gap-2">
-          <div
-            className="w-3 h-3 rounded-full"
-            style={{ backgroundColor: primaryColor }}
-          />
+          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: primaryColor }} />
           <span className="text-gray-400">
             {spiritElements
               .map((e) =>
@@ -251,7 +228,7 @@ export default function MeridianDiagram({
                       Thủy: "Water",
                       Hỏa: "Fire",
                       Thổ: "Earth",
-                    }[e],
+                    }[e]
               )
               .join(" + ")}
           </span>

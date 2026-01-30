@@ -3,14 +3,7 @@
  * Manages game time, seasons, and time-based bonuses
  */
 
-import {
-  GameState,
-  GameTime,
-  TimeSegment,
-  Season,
-  Element,
-  Locale,
-} from "@/types/game";
+import { GameState, GameTime, TimeSegment, Season, Element, Locale } from "@/types/game";
 
 // =====================================================
 // CONSTANTS
@@ -48,10 +41,7 @@ export const SEASON_NAMES_VI: Record<Season, string> = {
 };
 
 // Element cultivation bonuses by season
-export const SEASON_ELEMENT_BONUS: Record<
-  Season,
-  Partial<Record<Element, number>>
-> = {
+export const SEASON_ELEMENT_BONUS: Record<Season, Partial<Record<Element, number>>> = {
   Spring: { Mộc: 20, Thủy: 10, Hỏa: -10 },
   Summer: { Hỏa: 20, Mộc: 10, Thủy: -10 },
   Autumn: { Kim: 20, Thổ: 10, Mộc: -10 },
@@ -77,7 +67,7 @@ export function createGameTime(
   day: number = 1,
   month: number = 1,
   year: number = 1,
-  segment: TimeSegment = "Sáng",
+  segment: TimeSegment = "Sáng"
 ): GameTime {
   return { day, month, year, segment };
 }
@@ -97,10 +87,7 @@ export function getGameTimeFromState(state: GameState): GameTime {
 /**
  * Apply GameTime to GameState
  */
-export function applyGameTimeToState(
-  state: GameState,
-  time: GameTime,
-): GameState {
+export function applyGameTimeToState(state: GameState, time: GameTime): GameState {
   return {
     ...state,
     time_day: time.day,
@@ -162,17 +149,12 @@ export function advanceTime(time: GameTime, segments: number): GameTime {
 /**
  * Advance time in GameState by segments
  */
-export function advanceGameStateTime(
-  state: GameState,
-  segments: number,
-): GameState {
+export function advanceGameStateTime(state: GameState, segments: number): GameState {
   const currentTime = getGameTimeFromState(state);
   const newTime = advanceTime(currentTime, segments);
 
   // Check for age increase (every 12 months = 1 year)
-  const oldYears = Math.floor(
-    currentTime.year - 1 + (currentTime.month - 1) / 12,
-  );
+  const oldYears = Math.floor(currentTime.year - 1 + (currentTime.month - 1) / 12);
   const newYears = Math.floor(newTime.year - 1 + (newTime.month - 1) / 12);
   const ageIncrease = newYears - oldYears;
 
@@ -259,10 +241,7 @@ export function isNighttime(segment: TimeSegment): boolean {
 /**
  * Get cultivation bonus for element based on season
  */
-export function getSeasonElementBonus(
-  season: Season,
-  element: Element,
-): number {
+export function getSeasonElementBonus(season: Season, element: Element): number {
   return SEASON_ELEMENT_BONUS[season][element] || 0;
 }
 
@@ -276,17 +255,12 @@ export function getSegmentCultivationBonus(segment: TimeSegment): number {
 /**
  * Calculate total time-based cultivation bonus
  */
-export function calculateTimeCultivationBonus(
-  time: GameTime,
-  elements: Element[],
-): number {
+export function calculateTimeCultivationBonus(time: GameTime, elements: Element[]): number {
   const season = getSeason(time);
   const segmentBonus = getSegmentCultivationBonus(time.segment);
 
   // Get best element bonus for player's spirit root
-  const elementBonuses = elements.map((el) =>
-    getSeasonElementBonus(season, el),
-  );
+  const elementBonuses = elements.map((el) => getSeasonElementBonus(season, el));
   const bestElementBonus = Math.max(...elementBonuses, 0);
 
   return segmentBonus + bestElementBonus;
@@ -337,9 +311,7 @@ export function formatDuration(segments: number, locale: Locale): string {
     const days = Math.floor(segments / SEGMENTS_PER_DAY);
     const remainingSegments = segments % SEGMENTS_PER_DAY;
     if (remainingSegments === 0) {
-      return locale === "vi"
-        ? `${days} ngày`
-        : `${days} day${days > 1 ? "s" : ""}`;
+      return locale === "vi" ? `${days} ngày` : `${days} day${days > 1 ? "s" : ""}`;
     }
     const hours = remainingSegments * 3;
     return locale === "vi"
@@ -348,13 +320,9 @@ export function formatDuration(segments: number, locale: Locale): string {
   }
 
   const months = Math.floor(segments / SEGMENTS_PER_MONTH);
-  const remainingDays = Math.floor(
-    (segments % SEGMENTS_PER_MONTH) / SEGMENTS_PER_DAY,
-  );
+  const remainingDays = Math.floor((segments % SEGMENTS_PER_MONTH) / SEGMENTS_PER_DAY);
   if (remainingDays === 0) {
-    return locale === "vi"
-      ? `${months} tháng`
-      : `${months} month${months > 1 ? "s" : ""}`;
+    return locale === "vi" ? `${months} tháng` : `${months} month${months > 1 ? "s" : ""}`;
   }
   return locale === "vi"
     ? `${months} tháng ${remainingDays} ngày`
@@ -371,8 +339,7 @@ export function formatDuration(segments: number, locale: Locale): string {
 export function formatGameTime(time: GameTime, locale: Locale): string {
   const season = getSeason(time);
   const seasonName = getSeasonName(season, locale);
-  const segmentName =
-    locale === "vi" ? time.segment : SEGMENT_NAMES_EN[time.segment];
+  const segmentName = locale === "vi" ? time.segment : SEGMENT_NAMES_EN[time.segment];
 
   if (locale === "vi") {
     return `Năm ${time.year}, Tháng ${time.month} (${seasonName}), Ngày ${time.day}, ${segmentName}`;
@@ -384,8 +351,7 @@ export function formatGameTime(time: GameTime, locale: Locale): string {
  * Format GameTime short version
  */
 export function formatGameTimeShort(time: GameTime, locale: Locale): string {
-  const segmentName =
-    locale === "vi" ? time.segment : SEGMENT_NAMES_EN[time.segment];
+  const segmentName = locale === "vi" ? time.segment : SEGMENT_NAMES_EN[time.segment];
 
   if (locale === "vi") {
     return `Y${time.year} T${time.month} N${time.day} - ${segmentName}`;
@@ -396,11 +362,7 @@ export function formatGameTimeShort(time: GameTime, locale: Locale): string {
 /**
  * Get relative time description
  */
-export function getRelativeTimeDescription(
-  from: GameTime,
-  to: GameTime,
-  locale: Locale,
-): string {
+export function getRelativeTimeDescription(from: GameTime, to: GameTime, locale: Locale): string {
   const diffSegments = getTimeDifference(from, to);
 
   if (diffSegments === 0) {
@@ -408,15 +370,10 @@ export function getRelativeTimeDescription(
   }
 
   if (diffSegments < 0) {
-    return (
-      formatDuration(Math.abs(diffSegments), locale) +
-      (locale === "vi" ? " trước" : " ago")
-    );
+    return formatDuration(Math.abs(diffSegments), locale) + (locale === "vi" ? " trước" : " ago");
   }
 
-  return (
-    formatDuration(diffSegments, locale) + (locale === "vi" ? " sau" : " later")
-  );
+  return formatDuration(diffSegments, locale) + (locale === "vi" ? " sau" : " later");
 }
 
 // =====================================================
@@ -467,10 +424,7 @@ export function getSpecialTimeBonus(time: GameTime): {
   if ((time.month === 6 || time.month === 12) && time.day === 21) {
     return {
       bonus: 20,
-      reason_vi:
-        time.month === 6
-          ? "Hạ chí - dương khí cực thịnh"
-          : "Đông chí - âm khí cực thịnh",
+      reason_vi: time.month === 6 ? "Hạ chí - dương khí cực thịnh" : "Đông chí - âm khí cực thịnh",
       reason_en:
         time.month === 6
           ? "Summer solstice - yang energy peak"

@@ -36,9 +36,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error syncing skills:", error);
-    return NextResponse.json(
-      { error: "Failed to sync skills" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to sync skills" }, { status: 500 });
   }
 }

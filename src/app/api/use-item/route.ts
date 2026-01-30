@@ -1,38 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/database/client';
-import { characterQueries, runQueries } from '@/lib/database/queries';
-import { GameState } from '@/types/game';
-import { syncInventoryToTables } from '@/lib/database/syncHelper';
+import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@/lib/database/client";
+import { characterQueries, runQueries } from "@/lib/database/queries";
+import { GameState } from "@/types/game";
+import { syncInventoryToTables } from "@/lib/database/syncHelper";
 
 export async function POST(request: NextRequest) {
   try {
     const { itemId } = await request.json();
 
     if (!itemId) {
-      return NextResponse.json(
-        { error: 'Invalid itemId' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid itemId" }, { status: 400 });
     }
 
     // Get authenticated user
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
     // Get character
     const characters = await characterQueries.getByUserId(user.id);
     if (characters.length === 0) {
-      return NextResponse.json(
-        { error: 'Character not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Character not found" }, { status: 404 });
     }
 
     const character = characters[0];
@@ -40,48 +33,39 @@ export async function POST(request: NextRequest) {
     // Get current run
     const runs = await runQueries.getByCharacterId(character.id);
     if (runs.length === 0) {
-      return NextResponse.json(
-        { error: 'No active run found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "No active run found" }, { status: 404 });
     }
 
     const run = runs[0];
     const state = run.current_state as GameState;
 
     // Find the item in inventory
-    const itemIndex = state.inventory.items.findIndex(item => item.id === itemId);
+    const itemIndex = state.inventory.items.findIndex((item) => item.id === itemId);
 
     if (itemIndex === -1) {
-      return NextResponse.json({ error: 'Item not found' }, { status: 404 });
+      return NextResponse.json({ error: "Item not found" }, { status: 404 });
     }
 
     const item = state.inventory.items[itemIndex];
 
     // Only consumables (Medicine, Book type or items with effects) can be used
-    if (item.type !== 'Medicine' && item.type !== 'Book' && !item.effects) {
-      return NextResponse.json(
-        { error: 'This item cannot be used' },
-        { status: 400 }
-      );
+    if (item.type !== "Medicine" && item.type !== "Book" && !item.effects) {
+      return NextResponse.json({ error: "This item cannot be used" }, { status: 400 });
     }
 
     // Track what was applied for response message
     const appliedEffects: string[] = [];
 
     // Handle Book type - teach techniques or skills
-    if (item.type === 'Book') {
+    if (item.type === "Book") {
       // Check if book teaches a technique
       if (item.teaches_technique) {
         const technique = item.teaches_technique;
-        
+
         // Check if already learned
-        const alreadyLearned = state.techniques.some(t => t.id === technique.id);
+        const alreadyLearned = state.techniques.some((t) => t.id === technique.id);
         if (alreadyLearned) {
-          return NextResponse.json(
-            { error: 'You already know this technique' },
-            { status: 400 }
-          );
+          return NextResponse.json({ error: "You already know this technique" }, { status: 400 });
         }
 
         // Add technique to state
@@ -92,14 +76,11 @@ export async function POST(request: NextRequest) {
       // Check if book teaches a skill
       if (item.teaches_skill) {
         const skill = item.teaches_skill;
-        
+
         // Check if already learned
-        const alreadyLearned = state.skills.some(s => s.id === skill.id);
+        const alreadyLearned = state.skills.some((s) => s.id === skill.id);
         if (alreadyLearned) {
-          return NextResponse.json(
-            { error: 'You already know this skill' },
-            { status: 400 }
-          );
+          return NextResponse.json({ error: "You already know this skill" }, { status: 400 });
         }
 
         // Add skill to state
@@ -110,7 +91,7 @@ export async function POST(request: NextRequest) {
       // If book doesn't teach anything, it's just a regular consumable with effects
       if (!item.teaches_technique && !item.teaches_skill && !item.effects) {
         return NextResponse.json(
-          { error: 'This book has no teachings or effects' },
+          { error: "This book has no teachings or effects" },
           { status: 400 }
         );
       }
@@ -208,13 +189,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       state,
-      message: appliedEffects.length > 0 ? appliedEffects.join(', ') : 'Item used'
+      message: appliedEffects.length > 0 ? appliedEffects.join(", ") : "Item used",
     });
   } catch (error) {
-    console.error('Use item error:', error);
-    return NextResponse.json(
-      { error: 'Failed to use item' },
-      { status: 500 }
-    );
+    console.error("Use item error:", error);
+    return NextResponse.json({ error: "Failed to use item" }, { status: 500 });
   }
 }

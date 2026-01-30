@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/database/client';
-import { characterQueries, runQueries } from '@/lib/database/queries';
-import { GameState } from '@/types/game';
-import { RegionId } from '@/types/world';
-import { migrateGameState } from '@/lib/game/mechanics';
+import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@/lib/database/client";
+import { characterQueries, runQueries } from "@/lib/database/queries";
+import { GameState } from "@/types/game";
+import { RegionId } from "@/types/world";
+import { migrateGameState } from "@/lib/game/mechanics";
 import {
   canTravelToArea,
   canTravelToRegion,
@@ -13,38 +13,40 @@ import {
   getCurrentLocationInfo,
   getDangerWarning,
   discoverArea,
-} from '@/lib/world/travel';
-import { getRegion, getArea } from '@/lib/world/regions';
+} from "@/lib/world/travel";
+import { getRegion, getArea } from "@/lib/world/regions";
 
 export async function POST(request: NextRequest) {
   try {
     const { action, destination } = await request.json();
 
-    if (!action || !['travel_area', 'travel_region', 'get_destinations', 'get_location'].includes(action)) {
+    if (
+      !action ||
+      !["travel_area", "travel_region", "get_destinations", "get_location"].includes(action)
+    ) {
       return NextResponse.json(
-        { error: 'Invalid action. Use "travel_area", "travel_region", "get_destinations", or "get_location"' },
+        {
+          error:
+            'Invalid action. Use "travel_area", "travel_region", "get_destinations", or "get_location"',
+        },
         { status: 400 }
       );
     }
 
     // Get authenticated user
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
     // Get character
     const characters = await characterQueries.getByUserId(user.id);
     if (characters.length === 0) {
-      return NextResponse.json(
-        { error: 'Character not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Character not found" }, { status: 404 });
     }
 
     const character = characters[0];
@@ -52,17 +54,14 @@ export async function POST(request: NextRequest) {
     // Get current run
     const runs = await runQueries.getByCharacterId(character.id);
     if (runs.length === 0) {
-      return NextResponse.json(
-        { error: 'No active run found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "No active run found" }, { status: 404 });
     }
 
     const run = runs[0];
-    let state = migrateGameState(run.current_state as GameState);
+    const state = migrateGameState(run.current_state as GameState);
 
     // Handle different actions
-    if (action === 'get_location') {
+    if (action === "get_location") {
       const locationInfo = getCurrentLocationInfo(state.travel!);
       const dangerWarning = getDangerWarning(state.travel!, state.progress.realm);
 
@@ -89,14 +88,16 @@ export async function POST(request: NextRequest) {
           totalAreas: locationInfo.totalAreas,
           reputation: locationInfo.reputation,
         },
-        danger_warning: dangerWarning.hasDanger ? {
-          message: dangerWarning.message,
-          message_en: dangerWarning.message_en,
-        } : null,
+        danger_warning: dangerWarning.hasDanger
+          ? {
+              message: dangerWarning.message,
+              message_en: dangerWarning.message_en,
+            }
+          : null,
       });
     }
 
-    if (action === 'get_destinations') {
+    if (action === "get_destinations") {
       const destinations = getAvailableDestinations(
         state.travel!,
         state.progress.realm,
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        areas: destinations.areas.map(a => ({
+        areas: destinations.areas.map((a) => ({
           id: a.area.id,
           name: a.area.name,
           name_en: a.area.name_en,
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
           reason: a.reason,
           staminaCost: a.staminaCost,
         })),
-        regions: destinations.regions.map(r => ({
+        regions: destinations.regions.map((r) => ({
           id: r.region.id,
           name: r.region.name,
           name_en: r.region.name_en,
@@ -129,21 +130,21 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (action === 'travel_area') {
+    if (action === "travel_area") {
       if (!destination) {
-        return NextResponse.json(
-          { error: 'Destination area ID required' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: "Destination area ID required" }, { status: 400 });
       }
 
       const canTravel = canTravelToArea(state.travel!, destination, state.stats.stamina);
 
       if (!canTravel.canTravel) {
-        return NextResponse.json({
-          success: false,
-          error: canTravel.reason_en || canTravel.reason,
-        }, { status: 400 });
+        return NextResponse.json(
+          {
+            success: false,
+            error: canTravel.reason_en || canTravel.reason,
+          },
+          { status: 400 }
+        );
       }
 
       // Execute travel
@@ -156,7 +157,7 @@ export async function POST(request: NextRequest) {
       state.travel = newTravel;
 
       // Advance time
-      const timeOrder = ['Sáng', 'Chiều', 'Tối', 'Đêm'];
+      const timeOrder = ["Sáng", "Chiều", "Tối", "Đêm"];
       let currentIndex = timeOrder.indexOf(state.time_segment);
       for (let i = 0; i < timeCost; i++) {
         currentIndex++;
@@ -195,19 +196,18 @@ export async function POST(request: NextRequest) {
           stamina_cost: canTravel.staminaCost,
           time_cost: timeCost,
         },
-        danger_warning: dangerWarning.hasDanger ? {
-          message: dangerWarning.message,
-          message_en: dangerWarning.message_en,
-        } : null,
+        danger_warning: dangerWarning.hasDanger
+          ? {
+              message: dangerWarning.message,
+              message_en: dangerWarning.message_en,
+            }
+          : null,
       });
     }
 
-    if (action === 'travel_region') {
+    if (action === "travel_region") {
       if (!destination) {
-        return NextResponse.json(
-          { error: 'Destination region ID required' },
-          { status: 400 }
-        );
+        return NextResponse.json({ error: "Destination region ID required" }, { status: 400 });
       }
 
       const canTravel = canTravelToRegion(
@@ -218,10 +218,13 @@ export async function POST(request: NextRequest) {
       );
 
       if (!canTravel.canTravel) {
-        return NextResponse.json({
-          success: false,
-          error: canTravel.reason_en || canTravel.reason,
-        }, { status: 400 });
+        return NextResponse.json(
+          {
+            success: false,
+            error: canTravel.reason_en || canTravel.reason,
+          },
+          { status: 400 }
+        );
       }
 
       // Execute travel
@@ -234,7 +237,7 @@ export async function POST(request: NextRequest) {
       state.travel = newTravel;
 
       // Advance time
-      const timeOrder = ['Sáng', 'Chiều', 'Tối', 'Đêm'];
+      const timeOrder = ["Sáng", "Chiều", "Tối", "Đêm"];
       let currentIndex = timeOrder.indexOf(state.time_segment);
       for (let i = 0; i < timeCost; i++) {
         currentIndex++;
@@ -276,19 +279,18 @@ export async function POST(request: NextRequest) {
           time_cost: timeCost,
           warning: canTravel.warning_en || canTravel.warning,
         },
-        danger_warning: dangerWarning.hasDanger ? {
-          message: dangerWarning.message,
-          message_en: dangerWarning.message_en,
-        } : null,
+        danger_warning: dangerWarning.hasDanger
+          ? {
+              message: dangerWarning.message,
+              message_en: dangerWarning.message_en,
+            }
+          : null,
       });
     }
 
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
-    console.error('Travel error:', error);
-    return NextResponse.json(
-      { error: 'Failed to process travel action' },
-      { status: 500 }
-    );
+    console.error("Travel error:", error);
+    return NextResponse.json({ error: "Failed to process travel action" }, { status: 500 });
   }
 }

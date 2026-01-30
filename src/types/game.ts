@@ -55,13 +55,7 @@ export interface ActivityDefinition {
   description: string;
   description_en: string;
   icon: string;
-  category:
-    | "cultivation"
-    | "combat"
-    | "gathering"
-    | "social"
-    | "recovery"
-    | "special";
+  category: "cultivation" | "combat" | "gathering" | "social" | "recovery" | "special";
 
   // Base costs per segment
   base_stamina_cost: number;
@@ -93,13 +87,7 @@ export interface ActivityDefinition {
   };
 
   // Affected by
-  affected_by: (
-    | "technique"
-    | "location"
-    | "season"
-    | "equipment"
-    | "condition"
-  )[];
+  affected_by: ("technique" | "location" | "season" | "equipment" | "condition")[];
 }
 
 // Current activity state
@@ -328,12 +316,7 @@ export interface WorldSimulationState {
   // NPC changes since last check
   npc_changes: {
     npc_id: string;
-    change_type:
-      | "breakthrough"
-      | "death"
-      | "moved"
-      | "joined_sect"
-      | "left_sect";
+    change_type: "breakthrough" | "death" | "moved" | "joined_sect" | "left_sect";
     details: string;
   }[];
 
@@ -363,13 +346,7 @@ export interface WorldSimulationState {
 
 export interface WorldEvent {
   id: string;
-  type:
-    | "sect_war"
-    | "beast_tide"
-    | "treasure_appearance"
-    | "tournament"
-    | "disaster"
-    | "festival";
+  type: "sect_war" | "beast_tide" | "treasure_appearance" | "tournament" | "disaster" | "festival";
   name: string;
   name_en: string;
   description: string;
@@ -466,12 +443,7 @@ export interface CharacterAttributes {
 export type CultivationPath = "qi" | "body" | "dual";
 
 // Body cultivation stages (parallel to Qi cultivation)
-export type BodyRealm =
-  | "PhàmThể"
-  | "LuyệnCốt"
-  | "ĐồngCân"
-  | "KimCương"
-  | "TháiCổ";
+export type BodyRealm = "PhàmThể" | "LuyệnCốt" | "ĐồngCân" | "KimCương" | "TháiCổ";
 
 // Cultivation progress
 export interface CultivationProgress {
@@ -573,15 +545,7 @@ export interface InventoryItem {
   name_en: string;
   description: string;
   description_en: string;
-  type:
-    | "Medicine"
-    | "Material"
-    | "Equipment"
-    | "Accessory"
-    | "Manual"
-    | "Book"
-    | "Effect"
-    | "Misc";
+  type: "Medicine" | "Material" | "Equipment" | "Accessory" | "Manual" | "Book" | "Effect" | "Misc";
   rarity: ItemRarity;
   quantity: number;
 
@@ -801,6 +765,10 @@ export interface ValidatedTurnResult {
   state: GameState;
   events: GameEvent[];
   turn_no: number;
+  saveStatus?: {
+    success: boolean;
+    error?: string;
+  };
 }
 
 // Enemy for combat

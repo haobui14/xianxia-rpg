@@ -1,13 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import {
-  GameState,
-  Locale,
-  Realm,
-  BodyRealm,
-  REALM_LIFESPAN_BONUS,
-} from "@/types/game";
+import { GameState, Locale, Realm, BodyRealm, REALM_LIFESPAN_BONUS } from "@/types/game";
 import {
   getGameTimeFromState,
   formatGameTimeShort,
@@ -76,14 +70,10 @@ export default function ProgressionView({
     const thresholds = STAGE_EXP_THRESHOLDS[realm];
 
     const currentThreshold = stage > 0 ? thresholds[stage - 1] : 0;
-    const nextThreshold =
-      thresholds[stage] || thresholds[thresholds.length - 1];
+    const nextThreshold = thresholds[stage] || thresholds[thresholds.length - 1];
     const expInStage = exp - currentThreshold;
     const expNeeded = nextThreshold - currentThreshold;
-    const percentage = Math.min(
-      100,
-      Math.floor((expInStage / expNeeded) * 100),
-    );
+    const percentage = Math.min(100, Math.floor((expInStage / expNeeded) * 100));
 
     return {
       realm,
@@ -107,14 +97,10 @@ export default function ProgressionView({
     const thresholds = [80, 200, 400, 650, 950];
 
     const currentThreshold = stage > 0 ? thresholds[stage - 1] : 0;
-    const nextThreshold =
-      thresholds[stage] || thresholds[thresholds.length - 1];
+    const nextThreshold = thresholds[stage] || thresholds[thresholds.length - 1];
     const expInStage = exp - currentThreshold;
     const expNeeded = nextThreshold - currentThreshold;
-    const percentage = Math.min(
-      100,
-      Math.floor((expInStage / expNeeded) * 100),
-    );
+    const percentage = Math.min(100, Math.floor((expInStage / expNeeded) * 100));
 
     return {
       realm,
@@ -154,9 +140,7 @@ export default function ProgressionView({
   // Get top skills
   const topSkills = useMemo(() => {
     return [...skills]
-      .sort(
-        (a, b) => b.level * 100 + (b.exp || 0) - (a.level * 100 + (a.exp || 0)),
-      )
+      .sort((a, b) => b.level * 100 + (b.exp || 0) - (a.level * 100 + (a.exp || 0)))
       .slice(0, 5);
   }, [skills]);
 
@@ -201,9 +185,7 @@ export default function ProgressionView({
           </div>
         </div>
         <div className="text-right text-sm">
-          <div className="text-amber-300">
-            {formatGameTimeShort(currentTime, locale)}
-          </div>
+          <div className="text-amber-300">{formatGameTimeShort(currentTime, locale)}</div>
           <div className="text-emerald-400">{seasonName}</div>
         </div>
       </div>
@@ -213,9 +195,7 @@ export default function ProgressionView({
         {/* HP */}
         <div className="bg-gray-800/50 rounded-lg p-2">
           <div className="flex justify-between text-xs mb-1">
-            <span className="text-red-400">
-              ❤️ {locale === "vi" ? "Sinh lực" : "HP"}
-            </span>
+            <span className="text-red-400">❤️ {locale === "vi" ? "Sinh lực" : "HP"}</span>
             <span className="text-gray-300">
               {stats.hp}/{stats.hp_max}
             </span>
@@ -231,9 +211,7 @@ export default function ProgressionView({
         {/* Qi */}
         <div className="bg-gray-800/50 rounded-lg p-2">
           <div className="flex justify-between text-xs mb-1">
-            <span className="text-blue-400">
-              💠 {locale === "vi" ? "Chân khí" : "Qi"}
-            </span>
+            <span className="text-blue-400">💠 {locale === "vi" ? "Chân khí" : "Qi"}</span>
             <span className="text-gray-300">
               {stats.qi}/{stats.qi_max}
             </span>
@@ -251,9 +229,7 @@ export default function ProgressionView({
         {/* Stamina */}
         <div className="bg-gray-800/50 rounded-lg p-2">
           <div className="flex justify-between text-xs mb-1">
-            <span className="text-yellow-400">
-              ⚡ {locale === "vi" ? "Thể lực" : "Stamina"}
-            </span>
+            <span className="text-yellow-400">⚡ {locale === "vi" ? "Thể lực" : "Stamina"}</span>
             <span className="text-gray-300">
               {stats.stamina}/{stats.stamina_max}
             </span>
@@ -281,8 +257,7 @@ export default function ProgressionView({
                   : REALM_NAMES[cultivationProgress.realm].en}
               </span>
               <span className="text-amber-400 ml-2">
-                {locale === "vi" ? "Tầng" : "Stage"}{" "}
-                {cultivationProgress.stage + 1}
+                {locale === "vi" ? "Tầng" : "Stage"} {cultivationProgress.stage + 1}
               </span>
             </div>
             <div className="text-sm text-gray-400">
@@ -314,13 +289,11 @@ export default function ProgressionView({
                     : BODY_REALM_NAMES[bodyCultivationProgress.realm].en}
                 </span>
                 <span className="text-amber-400 ml-2">
-                  {locale === "vi" ? "Tầng" : "Stage"}{" "}
-                  {bodyCultivationProgress.stage + 1}
+                  {locale === "vi" ? "Tầng" : "Stage"} {bodyCultivationProgress.stage + 1}
                 </span>
               </div>
               <div className="text-sm text-gray-400">
-                {bodyCultivationProgress.expInStage} /{" "}
-                {bodyCultivationProgress.expNeeded}
+                {bodyCultivationProgress.expInStage} / {bodyCultivationProgress.expNeeded}
               </div>
             </div>
             <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
@@ -371,10 +344,7 @@ export default function ProgressionView({
               color: "text-yellow-400",
             },
           ].map((attr) => (
-            <div
-              key={attr.key}
-              className="bg-gray-800/50 rounded p-2 text-center"
-            >
+            <div key={attr.key} className="bg-gray-800/50 rounded p-2 text-center">
               <div className={`text-xs ${attr.color}`}>{attr.label}</div>
               <div className="text-lg font-bold text-white">{attr.value}</div>
             </div>
@@ -390,20 +360,12 @@ export default function ProgressionView({
         <div className="bg-gray-800/50 rounded-lg p-3">
           <div className="flex justify-between items-center mb-2">
             <div>
-              <span className="text-gray-300">
-                {locale === "vi" ? "Tuổi: " : "Age: "}
-              </span>
-              <span className="text-white font-bold">
-                {lifespanInfo.currentAge}
-              </span>
-              <span className="text-gray-400">
-                {" "}
-                / {lifespanInfo.maxLifespan}
-              </span>
+              <span className="text-gray-300">{locale === "vi" ? "Tuổi: " : "Age: "}</span>
+              <span className="text-white font-bold">{lifespanInfo.currentAge}</span>
+              <span className="text-gray-400"> / {lifespanInfo.maxLifespan}</span>
             </div>
             <div className={urgencyColors[lifespanInfo.urgency]}>
-              {lifespanInfo.yearsRemaining}{" "}
-              {locale === "vi" ? "năm còn lại" : "years remaining"}
+              {lifespanInfo.yearsRemaining} {locale === "vi" ? "năm còn lại" : "years remaining"}
             </div>
           </div>
           <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
@@ -436,9 +398,7 @@ export default function ProgressionView({
                   <span className="text-gray-200 text-sm">
                     {locale === "vi" ? skill.name : skill.name_en}
                   </span>
-                  <span className="text-amber-400 text-sm">
-                    Lv.{skill.level}
-                  </span>
+                  <span className="text-amber-400 text-sm">Lv.{skill.level}</span>
                 </div>
                 {skill.max_exp && (
                   <div className="h-1 bg-gray-700 rounded-full overflow-hidden mt-1">
@@ -501,8 +461,7 @@ export default function ProgressionView({
             <div className="bg-red-900/20 border border-red-900/30 rounded-lg p-2 space-y-1 text-sm">
               {condition.injuries?.map((injury, i) => (
                 <div key={i} className="text-red-300">
-                  🩹 {locale === "vi" ? injury.name : injury.name_en}(
-                  {injury.recovery_days}{" "}
+                  🩹 {locale === "vi" ? injury.name : injury.name_en}({injury.recovery_days}{" "}
                   {locale === "vi" ? "ngày hồi phục" : "days to recover"})
                 </div>
               ))}
@@ -514,8 +473,7 @@ export default function ProgressionView({
               )}
               {condition.fatigue > 30 && (
                 <div className="text-yellow-300">
-                  😴 {locale === "vi" ? "Mệt mỏi" : "Fatigue"}:{" "}
-                  {condition.fatigue}%
+                  😴 {locale === "vi" ? "Mệt mỏi" : "Fatigue"}: {condition.fatigue}%
                 </div>
               )}
             </div>
@@ -530,12 +488,8 @@ export default function ProgressionView({
         <div className="flex gap-4 text-sm">
           <div className="flex items-center gap-1">
             <span className="text-gray-400">🥈</span>
-            <span className="text-white font-medium">
-              {inventory.silver.toLocaleString()}
-            </span>
-            <span className="text-gray-500">
-              {locale === "vi" ? "bạc" : "silver"}
-            </span>
+            <span className="text-white font-medium">{inventory.silver.toLocaleString()}</span>
+            <span className="text-gray-500">{locale === "vi" ? "bạc" : "silver"}</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="text-purple-400">💎</span>
@@ -548,9 +502,7 @@ export default function ProgressionView({
           </div>
           <div className="flex items-center gap-1">
             <span className="text-amber-400">📦</span>
-            <span className="text-white font-medium">
-              {inventory.items.length}
-            </span>
+            <span className="text-white font-medium">{inventory.items.length}</span>
             <span className="text-gray-500">
               / {inventory.max_slots + (inventory.storage_ring?.capacity || 0)}
             </span>

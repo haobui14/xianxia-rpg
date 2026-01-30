@@ -1,70 +1,74 @@
-import { InventoryItem, ItemRarity, StorageRing, Inventory } from '@/types/game';
+import { InventoryItem, ItemRarity, StorageRing, Inventory } from "@/types/game";
 
 /**
  * Sort options for inventory
  */
-export type SortOption = 'name' | 'type' | 'rarity' | 'quantity' | 'recent';
+export type SortOption = "name" | "type" | "rarity" | "quantity" | "recent";
 
 /**
  * Filter options for inventory
  */
-export type FilterOption = 'all' | 'equipment' | 'consumable' | 'material' | 'book';
+export type FilterOption = "all" | "equipment" | "consumable" | "material" | "book";
 
 /**
  * Rarity order for sorting (higher = more rare)
  */
 const RARITY_ORDER: Record<ItemRarity, number> = {
-  'Common': 1,
-  'Uncommon': 2,
-  'Rare': 3,
-  'Epic': 4,
-  'Legendary': 5,
+  Common: 1,
+  Uncommon: 2,
+  Rare: 3,
+  Epic: 4,
+  Legendary: 5,
 };
 
 /**
  * Type order for sorting
  */
 const TYPE_ORDER: Record<string, number> = {
-  'Equipment': 1,
-  'Accessory': 2,
-  'Weapon': 3,
-  'Medicine': 4,
-  'Book': 5,
-  'Manual': 6,
-  'Material': 7,
-  'Effect': 8,
-  'Misc': 9,
+  Equipment: 1,
+  Accessory: 2,
+  Weapon: 3,
+  Medicine: 4,
+  Book: 5,
+  Manual: 6,
+  Material: 7,
+  Effect: 8,
+  Misc: 9,
 };
 
 /**
  * Sort inventory items
  */
-export function sortItems(items: InventoryItem[], sortBy: SortOption, ascending: boolean = true): InventoryItem[] {
+export function sortItems(
+  items: InventoryItem[],
+  sortBy: SortOption,
+  ascending: boolean = true
+): InventoryItem[] {
   const sorted = [...items].sort((a, b) => {
     let comparison = 0;
 
     switch (sortBy) {
-      case 'name':
+      case "name":
         comparison = a.name.localeCompare(b.name);
         break;
-      case 'type':
+      case "type":
         comparison = (TYPE_ORDER[a.type] || 99) - (TYPE_ORDER[b.type] || 99);
         // Secondary sort by rarity within same type
         if (comparison === 0) {
           comparison = RARITY_ORDER[b.rarity] - RARITY_ORDER[a.rarity];
         }
         break;
-      case 'rarity':
+      case "rarity":
         comparison = RARITY_ORDER[b.rarity] - RARITY_ORDER[a.rarity];
         // Secondary sort by name within same rarity
         if (comparison === 0) {
           comparison = a.name.localeCompare(b.name);
         }
         break;
-      case 'quantity':
+      case "quantity":
         comparison = b.quantity - a.quantity;
         break;
-      case 'recent':
+      case "recent":
         // Items are generally added at the end, so reverse order = most recent first
         // This is a simple approximation - for true "recent" we'd need timestamps
         comparison = 0; // Keep original order (most recent last in array)
@@ -81,18 +85,18 @@ export function sortItems(items: InventoryItem[], sortBy: SortOption, ascending:
  * Filter inventory items
  */
 export function filterItems(items: InventoryItem[], filter: FilterOption): InventoryItem[] {
-  if (filter === 'all') return items;
+  if (filter === "all") return items;
 
-  return items.filter(item => {
+  return items.filter((item) => {
     switch (filter) {
-      case 'equipment':
-        return item.type === 'Equipment' || item.type === 'Accessory';
-      case 'consumable':
-        return item.type === 'Medicine' || item.type === 'Effect';
-      case 'material':
-        return item.type === 'Material' || item.type === 'Misc';
-      case 'book':
-        return item.type === 'Book' || item.type === 'Manual';
+      case "equipment":
+        return item.type === "Equipment" || item.type === "Accessory";
+      case "consumable":
+        return item.type === "Medicine" || item.type === "Effect";
+      case "material":
+        return item.type === "Material" || item.type === "Misc";
+      case "book":
+        return item.type === "Book" || item.type === "Manual";
       default:
         return true;
     }
@@ -102,14 +106,18 @@ export function filterItems(items: InventoryItem[], filter: FilterOption): Inven
 /**
  * Search items by name
  */
-export function searchItems(items: InventoryItem[], query: string, locale: 'vi' | 'en'): InventoryItem[] {
+export function searchItems(
+  items: InventoryItem[],
+  query: string,
+  locale: "vi" | "en"
+): InventoryItem[] {
   if (!query.trim()) return items;
 
   const lowerQuery = query.toLowerCase().trim();
 
-  return items.filter(item => {
-    const name = locale === 'vi' ? item.name : item.name_en;
-    const description = locale === 'vi' ? item.description : item.description_en;
+  return items.filter((item) => {
+    const name = locale === "vi" ? item.name : item.name_en;
+    const description = locale === "vi" ? item.description : item.description_en;
 
     return (
       name.toLowerCase().includes(lowerQuery) ||
@@ -124,7 +132,7 @@ export function searchItems(items: InventoryItem[], query: string, locale: 'vi' 
  * Auto-sort items by type and rarity (convenience function)
  */
 export function autoSortItems(items: InventoryItem[]): InventoryItem[] {
-  return sortItems(items, 'type', true);
+  return sortItems(items, "type", true);
 }
 
 /**
@@ -147,7 +155,11 @@ export function isInventoryFull(inventory: Inventory): boolean {
 /**
  * Get inventory usage info
  */
-export function getInventoryUsage(inventory: Inventory): { used: number; total: number; percentage: number } {
+export function getInventoryUsage(inventory: Inventory): {
+  used: number;
+  total: number;
+  percentage: number;
+} {
   const total = getTotalCapacity(inventory);
   const used = inventory.items.length;
   return {
@@ -162,39 +174,39 @@ export function getInventoryUsage(inventory: Inventory): { used: number; total: 
  */
 export const STORAGE_RINGS: StorageRing[] = [
   {
-    id: 'storage_ring_basic',
-    name: 'Trữ Vật Giới (Cơ Bản)',
-    name_en: 'Basic Storage Ring',
+    id: "storage_ring_basic",
+    name: "Trữ Vật Giới (Cơ Bản)",
+    name_en: "Basic Storage Ring",
     capacity: 10,
-    rarity: 'Common',
+    rarity: "Common",
   },
   {
-    id: 'storage_ring_uncommon',
-    name: 'Trữ Vật Giới (Tốt)',
-    name_en: 'Uncommon Storage Ring',
+    id: "storage_ring_uncommon",
+    name: "Trữ Vật Giới (Tốt)",
+    name_en: "Uncommon Storage Ring",
     capacity: 20,
-    rarity: 'Uncommon',
+    rarity: "Uncommon",
   },
   {
-    id: 'storage_ring_rare',
-    name: 'Trữ Vật Giới (Hiếm)',
-    name_en: 'Rare Storage Ring',
+    id: "storage_ring_rare",
+    name: "Trữ Vật Giới (Hiếm)",
+    name_en: "Rare Storage Ring",
     capacity: 35,
-    rarity: 'Rare',
+    rarity: "Rare",
   },
   {
-    id: 'storage_ring_epic',
-    name: 'Trữ Vật Giới (Sử Thi)',
-    name_en: 'Epic Storage Ring',
+    id: "storage_ring_epic",
+    name: "Trữ Vật Giới (Sử Thi)",
+    name_en: "Epic Storage Ring",
     capacity: 50,
-    rarity: 'Epic',
+    rarity: "Epic",
   },
   {
-    id: 'storage_ring_legendary',
-    name: 'Vô Tận Trữ Vật Giới',
-    name_en: 'Infinite Storage Ring',
+    id: "storage_ring_legendary",
+    name: "Vô Tận Trữ Vật Giới",
+    name_en: "Infinite Storage Ring",
     capacity: 100,
-    rarity: 'Legendary',
+    rarity: "Legendary",
   },
 ];
 
@@ -202,27 +214,27 @@ export const STORAGE_RINGS: StorageRing[] = [
  * Get storage ring by ID
  */
 export function getStorageRingById(id: string): StorageRing | undefined {
-  return STORAGE_RINGS.find(ring => ring.id === id);
+  return STORAGE_RINGS.find((ring) => ring.id === id);
 }
 
 /**
  * Filter labels for UI
  */
 export const FILTER_LABELS: Record<FilterOption, { vi: string; en: string }> = {
-  all: { vi: 'Tất cả', en: 'All' },
-  equipment: { vi: 'Trang bị', en: 'Equipment' },
-  consumable: { vi: 'Tiêu hao', en: 'Consumables' },
-  material: { vi: 'Nguyên liệu', en: 'Materials' },
-  book: { vi: 'Sách/Bí kíp', en: 'Books' },
+  all: { vi: "Tất cả", en: "All" },
+  equipment: { vi: "Trang bị", en: "Equipment" },
+  consumable: { vi: "Tiêu hao", en: "Consumables" },
+  material: { vi: "Nguyên liệu", en: "Materials" },
+  book: { vi: "Sách/Bí kíp", en: "Books" },
 };
 
 /**
  * Sort labels for UI
  */
 export const SORT_LABELS: Record<SortOption, { vi: string; en: string }> = {
-  name: { vi: 'Tên', en: 'Name' },
-  type: { vi: 'Loại', en: 'Type' },
-  rarity: { vi: 'Độ hiếm', en: 'Rarity' },
-  quantity: { vi: 'Số lượng', en: 'Quantity' },
-  recent: { vi: 'Gần đây', en: 'Recent' },
+  name: { vi: "Tên", en: "Name" },
+  type: { vi: "Loại", en: "Type" },
+  rarity: { vi: "Độ hiếm", en: "Rarity" },
+  quantity: { vi: "Số lượng", en: "Quantity" },
+  recent: { vi: "Gần đây", en: "Recent" },
 };

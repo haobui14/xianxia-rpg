@@ -1,4 +1,11 @@
-import { CultivationProgress, CultivationPath, Realm, BodyRealm, CharacterStats, CharacterAttributes } from '@/types/game';
+import {
+  CultivationProgress,
+  CultivationPath,
+  Realm,
+  BodyRealm,
+  CharacterStats,
+  CharacterAttributes,
+} from "@/types/game";
 
 /**
  * Dual Cultivation System
@@ -7,33 +14,33 @@ import { CultivationProgress, CultivationPath, Realm, BodyRealm, CharacterStats,
  */
 
 // Body realm progression (parallel to qi cultivation)
-export const BODY_REALMS: BodyRealm[] = ['PhàmThể', 'LuyệnCốt', 'ĐồngCân', 'KimCương', 'TháiCổ'];
+export const BODY_REALMS: BodyRealm[] = ["PhàmThể", "LuyệnCốt", "ĐồngCân", "KimCương", "TháiCổ"];
 
 // Body realm names for display
 export const BODY_REALM_NAMES: Record<BodyRealm, { vi: string; en: string }> = {
-  'PhàmThể': { vi: 'Phàm Thể', en: 'Mortal Body' },
-  'LuyệnCốt': { vi: 'Luyện Cốt', en: 'Bone Forging' },
-  'ĐồngCân': { vi: 'Đồng Cân', en: 'Copper Tendon' },
-  'KimCương': { vi: 'Kim Cương', en: 'Diamond Body' },
-  'TháiCổ': { vi: 'Thái Cổ', en: 'Primordial Body' },
+  PhàmThể: { vi: "Phàm Thể", en: "Mortal Body" },
+  LuyệnCốt: { vi: "Luyện Cốt", en: "Bone Forging" },
+  ĐồngCân: { vi: "Đồng Cân", en: "Copper Tendon" },
+  KimCương: { vi: "Kim Cương", en: "Diamond Body" },
+  TháiCổ: { vi: "Thái Cổ", en: "Primordial Body" },
 };
 
 // Experience required to advance body cultivation stages
 export const BODY_EXP_THRESHOLDS: Record<BodyRealm, number[]> = {
-  'PhàmThể': [50, 100, 150, 200, 250], // Stage 0-4, stage 5 = breakthrough
-  'LuyệnCốt': [200, 400, 600, 800, 1000],
-  'ĐồngCân': [500, 1000, 1500, 2000, 2500],
-  'KimCương': [1000, 2000, 3000, 4000, 5000],
-  'TháiCổ': [2500, 5000, 7500, 10000, 15000],
+  PhàmThể: [50, 100, 150, 200, 250], // Stage 0-4, stage 5 = breakthrough
+  LuyệnCốt: [200, 400, 600, 800, 1000],
+  ĐồngCân: [500, 1000, 1500, 2000, 2500],
+  KimCương: [1000, 2000, 3000, 4000, 5000],
+  TháiCổ: [2500, 5000, 7500, 10000, 15000],
 };
 
 // Stat bonuses per body realm breakthrough
 export const BODY_REALM_BONUSES: Record<BodyRealm, { hp: number; str: number; stamina: number }> = {
-  'PhàmThể': { hp: 10, str: 1, stamina: 5 },
-  'LuyệnCốt': { hp: 25, str: 2, stamina: 10 },
-  'ĐồngCân': { hp: 50, str: 4, stamina: 20 },
-  'KimCương': { hp: 100, str: 8, stamina: 40 },
-  'TháiCổ': { hp: 200, str: 15, stamina: 80 },
+  PhàmThể: { hp: 10, str: 1, stamina: 5 },
+  LuyệnCốt: { hp: 25, str: 2, stamina: 10 },
+  ĐồngCân: { hp: 50, str: 4, stamina: 20 },
+  KimCương: { hp: 100, str: 8, stamina: 40 },
+  TháiCổ: { hp: 200, str: 15, stamina: 80 },
 };
 
 // Stat bonuses per body stage
@@ -45,22 +52,24 @@ export const BODY_STAGE_BONUSES = {
 
 // Cultivation path names
 export const CULTIVATION_PATH_NAMES: Record<CultivationPath, { vi: string; en: string }> = {
-  'qi': { vi: 'Tu Khí', en: 'Qi Cultivation' },
-  'body': { vi: 'Tu Thể', en: 'Body Cultivation' },
-  'dual': { vi: 'Song Tu', en: 'Dual Cultivation' },
+  qi: { vi: "Tu Khí", en: "Qi Cultivation" },
+  body: { vi: "Tu Thể", en: "Body Cultivation" },
+  dual: { vi: "Song Tu", en: "Dual Cultivation" },
 };
 
 /**
  * Initialize dual cultivation for a character
+ * Preserves existing body cultivation progress if any
  */
 export function initDualCultivation(progress: CultivationProgress): CultivationProgress {
   return {
     ...progress,
-    cultivation_path: 'dual',
-    body_realm: 'PhàmThể',
-    body_stage: 0,
-    body_exp: 0,
-    exp_split: 50, // Default 50/50 split
+    cultivation_path: "dual",
+    // Preserve existing body progress, or initialize to starting values
+    body_realm: progress.body_realm || "PhàmThể",
+    body_stage: progress.body_stage ?? 0,
+    body_exp: progress.body_exp ?? 0,
+    exp_split: progress.exp_split ?? 50, // Keep previous split or default 50/50
   };
 }
 
@@ -84,7 +93,7 @@ export function getNextBodyRealm(realm: BodyRealm): BodyRealm | null {
  * Calculate exp needed for next body stage/realm
  */
 export function getBodyExpToNext(progress: CultivationProgress): number {
-  const realm = progress.body_realm || 'PhàmThể';
+  const realm = progress.body_realm || "PhàmThể";
   const stage = progress.body_stage || 0;
   const thresholds = BODY_EXP_THRESHOLDS[realm];
 
@@ -138,11 +147,11 @@ export function addBodyExperience(
   const newProgress = { ...progress };
   let stageUp = false;
   let realmUp = false;
-  let statBonuses = { hp: 0, str: 0, stamina: 0 };
+  const statBonuses = { hp: 0, str: 0, stamina: 0 };
 
   // Initialize if needed
   if (!newProgress.body_realm) {
-    newProgress.body_realm = 'PhàmThể';
+    newProgress.body_realm = "PhàmThể";
     newProgress.body_stage = 0;
     newProgress.body_exp = 0;
   }
@@ -210,7 +219,7 @@ export function applyDualCultivationExp(
   bodyStatBonuses: { hp: number; str: number; stamina: number };
 } {
   // Default to 100% qi if not in dual cultivation mode
-  const expSplit = progress.cultivation_path === 'dual' ? (progress.exp_split ?? 50) : 100;
+  const expSplit = progress.cultivation_path === "dual" ? (progress.exp_split ?? 50) : 100;
   const { qiExp, bodyExp } = splitExperience(totalExp, expSplit);
 
   // Apply qi exp (handled by existing system)
@@ -224,7 +233,7 @@ export function applyDualCultivationExp(
   let bodyRealmUp = false;
   let bodyStatBonuses = { hp: 0, str: 0, stamina: 0 };
 
-  if (progress.cultivation_path === 'dual' && bodyExp > 0) {
+  if (progress.cultivation_path === "dual" && bodyExp > 0) {
     const bodyResult = addBodyExperience(updatedProgress, bodyExp);
     Object.assign(updatedProgress, bodyResult.updatedProgress);
     bodyStageUp = bodyResult.stageUp;
@@ -255,10 +264,13 @@ export function setExpSplit(progress: CultivationProgress, split: number): Culti
 /**
  * Get body cultivation display text
  */
-export function getBodyCultivationDisplay(progress: CultivationProgress, locale: 'vi' | 'en'): string {
-  if (!progress.body_realm) return locale === 'vi' ? 'Chưa tu thể' : 'No Body Cultivation';
+export function getBodyCultivationDisplay(
+  progress: CultivationProgress,
+  locale: "vi" | "en"
+): string {
+  if (!progress.body_realm) return locale === "vi" ? "Chưa tu thể" : "No Body Cultivation";
 
-  const realmName = BODY_REALM_NAMES[progress.body_realm][locale === 'vi' ? 'vi' : 'en'];
+  const realmName = BODY_REALM_NAMES[progress.body_realm][locale === "vi" ? "vi" : "en"];
   const stage = progress.body_stage || 0;
 
   return `${realmName} ${stage + 1}`;

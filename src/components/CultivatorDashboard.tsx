@@ -44,10 +44,7 @@ import {
 interface CultivatorDashboardProps {
   state: GameState;
   locale: Locale;
-  onActivityStart?: (
-    activityType: ActivityType,
-    durationSegments: number,
-  ) => void;
+  onActivityStart?: (activityType: ActivityType, durationSegments: number) => void;
   onActivityInterrupt?: () => void;
   onTimeSkip?: (segments: number) => void;
   compact?: boolean;
@@ -71,14 +68,9 @@ function TimeDisplay({ state, locale }: { state: GameState; locale: Locale }) {
   const season = getSeasonFromMonth(time.month);
   const seasonName = getSeasonName(season, locale);
   const segmentName =
-    locale === "en"
-      ? SEGMENT_NAMES_EN[time.segment as TimeSegment]
-      : time.segment;
+    locale === "en" ? SEGMENT_NAMES_EN[time.segment as TimeSegment] : time.segment;
 
-  const timeBonus = calculateTimeCultivationBonus(
-    time,
-    state.spirit_root.elements,
-  );
+  const timeBonus = calculateTimeCultivationBonus(time, state.spirit_root.elements);
   const specialBonus = getSpecialTimeBonus(time);
 
   // Segment icons
@@ -92,8 +84,7 @@ function TimeDisplay({ state, locale }: { state: GameState; locale: Locale }) {
   // Season colors
   const seasonColors: Record<string, string> = {
     Spring: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    Summer:
-      "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+    Summer: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
     Autumn: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
     Winter: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
   };
@@ -102,23 +93,17 @@ function TimeDisplay({ state, locale }: { state: GameState; locale: Locale }) {
     <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-2xl">
-            {segmentIcons[time.segment as TimeSegment] || "⏰"}
-          </span>
+          <span className="text-2xl">{segmentIcons[time.segment as TimeSegment] || "⏰"}</span>
           <div>
             <div className="font-medium text-gray-900 dark:text-white">
               {locale === "vi"
                 ? `Năm ${time.year}, Tháng ${time.month}, Ngày ${time.day}`
                 : `Year ${time.year}, Month ${time.month}, Day ${time.day}`}
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              {segmentName}
-            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">{segmentName}</div>
           </div>
         </div>
-        <span
-          className={`px-2 py-1 rounded-full text-xs font-medium ${seasonColors[season]}`}
-        >
+        <span className={`px-2 py-1 rounded-full text-xs font-medium ${seasonColors[season]}`}>
           🌸 {seasonName}
         </span>
       </div>
@@ -130,9 +115,8 @@ function TimeDisplay({ state, locale }: { state: GameState; locale: Locale }) {
         </span>
         {specialBonus && (
           <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded animate-pulse">
-            ✨{" "}
-            {locale === "vi" ? specialBonus.reason_vi : specialBonus.reason_en}:
-            +{specialBonus.bonus}%
+            ✨ {locale === "vi" ? specialBonus.reason_vi : specialBonus.reason_en}: +
+            {specialBonus.bonus}%
           </span>
         )}
       </div>
@@ -192,8 +176,7 @@ function ActivityProgress({
       </div>
 
       {/* Accumulated rewards preview */}
-      {(activity.accumulated_rewards.qi_exp > 0 ||
-        activity.accumulated_rewards.body_exp > 0) && (
+      {(activity.accumulated_rewards.qi_exp > 0 || activity.accumulated_rewards.body_exp > 0) && (
         <div className="mt-2 pt-2 border-t border-blue-200 dark:border-blue-700 text-xs text-gray-600 dark:text-gray-400">
           {locale === "vi" ? "Tích lũy" : "Accumulated"}:
           {activity.accumulated_rewards.qi_exp > 0 && (
@@ -298,10 +281,7 @@ function ActivityQuickSelect({
 }) {
   const [selectedDuration, setSelectedDuration] = useState(4); // Default 1 day
 
-  const availableActivities = useMemo(
-    () => getAvailableActivities(state, locale),
-    [state, locale],
-  );
+  const availableActivities = useMemo(() => getAvailableActivities(state, locale), [state, locale]);
 
   // Group activities by category
   const groupedActivities = useMemo(() => {
@@ -332,7 +312,7 @@ function ActivityQuickSelect({
         onActivityStart(type, selectedDuration);
       }
     },
-    [state, selectedDuration, locale, onActivityStart],
+    [state, selectedDuration, locale, onActivityStart]
   );
 
   return (
@@ -358,9 +338,7 @@ function ActivityQuickSelect({
         {Object.entries(groupedActivities).map(([category, activities]) => (
           <div key={category}>
             <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-              {locale === "vi"
-                ? categoryLabels[category]?.vi
-                : categoryLabels[category]?.en}
+              {locale === "vi" ? categoryLabels[category]?.vi : categoryLabels[category]?.en}
             </div>
             <div className="flex flex-wrap gap-1">
               {activities.map((activity) => {
@@ -403,24 +381,14 @@ function ActivityQuickSelect({
 /**
  * Condition Warnings
  */
-function ConditionWarnings({
-  state,
-  locale,
-}: {
-  state: GameState;
-  locale: Locale;
-}) {
-  const warnings: Array<{ icon: string; message: string; severity: string }> =
-    [];
+function ConditionWarnings({ state, locale }: { state: GameState; locale: Locale }) {
+  const warnings: Array<{ icon: string; message: string; severity: string }> = [];
 
   // Stamina warning
   if (state.stats.stamina < 20) {
     warnings.push({
       icon: "😴",
-      message:
-        locale === "vi"
-          ? "Thể lực thấp - cần nghỉ ngơi"
-          : "Low stamina - rest needed",
+      message: locale === "vi" ? "Thể lực thấp - cần nghỉ ngơi" : "Low stamina - rest needed",
       severity: "warning",
     });
   }
@@ -440,9 +408,7 @@ function ConditionWarnings({
       warnings.push({
         icon: "😓",
         message:
-          locale === "vi"
-            ? "Mệt mỏi cao - hiệu quả giảm"
-            : "High fatigue - reduced efficiency",
+          locale === "vi" ? "Mệt mỏi cao - hiệu quả giảm" : "High fatigue - reduced efficiency",
         severity: "warning",
       });
     }
@@ -537,11 +503,7 @@ export default function CultivatorDashboard({
         />
       ) : (
         !compact && (
-          <ActivityQuickSelect
-            state={state}
-            locale={locale}
-            onActivityStart={onActivityStart}
-          />
+          <ActivityQuickSelect state={state} locale={locale} onActivityStart={onActivityStart} />
         )
       )}
 

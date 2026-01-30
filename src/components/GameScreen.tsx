@@ -1,14 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import {
-  GameState,
-  Choice,
-  ValidatedTurnResult,
-  Realm,
-  Enemy,
-  CombatLogEntry,
-} from "@/types/game";
+import { GameState, Choice, ValidatedTurnResult, Realm, Enemy, CombatLogEntry } from "@/types/game";
 import { t, Locale } from "@/lib/i18n/translations";
 import CharacterSheet from "./CharacterSheet";
 import SectView from "./SectView";
@@ -37,17 +30,13 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveError, setSaveError] = useState<string>("");
+  const saveStatusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [activeTab, setActiveTab] = useState<
-    | "game"
-    | "character"
-    | "sect"
-    | "inventory"
-    | "market"
-    | "notifications"
-    | "world"
+    "game" | "character" | "sect" | "inventory" | "market" | "notifications" | "world"
   >("game");
-  const [breakthroughEvent, setBreakthroughEvent] =
-    useState<BreakthroughEvent | null>(null);
+  const [breakthroughEvent, setBreakthroughEvent] = useState<BreakthroughEvent | null>(null);
   const [previousExp, setPreviousExp] = useState<number | undefined>(undefined);
   const [testCombat, setTestCombat] = useState<{
     enemy: Enemy;
@@ -71,6 +60,12 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
     async (choiceId: string | null, selectedChoice?: Choice) => {
       setProcessing(true);
       setError("");
+      setSaveStatus("saving");
+
+      // Clear any previous save status timeout
+      if (saveStatusTimeoutRef.current) {
+        clearTimeout(saveStatusTimeoutRef.current);
+      }
 
       // Store previous exp for animation
       if (state) {
@@ -105,10 +100,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           const newStage = result.state.progress.realm_stage;
 
           // Detect breakthrough (realm changed or stage increased)
-          if (
-            prevRealm !== newRealm ||
-            (prevRealm === newRealm && newStage > prevStage)
-          ) {
+          if (prevRealm !== newRealm || (prevRealm === newRealm && newStage > prevStage)) {
             // Calculate stat increases (approximate based on typical breakthrough)
             const breakthroughData: BreakthroughEvent = {
               previousRealm: prevRealm,
@@ -121,64 +113,21 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
             // For realm breakthroughs, show major stat increases
             if (prevRealm !== newRealm) {
               breakthroughData.statIncreases = {
-                hp_max:
-                  prevRealm === "PhàmNhân"
-                    ? 50
-                    : prevRealm === "LuyệnKhí"
-                      ? 100
-                      : 150,
-                qi_max:
-                  prevRealm === "PhàmNhân"
-                    ? 100
-                    : prevRealm === "LuyệnKhí"
-                      ? 200
-                      : 300,
-                str:
-                  prevRealm === "PhàmNhân"
-                    ? 2
-                    : prevRealm === "LuyệnKhí"
-                      ? 3
-                      : 4,
-                agi:
-                  prevRealm === "PhàmNhân"
-                    ? 2
-                    : prevRealm === "LuyệnKhí"
-                      ? 3
-                      : 4,
-                int:
-                  prevRealm === "PhàmNhân"
-                    ? 2
-                    : prevRealm === "LuyệnKhí"
-                      ? 3
-                      : 4,
-                perception:
-                  prevRealm === "PhàmNhân"
-                    ? 1
-                    : prevRealm === "LuyệnKhí"
-                      ? 2
-                      : 3,
+                hp_max: prevRealm === "PhàmNhân" ? 50 : prevRealm === "LuyệnKhí" ? 100 : 150,
+                qi_max: prevRealm === "PhàmNhân" ? 100 : prevRealm === "LuyệnKhí" ? 200 : 300,
+                str: prevRealm === "PhàmNhân" ? 2 : prevRealm === "LuyệnKhí" ? 3 : 4,
+                agi: prevRealm === "PhàmNhân" ? 2 : prevRealm === "LuyệnKhí" ? 3 : 4,
+                int: prevRealm === "PhàmNhân" ? 2 : prevRealm === "LuyệnKhí" ? 3 : 4,
+                perception: prevRealm === "PhàmNhân" ? 1 : prevRealm === "LuyệnKhí" ? 2 : 3,
               };
             } else {
               // Stage breakthrough within same realm
               breakthroughData.statIncreases = {
-                hp_max:
-                  prevRealm === "LuyệnKhí"
-                    ? 30
-                    : prevRealm === "TrúcCơ"
-                      ? 50
-                      : 80,
-                qi_max:
-                  prevRealm === "LuyệnKhí"
-                    ? 50
-                    : prevRealm === "TrúcCơ"
-                      ? 80
-                      : 120,
-                str:
-                  prevRealm === "LuyệnKhí" ? 1 : prevRealm === "TrúcCơ" ? 2 : 3,
-                agi:
-                  prevRealm === "LuyệnKhí" ? 1 : prevRealm === "TrúcCơ" ? 2 : 3,
-                int:
-                  prevRealm === "LuyệnKhí" ? 1 : prevRealm === "TrúcCơ" ? 2 : 3,
+                hp_max: prevRealm === "LuyệnKhí" ? 30 : prevRealm === "TrúcCơ" ? 50 : 80,
+                qi_max: prevRealm === "LuyệnKhí" ? 50 : prevRealm === "TrúcCơ" ? 80 : 120,
+                str: prevRealm === "LuyệnKhí" ? 1 : prevRealm === "TrúcCơ" ? 2 : 3,
+                agi: prevRealm === "LuyệnKhí" ? 1 : prevRealm === "TrúcCơ" ? 2 : 3,
+                int: prevRealm === "LuyệnKhí" ? 1 : prevRealm === "TrúcCơ" ? 2 : 3,
               };
             }
 
@@ -190,10 +139,34 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         setNarrative(result.narrative);
         setChoices(result.choices);
 
+        // Handle save status from API response
+        if (result.saveStatus) {
+          if (result.saveStatus.success) {
+            setSaveStatus("saved");
+            setSaveError("");
+            // Auto-hide saved status after 3 seconds
+            saveStatusTimeoutRef.current = setTimeout(() => {
+              setSaveStatus("idle");
+            }, 3000);
+          } else {
+            setSaveStatus("error");
+            setSaveError(result.saveStatus.error || "Unknown save error");
+            // Keep error visible longer
+            saveStatusTimeoutRef.current = setTimeout(() => {
+              setSaveStatus("idle");
+              setSaveError("");
+            }, 10000);
+          }
+        } else {
+          // API didn't return saveStatus, assume success
+          setSaveStatus("saved");
+          saveStatusTimeoutRef.current = setTimeout(() => {
+            setSaveStatus("idle");
+          }, 3000);
+        }
+
         // Check for combat_encounter event from AI
-        const combatEncounter = result.events?.find(
-          (e) => e.type === "combat_encounter",
-        );
+        const combatEncounter = result.events?.find((e) => e.type === "combat_encounter");
         if (combatEncounter && combatEncounter.data?.enemy) {
           const enemy = combatEncounter.data.enemy as Enemy;
           // Ensure hp_max is set
@@ -209,14 +182,14 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         }
       } catch (err) {
         console.error("Turn error:", err);
-        setError(
-          locale === "vi" ? "Lỗi xử lý lượt chơi" : "Error processing turn",
-        );
+        setError(locale === "vi" ? "Lỗi xử lý lượt chơi" : "Error processing turn");
+        setSaveStatus("error");
+        setSaveError(err instanceof Error ? err.message : "Turn processing failed");
       } finally {
         setProcessing(false);
       }
     },
-    [runId, locale, state],
+    [runId, locale, state]
   );
 
   const handleEquipItem = useCallback(
@@ -241,11 +214,11 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         console.error("Equip error:", err);
         setError(
           (err instanceof Error ? err.message : "") ||
-            (locale === "vi" ? "Lỗi trang bị" : "Error equipping item"),
+            (locale === "vi" ? "Lỗi trang bị" : "Error equipping item")
         );
       }
     },
-    [locale],
+    [locale]
   );
 
   const handleMarketAction = useCallback(
@@ -267,13 +240,10 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         setState(result.state);
       } catch (err: any) {
         console.error("Market error:", err);
-        setError(
-          err.message ||
-            (locale === "vi" ? "Lỗi giao dịch" : "Transaction error"),
-        );
+        setError(err.message || (locale === "vi" ? "Lỗi giao dịch" : "Transaction error"));
       }
     },
-    [locale],
+    [locale]
   );
 
   const handleRefreshMarket = useCallback(async () => {
@@ -294,9 +264,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       setState(result.state);
     } catch (err: any) {
       console.error("Refresh error:", err);
-      setError(
-        err.message || (locale === "vi" ? "Lỗi làm mới" : "Refresh error"),
-      );
+      setError(err.message || (locale === "vi" ? "Lỗi làm mới" : "Refresh error"));
     }
   }, [locale]);
 
@@ -319,12 +287,10 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         setState(result.state);
       } catch (err: any) {
         console.error("Exchange error:", err);
-        setError(
-          err.message || (locale === "vi" ? "Lỗi đổi tiền" : "Exchange error"),
-        );
+        setError(err.message || (locale === "vi" ? "Lỗi đổi tiền" : "Exchange error"));
       }
     },
-    [locale],
+    [locale]
   );
 
   const handleDiscardItem = useCallback(
@@ -345,12 +311,10 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         setState(result.state);
       } catch (err) {
         console.error("Discard error:", err);
-        setError(
-          locale === "vi" ? "Lỗi vứt vật phẩm" : "Error discarding item",
-        );
+        setError(locale === "vi" ? "Lỗi vứt vật phẩm" : "Error discarding item");
       }
     },
-    [locale],
+    [locale]
   );
 
   const handleUseItem = useCallback(
@@ -372,13 +336,10 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         setState(result.state);
       } catch (err: any) {
         console.error("Use item error:", err);
-        setError(
-          err.message ||
-            (locale === "vi" ? "Lỗi sử dụng vật phẩm" : "Error using item"),
-        );
+        setError(err.message || (locale === "vi" ? "Lỗi sử dụng vật phẩm" : "Error using item"));
       }
     },
-    [locale],
+    [locale]
   );
 
   const handleEnhanceItem = useCallback(
@@ -402,15 +363,12 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       } catch (err: any) {
         console.error("Enhance item error:", err);
         setError(
-          err.message ||
-            (locale === "vi"
-              ? "Lỗi cường hóa vật phẩm"
-              : "Error enhancing item"),
+          err.message || (locale === "vi" ? "Lỗi cường hóa vật phẩm" : "Error enhancing item")
         );
         return null;
       }
     },
-    [locale],
+    [locale]
   );
 
   // Handle ability swap (techniques/skills)
@@ -419,7 +377,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       abilityType: "technique" | "skill",
       activeId: string | null,
       queueId: string | null,
-      action: "swap" | "forget" | "learn" | "discard",
+      action: "swap" | "forget" | "learn" | "discard"
     ) => {
       try {
         const response = await fetch("/api/swap-ability", {
@@ -445,14 +403,11 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       } catch (err: any) {
         console.error("Ability swap error:", err);
         setError(
-          err.message ||
-            (locale === "vi"
-              ? "Lỗi hoán đổi năng lực"
-              : "Error swapping ability"),
+          err.message || (locale === "vi" ? "Lỗi hoán đổi năng lực" : "Error swapping ability")
         );
       }
     },
-    [runId, locale],
+    [runId, locale]
   );
 
   // Handle dual cultivation toggle
@@ -476,9 +431,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       console.error("Dual cultivation error:", err);
       setError(
         err.message ||
-          (locale === "vi"
-            ? "Lỗi chuyển đổi song tu"
-            : "Error toggling dual cultivation"),
+          (locale === "vi" ? "Lỗi chuyển đổi song tu" : "Error toggling dual cultivation")
       );
     }
   }, [locale]);
@@ -505,40 +458,41 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         console.error("Exp split error:", err);
         setError(
           err.message ||
-            (locale === "vi"
-              ? "Lỗi cài đặt phân chia kinh nghiệm"
-              : "Error setting exp split"),
+            (locale === "vi" ? "Lỗi cài đặt phân chia kinh nghiệm" : "Error setting exp split")
         );
       }
     },
-    [locale],
+    [locale]
   );
 
   // Sync skills to database after combat
-  const syncSkillsAfterCombat = useCallback(async (updatedSkills: any[]) => {
-    if (!updatedSkills) return;
-    
-    try {
-      console.log("[Sync Skills] Saving skill exp to database...", updatedSkills);
-      const response = await fetch("/api/sync-skills", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({
-          runId,
-          skills: updatedSkills,
-        }),
-      });
+  const syncSkillsAfterCombat = useCallback(
+    async (updatedSkills: any[]) => {
+      if (!updatedSkills) return;
 
-      if (!response.ok) {
-        console.error("[Sync Skills] Failed to sync skills");
-      } else {
-        console.log("[Sync Skills] Successfully synced skills to database");
+      try {
+        console.log("[Sync Skills] Saving skill exp to database...", updatedSkills);
+        const response = await fetch("/api/sync-skills", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            runId,
+            skills: updatedSkills,
+          }),
+        });
+
+        if (!response.ok) {
+          console.error("[Sync Skills] Failed to sync skills");
+        } else {
+          console.log("[Sync Skills] Successfully synced skills to database");
+        }
+      } catch (err) {
+        console.error("[Sync Skills] Error syncing skills:", err);
       }
-    } catch (err) {
-      console.error("[Sync Skills] Error syncing skills:", err);
-    }
-  }, [runId]);
+    },
+    [runId]
+  );
 
   // Test combat with dummy enemy
   const startTestCombat = useCallback(() => {
@@ -564,10 +518,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
 
   // Handle test combat action
   const handleTestCombatAction = useCallback(
-    (
-      action: "attack" | "qi_attack" | "defend" | "flee" | "skill",
-      skillId?: string,
-    ) => {
+    (action: "attack" | "qi_attack" | "defend" | "flee" | "skill", skillId?: string) => {
       if (!testCombat || !state) return;
 
       const { enemy, log, playerHp } = testCombat;
@@ -583,9 +534,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
             skills: prev.skills.map((s) => ({
               ...s,
               current_cooldown:
-                s.current_cooldown && s.current_cooldown > 0
-                  ? s.current_cooldown - 1
-                  : 0,
+                s.current_cooldown && s.current_cooldown > 0 ? s.current_cooldown - 1 : 0,
             })),
           };
         });
@@ -596,12 +545,10 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         isDefending: boolean,
         currentPlayerHp: number,
         currentEnemy: Enemy,
-        currentLog: CombatLogEntry[],
+        currentLog: CombatLogEntry[]
       ) => {
         setTimeout(() => {
-          const enemyDamage = Math.floor(
-            currentEnemy.atk * (0.8 + Math.random() * 0.4),
-          );
+          const enemyDamage = Math.floor(currentEnemy.atk * (0.8 + Math.random() * 0.4));
           const defendBonus = isDefending ? 0.5 : 1;
           const enemyMiss = Math.random() < 0.15;
           const enemyCrit = Math.random() < 0.1;
@@ -630,7 +577,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
                   playerTurn: true,
                   playerHp: newPlayerHp,
                 }
-              : null,
+              : null
           );
         }, 800);
       };
@@ -639,12 +586,8 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       if (action === "skill" && skillId) {
         const skill = state.skills?.find((s) => s.id === skillId);
         // At combat start (log empty), treat cooldown as 0
-        const effectiveCooldown = log.length === 0 ? 0 : (skill?.current_cooldown || 0);
-        if (
-          skill &&
-          state.stats.qi >= skill.qi_cost &&
-          effectiveCooldown <= 0
-        ) {
+        const effectiveCooldown = log.length === 0 ? 0 : skill?.current_cooldown || 0;
+        if (skill && state.stats.qi >= skill.qi_cost && effectiveCooldown <= 0) {
           // Deduct qi
           setState((prev) =>
             prev
@@ -652,7 +595,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
                   ...prev,
                   stats: { ...prev.stats, qi: prev.stats.qi - skill.qi_cost },
                 }
-              : prev,
+              : prev
           );
 
           // Calculate skill damage
@@ -660,7 +603,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           console.log(
             "[Test Skill DEBUG - damage_multiplier]",
             skill.damage_multiplier,
-            typeof skill.damage_multiplier,
+            typeof skill.damage_multiplier
           );
           const baseDamage = state.attrs.str * 1.5;
           const skillDamage = baseDamage * (skill.damage_multiplier || 1);
@@ -672,9 +615,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           const playerMiss = Math.random() < 0.1;
           const playerCrit = Math.random() < 0.15;
           const rawDamage = Math.floor(skillDamage * (playerCrit ? 1.5 : 1));
-          const finalDamage = playerMiss
-            ? 0
-            : Math.max(1, rawDamage - Math.floor(enemy.def / 2));
+          const finalDamage = playerMiss ? 0 : Math.max(1, rawDamage - Math.floor(enemy.def / 2));
 
           console.log("[Test Skill]", {
             str: state.attrs.str,
@@ -705,7 +646,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
 
           // Set skill cooldown and grant skill exp
           if (!state || !state.skills) return;
-          
+
           const updatedSkills = state.skills.map((s) => {
             if (s.id === skillId) {
               // Grant 5-15 exp for using skill
@@ -717,7 +658,12 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
               let newMaxExp = maxExp;
               let newDamageMultiplier = s.damage_multiplier;
 
-              console.log("[Test Combat - Skill Exp] Granting:", skillExpGain, "Current:", currentExp);
+              console.log(
+                "[Test Combat - Skill Exp] Granting:",
+                skillExpGain,
+                "Current:",
+                currentExp
+              );
 
               // Handle level ups
               while (newExp >= newMaxExp && newLevel < s.max_level) {
@@ -738,7 +684,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
             }
             return s;
           });
-          
+
           setState((prev) => {
             if (!prev) return prev;
             return {
@@ -756,9 +702,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           }
 
           setTestCombat((prev) =>
-            prev
-              ? { ...prev, enemy: newEnemy, log: newLog, playerTurn: false }
-              : null,
+            prev ? { ...prev, enemy: newEnemy, log: newLog, playerTurn: false } : null
           );
           applyEnemyTurn(false, playerHp, newEnemy, newLog);
           return;
@@ -783,9 +727,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           timestamp: Date.now(),
         });
 
-        setTestCombat((prev) =>
-          prev ? { ...prev, log: newLog, playerTurn: false } : null,
-        );
+        setTestCombat((prev) => (prev ? { ...prev, log: newLog, playerTurn: false } : null));
         applyEnemyTurn(false, playerHp, enemy, newLog);
         return;
       }
@@ -799,24 +741,18 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           timestamp: Date.now(),
         });
 
-        setTestCombat((prev) =>
-          prev ? { ...prev, log: newLog, playerTurn: false } : null,
-        );
+        setTestCombat((prev) => (prev ? { ...prev, log: newLog, playerTurn: false } : null));
         applyEnemyTurn(true, playerHp, enemy, newLog);
         return;
       }
 
       // Attack or qi_attack
       const baseDamage =
-        action === "qi_attack"
-          ? state.attrs.int * 2 + state.attrs.str
-          : state.attrs.str * 1.5;
+        action === "qi_attack" ? state.attrs.int * 2 + state.attrs.str : state.attrs.str * 1.5;
       const isCritical = Math.random() < 0.15;
       const isMiss = Math.random() < 0.1;
       const rawDamage = Math.floor(baseDamage * (isCritical ? 2 : 1));
-      const damage = isMiss
-        ? 0
-        : Math.max(1, rawDamage - Math.floor(enemy.def / 2));
+      const damage = isMiss ? 0 : Math.max(1, rawDamage - Math.floor(enemy.def / 2));
 
       console.log("[Test Normal]", {
         str: state.attrs.str,
@@ -839,10 +775,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       });
 
       // Update enemy HP
-      const newEnemyHp = Math.max(
-        0,
-        enemy.hp - (isMiss ? 0 : Math.max(0, damage)),
-      );
+      const newEnemyHp = Math.max(0, enemy.hp - (isMiss ? 0 : Math.max(0, damage)));
       const updatedEnemy = { ...enemy, hp: newEnemyHp };
 
       // Enemy turn (if not dead)
@@ -865,15 +798,12 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         playerHp,
       });
     },
-    [testCombat, state],
+    [testCombat, state]
   );
 
   // Handle active combat action (from AI combat_encounter)
   const handleActiveCombatAction = useCallback(
-    (
-      action: "attack" | "qi_attack" | "defend" | "flee" | "skill",
-      skillId?: string,
-    ) => {
+    (action: "attack" | "qi_attack" | "defend" | "flee" | "skill", skillId?: string) => {
       if (!activeCombat || !state) return;
 
       const { enemy, log } = activeCombat;
@@ -891,9 +821,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
             skills: prev.skills.map((s) => ({
               ...s,
               current_cooldown:
-                s.current_cooldown && s.current_cooldown > 0
-                  ? s.current_cooldown - 1
-                  : 0,
+                s.current_cooldown && s.current_cooldown > 0 ? s.current_cooldown - 1 : 0,
             })),
           };
         });
@@ -903,12 +831,10 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       const applyEnemyTurn = (
         isDefending: boolean,
         currentEnemy: Enemy,
-        currentLog: CombatLogEntry[],
+        currentLog: CombatLogEntry[]
       ) => {
         setTimeout(() => {
-          const enemyDamage = Math.floor(
-            currentEnemy.atk * (0.8 + Math.random() * 0.4),
-          );
+          const enemyDamage = Math.floor(currentEnemy.atk * (0.8 + Math.random() * 0.4));
           const defendBonus = isDefending ? 0.5 : 1;
           const enemyMiss = Math.random() < 0.15;
           const enemyCrit = Math.random() < 0.1;
@@ -947,7 +873,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
                   log: [...prev.log, enemyLogEntry],
                   playerTurn: true,
                 }
-              : null,
+              : null
           );
         }, 800);
       };
@@ -956,12 +882,8 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       if (action === "skill" && skillId) {
         const skill = state.skills?.find((s) => s.id === skillId);
         // At combat start (log empty), treat cooldown as 0
-        const effectiveCooldown = log.length === 0 ? 0 : (skill?.current_cooldown || 0);
-        if (
-          skill &&
-          state.stats.qi >= skill.qi_cost &&
-          effectiveCooldown <= 0
-        ) {
+        const effectiveCooldown = log.length === 0 ? 0 : skill?.current_cooldown || 0;
+        if (skill && state.stats.qi >= skill.qi_cost && effectiveCooldown <= 0) {
           // Calculate skill damage based on skill type
           let finalDamage = 0;
           let healAmount = 0;
@@ -974,11 +896,18 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           });
 
           // Default: all skills do damage unless they're pure support/defense with healing
-          const isAttackSkill = !skill.type || skill.type === "attack" || (skill.type !== "defense" && skill.type !== "support");
-          const isHealSkill = (skill.type === "defense" || skill.type === "support") && skill.effects?.heal_percent;
+          const isAttackSkill =
+            !skill.type ||
+            skill.type === "attack" ||
+            (skill.type !== "defense" && skill.type !== "support");
+          const isHealSkill =
+            (skill.type === "defense" || skill.type === "support") && skill.effects?.heal_percent;
 
           if (isAttackSkill || !isHealSkill) {
-            console.log("[Active Combat - Entering attack damage calculation]", { isAttackSkill, isHealSkill });
+            console.log("[Active Combat - Entering attack damage calculation]", {
+              isAttackSkill,
+              isHealSkill,
+            });
             // Attack skills or skills without specific heal effects
             const baseDamage = state.attrs.str * 1.5;
             const skillDamage = baseDamage * (skill.damage_multiplier || 1.5);
@@ -1001,12 +930,10 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
               playerCrit,
             });
           }
-          
+
           if (isHealSkill) {
             console.log("[Active Combat - Defense/heal skill]");
-            healAmount = Math.floor(
-              state.stats.hp_max * ((skill.effects?.heal_percent) ?? 0),
-            );
+            healAmount = Math.floor(state.stats.hp_max * (skill.effects?.heal_percent ?? 0));
           }
 
           console.log("[Active Combat - Final values before log entry]", {
@@ -1036,10 +963,15 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
 
           // Calculate skill exp gain and update skills
           if (!state || !state.skills) return;
-          
+
           const skillExpGain = 5 + Math.floor(Math.random() * 11);
-          console.log("[Active Combat - Skill Exp] Granting exp:", skillExpGain, "to skill:", skillId);
-          
+          console.log(
+            "[Active Combat - Skill Exp] Granting exp:",
+            skillExpGain,
+            "to skill:",
+            skillId
+          );
+
           const updatedSkills = state.skills.map((s) => {
             if (s.id === skillId) {
               const currentExp = s.exp || 0;
@@ -1082,7 +1014,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
               stats: {
                 ...prev.stats,
                 qi: prev.stats.qi - skill.qi_cost,
-                hp: isHealSkill 
+                hp: isHealSkill
                   ? Math.min(prev.stats.hp_max, prev.stats.hp + healAmount)
                   : prev.stats.hp,
               },
@@ -1099,9 +1031,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           }
 
           setActiveCombat((prev) =>
-            prev
-              ? { ...prev, enemy: newEnemy, log: newLog, playerTurn: false }
-              : null,
+            prev ? { ...prev, enemy: newEnemy, log: newLog, playerTurn: false } : null
           );
           applyEnemyTurn(false, newEnemy, newLog);
           return;
@@ -1127,9 +1057,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           timestamp: Date.now(),
         });
 
-        setActiveCombat((prev) =>
-          prev ? { ...prev, log: newLog, playerTurn: false } : null,
-        );
+        setActiveCombat((prev) => (prev ? { ...prev, log: newLog, playerTurn: false } : null));
         applyEnemyTurn(false, enemy, newLog);
         return;
       }
@@ -1143,24 +1071,18 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           timestamp: Date.now(),
         });
 
-        setActiveCombat((prev) =>
-          prev ? { ...prev, log: newLog, playerTurn: false } : null,
-        );
+        setActiveCombat((prev) => (prev ? { ...prev, log: newLog, playerTurn: false } : null));
         applyEnemyTurn(true, enemy, newLog);
         return;
       }
 
       // Attack or qi_attack
       const baseDamage =
-        action === "qi_attack"
-          ? state.attrs.int * 2 + state.attrs.str
-          : state.attrs.str * 1.5; // Normal attack uses STR × 1.5
+        action === "qi_attack" ? state.attrs.int * 2 + state.attrs.str : state.attrs.str * 1.5; // Normal attack uses STR × 1.5
       const isCritical = Math.random() < 0.15;
       const isMiss = Math.random() < 0.1;
       const rawDamage = Math.floor(baseDamage * (isCritical ? 2 : 1));
-      const damage = isMiss
-        ? 0
-        : Math.max(1, rawDamage - Math.floor(enemy.def / 2));
+      const damage = isMiss ? 0 : Math.max(1, rawDamage - Math.floor(enemy.def / 2));
 
       console.log("[Active Normal]", {
         str: state.attrs.str,
@@ -1182,7 +1104,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
                   qi: Math.max(0, prev.stats.qi - 10),
                 },
               }
-            : prev,
+            : prev
         );
       }
 
@@ -1198,10 +1120,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       });
 
       // Update enemy HP
-      const newEnemyHp = Math.max(
-        0,
-        enemy.hp - (isMiss ? 0 : Math.max(0, damage)),
-      );
+      const newEnemyHp = Math.max(0, enemy.hp - (isMiss ? 0 : Math.max(0, damage)));
       const updatedEnemy = { ...enemy, hp: newEnemyHp };
 
       // Enemy turn (if not dead)
@@ -1222,7 +1141,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         playerTurn: true,
       });
     },
-    [activeCombat, state],
+    [activeCombat, state]
   );
 
   // Handle combat end - apply loot and continue game
@@ -1275,8 +1194,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
 
     if (victory) {
       // Check if we're in a dungeon for enhanced rewards
-      const isInDungeon =
-        currentState.dungeon?.dungeon_id && currentState.dungeon?.current_floor;
+      const isInDungeon = currentState.dungeon?.dungeon_id && currentState.dungeon?.current_floor;
 
       // Calculate loot based on enemy and dungeon status
       let lootSilver = Math.floor(Math.random() * 50) + 20;
@@ -1295,16 +1213,12 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         if (itemChance > 0.5) {
           // Common herbs and materials
           const commonDrops = ["spirit_herb", "beast_core", "spirit_jade"];
-          lootItems.push(
-            commonDrops[Math.floor(Math.random() * commonDrops.length)],
-          );
+          lootItems.push(commonDrops[Math.floor(Math.random() * commonDrops.length)]);
         }
         if (itemChance > 0.8) {
           // Rare drops
           const rareDrops = ["phoenix_feather", "dragon_scale", "void_crystal"];
-          lootItems.push(
-            rareDrops[Math.floor(Math.random() * rareDrops.length)],
-          );
+          lootItems.push(rareDrops[Math.floor(Math.random() * rareDrops.length)]);
         }
       }
 
@@ -1314,8 +1228,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         inventory: {
           ...updatedState.inventory,
           silver: updatedState.inventory.silver + lootSilver,
-          spirit_stones:
-            updatedState.inventory.spirit_stones + lootSpiritStones,
+          spirit_stones: updatedState.inventory.spirit_stones + lootSpiritStones,
         },
         progress: {
           ...updatedState.progress,
@@ -1326,9 +1239,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       // Add items to inventory
       if (lootItems.length > 0) {
         for (const itemId of lootItems) {
-          const existingItem = updatedState.inventory.items.find(
-            (i) => i.id === itemId,
-          );
+          const existingItem = updatedState.inventory.items.find((i) => i.id === itemId);
           if (existingItem) {
             existingItem.quantity = (existingItem.quantity || 1) + 1;
           } else {
@@ -1373,8 +1284,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
 
       if (lootItems.length > 0) {
         const itemNames = lootItems.map((id) => getItemName(id)).join(", ");
-        lootText +=
-          locale === "vi" ? ` Vật phẩm: ${itemNames}` : ` Items: ${itemNames}`;
+        lootText += locale === "vi" ? ` Vật phẩm: ${itemNames}` : ` Items: ${itemNames}`;
       }
 
       setNarrative((prev) => prev + lootText);
@@ -1436,20 +1346,16 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
       ) {
         const now = new Date();
         const lastRegen = new Date(loadedState.last_stamina_regen);
-        const minutesElapsed = Math.floor(
-          (now.getTime() - lastRegen.getTime()) / 60000,
-        );
+        const minutesElapsed = Math.floor((now.getTime() - lastRegen.getTime()) / 60000);
 
         if (minutesElapsed > 0) {
           const staminaToRegen = Math.min(
             minutesElapsed,
-            loadedState.stats.stamina_max - loadedState.stats.stamina,
+            loadedState.stats.stamina_max - loadedState.stats.stamina
           );
           loadedState.stats.stamina += staminaToRegen;
           loadedState.last_stamina_regen = now.toISOString();
-          console.log(
-            `Regenerated ${staminaToRegen} stamina (${minutesElapsed} minutes elapsed)`,
-          );
+          console.log(`Regenerated ${staminaToRegen} stamina (${minutesElapsed} minutes elapsed)`);
 
           // Save updated state
           await fetch(`/api/run/${runId}`, {
@@ -1505,11 +1411,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
   // Initialize market when market tab is opened
   useEffect(() => {
     const initMarket = async () => {
-      if (
-        activeTab === "market" &&
-        state &&
-        (!state.market || state.market.items.length === 0)
-      ) {
+      if (activeTab === "market" && state && (!state.market || state.market.items.length === 0)) {
         try {
           const response = await fetch("/api/market", {
             method: "GET",
@@ -1537,19 +1439,14 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
 
     const checkStamina = async () => {
       const isStaminaFull = state.stats.stamina === state.stats.stamina_max;
-      const wasStaminaNotFull =
-        previousStaminaRef.current < state.stats.stamina_max;
+      const wasStaminaNotFull = previousStaminaRef.current < state.stats.stamina_max;
       const now = Date.now();
       const oneHourAgo = now - 60 * 60 * 1000;
 
       // Send notification if:
       // 1. Stamina just became full (wasn't full before)
       // 2. Haven't sent notification in last hour
-      if (
-        isStaminaFull &&
-        wasStaminaNotFull &&
-        lastNotificationRef.current < oneHourAgo
-      ) {
+      if (isStaminaFull && wasStaminaNotFull && lastNotificationRef.current < oneHourAgo) {
         try {
           const response = await fetch("/api/notify-stamina-full", {
             method: "POST",
@@ -1588,10 +1485,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
 
     // Check if can afford the cost
     if (selectedChoice?.cost && state) {
-      if (
-        selectedChoice.cost.stamina &&
-        state.stats.stamina < selectedChoice.cost.stamina
-      ) {
+      if (selectedChoice.cost.stamina && state.stats.stamina < selectedChoice.cost.stamina) {
         setError(locale === "vi" ? "Không đủ Thể Lực!" : "Not enough Stamina!");
         return;
       }
@@ -1599,10 +1493,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         setError(locale === "vi" ? "Không đủ Linh Lực!" : "Not enough Qi!");
         return;
       }
-      if (
-        selectedChoice.cost.silver &&
-        state.inventory.silver < selectedChoice.cost.silver
-      ) {
+      if (selectedChoice.cost.silver && state.inventory.silver < selectedChoice.cost.silver) {
         setError(locale === "vi" ? "Không đủ Bạc!" : "Not enough Silver!");
         return;
       }
@@ -1610,11 +1501,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         selectedChoice.cost.spirit_stones &&
         state.inventory.spirit_stones < selectedChoice.cost.spirit_stones
       ) {
-        setError(
-          locale === "vi"
-            ? "Không đủ Linh Thạch!"
-            : "Not enough Spirit Stones!",
-        );
+        setError(locale === "vi" ? "Không đủ Linh Thạch!" : "Not enough Spirit Stones!");
         return;
       }
     }
@@ -1657,12 +1544,10 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         }
       } catch (err: any) {
         // Error is displayed in UI, no need to log to console
-        setError(
-          err.message || (locale === "vi" ? "Lỗi di chuyển" : "Travel error"),
-        );
+        setError(err.message || (locale === "vi" ? "Lỗi di chuyển" : "Travel error"));
       }
     },
-    [locale],
+    [locale]
   );
 
   const handleTravelRegion = useCallback(
@@ -1689,12 +1574,10 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         }
       } catch (err: any) {
         // Error is displayed in UI, no need to log to console
-        setError(
-          err.message || (locale === "vi" ? "Lỗi di chuyển" : "Travel error"),
-        );
+        setError(err.message || (locale === "vi" ? "Lỗi di chuyển" : "Travel error"));
       }
     },
-    [locale],
+    [locale]
   );
 
   const handleDungeonAction = useCallback(
@@ -1757,13 +1640,11 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         return result;
       } catch (err: any) {
         // Error is displayed in UI, no need to log to console
-        setError(
-          err.message || (locale === "vi" ? "Lỗi bí cảnh" : "Dungeon error"),
-        );
+        setError(err.message || (locale === "vi" ? "Lỗi bí cảnh" : "Dungeon error"));
         throw err;
       }
     },
-    [locale],
+    [locale]
   );
 
   const handleEventChoice = useCallback(
@@ -1796,12 +1677,10 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
         setChoices(result.choices || []);
       } catch (err: any) {
         // Error is displayed in UI, no need to log to console
-        setError(
-          err.message || (locale === "vi" ? "Lỗi sự kiện" : "Event error"),
-        );
+        setError(err.message || (locale === "vi" ? "Lỗi sự kiện" : "Event error"));
       }
     },
-    [state, runId, locale],
+    [state, runId, locale]
   );
 
   if (loading) {
@@ -1815,9 +1694,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
   if (!state) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl text-red-500">
-          {error || t(locale, "error")}
-        </div>
+        <div className="text-xl text-red-500">{error || t(locale, "error")}</div>
       </div>
     );
   }
@@ -1825,6 +1702,73 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
   return (
     <div className="min-h-screen p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
+        {/* Save Status Indicator */}
+        <div className="fixed top-4 right-4 z-50">
+          {saveStatus === "saving" && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-blue-900/90 border border-blue-500/50 rounded-lg text-sm text-blue-200 animate-pulse shadow-lg backdrop-blur-sm">
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              <span>{locale === "vi" ? "Đang lưu..." : "Saving..."}</span>
+            </div>
+          )}
+          {saveStatus === "saved" && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-green-900/90 border border-green-500/50 rounded-lg text-sm text-green-200 animate-fade-in shadow-lg backdrop-blur-sm">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              <span>{locale === "vi" ? "Đã lưu" : "Saved"}</span>
+            </div>
+          )}
+          {saveStatus === "error" && (
+            <div className="flex flex-col gap-1 px-3 py-2 bg-red-900/90 border border-red-500/50 rounded-lg text-sm text-red-200 animate-shake shadow-lg backdrop-blur-sm max-w-xs">
+              <div className="flex items-center gap-2">
+                <svg
+                  className="w-4 h-4 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+                <span>{locale === "vi" ? "Lỗi lưu dữ liệu" : "Save Failed"}</span>
+              </div>
+              {saveError && <p className="text-xs text-red-300/80 ml-6">{saveError}</p>}
+              <button
+                onClick={() => {
+                  setSaveStatus("idle");
+                  setSaveError("");
+                }}
+                className="ml-6 text-xs text-red-400 hover:text-red-300 underline"
+              >
+                {locale === "vi" ? "Bỏ qua" : "Dismiss"}
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Header with tabs */}
         <div className="mb-6 flex flex-wrap gap-2 border-b border-xianxia-accent/30 pb-2">
           <button
@@ -1906,10 +1850,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
             <CultivatorDashboard
               state={state}
               locale={locale}
-              onActivityStart={(
-                activityType: ActivityType,
-                duration: number,
-              ) => {
+              onActivityStart={(activityType: ActivityType, duration: number) => {
                 // For now, translate activity selection into a choice
                 const activityChoiceText =
                   locale === "vi"
@@ -1923,9 +1864,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
               }}
               onActivityInterrupt={() => {
                 const interruptText =
-                  locale === "vi"
-                    ? "Dừng hoạt động hiện tại"
-                    : "Stop current activity";
+                  locale === "vi" ? "Dừng hoạt động hiện tại" : "Stop current activity";
                 processTurn("interrupt_activity", {
                   id: "interrupt_activity",
                   text: interruptText,
@@ -1938,9 +1877,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
             <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
               <div className="prose prose-invert max-w-none">
                 {narrative ? (
-                  <p className="whitespace-pre-wrap leading-relaxed">
-                    {narrative}
-                  </p>
+                  <p className="whitespace-pre-wrap leading-relaxed">{narrative}</p>
                 ) : (
                   <p className="text-gray-500 italic">
                     {processing
@@ -1970,15 +1907,11 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
                     !choice.cost ||
                     ((!choice.cost.stamina ||
                       (state && state.stats.stamina >= choice.cost.stamina)) &&
-                      (!choice.cost.qi ||
-                        (state && state.stats.qi >= choice.cost.qi)) &&
+                      (!choice.cost.qi || (state && state.stats.qi >= choice.cost.qi)) &&
                       (!choice.cost.silver ||
-                        (state &&
-                          state.inventory.silver >= choice.cost.silver)) &&
+                        (state && state.inventory.silver >= choice.cost.silver)) &&
                       (!choice.cost.spirit_stones ||
-                        (state &&
-                          state.inventory.spirit_stones >=
-                            choice.cost.spirit_stones)));
+                        (state && state.inventory.spirit_stones >= choice.cost.spirit_stones)));
 
                   return (
                     <button
@@ -1997,8 +1930,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
                           {choice.cost.stamina && (
                             <span
                               className={
-                                state &&
-                                state.stats.stamina < choice.cost.stamina
+                                state && state.stats.stamina < choice.cost.stamina
                                   ? "text-red-400"
                                   : "text-gray-400"
                               }
@@ -2020,8 +1952,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
                           {choice.cost.silver && (
                             <span
                               className={
-                                state &&
-                                state.inventory.silver < choice.cost.silver
+                                state && state.inventory.silver < choice.cost.silver
                                   ? "text-red-400"
                                   : "text-gray-400"
                               }
@@ -2032,29 +1963,22 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
                           {choice.cost.spirit_stones && (
                             <span
                               className={
-                                state &&
-                                state.inventory.spirit_stones <
-                                  choice.cost.spirit_stones
+                                state && state.inventory.spirit_stones < choice.cost.spirit_stones
                                   ? "text-red-400"
                                   : "text-gray-400"
                               }
                             >
-                              {t(locale, "spiritStones")}:{" "}
-                              {choice.cost.spirit_stones}
+                              {t(locale, "spiritStones")}: {choice.cost.spirit_stones}
                             </span>
                           )}
                           {choice.cost.time_segments && (
-                            <span className="text-gray-400">
-                              Time: {choice.cost.time_segments}
-                            </span>
+                            <span className="text-gray-400">Time: {choice.cost.time_segments}</span>
                           )}
                         </div>
                       )}
                       {!canAfford && (
                         <div className="text-xs text-red-400 mt-1">
-                          {locale === "vi"
-                            ? "(Không đủ điều kiện)"
-                            : "(Cannot afford)"}
+                          {locale === "vi" ? "(Không đủ điều kiện)" : "(Cannot afford)"}
                         </div>
                       )}
                     </button>
@@ -2074,11 +1998,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
                       value={customAction}
                       onChange={(e) => setCustomAction(e.target.value)}
                       onKeyDown={(e) => {
-                        if (
-                          e.key === "Enter" &&
-                          !processing &&
-                          customAction.trim()
-                        ) {
+                        if (e.key === "Enter" && !processing && customAction.trim()) {
                           handleCustomAction();
                         }
                       }}
@@ -2109,9 +2029,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
 
             {processing && (
               <div className="p-4 bg-xianxia-accent/10 border border-xianxia-accent/30 rounded-lg text-center text-xianxia-accent">
-                {locale === "vi"
-                  ? "Đang xử lý lượt chơi..."
-                  : "Processing turn..."}
+                {locale === "vi" ? "Đang xử lý lượt chơi..." : "Processing turn..."}
               </div>
             )}
           </div>
@@ -2175,11 +2093,7 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
             />
 
             {/* Dungeon View (only show if in dungeon) */}
-            <DungeonView
-              state={state}
-              locale={locale}
-              onAction={handleDungeonAction}
-            />
+            <DungeonView state={state} locale={locale} onAction={handleDungeonAction} />
           </div>
         )}
       </div>

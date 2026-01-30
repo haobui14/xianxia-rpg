@@ -1,10 +1,4 @@
-import {
-  GameState,
-  Locale,
-  ItemRarity,
-  InventoryItem,
-  EquipmentSlot,
-} from "@/types/game";
+import { GameState, Locale, ItemRarity, InventoryItem, EquipmentSlot } from "@/types/game";
 import { DeterministicRNG } from "../game/rng";
 
 export interface LootEntry {
@@ -37,8 +31,7 @@ export const STORAGE_RING_ITEMS: LootEntry[] = [
     id: "storage_ring_basic",
     name: "Trữ Vật Giới (Cơ Bản)",
     name_en: "Basic Storage Ring",
-    description:
-      "Một chiếc nhẫn trữ vật đơn giản, có thể chứa thêm 10 vật phẩm.",
+    description: "Một chiếc nhẫn trữ vật đơn giản, có thể chứa thêm 10 vật phẩm.",
     description_en: "A simple storage ring that can hold 10 additional items.",
     type: "Accessory",
     rarity: "Common",
@@ -51,8 +44,7 @@ export const STORAGE_RING_ITEMS: LootEntry[] = [
     name: "Trữ Vật Giới (Tốt)",
     name_en: "Uncommon Storage Ring",
     description: "Nhẫn trữ vật chất lượng tốt, có thể chứa thêm 20 vật phẩm.",
-    description_en:
-      "Good quality storage ring that can hold 20 additional items.",
+    description_en: "Good quality storage ring that can hold 20 additional items.",
     type: "Accessory",
     rarity: "Uncommon",
     equipment_slot: "Accessory",
@@ -106,8 +98,7 @@ export const ENHANCEMENT_MATERIALS: LootEntry[] = [
     name: "Đá Cường Hóa (Thường)",
     name_en: "Enhancement Stone (Common)",
     description: "Đá cường hóa cơ bản, dùng để nâng cấp trang bị +1 đến +3.",
-    description_en:
-      "Basic enhancement stone, used to upgrade equipment from +1 to +3.",
+    description_en: "Basic enhancement stone, used to upgrade equipment from +1 to +3.",
     type: "Material",
     rarity: "Common",
     weight: 40,
@@ -116,10 +107,8 @@ export const ENHANCEMENT_MATERIALS: LootEntry[] = [
     id: "enhancement_stone_uncommon",
     name: "Đá Cường Hóa (Tốt)",
     name_en: "Enhancement Stone (Uncommon)",
-    description:
-      "Đá cường hóa chất lượng tốt, dùng để nâng cấp trang bị +4 đến +6.",
-    description_en:
-      "Good quality enhancement stone, used to upgrade equipment from +4 to +6.",
+    description: "Đá cường hóa chất lượng tốt, dùng để nâng cấp trang bị +4 đến +6.",
+    description_en: "Good quality enhancement stone, used to upgrade equipment from +4 to +6.",
     type: "Material",
     rarity: "Uncommon",
     weight: 25,
@@ -129,8 +118,7 @@ export const ENHANCEMENT_MATERIALS: LootEntry[] = [
     name: "Đá Cường Hóa (Hiếm)",
     name_en: "Enhancement Stone (Rare)",
     description: "Đá cường hóa hiếm, dùng để nâng cấp trang bị +7 đến +9.",
-    description_en:
-      "Rare enhancement stone, used to upgrade equipment from +7 to +9.",
+    description_en: "Rare enhancement stone, used to upgrade equipment from +7 to +9.",
     type: "Material",
     rarity: "Rare",
     weight: 15,
@@ -160,8 +148,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
         id: "lingzhi_grass",
         name: "Linh Chi Thảo",
         name_en: "Spirit Grass",
-        description:
-          "Cỏ linh thảo thông thường, có thể dùng để luyện đan dược.",
+        description: "Cỏ linh thảo thông thường, có thể dùng để luyện đan dược.",
         description_en: "Common spirit grass, can be used for alchemy.",
         type: "Material",
         rarity: "Common",
@@ -251,8 +238,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
         name: "Luyện Khí Tâm Pháp",
         name_en: "Qi Condensation Manual",
         description: "Bí tịch luyện khí cơ bản, tăng tốc độ tu luyện.",
-        description_en:
-          "Basic Qi cultivation manual, increases cultivation speed.",
+        description_en: "Basic Qi cultivation manual, increases cultivation speed.",
         type: "Manual",
         rarity: "Uncommon",
         effects: { cultivation_speed: 1.2 },
@@ -263,8 +249,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
         name: "Mảnh Linh Thạch",
         name_en: "Spirit Stone Fragment",
         description: "Mảnh vỡ của linh thạch, chứa linh khí tinh túy.",
-        description_en:
-          "Fragment of spirit stone, contains pure spiritual energy.",
+        description_en: "Fragment of spirit stone, contains pure spiritual energy.",
         type: "Material",
         rarity: "Rare",
         weight: 15,
@@ -311,8 +296,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
         name: "Linh Kiếm",
         name_en: "Spirit Sword",
         description: "Kiếm chứa linh khí, tăng sức mạnh đáng kể.",
-        description_en:
-          "Sword imbued with spiritual energy, significantly increases strength.",
+        description_en: "Sword imbued with spiritual energy, significantly increases strength.",
         type: "Equipment",
         rarity: "Rare",
         equipment_slot: "Weapon",
@@ -365,8 +349,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
         name: "Tiên Đạo Kiếm",
         name_en: "Immortal Blade",
         description: "Kiếm của tiên nhân cổ đại, chứa đựng sức mạnh vô song.",
-        description_en:
-          "Blade of an ancient immortal, contains unparalleled power.",
+        description_en: "Blade of an ancient immortal, contains unparalleled power.",
         type: "Equipment",
         rarity: "Epic",
         equipment_slot: "Weapon",
@@ -413,7 +396,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
 export function generateLoot(
   lootTableId: string,
   rng: DeterministicRNG,
-  locale: Locale,
+  locale: Locale
 ): {
   items: InventoryItem[];
   silver: number;
@@ -432,10 +415,7 @@ export function generateLoot(
   // Generate spirit stones
   let spiritStones = 0;
   if (rng.chance(table.spiritStoneChance)) {
-    spiritStones = rng.randomInt(
-      table.spiritStoneRange[0],
-      table.spiritStoneRange[1],
-    );
+    spiritStones = rng.randomInt(table.spiritStoneRange[0], table.spiritStoneRange[1]);
   }
 
   // Generate 1-3 items
@@ -465,7 +445,7 @@ export function generateLoot(
  */
 function selectWeightedEntry<T extends { weight: number }>(
   entries: T[],
-  rng: DeterministicRNG,
+  rng: DeterministicRNG
 ): T | null {
   if (entries.length === 0) return null;
 
@@ -485,10 +465,7 @@ function selectWeightedEntry<T extends { weight: number }>(
 /**
  * Validate that loot is legitimate for the given tier
  */
-export function validateLoot(
-  lootTableId: string,
-  items: InventoryItem[],
-): boolean {
+export function validateLoot(lootTableId: string, items: InventoryItem[]): boolean {
   const table = LOOT_TABLES[lootTableId];
   if (!table) return false;
 

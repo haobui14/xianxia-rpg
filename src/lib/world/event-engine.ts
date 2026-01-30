@@ -9,22 +9,22 @@ import {
   EventOutcome,
   EventTrigger,
   RegionId,
-} from '@/types/world';
-import { Realm, Element, GameState, ProposedDelta } from '@/types/game';
-import { ALL_EVENTS, getEventsByTrigger, getEventsForRegion, getEventById } from './events';
+} from "@/types/world";
+import { Realm, Element, GameState, ProposedDelta } from "@/types/game";
+import { ALL_EVENTS, getEventsByTrigger, getEventsForRegion, getEventById } from "./events";
 
 // Event trigger chances by trigger type
 const EVENT_TRIGGER_CHANCES: Record<EventTrigger, number> = {
-  exploration: 0.40,    // 40% chance during exploration
-  travel: 0.25,         // 25% chance during travel
-  cultivation: 0.15,    // 15% chance during cultivation
-  rest: 0.10,           // 10% chance during rest
-  combat_end: 0.20,     // 20% chance after combat
-  area_enter: 0.30,     // 30% chance when entering new area
+  exploration: 0.4, // 40% chance during exploration
+  travel: 0.25, // 25% chance during travel
+  cultivation: 0.15, // 15% chance during cultivation
+  rest: 0.1, // 10% chance during rest
+  combat_end: 0.2, // 20% chance after combat
+  area_enter: 0.3, // 30% chance when entering new area
 };
 
 // Realm order for comparison
-const REALM_ORDER: Realm[] = ['PhàmNhân', 'LuyệnKhí', 'TrúcCơ', 'KếtĐan', 'NguyênAnh'];
+const REALM_ORDER: Realm[] = ["PhàmNhân", "LuyệnKhí", "TrúcCơ", "KếtĐan", "NguyênAnh"];
 
 /**
  * Initialize event state
@@ -42,10 +42,7 @@ export function initEventState(): EventState {
 /**
  * Check if an event should trigger
  */
-export function shouldTriggerEvent(
-  trigger: EventTrigger,
-  rng: () => number
-): boolean {
+export function shouldTriggerEvent(trigger: EventTrigger, rng: () => number): boolean {
   const chance = EVENT_TRIGGER_CHANCES[trigger] || 0.1;
   return rng() < chance;
 }
@@ -64,7 +61,7 @@ export function getValidEvents(
   const events = getEventsForRegion(regionId, trigger);
   const realmIndex = REALM_ORDER.indexOf(playerRealm);
 
-  return events.filter(event => {
+  return events.filter((event) => {
     // Check cooldown
     if (eventCooldowns[event.id] && eventCooldowns[event.id] > 0) {
       return false;
@@ -119,7 +116,7 @@ export function selectEvent(
   if (validEvents.length === 0) return null;
 
   // Calculate weights with element affinity bonus
-  const weights = validEvents.map(event => {
+  const weights = validEvents.map((event) => {
     let weight = event.weight;
 
     // 50% bonus if player has matching element
@@ -196,7 +193,7 @@ export function getAvailableChoices(
   event: RandomEvent,
   state: GameState
 ): Array<{ choice: EventChoice; available: boolean; reason?: string }> {
-  return event.choices.map(choice => {
+  return event.choices.map((choice) => {
     if (!choice.requirements) {
       return { choice, available: true };
     }
@@ -206,24 +203,24 @@ export function getAvailableChoices(
     // Check stat requirement
     if (req.stat) {
       const value = getNestedValue(state, req.stat.key);
-      if (typeof value !== 'number' || value < req.stat.min) {
+      if (typeof value !== "number" || value < req.stat.min) {
         if (choice.hidden_until_met) {
-          return { choice, available: false, reason: 'hidden' };
+          return { choice, available: false, reason: "hidden" };
         }
         return {
           choice,
           available: false,
-          reason: `Requires ${req.stat.key.split('.').pop()} >= ${req.stat.min}`,
+          reason: `Requires ${req.stat.key.split(".").pop()} >= ${req.stat.min}`,
         };
       }
     }
 
     // Check item requirement
     if (req.item) {
-      const hasItem = state.inventory.items.some(item => item.id === req.item);
+      const hasItem = state.inventory.items.some((item) => item.id === req.item);
       if (!hasItem) {
         if (choice.hidden_until_met) {
-          return { choice, available: false, reason: 'hidden' };
+          return { choice, available: false, reason: "hidden" };
         }
         return { choice, available: false, reason: `Requires item: ${req.item}` };
       }
@@ -231,10 +228,10 @@ export function getAvailableChoices(
 
     // Check skill requirement
     if (req.skill) {
-      const hasSkill = state.skills.some(skill => skill.id === req.skill);
+      const hasSkill = state.skills.some((skill) => skill.id === req.skill);
       if (!hasSkill) {
         if (choice.hidden_until_met) {
-          return { choice, available: false, reason: 'hidden' };
+          return { choice, available: false, reason: "hidden" };
         }
         return { choice, available: false, reason: `Requires skill: ${req.skill}` };
       }
@@ -246,7 +243,7 @@ export function getAvailableChoices(
       const requiredIndex = REALM_ORDER.indexOf(req.realm);
       if (playerIndex < requiredIndex) {
         if (choice.hidden_until_met) {
-          return { choice, available: false, reason: 'hidden' };
+          return { choice, available: false, reason: "hidden" };
         }
         return { choice, available: false, reason: `Requires realm: ${req.realm}` };
       }
@@ -255,14 +252,14 @@ export function getAvailableChoices(
     // Check karma
     if (req.karma_min !== undefined && state.karma < req.karma_min) {
       if (choice.hidden_until_met) {
-        return { choice, available: false, reason: 'hidden' };
+        return { choice, available: false, reason: "hidden" };
       }
       return { choice, available: false, reason: `Requires karma >= ${req.karma_min}` };
     }
 
     if (req.karma_max !== undefined && state.karma > req.karma_max) {
       if (choice.hidden_until_met) {
-        return { choice, available: false, reason: 'hidden' };
+        return { choice, available: false, reason: "hidden" };
       }
       return { choice, available: false, reason: `Requires karma <= ${req.karma_max}` };
     }
@@ -274,10 +271,7 @@ export function getAvailableChoices(
 /**
  * Select an outcome from a choice using weighted random
  */
-export function selectOutcome(
-  choice: EventChoice,
-  rng: () => number
-): EventOutcome {
+export function selectOutcome(choice: EventChoice, rng: () => number): EventOutcome {
   if (choice.outcomes.length === 1) {
     return choice.outcomes[0];
   }
@@ -311,16 +305,16 @@ export function processEventChoice(
     return {
       outcome: null,
       newEventState: eventState,
-      error: 'No active event',
+      error: "No active event",
     };
   }
 
-  const choice = eventState.active_event.choices.find(c => c.id === choiceId);
+  const choice = eventState.active_event.choices.find((c) => c.id === choiceId);
   if (!choice) {
     return {
       outcome: null,
       newEventState: eventState,
-      error: 'Invalid choice',
+      error: "Invalid choice",
     };
   }
 
@@ -390,29 +384,29 @@ export function getOutcomeEffects(outcome: EventOutcome): {
 /**
  * Get event narrative based on locale
  */
-export function getEventNarrative(event: RandomEvent, locale: 'vi' | 'en'): string {
-  return locale === 'vi' ? event.narrative : event.narrative_en;
+export function getEventNarrative(event: RandomEvent, locale: "vi" | "en"): string {
+  return locale === "vi" ? event.narrative : event.narrative_en;
 }
 
 /**
  * Get choice text based on locale
  */
-export function getChoiceText(choice: EventChoice, locale: 'vi' | 'en'): string {
-  return locale === 'vi' ? choice.text : choice.text_en;
+export function getChoiceText(choice: EventChoice, locale: "vi" | "en"): string {
+  return locale === "vi" ? choice.text : choice.text_en;
 }
 
 /**
  * Get outcome narrative based on locale
  */
-export function getOutcomeNarrative(outcome: EventOutcome, locale: 'vi' | 'en'): string {
-  return locale === 'vi' ? outcome.narrative : outcome.narrative_en;
+export function getOutcomeNarrative(outcome: EventOutcome, locale: "vi" | "en"): string {
+  return locale === "vi" ? outcome.narrative : outcome.narrative_en;
 }
 
 /**
  * Helper to get nested value from object
  */
 function getNestedValue(obj: any, path: string): any {
-  return path.split('.').reduce((current, key) => current?.[key], obj);
+  return path.split(".").reduce((current, key) => current?.[key], obj);
 }
 
 /**

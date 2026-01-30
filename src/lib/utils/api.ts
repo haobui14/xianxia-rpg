@@ -4,9 +4,9 @@
 export async function apiFetch(url: string, options?: RequestInit) {
   return fetch(url, {
     ...options,
-    credentials: 'same-origin',
+    credentials: "same-origin",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...options?.headers,
     },
   });

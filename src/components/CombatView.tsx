@@ -15,7 +15,7 @@ interface CombatViewProps {
   playerTurn: boolean;
   onAction: (
     action: "attack" | "qi_attack" | "defend" | "flee" | "skill",
-    skillId?: string,
+    skillId?: string
   ) => void;
   onCombatEnd: () => void;
   overridePlayerHp?: number; // For test combat to track HP separately
@@ -32,8 +32,7 @@ export default function CombatView({
   overridePlayerHp,
 }: CombatViewProps) {
   // Use overridden HP if provided, otherwise use state HP
-  const playerHp =
-    overridePlayerHp !== undefined ? overridePlayerHp : state.stats.hp;
+  const playerHp = overridePlayerHp !== undefined ? overridePlayerHp : state.stats.hp;
   const [damageNumbers, setDamageNumbers] = useState<DamageNumberData[]>([]);
   const [playerHit, setPlayerHit] = useState(false);
   const [enemyHit, setEnemyHit] = useState(false);
@@ -74,12 +73,7 @@ export default function CombatView({
     };
 
     // Add damage number
-    if (
-      lastEntry.damage ||
-      lastEntry.isMiss ||
-      lastEntry.isDodged ||
-      lastEntry.healAmount
-    ) {
+    if (lastEntry.damage || lastEntry.isMiss || lastEntry.isDodged || lastEntry.healAmount) {
       setDamageNumbers((prev) => [...prev, newDamageNumber]);
     }
 
@@ -107,7 +101,7 @@ export default function CombatView({
       onAction(action as any, selectedSkill || undefined);
       setSelectedSkill(null);
     },
-    [playerTurn, onAction, selectedSkill],
+    [playerTurn, onAction, selectedSkill]
   );
 
   // Check if enemy is dead
@@ -126,9 +120,7 @@ export default function CombatView({
           : enemy.name_en;
 
     if (entry.isMiss) {
-      return locale === "vi"
-        ? `${actorName} đã đánh trượt!`
-        : `${actorName} missed!`;
+      return locale === "vi" ? `${actorName} đã đánh trượt!` : `${actorName} missed!`;
     }
 
     if (entry.isDodged) {
@@ -156,11 +148,7 @@ export default function CombatView({
             ? "tấn công"
             : "attacked";
 
-    const critText = entry.isCritical
-      ? locale === "vi"
-        ? " (Chí mạng!)"
-        : " (Critical!)"
-      : "";
+    const critText = entry.isCritical ? (locale === "vi" ? " (Chí mạng!)" : " (Critical!)") : "";
 
     return locale === "vi"
       ? `${actorName} ${actionText}${entry.damage ? ` gây ${entry.damage} sát thương` : ""}${critText}`
@@ -174,9 +162,7 @@ export default function CombatView({
         <h2 className="text-2xl font-bold text-red-500 animate-pulse">
           {locale === "vi" ? "⚔️ CHIẾN ĐẤU ⚔️" : "⚔️ COMBAT ⚔️"}
         </h2>
-        <div
-          className={`text-sm mt-1 ${playerTurn ? "text-green-400" : "text-red-400"}`}
-        >
+        <div className={`text-sm mt-1 ${playerTurn ? "text-green-400" : "text-red-400"}`}>
           {playerTurn
             ? locale === "vi"
               ? "Lượt của bạn"
@@ -192,9 +178,7 @@ export default function CombatView({
         {/* Player Side */}
         <div className={`relative ${playerHit ? "animate-bounce" : ""}`}>
           <div className="text-center mb-2">
-            <span className="text-xianxia-gold font-bold">
-              {locale === "vi" ? "Bạn" : "You"}
-            </span>
+            <span className="text-xianxia-gold font-bold">{locale === "vi" ? "Bạn" : "You"}</span>
           </div>
           <div className="space-y-2">
             <HealthBar
@@ -228,19 +212,12 @@ export default function CombatView({
 
         {/* VS Indicator */}
         <div className="flex items-center justify-center">
-          <div className="text-4xl font-bold text-xianxia-accent animate-pulse">
-            VS
-          </div>
+          <div className="text-4xl font-bold text-xianxia-accent animate-pulse">VS</div>
         </div>
 
         {/* Enemy Side */}
         <div className="relative">
-          <EnemyPortrait
-            enemy={enemy}
-            locale={locale}
-            isHit={enemyHit}
-            isDead={enemyDead}
-          />
+          <EnemyPortrait enemy={enemy} locale={locale} isHit={enemyHit} isDead={enemyDead} />
 
           {/* Damage numbers for enemy */}
           <DamageNumberManager
@@ -271,9 +248,7 @@ export default function CombatView({
                   entry.actor === "player" ? "text-green-400" : "text-red-400"
                 } ${entry.isCritical ? "font-bold" : ""}`}
               >
-                <span className="text-gray-500 text-xs mr-2">
-                  [{entry.turn}]
-                </span>
+                <span className="text-gray-500 text-xs mr-2">[{entry.turn}]</span>
                 {formatLogEntry(entry)}
               </div>
             ))
@@ -295,9 +270,7 @@ export default function CombatView({
                   : "bg-gray-800 border-gray-600 text-gray-500 cursor-not-allowed"
               }`}
             >
-              <div className="font-bold">
-                {locale === "vi" ? "⚔️ Tấn Công" : "⚔️ Attack"}
-              </div>
+              <div className="font-bold">{locale === "vi" ? "⚔️ Tấn Công" : "⚔️ Attack"}</div>
               <div className="text-xs opacity-70">
                 {locale === "vi" ? "Sát thương vật lý" : "Physical damage"}
               </div>
@@ -312,9 +285,7 @@ export default function CombatView({
                   : "bg-gray-800 border-gray-600 text-gray-500 cursor-not-allowed"
               }`}
             >
-              <div className="font-bold">
-                {locale === "vi" ? "✨ Khí Công" : "✨ Qi Attack"}
-              </div>
+              <div className="font-bold">{locale === "vi" ? "✨ Khí Công" : "✨ Qi Attack"}</div>
               <div className="text-xs opacity-70">
                 {locale === "vi" ? "Chi phí: 10 Khí" : "Cost: 10 Qi"}
               </div>
@@ -329,9 +300,7 @@ export default function CombatView({
                   : "bg-gray-800 border-gray-600 text-gray-500 cursor-not-allowed"
               }`}
             >
-              <div className="font-bold">
-                {locale === "vi" ? "🛡️ Phòng Thủ" : "🛡️ Defend"}
-              </div>
+              <div className="font-bold">{locale === "vi" ? "🛡️ Phòng Thủ" : "🛡️ Defend"}</div>
               <div className="text-xs opacity-70">
                 {locale === "vi" ? "Giảm sát thương" : "Reduce damage"}
               </div>
@@ -346,9 +315,7 @@ export default function CombatView({
                   : "bg-gray-800 border-gray-600 text-gray-500 cursor-not-allowed"
               }`}
             >
-              <div className="font-bold">
-                {locale === "vi" ? "🏃 Chạy Trốn" : "🏃 Flee"}
-              </div>
+              <div className="font-bold">{locale === "vi" ? "🏃 Chạy Trốn" : "🏃 Flee"}</div>
               <div className="text-xs opacity-70">
                 {locale === "vi" ? "Cơ hội thoát" : "Chance to escape"}
               </div>
@@ -365,14 +332,13 @@ export default function CombatView({
                 {state.skills.map((skill) => {
                   // At combat start (empty log), all skills should be available
                   // current_cooldown is reset to 0 for fresh combat
-                  const effectiveCooldown = combatLog.length === 0 ? 0 : (skill.current_cooldown || 0);
-                  
+                  const effectiveCooldown =
+                    combatLog.length === 0 ? 0 : skill.current_cooldown || 0;
+
                   const canUse =
-                    playerTurn &&
-                    state.stats.qi >= skill.qi_cost &&
-                    effectiveCooldown <= 0;
+                    playerTurn && state.stats.qi >= skill.qi_cost && effectiveCooldown <= 0;
                   const onCooldown = effectiveCooldown > 0;
-                  
+
                   console.log("[CombatView Skill Render]", {
                     skillId: skill.id,
                     skillName: skill.name,
@@ -386,7 +352,7 @@ export default function CombatView({
                     effectiveCooldown,
                     canUse,
                   });
-                  
+
                   return (
                     <button
                       key={skill.id}
@@ -419,11 +385,7 @@ export default function CombatView({
                       </div>
                       {skill.type && (
                         <div className="text-xs opacity-50">
-                          {skill.type === "attack"
-                            ? "⚔️"
-                            : skill.type === "defense"
-                              ? "🛡️"
-                              : "✨"}
+                          {skill.type === "attack" ? "⚔️" : skill.type === "defense" ? "🛡️" : "✨"}
                         </div>
                       )}
                     </button>
@@ -442,9 +404,7 @@ export default function CombatView({
             {locale === "vi" ? "🎉 CHIẾN THẮNG! 🎉" : "🎉 VICTORY! 🎉"}
           </h3>
           <p className="text-gray-300 mb-4">
-            {locale === "vi"
-              ? `Bạn đã đánh bại ${enemy.name}!`
-              : `You defeated ${enemy.name_en}!`}
+            {locale === "vi" ? `Bạn đã đánh bại ${enemy.name}!` : `You defeated ${enemy.name_en}!`}
           </p>
           <button
             onClick={onCombatEnd}
@@ -461,9 +421,7 @@ export default function CombatView({
             {locale === "vi" ? "💀 THẤT BẠI 💀" : "💀 DEFEAT 💀"}
           </h3>
           <p className="text-gray-300 mb-4">
-            {locale === "vi"
-              ? "Bạn đã bị đánh bại..."
-              : "You have been defeated..."}
+            {locale === "vi" ? "Bạn đã bị đánh bại..." : "You have been defeated..."}
           </p>
           <button
             onClick={onCombatEnd}

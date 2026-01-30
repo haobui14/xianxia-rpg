@@ -1,5 +1,5 @@
-import { InventoryItem, GameState } from '@/types/game';
-import { DeterministicRNG } from './rng';
+import { InventoryItem, GameState } from "@/types/game";
+import { DeterministicRNG } from "./rng";
 
 /**
  * Enhancement configuration
@@ -9,7 +9,7 @@ export const ENHANCEMENT_CONFIG: Record<number, { silver: number; successRate: n
   1: { silver: 100, successRate: 1.0 },
   2: { silver: 200, successRate: 1.0 },
   3: { silver: 400, successRate: 0.95 },
-  4: { silver: 800, successRate: 0.90 },
+  4: { silver: 800, successRate: 0.9 },
   5: { silver: 1500, successRate: 0.85 },
   6: { silver: 3000, successRate: 0.75 },
   7: { silver: 5000, successRate: 0.65 },
@@ -22,16 +22,16 @@ export const ENHANCEMENT_CONFIG: Record<number, { silver: number; successRate: n
  * Enhancement materials required per level
  */
 export const ENHANCEMENT_MATERIALS: Record<number, { id: string; quantity: number }[]> = {
-  1: [{ id: 'enhancement_stone_common', quantity: 1 }],
-  2: [{ id: 'enhancement_stone_common', quantity: 2 }],
-  3: [{ id: 'enhancement_stone_common', quantity: 3 }],
-  4: [{ id: 'enhancement_stone_uncommon', quantity: 1 }],
-  5: [{ id: 'enhancement_stone_uncommon', quantity: 2 }],
-  6: [{ id: 'enhancement_stone_uncommon', quantity: 3 }],
-  7: [{ id: 'enhancement_stone_rare', quantity: 1 }],
-  8: [{ id: 'enhancement_stone_rare', quantity: 2 }],
-  9: [{ id: 'enhancement_stone_rare', quantity: 3 }],
-  10: [{ id: 'enhancement_stone_epic', quantity: 1 }],
+  1: [{ id: "enhancement_stone_common", quantity: 1 }],
+  2: [{ id: "enhancement_stone_common", quantity: 2 }],
+  3: [{ id: "enhancement_stone_common", quantity: 3 }],
+  4: [{ id: "enhancement_stone_uncommon", quantity: 1 }],
+  5: [{ id: "enhancement_stone_uncommon", quantity: 2 }],
+  6: [{ id: "enhancement_stone_uncommon", quantity: 3 }],
+  7: [{ id: "enhancement_stone_rare", quantity: 1 }],
+  8: [{ id: "enhancement_stone_rare", quantity: 2 }],
+  9: [{ id: "enhancement_stone_rare", quantity: 3 }],
+  10: [{ id: "enhancement_stone_epic", quantity: 1 }],
 };
 
 /**
@@ -57,9 +57,9 @@ export interface EnhancementResult {
 /**
  * Get the display name for an enhanced item
  */
-export function getEnhancedItemName(item: InventoryItem, locale: 'vi' | 'en'): string {
+export function getEnhancedItemName(item: InventoryItem, locale: "vi" | "en"): string {
   const level = item.enhancement_level || 0;
-  const baseName = locale === 'vi' ? item.name : item.name_en;
+  const baseName = locale === "vi" ? item.name : item.name_en;
   if (level === 0) return baseName;
   return `+${level} ${baseName}`;
 }
@@ -68,11 +68,11 @@ export function getEnhancedItemName(item: InventoryItem, locale: 'vi' | 'en'): s
  * Get enhancement level color class
  */
 export function getEnhancementColor(level: number): string {
-  if (level === 0) return '';
-  if (level <= 3) return 'text-green-400';
-  if (level <= 6) return 'text-blue-400';
-  if (level <= 9) return 'text-purple-400';
-  return 'text-yellow-400'; // +10
+  if (level === 0) return "";
+  if (level <= 3) return "text-green-400";
+  if (level <= 6) return "text-blue-400";
+  if (level <= 9) return "text-purple-400";
+  return "text-yellow-400"; // +10
 }
 
 /**
@@ -80,7 +80,7 @@ export function getEnhancementColor(level: number): string {
  */
 export function canEnhance(item: InventoryItem): boolean {
   // Only equipment can be enhanced
-  if (item.type !== 'Equipment' && item.type !== 'Accessory') return false;
+  if (item.type !== "Equipment" && item.type !== "Accessory") return false;
 
   const currentLevel = item.enhancement_level || 0;
   const maxLevel = item.max_enhancement || 10;
@@ -108,16 +108,16 @@ export function getEnhancementCost(item: InventoryItem, state: GameState): Enhan
   const requiredMaterials = ENHANCEMENT_MATERIALS[nextLevel] || [];
 
   // Check material availability
-  const materials = requiredMaterials.map(req => {
-    const inventoryItem = state.inventory.items.find(i => i.id === req.id);
+  const materials = requiredMaterials.map((req) => {
+    const inventoryItem = state.inventory.items.find((i) => i.id === req.id);
     const hasEnough = inventoryItem ? inventoryItem.quantity >= req.quantity : false;
 
     // Get material display names
     const materialNames: Record<string, { vi: string; en: string }> = {
-      'enhancement_stone_common': { vi: 'Đá Cường Hóa (Thường)', en: 'Enhancement Stone (Common)' },
-      'enhancement_stone_uncommon': { vi: 'Đá Cường Hóa (Tốt)', en: 'Enhancement Stone (Uncommon)' },
-      'enhancement_stone_rare': { vi: 'Đá Cường Hóa (Hiếm)', en: 'Enhancement Stone (Rare)' },
-      'enhancement_stone_epic': { vi: 'Đá Cường Hóa (Sử Thi)', en: 'Enhancement Stone (Epic)' },
+      enhancement_stone_common: { vi: "Đá Cường Hóa (Thường)", en: "Enhancement Stone (Common)" },
+      enhancement_stone_uncommon: { vi: "Đá Cường Hóa (Tốt)", en: "Enhancement Stone (Uncommon)" },
+      enhancement_stone_rare: { vi: "Đá Cường Hóa (Hiếm)", en: "Enhancement Stone (Rare)" },
+      enhancement_stone_epic: { vi: "Đá Cường Hóa (Sử Thi)", en: "Enhancement Stone (Epic)" },
     };
 
     return {
@@ -130,7 +130,7 @@ export function getEnhancementCost(item: InventoryItem, state: GameState): Enhan
   });
 
   const hasSilver = state.inventory.silver >= config.silver;
-  const hasAllMaterials = materials.every(m => m.hasEnough);
+  const hasAllMaterials = materials.every((m) => m.hasEnough);
 
   return {
     silver: config.silver,
@@ -149,7 +149,7 @@ export function calculateEnhancedStats(
 ): Record<string, number> {
   if (enhancementLevel === 0) return baseStats;
 
-  const multiplier = 1 + (enhancementLevel * STAT_MULTIPLIER_PER_LEVEL);
+  const multiplier = 1 + enhancementLevel * STAT_MULTIPLIER_PER_LEVEL;
   const enhancedStats: Record<string, number> = {};
 
   for (const [stat, value] of Object.entries(baseStats)) {
@@ -171,7 +171,10 @@ export function getStatDifference(
   const currentLevel = item.enhancement_level || 0;
   const nextLevel = currentLevel + 1;
 
-  const currentStats = calculateEnhancedStats(item.bonus_stats as Record<string, number>, currentLevel);
+  const currentStats = calculateEnhancedStats(
+    item.bonus_stats as Record<string, number>,
+    currentLevel
+  );
   const nextStats = calculateEnhancedStats(item.bonus_stats as Record<string, number>, nextLevel);
 
   const diff: Record<string, { current: number; next: number; diff: number }> = {};
@@ -224,7 +227,7 @@ export function attemptEnhancement(
 
   // Deduct materials
   for (const material of cost.materials) {
-    const materialIndex = newState.inventory.items.findIndex(i => i.id === material.id);
+    const materialIndex = newState.inventory.items.findIndex((i) => i.id === material.id);
     if (materialIndex !== -1) {
       newState.inventory.items[materialIndex].quantity -= material.quantity;
       if (newState.inventory.items[materialIndex].quantity <= 0) {
@@ -239,7 +242,7 @@ export function attemptEnhancement(
 
   if (success) {
     // Find and update the item
-    const itemIndex = newState.inventory.items.findIndex(i => i.id === item.id);
+    const itemIndex = newState.inventory.items.findIndex((i) => i.id === item.id);
     if (itemIndex !== -1) {
       newState.inventory.items[itemIndex].enhancement_level = nextLevel;
     }

@@ -70,10 +70,8 @@ const SPIRIT_HERB_REALM_FLOORS: DungeonFloor[] = [
     floor_number: 2,
     name: "Nội Viên",
     name_en: "Inner Garden",
-    description:
-      "Vườn trong với dược liệu quý hiếm, nơi tinh linh cây bắt đầu xuất hiện.",
-    description_en:
-      "Inner garden with rare herbs, where tree spirits begin to appear.",
+    description: "Vườn trong với dược liệu quý hiếm, nơi tinh linh cây bắt đầu xuất hiện.",
+    description_en: "Inner garden with rare herbs, where tree spirits begin to appear.",
     enemy_waves: [
       {
         id: "wave_2_1",
@@ -94,8 +92,7 @@ const SPIRIT_HERB_REALM_FLOORS: DungeonFloor[] = [
     name: "Thần Mộc Đường",
     name_en: "Divine Tree Hall",
     description: "Trung tâm bí cảnh, nơi cổ thụ thần mộc ngự trị.",
-    description_en:
-      "The realm's center, where the ancient divine tree resides.",
+    description_en: "The realm's center, where the ancient divine tree resides.",
     enemy_waves: [
       {
         id: "wave_3_1",
@@ -354,8 +351,7 @@ const DRAGON_TURTLE_FLOORS: DungeonFloor[] = [
     name: "Long Cung Tiền Đường",
     name_en: "Dragon Palace Antechamber",
     description: "Tiền sảnh của cung điện long quy với kiến trúc cổ đại.",
-    description_en:
-      "Antechamber of the dragon turtle palace with ancient architecture.",
+    description_en: "Antechamber of the dragon turtle palace with ancient architecture.",
     enemy_waves: [
       {
         id: "wave_4_1",
@@ -455,8 +451,7 @@ const TRIBULATION_GROUNDS_FLOORS: DungeonFloor[] = [
     name: "Điện Phách Lâm",
     name_en: "Lightning Soul Forest",
     description: "Rừng cây bị sét đánh thành than nhưng vẫn đứng.",
-    description_en:
-      "Forest of charred trees still standing after lightning strikes.",
+    description_en: "Forest of charred trees still standing after lightning strikes.",
     enemy_waves: [
       { id: "wave_2_1", enemies: ["thunder_beast"], spawn_chance: 1 },
       {
@@ -517,10 +512,8 @@ const TRIBULATION_GROUNDS_FLOORS: DungeonFloor[] = [
     floor_number: 5,
     name: "Luyện Lôi Điện",
     name_en: "Lightning Refinement Hall",
-    description:
-      "Đại điện nơi tu sĩ thời xưa rèn luyện thân thể bằng thiên lôi.",
-    description_en:
-      "Hall where ancient cultivators tempered their bodies with heavenly lightning.",
+    description: "Đại điện nơi tu sĩ thời xưa rèn luyện thân thể bằng thiên lôi.",
+    description_en: "Hall where ancient cultivators tempered their bodies with heavenly lightning.",
     enemy_waves: [
       {
         id: "wave_5_1",
@@ -561,11 +554,7 @@ const TRIBULATION_GROUNDS_FLOORS: DungeonFloor[] = [
     enemy_waves: [
       {
         id: "wave_7_1",
-        enemies: [
-          "tribulation_avatar_fragment",
-          "thunder_elemental",
-          "lightning_serpent",
-        ],
+        enemies: ["tribulation_avatar_fragment", "thunder_elemental", "lightning_serpent"],
         spawn_chance: 1,
       },
     ],
@@ -657,8 +646,7 @@ const VOID_HALL_FLOORS: DungeonFloor[] = [
     name: "Âm Dương Giới",
     name_en: "Yin-Yang Boundary",
     description: "Ranh giới giữa âm và dương, nơi thực tại bắt đầu méo mó.",
-    description_en:
-      "Boundary between yin and yang, where reality begins to distort.",
+    description_en: "Boundary between yin and yang, where reality begins to distort.",
     enemy_waves: [
       {
         id: "wave_3_1",
@@ -777,12 +765,7 @@ const VOID_HALL_FLOORS: DungeonFloor[] = [
     enemy_waves: [
       {
         id: "wave_9_1",
-        enemies: [
-          "void_emperor_shade",
-          "void_creature",
-          "dimensional_beast",
-          "void_walker",
-        ],
+        enemies: ["void_emperor_shade", "void_creature", "dimensional_beast", "void_walker"],
         spawn_chance: 1,
       },
     ],
@@ -860,10 +843,7 @@ export function getDungeonsInRegion(regionId: string): Dungeon[] {
   return DUNGEONS_BY_REGION[regionId] || [];
 }
 
-export function getDungeonFloor(
-  dungeonId: string,
-  floorNumber: number,
-): DungeonFloor | undefined {
+export function getDungeonFloor(dungeonId: string, floorNumber: number): DungeonFloor | undefined {
   const dungeon = getDungeonById(dungeonId);
   return dungeon?.floors.find((f) => f.floor_number === floorNumber);
 }
@@ -874,17 +854,11 @@ export function canEnterDungeon(
   playerItems: string[],
   playerFlags: string[],
   playerSilver: number,
-  playerSpiritStones: number,
+  playerSpiritStones: number
 ): { canEnter: boolean; reason?: string; reason_en?: string } {
   // Check realm requirement
   if (dungeon.entry_requirements?.realm) {
-    const realmOrder = [
-      "PhàmNhân",
-      "LuyệnKhí",
-      "TrúcCơ",
-      "KếtĐan",
-      "NguyênAnh",
-    ];
+    const realmOrder = ["PhàmNhân", "LuyệnKhí", "TrúcCơ", "KếtĐan", "NguyênAnh"];
     const requiredIndex = realmOrder.indexOf(dungeon.entry_requirements.realm);
     const playerIndex = realmOrder.indexOf(playerRealm);
     if (playerIndex < requiredIndex) {
@@ -933,20 +907,14 @@ export function canEnterDungeon(
         reason_en: `Need ${dungeon.entry_cost.silver - playerSilver} more silver`,
       };
     }
-    if (
-      dungeon.entry_cost.spirit_stones &&
-      playerSpiritStones < dungeon.entry_cost.spirit_stones
-    ) {
+    if (dungeon.entry_cost.spirit_stones && playerSpiritStones < dungeon.entry_cost.spirit_stones) {
       return {
         canEnter: false,
         reason: `Thiếu ${dungeon.entry_cost.spirit_stones - playerSpiritStones} linh thạch`,
         reason_en: `Need ${dungeon.entry_cost.spirit_stones - playerSpiritStones} more spirit stones`,
       };
     }
-    if (
-      dungeon.entry_cost.item &&
-      !playerItems.includes(dungeon.entry_cost.item)
-    ) {
+    if (dungeon.entry_cost.item && !playerItems.includes(dungeon.entry_cost.item)) {
       const itemName = getItemName(dungeon.entry_cost.item);
 
       return {

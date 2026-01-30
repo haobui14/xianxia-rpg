@@ -1,57 +1,57 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from "react";
 
 interface HealthBarProps {
   current: number;
   max: number;
-  type: 'hp' | 'qi' | 'stamina' | 'enemy';
+  type: "hp" | "qi" | "stamina" | "enemy";
   showNumbers?: boolean;
   showPercentage?: boolean;
-  size?: 'small' | 'medium' | 'large';
+  size?: "small" | "medium" | "large";
   animate?: boolean;
   label?: string;
 }
 
 const BAR_COLORS = {
   hp: {
-    fill: 'from-red-600 to-red-400',
-    bg: 'bg-red-950',
-    border: 'border-red-700/50',
-    text: 'text-red-400',
-    glow: 'shadow-red-500/30',
-    damage: 'bg-red-300',
+    fill: "from-red-600 to-red-400",
+    bg: "bg-red-950",
+    border: "border-red-700/50",
+    text: "text-red-400",
+    glow: "shadow-red-500/30",
+    damage: "bg-red-300",
   },
   qi: {
-    fill: 'from-blue-600 to-blue-400',
-    bg: 'bg-blue-950',
-    border: 'border-blue-700/50',
-    text: 'text-blue-400',
-    glow: 'shadow-blue-500/30',
-    damage: 'bg-blue-300',
+    fill: "from-blue-600 to-blue-400",
+    bg: "bg-blue-950",
+    border: "border-blue-700/50",
+    text: "text-blue-400",
+    glow: "shadow-blue-500/30",
+    damage: "bg-blue-300",
   },
   stamina: {
-    fill: 'from-green-600 to-green-400',
-    bg: 'bg-green-950',
-    border: 'border-green-700/50',
-    text: 'text-green-400',
-    glow: 'shadow-green-500/30',
-    damage: 'bg-green-300',
+    fill: "from-green-600 to-green-400",
+    bg: "bg-green-950",
+    border: "border-green-700/50",
+    text: "text-green-400",
+    glow: "shadow-green-500/30",
+    damage: "bg-green-300",
   },
   enemy: {
-    fill: 'from-orange-600 to-orange-400',
-    bg: 'bg-orange-950',
-    border: 'border-orange-700/50',
-    text: 'text-orange-400',
-    glow: 'shadow-orange-500/30',
-    damage: 'bg-orange-300',
+    fill: "from-orange-600 to-orange-400",
+    bg: "bg-orange-950",
+    border: "border-orange-700/50",
+    text: "text-orange-400",
+    glow: "shadow-orange-500/30",
+    damage: "bg-orange-300",
   },
 };
 
 const SIZE_CLASSES = {
-  small: 'h-2',
-  medium: 'h-4',
-  large: 'h-6',
+  small: "h-2",
+  medium: "h-4",
+  large: "h-6",
 };
 
 export default function HealthBar({
@@ -60,7 +60,7 @@ export default function HealthBar({
   type,
   showNumbers = true,
   showPercentage = false,
-  size = 'medium',
+  size = "medium",
   animate = true,
   label,
 }: HealthBarProps) {
@@ -140,11 +140,7 @@ export default function HealthBar({
       {/* Label row */}
       {(label || showNumbers) && (
         <div className="flex justify-between items-center mb-1">
-          {label && (
-            <span className={`text-xs font-medium ${colors.text}`}>
-              {label}
-            </span>
-          )}
+          {label && <span className={`text-xs font-medium ${colors.text}`}>{label}</span>}
           {showNumbers && (
             <span className={`text-xs font-mono ${colors.text}`}>
               {displayCurrent.toLocaleString()} / {max.toLocaleString()}
@@ -172,7 +168,7 @@ export default function HealthBar({
         {/* Main fill bar */}
         <div
           className={`h-full rounded-full bg-gradient-to-r ${colors.fill} transition-all duration-300 ease-out relative overflow-hidden ${
-            isLow && animate ? (isCritical ? 'animate-pulse' : 'animate-progress-pulse') : ''
+            isLow && animate ? (isCritical ? "animate-pulse" : "animate-progress-pulse") : ""
           }`}
           style={{
             width: `${percentage}%`,
@@ -184,15 +180,16 @@ export default function HealthBar({
             <div
               className="absolute inset-0 animate-shimmer"
               style={{
-                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
-                backgroundSize: '200% 100%',
+                background:
+                  "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)",
+                backgroundSize: "200% 100%",
               }}
             />
           )}
         </div>
 
         {/* Segment markers for medium/large bars */}
-        {size !== 'small' && (
+        {size !== "small" && (
           <div className="absolute inset-0 flex">
             {[25, 50, 75].map((mark) => (
               <div
@@ -206,9 +203,11 @@ export default function HealthBar({
       </div>
 
       {/* Low health warning text */}
-      {isLow && type === 'hp' && (
-        <div className={`text-xs mt-1 ${isCritical ? 'text-red-500 animate-pulse' : 'text-red-400'}`}>
-          {isCritical ? '!! CRITICAL !!' : '! Low Health !'}
+      {isLow && type === "hp" && (
+        <div
+          className={`text-xs mt-1 ${isCritical ? "text-red-500 animate-pulse" : "text-red-400"}`}
+        >
+          {isCritical ? "!! CRITICAL !!" : "! Low Health !"}
         </div>
       )}
     </div>

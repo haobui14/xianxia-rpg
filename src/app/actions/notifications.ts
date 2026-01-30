@@ -1,10 +1,10 @@
-'use server';
+"use server";
 
-import webpush from 'web-push';
+import webpush from "web-push";
 
 // Set VAPID details
 webpush.setVapidDetails(
-  'mailto:admin@xianxia-rpg.com',
+  "mailto:admin@xianxia-rpg.com",
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
   process.env.VAPID_PRIVATE_KEY!
 );
@@ -24,32 +24,32 @@ export async function unsubscribeUser(userId: string) {
 
 export async function sendStaminaFullNotification(userId: string) {
   const subscription = subscriptions.get(userId);
-  
+
   if (!subscription) {
-    console.log('No subscription found for user:', userId);
-    return { success: false, error: 'No subscription available' };
+    console.log("No subscription found for user:", userId);
+    return { success: false, error: "No subscription available" };
   }
 
   try {
     await webpush.sendNotification(
       subscription as any,
       JSON.stringify({
-        title: 'Thể Lực Đã Phục Hồi! ⚡',
-        body: 'Thể lực của bạn đã hồi phục đầy đủ. Tiếp tục hành trình tu tiên!',
-        icon: '/icon-192.png',
-        url: '/'
+        title: "Thể Lực Đã Phục Hồi! ⚡",
+        body: "Thể lực của bạn đã hồi phục đầy đủ. Tiếp tục hành trình tu tiên!",
+        icon: "/icon-192.png",
+        url: "/",
       })
     );
     return { success: true };
   } catch (error: any) {
-    console.error('Error sending push notification:', error);
-    
+    console.error("Error sending push notification:", error);
+
     // If subscription is invalid, remove it
     if (error.statusCode === 410) {
       subscriptions.delete(userId);
     }
-    
-    return { success: false, error: 'Failed to send notification' };
+
+    return { success: false, error: "Failed to send notification" };
   }
 }
 
