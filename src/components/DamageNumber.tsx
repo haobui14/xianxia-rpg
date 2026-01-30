@@ -85,7 +85,9 @@ function DamageNumber({ data, onComplete }: DamageNumberProps) {
         {
           left: `calc(50% + ${data.x || 0}px)`,
           top: `calc(50% + ${data.y || 0}px)`,
-          transform: "translate(-50%, -50%)", // eslint-disable-next-line react-hooks/purity          "--particle-drift": `${(Math.random() - 0.5) * 30}px`,
+          transform: "translate(-50%, -50%)",
+          // eslint-disable-next-line react-hooks/purity
+          "--particle-drift": `${(Math.random() - 0.5) * 30}px`,
         } as React.CSSProperties
       }
     >
