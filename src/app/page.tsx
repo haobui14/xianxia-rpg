@@ -102,12 +102,15 @@ export default function Home() {
     setScreen('game');
   };
 
+  const [previousScreen, setPreviousScreen] = useState<Screen>('character');
+
   const handleShowProfile = () => {
+    setPreviousScreen(screen);
     setScreen('profile');
   };
 
   const handleBackFromProfile = () => {
-    setScreen('character');
+    setScreen(previousScreen === 'profile' ? 'character' : previousScreen);
   };
 
   if (loading) {
@@ -141,7 +144,17 @@ export default function Home() {
       )}
 
       {screen === 'game' && gameState && (
-        <GameScreen runId={gameState.runId} locale={locale} userId={user?.id} />
+        <div>
+          <div className="flex justify-end p-4">
+            <button
+              onClick={handleShowProfile}
+              className="px-4 py-2 bg-xianxia-accent/20 hover:bg-xianxia-accent/30 rounded-lg transition-colors"
+            >
+              {locale === 'vi' ? 'Hồ Sơ' : 'Profile'}
+            </button>
+          </div>
+          <GameScreen runId={gameState.runId} locale={locale} userId={user?.id} />
+        </div>
       )}
 
       {screen === 'profile' && (
