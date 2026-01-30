@@ -105,19 +105,6 @@ export default function Home() {
     setScreen("game");
   };
 
-<<<<<<< Updated upstream
-  const handleBackToCharacter = () => {
-    setGameState(null);
-    setScreen('character');
-  };
-
-  const handleShowProfile = () => {
-    setScreen('profile');
-  };
-
-  const handleBackFromProfile = () => {
-    setScreen('character');
-=======
   const [previousScreen, setPreviousScreen] = useState<Screen>("character");
 
   const handleShowProfile = () => {
@@ -127,7 +114,6 @@ export default function Home() {
 
   const handleBackFromProfile = () => {
     setScreen(previousScreen === "profile" ? "character" : previousScreen);
->>>>>>> Stashed changes
   };
 
   if (loading) {
@@ -164,13 +150,7 @@ export default function Home() {
 
       {screen === "game" && gameState && (
         <div>
-          <div className="flex justify-between p-4">
-            <button
-              onClick={handleBackToCharacter}
-              className="px-4 py-2 bg-xianxia-accent/20 hover:bg-xianxia-accent/30 rounded-lg transition-colors"
-            >
-              ← {locale === 'vi' ? 'Quay lại' : 'Back'}
-            </button>
+          <div className="flex justify-end p-4">
             <button
               onClick={handleShowProfile}
               className="px-4 py-2 bg-xianxia-accent/20 hover:bg-xianxia-accent/30 rounded-lg transition-colors"

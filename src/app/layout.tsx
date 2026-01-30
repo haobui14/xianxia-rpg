@@ -6,9 +6,10 @@ export const metadata: Metadata = {
   description:
     "Text-based Xianxia cultivation RPG game powered by AI. Embark on your immortal cultivation journey.",
   applicationName: "Xianxia RPG",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: "Xianxia RPG",
   },
   formatDetection: {
@@ -40,6 +41,19 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js');
+                });
+              }
+            `,
+          }}
+        />
+      </head>
       <body>{children}</body>
     </html>
   );
