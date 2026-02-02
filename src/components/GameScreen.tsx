@@ -21,9 +21,10 @@ interface GameScreenProps {
   runId: string;
   locale: Locale;
   userId?: string;
+  onLocaleChange?: (locale: Locale) => void;
 }
 
-export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
+export default function GameScreen({ runId, locale, userId, onLocaleChange }: GameScreenProps) {
   const [state, setState] = useState<GameState | null>(null);
   const [narrative, setNarrative] = useState("");
   const [choices, setChoices] = useState<Choice[]>([]);
@@ -1841,6 +1842,16 @@ export default function GameScreen({ runId, locale, userId }: GameScreenProps) {
           >
             🔔
           </button>
+          {/* Language Toggle */}
+          {onLocaleChange && (
+            <button
+              onClick={() => onLocaleChange(locale === "vi" ? "en" : "vi")}
+              className="ml-auto px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg bg-xianxia-dark hover:bg-xianxia-accent/20 transition-colors flex items-center gap-1"
+              title={locale === "vi" ? "Switch to English" : "Chuyển sang Tiếng Việt"}
+            >
+              🌐 {locale === "vi" ? "EN" : "VI"}
+            </button>
+          )}
         </div>
 
         {/* Content */}

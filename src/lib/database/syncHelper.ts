@@ -427,11 +427,30 @@ export async function loadTechniquesFromTables(
 }
 
 /**
- * Full sync - sync entire game state to tables
+ * Full sync - sync entire game state to tables (runs all syncs in parallel)
+ * This is more efficient than calling individual sync functions sequentially.
  */
 export async function fullSync(runId: string, state: GameState, characterName: string) {
-  await syncInventoryToTables(runId, state.inventory, state.equipped_items);
-  await syncSkillsToTables(runId, state.skills);
-  await syncTechniquesToTables(runId, state.techniques);
-  await updatePlayerStats(runId, characterName, state);
+  // Run all syncs in parallel for better performance
+  await Promise.all([
+    syncInventoryToTables(runId, state.inventory, state.equipped_items),
+    syncSkillsToTables(runId, state.skills),
+    syncTechniquesToTables(runId, state.techniques),
+    updatePlayerStats(runId, characterName, state),
+  ]);
+}
+
+/**
+ * Fire-and-forget sync - doesn't block, errors are silently ignored.
+ * Use this when you want to sync in the background without waiting.
+ */
+export function syncInBackground(runId: string, state: GameState, characterName?: string) {
+  Promise.all([
+    syncInventoryToTables(runId, state.inventory, state.equipped_items).catch(() => {}),
+    syncSkillsToTables(runId, state.skills).catch(() => {}),
+    syncTechniquesToTables(runId, state.techniques).catch(() => {}),
+    characterName ? updatePlayerStats(runId, characterName, state).catch(() => {}) : Promise.resolve(),
+  ]).catch(() => {
+    // Silently ignore all errors
+  });
 }

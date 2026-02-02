@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { runQueries, turnLogQueries, characterQueries } from "@/lib/database/queries";
+import { runQueries, turnLogQueries } from "@/lib/database/queries";
 import { generateAITurn, getFallbackResponse } from "@/lib/ai/agent";
 import {
   GameState,
@@ -44,11 +44,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Run ID required" }, { status: 400 });
     }
 
-    // Load run
-    const run = await runQueries.getById(runId);
+    // Load run with character data in single query
+    const run = await runQueries.getByIdWithCharacter(runId);
     if (!run) {
       return NextResponse.json({ error: "Run not found" }, { status: 404 });
     }
+    const characterName = run.character?.name;
 
     const state: GameState = run.current_state as GameState;
     const locale = run.locale;
@@ -320,58 +321,26 @@ export async function POST(request: Request) {
       updateStorySummary(state, aiResult.narrative, locale);
     }
 
-    // Record combat events to history table
-    const combatEvents = events.filter((e) => e.type === "combat");
-    for (const event of combatEvents) {
-      if (event.data.enemy && event.data.victory !== undefined) {
-        await recordCombatHistory(
-          runId,
-          event.data.enemy.id || "unknown",
-          event.data.enemy.name || "Unknown Enemy",
-          event.data.victory,
-          event.data.playerDamage || 0,
-          event.data.enemyDamage || 0,
-          event.data.loot || {},
-          {
-            year: state.time_year,
-            month: state.time_month,
-            day: state.time_day,
-          },
-          turnNo
-        );
-      }
-    }
-
-    // Update leaderboard statistics
-    const character = await characterQueries.getById(run.character_id);
-    if (character) {
-      const combatWins = combatEvents.filter((e) => e.data.victory === true).length;
-      await updatePlayerStats(runId, character.name, state, combatWins);
-    }
-
-    // Sync to normalized tables (optional - don't fail if functions don't exist)
-    try {
-      await syncInventoryToTables(runId, state.inventory, state.equipped_items);
-      await syncSkillsToTables(runId, state.skills);
-      await syncTechniquesToTables(runId, state.techniques);
-    } catch (err) {
-      // Ignore sync errors - this is optional functionality
-      console.log("Table sync skipped (function not available)");
-    }
-
-    // Update turn count in state
+    // Update turn count in state before saving
     state.turn_count = turnNo;
 
-    // Save state with retry logic
+    // === CRITICAL SAVES (must complete before response) ===
     console.log(
       `Saving state - Skills: ${state.skills?.length || 0}, Techniques: ${state.techniques?.length || 0}`
     );
-    const saveResult = await runQueries.update(runId, state);
+
+    // Run the two critical saves in parallel
+    const [saveResult] = await Promise.all([
+      runQueries.update(runId, state),
+      turnLogQueries.create(runId, turnNo, choiceId, aiResult.narrative, {
+        ...aiResult,
+        sceneType: selectedSceneType,
+      }),
+    ]);
 
     // Track save status in response
     if (!saveResult.success) {
       console.error(`[Turn] State save failed: ${saveResult.error}`);
-      // Add save failure event to notify frontend
       events.push({
         type: "status_effect",
         data: {
@@ -381,10 +350,41 @@ export async function POST(request: Request) {
       });
     }
 
-    // Save turn log with scene type for future anti-repetition
-    await turnLogQueries.create(runId, turnNo, choiceId, aiResult.narrative, {
-      ...aiResult,
-      sceneType: selectedSceneType,
+    // === FIRE-AND-FORGET OPERATIONS (don't block response) ===
+    // These are optional and can complete after response is sent
+    const combatEvents = events.filter((e) => e.type === "combat");
+    const combatWins = combatEvents.filter((e) => e.data.victory === true).length;
+
+    // Launch all optional operations without awaiting
+    // This significantly reduces response time
+    Promise.all([
+      // Sync to normalized tables
+      syncInventoryToTables(runId, state.inventory, state.equipped_items).catch(() => {}),
+      syncSkillsToTables(runId, state.skills).catch(() => {}),
+      syncTechniquesToTables(runId, state.techniques).catch(() => {}),
+      // Update leaderboard (using character name from combined query - no extra DB call!)
+      characterName
+        ? updatePlayerStats(runId, characterName, state, combatWins).catch(() => {})
+        : Promise.resolve(),
+      // Record combat history
+      ...combatEvents
+        .filter((event) => event.data.enemy && event.data.victory !== undefined)
+        .map((event) =>
+          recordCombatHistory(
+            runId,
+            event.data.enemy.id || "unknown",
+            event.data.enemy.name || "Unknown Enemy",
+            event.data.victory,
+            event.data.playerDamage || 0,
+            event.data.enemyDamage || 0,
+            event.data.loot || {},
+            { year: state.time_year, month: state.time_month, day: state.time_day },
+            turnNo
+          ).catch(() => {})
+        ),
+    ]).catch(() => {
+      // Ignore all errors from fire-and-forget operations
+      console.log("Some background sync operations failed (non-critical)");
     });
 
     // Return result with save status

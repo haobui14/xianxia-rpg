@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/database/client";
 import { User } from "@supabase/supabase-js";
 import Login from "@/components/Login";
@@ -9,6 +9,9 @@ import GameScreen from "@/components/GameScreen";
 import Profile from "@/components/Profile";
 
 type Screen = "login" | "character" | "game" | "profile";
+
+// Minimum time between token refresh events (in milliseconds)
+const TOKEN_REFRESH_COOLDOWN = 300000; // 5 minutes
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -19,6 +22,23 @@ export default function Home() {
     characterId: string;
     runId: string;
   } | null>(null);
+  const lastTokenRefreshRef = useRef<number>(0);
+
+  // Save locale to user's account when it changes
+  const handleLocaleChange = async (newLocale: "vi" | "en") => {
+    setLocale(newLocale);
+    // Save to user metadata if logged in
+    if (user) {
+      try {
+        await supabase.auth.updateUser({
+          data: { preferred_locale: newLocale },
+        });
+        console.log("Locale saved to account:", newLocale);
+      } catch (err) {
+        console.error("Failed to save locale to account:", err);
+      }
+    }
+  };
 
   useEffect(() => {
     // Force clear all auth storage to prevent stale token issues
@@ -59,6 +79,10 @@ export default function Home() {
         }
 
         setUser(session?.user ?? null);
+        // Load saved locale from user metadata
+        if (session?.user?.user_metadata?.preferred_locale) {
+          setLocale(session.user.user_metadata.preferred_locale as "vi" | "en");
+        }
         setScreen(session?.user ? "character" : "login");
         setLoading(false);
       } catch (err: any) {
@@ -82,18 +106,36 @@ export default function Home() {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state changed:", event);
 
-      // Handle token refresh errors
+      // Handle specific auth events
       if (event === "TOKEN_REFRESHED") {
+        // Check cooldown - skip if refreshed too recently
+        const now = Date.now();
+        const timeSinceLastRefresh = now - lastTokenRefreshRef.current;
+
+        if (timeSinceLastRefresh < TOKEN_REFRESH_COOLDOWN) {
+          console.log(`Token refresh skipped (cooldown: ${Math.round((TOKEN_REFRESH_COOLDOWN - timeSinceLastRefresh) / 1000)}s remaining)`);
+          return;
+        }
+
+        // Token refresh - just update user, DON'T change screen
+        // This prevents losing game state when switching tabs
         console.log("Token refreshed successfully");
+        lastTokenRefreshRef.current = now;
+        setUser(session?.user ?? null);
       } else if (event === "SIGNED_OUT") {
         console.log("User signed out");
         clearAllAuthStorage();
         setUser(null);
         setScreen("login");
+      } else if (event === "SIGNED_IN") {
+        // Only navigate to character screen on actual sign in
+        console.log("User signed in");
+        setUser(session?.user ?? null);
+        setScreen("character");
+      } else {
+        // For other events, just update user without changing screen
+        setUser(session?.user ?? null);
       }
-
-      setUser(session?.user ?? null);
-      setScreen(session?.user ? "character" : "login");
     });
 
     return () => subscription.unsubscribe();
@@ -101,7 +143,7 @@ export default function Home() {
 
   const handleGameStart = (characterId: string, runId: string, gameLocale: "vi" | "en") => {
     setGameState({ characterId, runId });
-    setLocale(gameLocale);
+    handleLocaleChange(gameLocale); // Save to account
     setScreen("game");
   };
 
@@ -128,7 +170,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-xianxia-darker">
-      {screen === "login" && <Login locale={locale} onLocaleChange={setLocale} />}
+      {screen === "login" && <Login locale={locale} onLocaleChange={handleLocaleChange} />}
 
       {screen === "character" && user && (
         <div>
@@ -143,7 +185,7 @@ export default function Home() {
           <CharacterCreation
             onGameStart={handleGameStart}
             locale={locale}
-            onLocaleChange={setLocale}
+            onLocaleChange={handleLocaleChange}
           />
         </div>
       )}
@@ -158,7 +200,7 @@ export default function Home() {
               {locale === "vi" ? "Hồ Sơ" : "Profile"}
             </button>
           </div>
-          <GameScreen runId={gameState.runId} locale={locale} userId={user?.id} />
+          <GameScreen runId={gameState.runId} locale={locale} userId={user?.id} onLocaleChange={handleLocaleChange} />
         </div>
       )}
 

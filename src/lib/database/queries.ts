@@ -80,6 +80,24 @@ export const runQueries = {
     return data;
   },
 
+  /**
+   * Get run with character data in a single query (avoids extra DB call)
+   */
+  async getByIdWithCharacter(id: string): Promise<(Run & { character: Character | null }) | null> {
+    const supabase = await createServerClient();
+    const { data, error } = await supabase
+      .from("runs")
+      .select("*, characters(*)")
+      .eq("id", id)
+      .single();
+
+    if (error) return null;
+    return {
+      ...data,
+      character: data.characters || null,
+    };
+  },
+
   async update(
     id: string,
     state: GameState,
