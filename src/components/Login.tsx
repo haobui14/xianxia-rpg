@@ -85,11 +85,15 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
         if (error) throw error;
 
         console.log("User signed in:", data.user?.email);
+        setLoading(false);
         // The onAuthStateChange in page.tsx will handle the redirect
       }
     } catch (err: any) {
       console.error("Auth error:", err);
       setError(err.message || (locale === "vi" ? "Lỗi xác thực" : "Authentication error"));
+      setLoading(false);
+    } finally {
+      // Ensure loading is always reset
       setLoading(false);
     }
   };

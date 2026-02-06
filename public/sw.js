@@ -1,8 +1,10 @@
 // Service Worker for Xianxia RPG PWA
 
-const CACHE_NAME = 'xianxia-rpg-v1';
+const CACHE_NAME = 'xianxia-rpg-v2';
+const OFFLINE_URL = '/offline.html';
 const STATIC_ASSETS = [
   '/',
+  OFFLINE_URL,
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
 ];
@@ -46,10 +48,50 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
+  // Navigation requests: network-first with offline fallback
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then(function(response) {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then(function(cache) {
+            cache.put(event.request, responseClone);
+          });
+          return response;
+        })
+        .catch(function() {
+          return caches.match(event.request).then(function(cached) {
+            return cached || caches.match(OFFLINE_URL);
+          });
+        })
+    );
+    return;
+  }
+
+  // Asset requests: cache-first
+  const destination = event.request.destination;
+  if (destination === 'style' || destination === 'script' || destination === 'font' || destination === 'image') {
+    event.respondWith(
+      caches.match(event.request).then(function(cached) {
+        if (cached) return cached;
+        return fetch(event.request).then(function(response) {
+          if (response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then(function(cache) {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // Default: network-first
   event.respondWith(
     fetch(event.request)
       .then(function(response) {
-        // Cache successful responses
         if (response.status === 200) {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then(function(cache) {
@@ -59,7 +101,6 @@ self.addEventListener('fetch', function(event) {
         return response;
       })
       .catch(function() {
-        // Fallback to cache when offline
         return caches.match(event.request);
       })
   );

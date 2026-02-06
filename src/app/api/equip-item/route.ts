@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@/lib/database/client";
+import { requireAuth } from "@/lib/api/auth-middleware";
 import { characterQueries, runQueries } from "@/lib/database/queries";
 import { GameState, InventoryItem } from "@/types/game";
 import { syncInventoryToTables } from "@/lib/database/syncHelper";
@@ -12,18 +12,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing itemId or action" }, { status: 400 });
     }
 
-    // Get authenticated user
-    const supabase = await createServerClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-    }
+    const { userId } = await requireAuth();
 
     // Get character
-    const characters = await characterQueries.getByUserId(user.id);
+    const characters = await characterQueries.getByUserId(userId);
     if (characters.length === 0) {
       return NextResponse.json({ error: "Character not found" }, { status: 404 });
     }

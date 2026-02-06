@@ -462,7 +462,7 @@ export async function POST(request: NextRequest) {
 }
 
 function shouldRegenerateMarket(state: GameState): boolean {
-  if (!state.market) return true;
+  if (!state.market || !state.market.items || state.market.items.length === 0) return true;
 
   const { next_regeneration } = state.market;
   return (

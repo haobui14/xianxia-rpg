@@ -45,6 +45,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           dangerouslySetInnerHTML={{
             __html: `
+              // Disable console in production (check hostname instead of process.env)
+              if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                const noop = function() {};
+                console.log = noop;
+                console.debug = noop;
+                console.info = noop;
+                console.warn = noop;
+              }
+              
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
                   navigator.serviceWorker.register('/sw.js');

@@ -20,8 +20,10 @@ export default function CharacterCreation({
   const [loading, setLoading] = useState(true);
   const [spiritRoot, setSpiritRoot] = useState<SpiritRoot | null>(null);
   const [characterId, setCharacterId] = useState<string | null>(null);
+  const [existingRunId, setExistingRunId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [existingCharacter, setExistingCharacter] = useState<Character | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const checkedRef = useRef(false);
 
   useEffect(() => {
@@ -48,12 +50,10 @@ export default function CharacterCreation({
           const character = data.character;
           setExistingCharacter(character);
           setCharacterId(character.id);
+          setExistingRunId(data.run.id);
           setName(character.name);
           setAge(character.age);
           setLoading(false);
-
-          // Auto-start the game with the latest run
-          onGameStart(character.id, data.run.id, locale);
         } else {
           setLoading(false);
         }
@@ -64,7 +64,7 @@ export default function CharacterCreation({
     };
 
     checkExistingCharacter();
-  }, [onGameStart, locale]);
+  }, []);
 
   const handleCreateCharacter = async () => {
     // Don't create if character already exists
@@ -177,6 +177,44 @@ export default function CharacterCreation({
     }
   };
 
+  const handleContinueExisting = () => {
+    if (!characterId || !existingRunId) return;
+    onGameStart(characterId, existingRunId, locale);
+  };
+
+  const handleResetGame = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/reset-game", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to reset game");
+      }
+
+      setExistingCharacter(null);
+      setExistingRunId(null);
+      setCharacterId(null);
+      setSpiritRoot(null);
+      setName("");
+      setAge(20);
+      setShowCreateForm(true);
+    } catch (err: any) {
+      setError(
+        locale === "vi"
+          ? `Lỗi đặt lại trò chơi: ${err.message}`
+          : `Error resetting game: ${err.message}`
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="max-w-2xl w-full bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-8">
@@ -203,7 +241,48 @@ export default function CharacterCreation({
               {t(locale, "createCharacter")}
             </h1>
 
-            {!spiritRoot ? (
+            {existingCharacter && !spiritRoot && !showCreateForm ? (
+              <div className="space-y-6">
+                <div className="p-6 bg-xianxia-darker rounded-lg border border-xianxia-gold/30">
+                  <h2 className="text-2xl font-bold mb-2 text-xianxia-gold">
+                    {existingCharacter.name}
+                  </h2>
+                  <p className="text-gray-300">
+                    {locale === "vi" ? "Tuổi" : "Age"}: {existingCharacter.age}
+                  </p>
+                </div>
+
+                {error && (
+                  <div className="p-4 bg-red-900/30 border border-red-500/50 rounded-lg text-red-200">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={handleContinueExisting}
+                    disabled={loading}
+                    className="w-full py-3 bg-xianxia-gold hover:bg-xianxia-gold/80 text-xianxia-darker disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-bold transition-colors"
+                  >
+                    {locale === "vi" ? "Tiếp tục hành trình" : "Continue Journey"}
+                  </button>
+                  <button
+                    onClick={() => setShowCreateForm(true)}
+                    disabled={loading}
+                    className="w-full py-3 bg-xianxia-darker border border-xianxia-accent/50 hover:bg-xianxia-accent/20 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
+                  >
+                    {locale === "vi" ? "Tạo nhân vật mới" : "Create New Character"}
+                  </button>
+                  <button
+                    onClick={handleResetGame}
+                    disabled={loading}
+                    className="w-full py-3 bg-red-900/40 hover:bg-red-900/60 border border-red-500/40 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
+                  >
+                    {locale === "vi" ? "Xóa dữ liệu & tạo lại" : "Reset Game Data"}
+                  </button>
+                </div>
+              </div>
+            ) : !spiritRoot ? (
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium mb-2">

@@ -39,14 +39,6 @@ export default function MarketView({
       !item.is_equipped
   );
 
-  // Debug logging
-  console.log("Market inventory items:", state.inventory.items.length);
-  console.log("Market sellable items:", sellableItems.length);
-  console.log(
-    "Sellable items:",
-    sellableItems.map((i) => ({ id: i.id, name: i.name, type: i.type }))
-  );
-
   return (
     <div className="space-y-6">
       {/* Market Info */}
