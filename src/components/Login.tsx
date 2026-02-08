@@ -73,6 +73,7 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
               ? "Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản."
               : "Sign up successful! Please check your email to confirm your account."
           );
+          setIsSignUp(false);
           setLoading(false);
         }
       } else {

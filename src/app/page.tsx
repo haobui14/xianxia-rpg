@@ -4,10 +4,11 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/database/client";
 import { User } from "@supabase/supabase-js";
 import Login from "@/components/Login";
+import CharacterCreation from "@/components/CharacterCreation";
 import GameScreen from "@/components/GameScreen";
 import Profile from "@/components/Profile";
 
-type Screen = "login" | "game" | "profile";
+type Screen = "login" | "character-creation" | "game" | "profile";
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -62,11 +63,10 @@ export default function Home() {
             setRunId(run.id);
             setScreen("game");
           } else {
-            setScreen("login");
+            setScreen("character-creation");
           }
         } else {
-          // No runs found - stay on login for now
-          setScreen("login");
+          setScreen("character-creation");
         }
         setLoading(false);
       } catch (err) {
@@ -108,10 +108,10 @@ export default function Home() {
             setRunId(run.id);
             setScreen("game");
           } else {
-            setScreen("login");
+            setScreen("character-creation");
           }
         } else {
-          setScreen("login");
+          setScreen("character-creation");
         }
         return;
       }
@@ -121,6 +121,11 @@ export default function Home() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const handleGameStart = (characterId: string, runId: string) => {
+    setRunId(runId);
+    setScreen("game");
+  };
 
   const [previousScreen, setPreviousScreen] = useState<Screen>("game");
 
@@ -146,6 +151,14 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-xianxia-darker">
       {screen === "login" && <Login locale={locale} onLocaleChange={handleLocaleChange} />}
+
+      {screen === "character-creation" && (
+        <CharacterCreation
+          onGameStart={handleGameStart}
+          locale={locale}
+          onLocaleChange={handleLocaleChange}
+        />
+      )}
 
       {screen === "game" && runId && (
         <div>

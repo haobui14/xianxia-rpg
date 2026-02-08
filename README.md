@@ -13,7 +13,7 @@ A single-player text-based RPG game with cultivation/xianxia theme, powered by A
 
 ## Tech Stack
 
-- **Frontend/Backend**: Next.js 14 (App Router)
+- **Frontend/Backend**: Next.js 16 (App Router)
 - **Database**: Supabase (PostgreSQL)
 - **AI**: OpenAI API (or compatible)
 - **Styling**: Tailwind CSS
