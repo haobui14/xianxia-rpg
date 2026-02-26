@@ -173,7 +173,6 @@ export default function Home() {
           <GameScreen
             runId={runId}
             locale={locale}
-            userId={user?.id}
             onLocaleChange={handleLocaleChange}
           />
         </div>

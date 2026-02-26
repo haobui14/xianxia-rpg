@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { GameState, Choice, Enemy, ActivityType } from "@/types/game";
+import { Choice, Enemy, ActivityType } from "@/types/game";
 import { t, Locale } from "@/lib/i18n/translations";
 import DebugInventory from "./DebugInventory";
 import BreakthroughModal from "./BreakthroughModal";
@@ -11,7 +11,6 @@ import EventModal from "./EventModal";
 import { useGameState } from "@/hooks/useGameState";
 import { useItemHandlers } from "@/hooks/useItemHandlers";
 import { useTutorial } from "@/hooks/useTutorial";
-import { useStaminaNotification } from "@/hooks/useStaminaNotification";
 import { useTravelHandlers } from "@/hooks/useTravelHandlers";
 import { useAbilityHandlers } from "@/hooks/useAbilityHandlers";
 import { useCombat } from "@/hooks/useCombat";
@@ -45,13 +44,6 @@ const MarketView = dynamic(() => import("./MarketView"), {
   ),
 });
 
-const NotificationManager = dynamic(() => import("./NotificationManager"), {
-  ssr: false,
-  loading: () => (
-    <div className="p-6 bg-xianxia-dark border border-xianxia-accent/30 rounded-lg">Loading...</div>
-  ),
-});
-
 const WorldMap = dynamic(() => import("./WorldMap"), {
   ssr: false,
   loading: () => (
@@ -76,11 +68,10 @@ const CombatView = dynamic(() => import("./CombatView"), {
 interface GameScreenProps {
   runId: string;
   locale: Locale;
-  userId?: string;
   onLocaleChange?: (locale: Locale) => void;
 }
 
-export default function GameScreen({ runId, locale, userId, onLocaleChange }: GameScreenProps) {
+export default function GameScreen({ runId, locale, onLocaleChange }: GameScreenProps) {
   // Core game state management
   const {
     state,
@@ -100,16 +91,13 @@ export default function GameScreen({ runId, locale, userId, onLocaleChange }: Ga
     setBreakthroughEvent,
     previousExp,
     processTurn,
-    previousStaminaRef,
     lastTurnEvents,
     setLastTurnEvents,
   } = useGameState({ runId, locale });
 
   const { showTutorial, handleDismissTutorial } = useTutorial(runId);
-  useStaminaNotification(state, userId, previousStaminaRef);
-
   const [activeTab, setActiveTab] = useState<
-    "game" | "character" | "sect" | "inventory" | "market" | "notifications" | "world"
+    "game" | "character" | "sect" | "inventory" | "market" | "world"
   >("game");
   const [customAction, setCustomAction] = useState("");
   const marketInitializedRef = useRef(false);
@@ -161,7 +149,7 @@ export default function GameScreen({ runId, locale, userId, onLocaleChange }: Ga
     if (!lastTurnEvents || lastTurnEvents.length === 0) return;
 
     const combatEncounter = lastTurnEvents.find(
-      (e: any) => e.type === "combat_encounter"
+      (e: { type: string; data?: { enemy?: Enemy } }) => e.type === "combat_encounter"
     );
     if (combatEncounter?.data?.enemy) {
       const enemy = combatEncounter.data.enemy as Enemy;
@@ -207,7 +195,7 @@ export default function GameScreen({ runId, locale, userId, onLocaleChange }: Ga
     };
 
     initMarket();
-  }, [activeTab, state]);
+  }, [activeTab, state?.market?.items?.length]);
 
   const handleChoice = async (choiceId: string) => {
     const selectedChoice = choices.find((c) => c.id === choiceId);
@@ -397,16 +385,6 @@ export default function GameScreen({ runId, locale, userId, onLocaleChange }: Ga
             }`}
           >
             {locale === "vi" ? "🗺️ Thế Giới" : "🗺️ World"}
-          </button>
-          <button
-            onClick={() => setActiveTab("notifications")}
-            className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
-              activeTab === "notifications"
-                ? "bg-xianxia-accent text-white"
-                : "bg-xianxia-dark hover:bg-xianxia-accent/20"
-            }`}
-          >
-            🔔
           </button>
           {/* Language Toggle */}
           {onLocaleChange && (
@@ -640,9 +618,6 @@ export default function GameScreen({ runId, locale, userId, onLocaleChange }: Ga
             onRefreshMarket={handleRefreshMarket}
             onExchange={handleExchange}
           />
-        )}
-        {activeTab === "notifications" && userId && (
-          <NotificationManager userId={userId} locale={locale} />
         )}
         {activeTab === "world" && (
           <div className="space-y-6">

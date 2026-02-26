@@ -390,6 +390,193 @@ export const LOOT_TABLES: Record<string, LootTable> = {
   },
 };
 
+// ====================================================
+// Dungeon-specific reward items (completion & first-clear bonuses)
+// These must be looked up by id when adding to inventory.
+// ====================================================
+export const DUNGEON_REWARD_ITEMS: Record<string, Omit<InventoryItem, "quantity">> = {
+  // ---- Tier 1: Spirit Herb Garden ----
+  spirit_root_pill: {
+    id: "spirit_root_pill",
+    name: "Linh Căn Đan",
+    name_en: "Spirit Root Pill",
+    description: "Đan dược quý từ bí cảnh linh thảo, củng cố linh căn tu luyện.",
+    description_en:
+      "A rare pill from the spirit herb realm, strengthening the cultivator's spirit root.",
+    type: "Medicine",
+    rarity: "Rare",
+    effects: { cultivation_exp: 150, spirit_root_boost: 1 },
+  },
+  rare_spirit_herb: {
+    id: "rare_spirit_herb",
+    name: "Linh Thảo Quý",
+    name_en: "Rare Spirit Herb",
+    description: "Một loại thảo dược linh khí dồi dào, vật liệu luyện đan bậc cao.",
+    description_en: "A potent spirit herb brimming with energy, used in high-grade alchemy.",
+    type: "Material",
+    rarity: "Uncommon",
+    effects: {},
+  },
+
+  // ---- Tier 2: Phoenix Ancestor Tomb ----
+  phoenix_feather: {
+    id: "phoenix_feather",
+    name: "Lông Phượng Hoàng",
+    name_en: "Phoenix Feather",
+    description: "Vũ mao phượng hoàng chứa đựng hỏa nguyên tinh thuần khiết.",
+    description_en: "A phoenix feather containing pure fire essence.",
+    type: "Material",
+    rarity: "Rare",
+    effects: { fire_affinity: 1 },
+  },
+  fire_essence: {
+    id: "fire_essence",
+    name: "Hỏa Tinh Hoa",
+    name_en: "Fire Essence",
+    description: "Tinh hoa hỏa nguyên được chưng cất từ lòng núi lửa.",
+    description_en: "Concentrated fire essence distilled from deep within a volcano.",
+    type: "Material",
+    rarity: "Uncommon",
+    effects: {},
+  },
+  phoenix_blood_pill: {
+    id: "phoenix_blood_pill",
+    name: "Phượng Huyết Đan",
+    name_en: "Phoenix Blood Pill",
+    description: "Đan dược tối thượng luyện từ huyết phượng hoàng, khai mở tiềm năng hỏa linh căn.",
+    description_en:
+      "Supreme pill refined from phoenix blood, unlocking fire spirit root potential.",
+    type: "Medicine",
+    rarity: "Epic",
+    effects: { cultivation_exp: 500, permanent_fire_affinity: 1 },
+  },
+
+  // ---- Tier 3: Dragon Palace ----
+  dragon_scale: {
+    id: "dragon_scale",
+    name: "Vảy Rồng",
+    name_en: "Dragon Scale",
+    description: "Vảy rồng chứa đựng thủy nguyên tinh thuần khiết và sức mạnh long tộc.",
+    description_en: "Dragon scale containing pure water essence and the power of the dragon clan.",
+    type: "Material",
+    rarity: "Rare",
+    effects: { water_affinity: 1 },
+  },
+  water_essence: {
+    id: "water_essence",
+    name: "Thủy Tinh Hoa",
+    name_en: "Water Essence",
+    description: "Tinh hoa thủy nguyên được thu thập từ đáy Long Cung.",
+    description_en: "Water essence collected from the depths of the Dragon Palace.",
+    type: "Material",
+    rarity: "Uncommon",
+    effects: {},
+  },
+  dragon_bloodline_pill: {
+    id: "dragon_bloodline_pill",
+    name: "Long Huyết Thống Đan",
+    name_en: "Dragon Bloodline Pill",
+    description:
+      "Đan dược hiếm có dùng huyết long làm chủ liệu, thức tỉnh long huyết trong cơ thể.",
+    description_en:
+      "A rare pill using dragon blood as primary material, awakening dragon blood within the body.",
+    type: "Medicine",
+    rarity: "Epic",
+    effects: { cultivation_exp: 600, permanent_str: 3 },
+  },
+
+  // ---- Tier 4: Lightning Trial ----
+  tribulation_crystal: {
+    id: "tribulation_crystal",
+    name: "Thiên Kiếp Tinh Thể",
+    name_en: "Tribulation Crystal",
+    description:
+      "Tinh thể thuần khiết ngưng tụ từ sấm sét thiên kiếp, chứa đựng sức mạnh phi thường.",
+    description_en:
+      "A crystal condensed from heavenly tribulation lightning, brimming with extraordinary power.",
+    type: "Material",
+    rarity: "Epic",
+    effects: { lightning_affinity: 1 },
+  },
+  lightning_essence: {
+    id: "lightning_essence",
+    name: "Lôi Tinh Hoa",
+    name_en: "Lightning Essence",
+    description: "Tinh hoa lôi nguyên thu thập được từ đại trận thử thách.",
+    description_en: "Lightning essence gathered from the trial formation.",
+    type: "Material",
+    rarity: "Rare",
+    effects: {},
+  },
+  tribulation_resistance_pill: {
+    id: "tribulation_resistance_pill",
+    name: "Thiên Kiếp Kháng Đan",
+    name_en: "Tribulation Resistance Pill",
+    description:
+      "Đan dược kỳ diệu giúp thân thể kháng lôi kiếp, tăng cơ hội vượt thiên kiếp thành công.",
+    description_en:
+      "A wondrous pill that helps the body resist heavenly tribulation, increasing success chance.",
+    type: "Medicine",
+    rarity: "Legendary",
+    effects: { cultivation_exp: 1000, tribulation_resistance: 1 },
+  },
+
+  // ---- Tier 5: Void Realm ----
+  void_crystal: {
+    id: "void_crystal",
+    name: "Hư Không Thạch",
+    name_en: "Void Crystal",
+    description: "Tinh thể hư không, ngưng tụ sức mạnh của hư vô tuyệt đối.",
+    description_en: "A void crystal, condensing the power of absolute nothingness.",
+    type: "Material",
+    rarity: "Legendary",
+    effects: { void_affinity: 1 },
+  },
+  void_essence: {
+    id: "void_essence",
+    name: "Hư Không Tinh Hoa",
+    name_en: "Void Essence",
+    description: "Tinh hoa hư không cực kỳ quý hiếm, chỉ tồn tại trong vùng hư không tuyệt đối.",
+    description_en: "Extremely rare void essence found only within absolute void zones.",
+    type: "Material",
+    rarity: "Epic",
+    effects: {},
+  },
+  void_emperor_ring: {
+    id: "void_emperor_ring",
+    name: "Hư Không Hoàng Giới",
+    name_en: "Void Emperor Ring",
+    description:
+      "Chiếc nhẫn truyền thuyết của Hoàng Đế Hư Không, chứa đựng sức mạnh kiểm soát không gian.",
+    description_en:
+      "The legendary ring of the Void Emperor, containing the power to control space.",
+    type: "Accessory",
+    rarity: "Legendary",
+    equipment_slot: "Accessory",
+    bonus_stats: { int: 20, qi: 100, luck: 5 },
+  },
+};
+
+/**
+ * Look up a dungeon reward item definition by its id.
+ * Returns null if the id is unknown.
+ */
+export function getDungeonRewardItem(id: string): InventoryItem | null {
+  const def = DUNGEON_REWARD_ITEMS[id];
+  if (!def) return null;
+  return { ...def, quantity: 1 };
+}
+
+/**
+ * Map dungeon tier to an appropriate existing loot table id for chest drops.
+ */
+export function getLootTableForDungeonTier(tier: number): string {
+  if (tier >= 4) return "ancient_treasure";
+  if (tier === 3) return "dungeon_boss";
+  if (tier === 2) return "cave_treasure";
+  return "common_herbs";
+}
+
 /**
  * Generate loot from a loot table
  */
@@ -433,6 +620,10 @@ export function generateLoot(
         rarity: entry.rarity,
         quantity: 1,
         effects: entry.effects,
+        // Preserve equipment-specific fields
+        ...(entry.equipment_slot && { equipment_slot: entry.equipment_slot }),
+        ...(entry.bonus_stats && { bonus_stats: entry.bonus_stats }),
+        ...(entry.level_requirement && { level_requirement: entry.level_requirement }),
       });
     }
   }

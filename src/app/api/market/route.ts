@@ -34,6 +34,58 @@ function generateMarketItems(state: GameState, rng: DeterministicRNG): MarketIte
     items.push(item);
   }
 
+  // Always include a guaranteed selection of enhancement stones so crafting is always possible
+  const enhancementStonePool: MarketItem[] = [
+    {
+      id: "enhancement_stone_common",
+      name: "Đá Cường Hóa (Thường)",
+      name_en: "Enhancement Stone (Common)",
+      description: "Đá cường hóa cơ bản, dùng để nâng cấp trang bị +1 đến +3.",
+      description_en: "Basic enhancement stone, used to upgrade equipment from +1 to +3.",
+      type: "Material",
+      rarity: "Common",
+      quantity: rng.randomInt(3, 8),
+      price_silver: 150,
+    },
+    {
+      id: "enhancement_stone_uncommon",
+      name: "Đá Cường Hóa (Tốt)",
+      name_en: "Enhancement Stone (Uncommon)",
+      description: "Đá cường hóa chất lượng tốt, dùng để nâng cấp trang bị +4 đến +6.",
+      description_en: "Good quality enhancement stone, used to upgrade equipment from +4 to +6.",
+      type: "Material",
+      rarity: "Uncommon",
+      quantity: rng.randomInt(2, 5),
+      price_silver: 400,
+    },
+    {
+      id: "enhancement_stone_rare",
+      name: "Đá Cường Hóa (Hiếm)",
+      name_en: "Enhancement Stone (Rare)",
+      description: "Đá cường hóa hiếm, dùng để nâng cấp trang bị +7 đến +9.",
+      description_en: "Rare enhancement stone, used to upgrade equipment from +7 to +9.",
+      type: "Material",
+      rarity: "Rare",
+      quantity: rng.randomInt(1, 3),
+      price_silver: 1200,
+      price_spirit_stones: 5,
+    },
+    {
+      id: "enhancement_stone_epic",
+      name: "Đá Cường Hóa (Sử Thi)",
+      name_en: "Enhancement Stone (Epic)",
+      description: "Đá cường hóa cực phẩm, dùng để nâng cấp trang bị lên +10.",
+      description_en: "Epic enhancement stone, used to upgrade equipment to +10.",
+      type: "Material",
+      rarity: "Epic",
+      quantity: rng.randomInt(1, 2),
+      price_silver: 5000,
+      price_spirit_stones: 20,
+    },
+  ];
+
+  items.push(...enhancementStonePool);
+
   return items;
 }
 

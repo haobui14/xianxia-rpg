@@ -3,6 +3,7 @@ import { createServerClient } from "@/lib/database/client";
 import { characterQueries, runQueries } from "@/lib/database/queries";
 import { GameState, Enemy } from "@/types/game";
 import { migrateGameState } from "@/lib/game/mechanics";
+import { getDungeonRewardItem, generateLoot, getLootTableForDungeonTier } from "@/lib/game/loot";
 import {
   canEnterDungeon,
   enterDungeon,
@@ -348,7 +349,21 @@ export async function POST(request: NextRequest) {
               case "exp":
                 state.progress.cultivation_exp += reward.amount || 0;
                 break;
-              // Items/techniques/skills would need to be added to inventory
+              case "item": {
+                if (reward.id) {
+                  const rewardItem = getDungeonRewardItem(reward.id);
+                  if (rewardItem) {
+                    const existing = state.inventory.items.find((i) => i.id === rewardItem.id);
+                    if (existing) {
+                      existing.quantity += 1;
+                    } else {
+                      state.inventory.items.push(rewardItem);
+                    }
+                  }
+                }
+                break;
+              }
+              // technique/skill rewards are handled by the AI narrative system
             }
           }
         }
@@ -550,14 +565,35 @@ export async function POST(request: NextRequest) {
 
         state.dungeon = collectChest(state.dungeon!, chest_id);
 
-        // Generate loot (simplified - would use loot tables in full implementation)
-        const loot = {
-          silver: Math.floor(rng.random() * 100) + 50,
-          spirit_stones: rng.random() > 0.7 ? Math.floor(rng.random() * 10) + 1 : 0,
-        };
+        // Determine dungeon tier for loot table selection
+        const chestDungeon = getCurrentDungeon(state.dungeon!);
+        const dungeonTier = chestDungeon?.tier ?? 1;
+        const lootTableId = getLootTableForDungeonTier(dungeonTier);
 
-        state.inventory.silver += loot.silver;
-        state.inventory.spirit_stones += loot.spirit_stones;
+        // Generate items from the tier-appropriate loot table
+        const generatedLoot = generateLoot(lootTableId, rng, "en");
+
+        const silver = Math.floor(rng.random() * 100) + 50;
+        const spirit_stones = rng.random() > 0.7 ? Math.floor(rng.random() * 10) + 1 : 0;
+
+        state.inventory.silver += silver + generatedLoot.silver;
+        state.inventory.spirit_stones += spirit_stones + generatedLoot.spiritStones;
+
+        // Add generated items to inventory
+        for (const item of generatedLoot.items) {
+          const existing = state.inventory.items.find((i) => i.id === item.id);
+          if (existing) {
+            existing.quantity += item.quantity;
+          } else {
+            state.inventory.items.push(item);
+          }
+        }
+
+        const loot = {
+          silver: silver + generatedLoot.silver,
+          spirit_stones: spirit_stones + generatedLoot.spiritStones,
+          items: generatedLoot.items,
+        };
 
         // Save to database
         await runQueries.update(run.id, state);

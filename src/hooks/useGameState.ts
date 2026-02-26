@@ -21,10 +21,11 @@ export function useGameState({ runId, locale }: UseGameStateProps) {
   const [previousExp, setPreviousExp] = useState<number | undefined>(undefined);
   const [lastTurnEvents, setLastTurnEvents] = useState<any[]>([]);
 
+  // stateRef mirrors state so processTurn can read the latest value without needing state in its deps
   const saveStatusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const firstTurnStartedRef = useRef(false);
-  const previousStaminaRef = useRef<number>(0);
   const previousRealmRef = useRef<{ realm: Realm; stage: number } | null>(null);
+  const stateRef = useRef<GameState | null>(null);
 
   const loadRun = useCallback(async () => {
     try {
@@ -64,24 +65,7 @@ export function useGameState({ runId, locale }: UseGameStateProps) {
       }
 
       setState(loadedState);
-
-      // Initialize market if empty
-      if (!loadedState.market || !loadedState.market.items || loadedState.market.items.length === 0) {
-        try {
-          const marketResponse = await fetch("/api/market", {
-            method: "GET",
-            credentials: "same-origin",
-          });
-          if (marketResponse.ok) {
-            const marketResult = await marketResponse.json();
-            if (marketResult.state && marketResult.state.market && marketResult.state.market.items && marketResult.state.market.items.length > 0) {
-              setState(marketResult.state);
-            }
-          }
-        } catch (err) {
-          console.error("Failed to initialize market:", err);
-        }
-      }
+      stateRef.current = loadedState;
 
       // If game has already started, load the last turn's narrative and choices
       if (data.run.current_state.turn_count > 0) {
@@ -114,11 +98,12 @@ export function useGameState({ runId, locale }: UseGameStateProps) {
         clearTimeout(saveStatusTimeoutRef.current);
       }
 
-      if (state) {
-        setPreviousExp(state.progress.cultivation_exp);
+      const currentState = stateRef.current;
+      if (currentState) {
+        setPreviousExp(currentState.progress.cultivation_exp);
         previousRealmRef.current = {
-          realm: state.progress.realm,
-          stage: state.progress.realm_stage,
+          realm: currentState.progress.realm,
+          stage: currentState.progress.realm_stage,
         };
       }
 
@@ -165,6 +150,7 @@ export function useGameState({ runId, locale }: UseGameStateProps) {
         }
 
         setState(result.state);
+        stateRef.current = result.state;
         setNarrative(result.narrative);
         setChoices(result.choices || []);
         setLastTurnEvents(result.events || []);
@@ -205,12 +191,17 @@ export function useGameState({ runId, locale }: UseGameStateProps) {
         setProcessing(false);
       }
     },
-    [runId, locale, state]
+    [runId, locale]
   );
 
   useEffect(() => {
     loadRun();
   }, [loadRun]);
+
+  // Keep stateRef in sync with state (covers external setState calls from child hooks)
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   useEffect(() => {
     console.log("State changed:", state);
@@ -225,7 +216,7 @@ export function useGameState({ runId, locale }: UseGameStateProps) {
         alreadyStarted: firstTurnStartedRef.current,
       });
     }
-  }, [state, runId, processTurn]);
+  }, [state, runId, processTurn]); // processTurn is now stable (locale/runId deps only), won't trigger extra re-runs
 
   return {
     state,
@@ -248,7 +239,6 @@ export function useGameState({ runId, locale }: UseGameStateProps) {
     setBreakthroughEvent,
     previousExp,
     processTurn,
-    previousStaminaRef,
     lastTurnEvents,
     setLastTurnEvents,
   };
