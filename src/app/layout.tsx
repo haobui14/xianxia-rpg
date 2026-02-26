@@ -31,6 +31,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 console.info = noop;
                 console.warn = noop;
               }
+              // Unregister any stale service workers (PWA was removed)
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(regs) {
+                  regs.forEach(function(reg) { reg.unregister(); });
+                });
+              }
             `,
           }}
         />

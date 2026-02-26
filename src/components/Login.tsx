@@ -45,6 +45,12 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
     }
   };
 
+  const withTimeout = <T,>(promise: Promise<T>, ms: number, msg: string): Promise<T> =>
+    Promise.race([
+      promise,
+      new Promise<T>((_, reject) => setTimeout(() => reject(new Error(msg)), ms)),
+    ]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -52,49 +58,46 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
 
     try {
       if (isSignUp) {
-        // Sign up
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
+        const { data, error } = await withTimeout(
+          supabase.auth.signUp({ email, password }),
+          15000,
+          locale === "vi" ? "Hết thời gian chờ. Vui lòng thử lại." : "Request timed out. Please try again."
+        );
 
         if (error) throw error;
 
-        // If email confirmation is disabled, the user will be logged in immediately
-        // Otherwise, they need to check their email
         if (data.session) {
-          // User is logged in immediately (email confirmation disabled)
-          console.log("User signed up and logged in:", data.user?.email);
-          // The onAuthStateChange in page.tsx will handle the redirect
+          // Signed in immediately — onAuthStateChange in page.tsx handles redirect
+          // Keep loading=true; component unmounts on redirect
+          return;
         } else {
-          // User needs to confirm email
           alert(
             locale === "vi"
               ? "Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản."
               : "Sign up successful! Please check your email to confirm your account."
           );
           setIsSignUp(false);
-          setLoading(false);
         }
       } else {
-        // Sign in
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { error } = await withTimeout(
+          supabase.auth.signInWithPassword({ email, password }),
+          15000,
+          locale === "vi" ? "Hết thời gian chờ. Vui lòng thử lại." : "Request timed out. Please try again."
+        );
 
         if (error) throw error;
 
-        console.log("User signed in:", data.user?.email);
-        setLoading(false);
-        // The onAuthStateChange in page.tsx will handle the redirect
+        // Signed in — onAuthStateChange in page.tsx handles redirect
+        // Keep loading=true; component unmounts on redirect
+        return;
       }
     } catch (err: any) {
-      console.error("Auth error:", err);
+      // Only log unexpected errors — credential failures are normal user-facing cases
+      if (!err?.message?.includes("Invalid login credentials") && !err?.status) {
+        console.error("Auth error:", err);
+      }
       setError(err.message || (locale === "vi" ? "Lỗi xác thực" : "Authentication error"));
-      setLoading(false);
     } finally {
-      // Ensure loading is always reset
       setLoading(false);
     }
   };

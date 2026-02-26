@@ -31,26 +31,14 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const initializeAuth = async () => {
+    // Single handler for any authenticated session — used by both initial load and post-login
+    const handleSession = async (session: { user: any }) => {
       try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-
-        if (error || !session?.user) {
-          setUser(null);
-          setScreen("login");
-          setLoading(false);
-          return;
-        }
-
         setUser(session.user);
         if (session.user.user_metadata?.preferred_locale) {
           setLocale(session.user.user_metadata.preferred_locale as "vi" | "en");
         }
 
-        // Auto-load the user's most recent run
         const { data: runs } = await supabase
           .from("runs")
           .select("id, character_id, characters(user_id)")
@@ -68,16 +56,16 @@ export default function Home() {
         } else {
           setScreen("character-creation");
         }
-        setLoading(false);
       } catch (err) {
-        console.error("Failed to get session:", err);
-        setUser(null);
-        setScreen("login");
+        console.error("Failed to load user data:", err);
+        setScreen("character-creation");
+      } finally {
         setLoading(false);
       }
     };
 
-    initializeAuth();
+    // Safety net: unblock loading after 8 s no matter what
+    const safetyTimeout = setTimeout(() => setLoading(false), 8000);
 
     const {
       data: { subscription },
@@ -86,40 +74,28 @@ export default function Home() {
         setUser(null);
         setRunId(null);
         setScreen("login");
+        setLoading(false);
         return;
       }
 
-      if (event === "SIGNED_IN" && session?.user) {
-        setUser(session.user);
-        if (session.user.user_metadata?.preferred_locale) {
-          setLocale(session.user.user_metadata.preferred_locale as "vi" | "en");
-        }
-
-        // Auto-load the user's most recent run
-        const { data: runs } = await supabase
-          .from("runs")
-          .select("id, character_id, characters(user_id)")
-          .order("updated_at", { ascending: false })
-          .limit(1);
-
-        if (runs && runs.length > 0) {
-          const run = runs[0] as any;
-          if (run.characters?.user_id === session.user.id) {
-            setRunId(run.id);
-            setScreen("game");
-          } else {
-            setScreen("character-creation");
-          }
-        } else {
-          setScreen("character-creation");
-        }
+      // INITIAL_SESSION fires on mount (existing session); SIGNED_IN fires after explicit login
+      if ((event === "INITIAL_SESSION" || event === "SIGNED_IN") && session?.user) {
+        await handleSession(session);
         return;
       }
 
-      setUser(session?.user ?? null);
+      // INITIAL_SESSION with no session means the user is not logged in
+      if (event === "INITIAL_SESSION" && !session) {
+        setUser(null);
+        setScreen("login");
+        setLoading(false);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(safetyTimeout);
+    };
   }, []);
 
   const handleGameStart = (characterId: string, runId: string) => {

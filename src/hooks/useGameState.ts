@@ -28,9 +28,11 @@ export function useGameState({ runId, locale }: UseGameStateProps) {
   const stateRef = useRef<GameState | null>(null);
 
   const loadRun = useCallback(async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     try {
       console.log("Loading run:", runId);
-      const response = await fetch(`/api/run/${runId}`);
+      const response = await fetch(`/api/run/${runId}`, { signal: controller.signal });
       if (!response.ok) throw new Error("Failed to load run");
 
       const data = await response.json();
@@ -55,12 +57,12 @@ export function useGameState({ runId, locale }: UseGameStateProps) {
           loadedState.last_stamina_regen = now.toISOString();
           console.log(`Regenerated ${staminaToRegen} stamina (${minutesElapsed} minutes elapsed)`);
 
-          // Save updated state
-          await fetch(`/api/run/${runId}`, {
+          // Save updated state (best-effort, don't block loading)
+          fetch(`/api/run/${runId}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ state: loadedState }),
-          });
+          }).catch(() => {});
         }
       }
 
@@ -69,14 +71,24 @@ export function useGameState({ runId, locale }: UseGameStateProps) {
 
       // If game has already started, load the last turn's narrative and choices
       if (data.run.current_state.turn_count > 0) {
-        const turnLogResponse = await fetch(`/api/turn-log/${runId}/last`);
-        if (turnLogResponse.ok) {
-          const turnLog = await turnLogResponse.json();
-          console.log("Loaded last turn:", turnLog);
-          setNarrative(turnLog.narrative);
-          if (turnLog.ai_json?.choices) {
-            setChoices(turnLog.ai_json.choices);
+        try {
+          const turnLogController = new AbortController();
+          const turnLogTimeout = setTimeout(() => turnLogController.abort(), 10000);
+          const turnLogResponse = await fetch(`/api/turn-log/${runId}/last`, {
+            signal: turnLogController.signal,
+          });
+          clearTimeout(turnLogTimeout);
+          if (turnLogResponse.ok) {
+            const turnLog = await turnLogResponse.json();
+            console.log("Loaded last turn:", turnLog);
+            setNarrative(turnLog.narrative);
+            if (turnLog.ai_json?.choices) {
+              setChoices(turnLog.ai_json.choices);
+            }
           }
+        } catch (turnLogErr) {
+          // Turn log is non-critical — log and continue
+          console.warn("Failed to load last turn log:", turnLogErr);
         }
       }
 
@@ -85,6 +97,8 @@ export function useGameState({ runId, locale }: UseGameStateProps) {
       console.error("Load run error:", err);
       setError("Failed to load game");
       setLoading(false);
+    } finally {
+      clearTimeout(timeout);
     }
   }, [runId]);
 
