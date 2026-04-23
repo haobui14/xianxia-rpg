@@ -1,5 +1,7 @@
-import { useState, useCallback } from "react";
-import { GameState, Enemy, CombatLogEntry } from "@/types/game";
+import { useState, useCallback, useRef } from "react";
+import { GameState, Enemy, CombatLogEntry, GameEvent, ProposedDelta } from "@/types/game";
+import { resolveSectMissions } from "@/lib/game/sect-missions";
+import { creditWarScore, WAR_SCORE_PER_RIVAL_COMBAT } from "@/lib/game/sect-wars";
 
 interface TestCombatState {
   enemy: Enemy;
@@ -25,6 +27,11 @@ interface UseCombatProps {
 export function useCombat({ runId, locale, state, setState, setNarrative }: UseCombatProps) {
   const [testCombat, setTestCombat] = useState<TestCombatState | null>(null);
   const [activeCombat, setActiveCombat] = useState<ActiveCombatState | null>(null);
+  // Re-entry guard: handleActiveCombatEnd is an async closure that mutates
+  // mission progress; React strict-mode double-invoke or a rapid-double-click
+  // could start a second pass on the same `activeCombat` before the first
+  // finishes. The ref blocks that window deterministically.
+  const combatEndInFlightRef = useRef(false);
 
   // Sync skills to database after combat
   const syncSkillsAfterCombat = useCallback(
@@ -639,6 +646,8 @@ export function useCombat({ runId, locale, state, setState, setNarrative }: UseC
   // Handle combat end - apply loot and continue game
   const handleActiveCombatEnd = useCallback(async () => {
     if (!activeCombat) return;
+    if (combatEndInFlightRef.current) return;
+    combatEndInFlightRef.current = true;
 
     // Get the latest state from the server to ensure we have current dungeon progress
     let currentState = state;
@@ -653,7 +662,10 @@ export function useCombat({ runId, locale, state, setState, setNarrative }: UseC
       // Continue with existing state if fetch fails
     }
 
-    if (!currentState) return;
+    if (!currentState) {
+      combatEndInFlightRef.current = false;
+      return;
+    }
 
     const victory = activeCombat.enemy.hp <= 0;
     const playerDied = currentState.stats.hp <= 0;
@@ -755,6 +767,60 @@ export function useCombat({ runId, locale, state, setState, setNarrative }: UseC
         lootText += locale === "vi" ? ` Vật phẩm: ${itemNames}` : ` Items: ${itemNames}`;
       }
 
+      // Advance sect missions that track combat victories / rival kills
+      // AND credit the cultivation-exp gained from loot so cultivate_exp
+      // missions progress after a fight too. resolveSectMissions mutates
+      // state in place and returns completion events for the narrative.
+      const rivalId = activeCombat.enemy.rival_sect_id;
+      const combatEvent: GameEvent = {
+        type: "combat",
+        data: {
+          victory: true,
+          enemy: activeCombat.enemy.name,
+          ...(rivalId ? { rival_sect_id: rivalId } : {}),
+        },
+      };
+      const syntheticDeltas: ProposedDelta[] =
+        lootExp > 0
+          ? [{ field: "progress.cultivation_exp", operation: "add", value: lootExp }]
+          : [];
+      const missionEvents = resolveSectMissions(
+        updatedState,
+        syntheticDeltas,
+        [combatEvent]
+      );
+
+      // Credit sect-war score if this was a combat against the warring
+      // rival's member. The resolveSectMissions call already advanced any
+      // matching defeat_rival_member mission — war score is independent.
+      const warCredit = creditWarScore(
+        updatedState,
+        rivalId,
+        WAR_SCORE_PER_RIVAL_COMBAT
+      );
+      if (warCredit > 0) {
+        lootText +=
+          locale === "vi"
+            ? `\n\n⚔️ Chiến công tông môn: +${warCredit} điểm chiến tranh`
+            : `\n\n⚔️ War merit: +${warCredit} war score`;
+      }
+
+      if (missionEvents.length > 0) {
+        const completions = missionEvents
+          .filter((e) => (e.data as { status?: string }).status === "completed")
+          .map((e) => {
+            const d = e.data as { name?: string; name_en?: string };
+            return locale === "vi" ? d.name : d.name_en;
+          })
+          .filter(Boolean);
+        if (completions.length > 0) {
+          lootText +=
+            locale === "vi"
+              ? `\n\n📜 Hoàn thành nhiệm vụ: ${completions.join(", ")}`
+              : `\n\n📜 Mission complete: ${completions.join(", ")}`;
+        }
+      }
+
       setNarrative((prev) => prev + lootText);
     } else if (playerDied) {
       // Player died - restore some HP to continue
@@ -793,8 +859,9 @@ export function useCombat({ runId, locale, state, setState, setNarrative }: UseC
       console.error("Failed to save combat result:", err);
     }
 
-    // Clear combat
+    // Clear combat + release re-entry guard.
     setActiveCombat(null);
+    combatEndInFlightRef.current = false;
   }, [activeCombat, state, locale, runId, setState, setNarrative, getItemName]);
 
   return {

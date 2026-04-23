@@ -28,6 +28,14 @@ import { createTurnRNG } from "@/lib/game/rng";
 import { getApplicableTemplates, selectRandomTemplate } from "@/lib/game/scenes";
 import { generateLoot, validateLoot } from "@/lib/game/loot";
 import {
+  initialRelationsForSect,
+  initialRelationsForSectByType,
+  getSectById,
+} from "@/lib/game/sects";
+import { mostHostileRival, resolveSectMissions } from "@/lib/game/sect-missions";
+import { abortWarOnSectLeave, tryResolveWar, tryStartWar } from "@/lib/game/sect-wars";
+import { calculateTotalAttributes } from "@/lib/game/equipment";
+import {
   recordCombatHistory,
   updatePlayerStats,
   syncInventoryToTables,
@@ -289,6 +297,61 @@ export async function POST(request: Request) {
     // Validate and apply deltas from AI
     console.log(`AI proposed ${aiResult.proposed_deltas?.length || 0} deltas`);
     applyValidatedDeltas(state, aiResult.proposed_deltas, rng, events);
+
+    // Resolve active sect missions (may grant contribution/rewards, push
+    // sect_mission events for completion/failure).
+    if (state.sect_missions && state.sect_missions.length > 0) {
+      const missionEvents = resolveSectMissions(state, aiResult.proposed_deltas, events);
+      events.push(...missionEvents);
+    }
+
+    // Resolve finished sect war (must run BEFORE the scheduler so a new
+    // war isn't started on the same turn the old one ends).
+    const warEnded = tryResolveWar(state);
+    if (warEnded) events.push(warEnded);
+
+    // Scheduler: maybe start a new war if conditions hold.
+    const warStarted = tryStartWar(state, () => rng.random());
+    if (warStarted) events.push(warStarted.event);
+
+    // Rival ambush: if player has a strongly hostile rival sect, a ~8% chance
+    // per turn of being ambushed — unless already in dungeon or already
+    // facing a combat encounter this turn.
+    const alreadyInCombat = events.some((e) => e.type === "combat_encounter");
+    const inDungeon = Boolean(state.dungeon?.dungeon_id);
+    if (!alreadyInCombat && !inDungeon && state.sect_membership) {
+      const hostile = mostHostileRival(state);
+      if (hostile && rng.random() < 0.08) {
+        const rivalSect = getSectById(hostile.sect_id);
+        if (rivalSect) {
+          // Use total attrs (base + equipment) so the ambush scales against
+          // the player's actual build, not the bare attribute stat.
+          const totalAttrs = calculateTotalAttributes(state);
+          const phys = Math.floor(totalAttrs.str * 1.5);
+          const def = Math.floor(5 + totalAttrs.agi / 3);
+          const hp = Math.max(30, Math.floor(phys * 2.5));
+          events.push({
+            type: "combat_encounter",
+            data: {
+              enemy: {
+                id: `rival_${rivalSect.id}_${turnNo}`,
+                name: `Đệ tử ${rivalSect.name}`,
+                name_en: `${rivalSect.name_en} Disciple`,
+                hp,
+                hp_max: hp,
+                atk: Math.max(5, Math.floor(phys * 0.9)),
+                def: Math.max(2, Math.floor(def * 0.9)),
+                behavior: "Aggressive",
+                loot_table_id: "rare_loot",
+                rival_sect_id: rivalSect.id,
+                enemy_sect_id: rivalSect.id,
+              },
+              reason: "rival_ambush",
+            },
+          });
+        }
+      }
+    }
 
     // Check for breakthrough
     if (canBreakthrough(state)) {
@@ -862,6 +925,26 @@ function applySectDelta(
       state.sect = membership.sect.name;
       state.sect_en = membership.sect.name_en;
 
+      // Seed sect_relations. For named sects we use the hand-authored
+      // rival/ally lists; for AI-invented sects (id not in NAMED_SECTS) we
+      // fall back to a type-based alignment matrix so rival missions,
+      // ambushes, and the Relations panel still have something to work with.
+      const namedSeed = initialRelationsForSect(membership.sect.id);
+      const seeded =
+        Object.keys(namedSeed).length > 0
+          ? namedSeed
+          : initialRelationsForSectByType(membership.sect.type, membership.sect.id);
+      state.sect_relations ||= {};
+      for (const [sectId, rel] of Object.entries(seeded)) {
+        if (!(sectId in state.sect_relations)) {
+          state.sect_relations[sectId] = {
+            sect_id: sectId,
+            relation: rel,
+            last_changed_turn: state.turn_count,
+          };
+        }
+      }
+
       events.push({
         type: "sect_join",
         data: { sect: membership.sect, rank: membership.rank },
@@ -872,9 +955,24 @@ function applySectDelta(
     // Leaving the sect
     if (state.sect_membership) {
       const oldSect = state.sect_membership.sect.name;
+      // If a war is active when the player leaves, log it to history as a
+      // loss and clear it so a rejoin doesn't inherit a dangling war.
+      abortWarOnSectLeave(state);
       state.sect_membership = undefined;
       state.sect = undefined;
       state.sect_en = undefined;
+      // Clear sect-scoped state so a rejoin later starts fresh: any active
+      // missions lose their host; rival/ally relations must be re-seeded
+      // from the new sect's matrix on next join.
+      state.sect_missions = [];
+      state.sect_relations = {};
+      if (state.flags) {
+        for (const key of Object.keys(state.flags)) {
+          if (key.startsWith("sect_mission_") || key.startsWith("sect_joining_")) {
+            delete state.flags[key];
+          }
+        }
+      }
       events.push({
         type: "sect_expulsion",
         data: { sect: oldSect, reason: value?.reason || "voluntary" },

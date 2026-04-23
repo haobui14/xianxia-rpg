@@ -302,5 +302,6 @@ export function useGameState({ runId, locale }: UseGameStateProps) {
     cancelProcessing,
     lastTurnEvents,
     setLastTurnEvents,
+    refreshRun: loadRun,
   };
 }

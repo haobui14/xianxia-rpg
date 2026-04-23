@@ -2,13 +2,17 @@
 
 import { GameState } from "@/types/game";
 import { Locale } from "@/lib/i18n/translations";
+import SectMissionsPanel, { SectRelationsPanel } from "./SectMissionsPanel";
+import SectWarBanner from "./SectWarBanner";
 
 interface SectViewProps {
   state: GameState;
   locale: Locale;
+  onRefresh?: () => void; // Called after a mission is accepted/abandoned so parent can reload
+  processing?: boolean; // Turn is being processed — disables mutation buttons to avoid last-write races
 }
 
-export default function SectView({ state, locale }: SectViewProps) {
+export default function SectView({ state, locale, onRefresh, processing }: SectViewProps) {
   const { sect_membership } = state;
 
   // Not in a sect
@@ -242,6 +246,21 @@ export default function SectView({ state, locale }: SectViewProps) {
           </div>
         </div>
       </div>
+
+      {/* Sect War (if active) — lives ABOVE the Mission Board so it's the
+          first thing players see when a war is happening. */}
+      <SectWarBanner state={state} locale={locale} />
+
+      {/* Mission Board */}
+      <SectMissionsPanel
+        state={state}
+        locale={locale}
+        onMutated={onRefresh}
+        processing={processing}
+      />
+
+      {/* Sect Relations */}
+      <SectRelationsPanel state={state} locale={locale} />
 
       {/* Sect Benefits */}
       <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">

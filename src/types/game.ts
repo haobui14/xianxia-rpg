@@ -494,6 +494,77 @@ export interface SectMembership {
   };
 }
 
+// Sect mission objective — what the player must do to complete the mission
+export type SectMissionObjective =
+  | { kind: "gather_items"; count: number; item_type?: InventoryItem["type"]; min_rarity?: ItemRarity }
+  | { kind: "win_combats"; count: number }
+  | { kind: "cultivate_exp"; amount: number }
+  | { kind: "visit_region"; region_id: string }
+  | { kind: "defeat_rival_member"; count: number; rival_sect_id?: string };
+
+export type SectMissionDifficulty = "easy" | "medium" | "hard";
+
+// Static mission definition (template — lives in code, not state)
+export interface SectMissionTemplate {
+  id: string;
+  sect_types: SectType[]; // which sect types offer this mission
+  name: string;
+  name_en: string;
+  description: string;
+  description_en: string;
+  difficulty: SectMissionDifficulty;
+  objective: SectMissionObjective;
+  reward: {
+    contribution: number;
+    silver?: number;
+    spirit_stones?: number;
+  };
+  deadline_turns: number; // turns allowed after acceptance
+  min_rank?: SectRank;
+}
+
+// An active mission instance in game state
+export interface ActiveSectMission {
+  instance_id: string; // unique per acceptance
+  template_id: string;
+  accepted_turn: number;
+  deadline_turn: number;
+  progress: number; // current count toward objective
+  objective: SectMissionObjective; // snapshot (rival_sect_id may be resolved at accept time)
+}
+
+// Tracks how a specific sect regards the player (-100 hostile … 100 friendly)
+export interface SectRelation {
+  sect_id: string;
+  relation: number;
+  last_changed_turn?: number;
+}
+
+// Active sect war between the player's sect and a named rival. Only one
+// active war at a time; past wars go into sect_war_history for flavor.
+export interface SectWar {
+  id: string;
+  player_sect_id: string; // denormalized from sect_membership at start time
+  rival_sect_id: string;
+  start_turn: number;
+  end_turn: number;
+  // Player-contributed score for their side. Wins if >= target at end_turn.
+  player_score: number;
+  target_score: number;
+  status: "active";
+}
+
+export interface SectWarRecord {
+  id: string;
+  player_sect_id: string;
+  rival_sect_id: string;
+  start_turn: number;
+  end_turn: number;
+  player_score: number;
+  target_score: number;
+  outcome: "won" | "lost";
+}
+
 // Combat Skill - Used in battle
 export interface Skill {
   id: string;
@@ -653,6 +724,13 @@ export interface GameState {
   sect?: string; // Môn phái (legacy - kept for backward compatibility)
   sect_en?: string;
   sect_membership?: SectMembership; // Full sect membership data
+  sect_missions?: ActiveSectMission[]; // Active sect missions
+  sect_relations?: Record<string, SectRelation>; // Keyed by sect_id
+  last_mission_list_turn?: number; // Turn count at the last Mission Board reroll, for cooldown
+  mission_list_cache?: SectMissionTemplate[]; // Cached offer so repeated opens of the Board don't reroll
+  sect_war?: SectWar | null; // One active sect war (null/undefined = no war)
+  sect_war_history?: SectWarRecord[]; // Past wars (append-only flavor)
+  last_war_check_turn?: number; // Throttles scheduler to every N turns
   market?: MarketState;
   auction?: AuctionState;
   // World system (new)
@@ -728,6 +806,9 @@ export type GameEventType =
   | "sect_promotion"
   | "sect_mission"
   | "sect_expulsion"
+  | "sect_war_start" // A war between the player's sect and a rival began
+  | "sect_war_progress" // War score shifted (combat/mission during war)
+  | "sect_war_end" // War resolved — won or lost
   | "random_event" // World system random event triggered
   | "area_discovered" // New area discovered
   | "dungeon_enter" // Entered a dungeon
@@ -782,6 +863,9 @@ export interface Enemy {
   def: number;
   behavior: CombatBehavior;
   loot_table_id?: string;
+  // Tag linking this enemy to a sect — used by rival ambush and missions
+  // that require defeating disciples of a specific sect.
+  rival_sect_id?: string;
 }
 
 // Combat state management

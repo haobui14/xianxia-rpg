@@ -166,6 +166,38 @@ export const runQueries = {
     if (error) throw error;
     return data || [];
   },
+
+  /**
+   * Optimistic-locked update: only writes if the row's updated_at still
+   * matches `expectedUpdatedAt`. Returns `{ success, conflict, newUpdatedAt }`.
+   * Caller is expected to handle conflicts by re-fetching and re-applying
+   * their mutation — we don't retry internally because the re-apply step is
+   * caller-specific.
+   */
+  async updateIfUnchanged(
+    id: string,
+    state: GameState,
+    expectedUpdatedAt: string
+  ): Promise<{ success: boolean; conflict?: boolean; newUpdatedAt?: string; error?: string }> {
+    const supabase = await createServerClient();
+    if (!state.stats || !state.progress || !state.inventory) {
+      return { success: false, error: "Invalid state: missing critical fields" };
+    }
+    const newUpdatedAt = new Date().toISOString();
+    const { data, error } = await supabase
+      .from("runs")
+      .update({ current_state: state, updated_at: newUpdatedAt })
+      .eq("id", id)
+      .eq("updated_at", expectedUpdatedAt)
+      .select("id");
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    if (!data || data.length === 0) {
+      return { success: false, conflict: true };
+    }
+    return { success: true, newUpdatedAt };
+  },
 };
 
 export const turnLogQueries = {

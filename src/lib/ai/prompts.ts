@@ -7,6 +7,7 @@ import {
   calculateTimeCultivationBonus,
   getSpecialTimeBonus,
 } from "@/lib/game/time";
+import { getMissionTemplate } from "@/lib/game/sect-missions";
 
 // Zod schemas for validation
 export const ChoiceSchema = z.object({
@@ -295,12 +296,14 @@ SEASONS: Spring Wood+20/Water+10, Summer Fire+20/Wood+10, Autumn Metal+20/Earth+
     ? `CHIẾN ĐẤU:
 KHI gặp yêu thú / ma tu / kẻ địch → PHẢI thêm event combat_encounter. KHÔNG giảm HP/Qi trong proposed_deltas (combat mode sẽ xử lý).
 Dùng "⚔️ SỨC MẠNH CHIẾN ĐẤU" trong context để cân bằng: HP ~ phys_atk×2-4, ATK ~ phys_atk×0.6-1.2, DEF ~ def×0.6-1.2. Boss ×2+ gợi ý.
-Enemy data: {id, name, name_en, hp, hp_max, atk, def, behavior: "Aggressive"|"Defensive"|"Balanced", loot_table_id: "common_loot"|"rare_loot"|"boss_loot"}.
+Enemy data: {id, name, name_en, hp, hp_max, atk, def, behavior: "Aggressive"|"Defensive"|"Balanced", loot_table_id: "common_loot"|"rare_loot"|"boss_loot", rival_sect_id?: "<sect_id>"}.
+⚠️ Nếu kẻ địch là đệ tử một tông môn cụ thể (vd huyet_sat_ma_tong, thanh_van_kiem) → PHẢI đặt rival_sect_id để nhiệm vụ truy sát tông môn địch đếm đúng.
 Narrative chỉ mô tả gặp địch, KHÔNG mô tả kết quả. Luôn có lựa chọn "Bỏ chạy" nếu hợp lý.`
     : `COMBAT:
 WHEN encountering beast / demonic cultivator / enemy → MUST add combat_encounter event. DO NOT subtract HP/Qi in proposed_deltas (combat mode handles it).
 Use "⚔️ COMBAT POWER" in context for balance: HP ~ phys_atk×2-4, ATK ~ phys_atk×0.6-1.2, DEF ~ def×0.6-1.2. Bosses ×2+ of suggested.
-Enemy data: {id, name, name_en, hp, hp_max, atk, def, behavior: "Aggressive"|"Defensive"|"Balanced", loot_table_id: "common_loot"|"rare_loot"|"boss_loot"}.
+Enemy data: {id, name, name_en, hp, hp_max, atk, def, behavior: "Aggressive"|"Defensive"|"Balanced", loot_table_id: "common_loot"|"rare_loot"|"boss_loot", rival_sect_id?: "<sect_id>"}.
+⚠️ If the enemy is a disciple of a specific sect (e.g. huyet_sat_ma_tong, thanh_van_kiem) → MUST set rival_sect_id so hunt-rival-sect missions count the kill.
 Narrative describes the encounter only, NOT the outcome. Always include a "Flee" choice when reasonable.`;
 
   const sect = isVi
@@ -440,14 +443,84 @@ export function buildGameContext(
 ): string {
   const ctx: string[] = [];
 
-  // Active quests/missions from flags - SHOW THIS FIRST!
+  // Sect war (highest-priority world hint if active)
+  if (state.sect_war) {
+    const war = state.sect_war;
+    const turnsLeft = Math.max(0, war.end_turn - state.turn_count);
+    ctx.push(
+      locale === "vi"
+        ? `⚔️ ĐẠI CHIẾN TÔNG MÔN: tông môn của ngươi vs ${war.rival_sect_id} — điểm ${war.player_score}/${war.target_score}, còn ${turnsLeft} lượt. Nên tạo nội dung có yếu tố chiến tranh / phục kích / gián điệp / đồng môn tử trận.`
+        : `⚔️ SECT WAR ACTIVE: player's sect vs ${war.rival_sect_id} — score ${war.player_score}/${war.target_score}, ${turnsLeft} turns left. Favor war-themed content (raids, ambushes, sect-mate casualties, spy intrigue).`
+    );
+    ctx.push("");
+  }
+
+  // Active quests/missions — sect missions (structured) + flag-based hints
   const activeFlags = Object.entries(state.flags || {}).filter(([_, v]) => v);
-  if (activeFlags.length > 0) {
+  const activeSectMissions = state.sect_missions ?? [];
+  if (activeFlags.length > 0 || activeSectMissions.length > 0) {
     ctx.push(
       locale === "vi"
         ? "🎯 NHIỆM VỤ ĐANG THỰC HIỆN (ƯU TIÊN CAO):"
         : "🎯 ACTIVE MISSIONS (HIGH PRIORITY):"
     );
+
+    for (const mission of activeSectMissions) {
+      const template = getMissionTemplate(mission.template_id);
+      const title = template
+        ? locale === "vi"
+          ? template.name
+          : template.name_en
+        : mission.template_id;
+      const obj = mission.objective;
+      let goal = "";
+      switch (obj.kind) {
+        case "gather_items":
+          goal =
+            locale === "vi"
+              ? `thu ${mission.progress}/${obj.count} ${obj.item_type ?? "vật phẩm"}${obj.min_rarity ? ` (≥${obj.min_rarity})` : ""}`
+              : `gather ${mission.progress}/${obj.count} ${obj.item_type ?? "item"}${obj.min_rarity ? ` (≥${obj.min_rarity})` : ""}`;
+          break;
+        case "win_combats":
+          goal =
+            locale === "vi"
+              ? `thắng ${mission.progress}/${obj.count} trận`
+              : `win ${mission.progress}/${obj.count} combats`;
+          break;
+        case "defeat_rival_member":
+          goal =
+            locale === "vi"
+              ? `hạ ${mission.progress}/${obj.count} đệ tử ${obj.rival_sect_id ?? "địch"}`
+              : `defeat ${mission.progress}/${obj.count} ${obj.rival_sect_id ?? "rival"} disciples`;
+          break;
+        case "cultivate_exp":
+          goal =
+            locale === "vi"
+              ? `tích ${mission.progress}/${obj.amount} exp tu vi`
+              : `accumulate ${mission.progress}/${obj.amount} cultivation exp`;
+          break;
+        case "visit_region":
+          goal =
+            locale === "vi"
+              ? `tới vùng ${obj.region_id}`
+              : `reach region ${obj.region_id}`;
+          break;
+      }
+      const turnsLeft = mission.deadline_turn - state.turn_count;
+      ctx.push(
+        locale === "vi"
+          ? `  📜 ${title} — ${goal} (còn ${turnsLeft} lượt)`
+          : `  📜 ${title} — ${goal} (${turnsLeft} turns left)`
+      );
+    }
+    if (activeSectMissions.length > 0) {
+      ctx.push(
+        locale === "vi"
+          ? `  ⚠️ Các nhiệm vụ trên đã được hệ thống theo dõi và thưởng tự động — KHÔNG thêm sect.contribution hay reward vào proposed_deltas cho chúng. Chỉ tạo nội dung đẩy nhiệm vụ tiến triển (ví dụ: sinh dược liệu, gặp địch đúng loại, tới vùng cần đến).`
+          : `  ⚠️ The missions above are tracked and rewarded automatically — DO NOT emit sect.contribution or reward deltas for them. Just craft content that advances their progress (e.g. yield the right herbs, stage the right enemy, reach the target region).`
+      );
+    }
+
     activeFlags.forEach(([flag, _]) => {
       if (flag.startsWith("sect_joining_")) {
         const sectName = flag.replace("sect_joining_", "").replace(/_/g, " ");
@@ -457,12 +530,8 @@ export function buildGameContext(
             : `  ⚠️ Joining: ${sectName} — MUST focus on this mission, do not switch themes. Complete → sect.join delta + set flag=false.`
         );
       } else if (flag.startsWith("sect_mission_")) {
-        const missionId = flag.replace("sect_mission_", "");
-        ctx.push(
-          locale === "vi"
-            ? `  📜 Nhiệm vụ tông môn: ${missionId}`
-            : `  📜 Sect mission: ${missionId}`
-        );
+        // Rendered above with structured progress; skip to avoid duplication.
+        return;
       } else if (flag.startsWith("quest_")) {
         const questName = flag.replace("quest_", "").replace(/_/g, " ");
         ctx.push(locale === "vi" ? `  🗡️ Nhiệm vụ: ${questName}` : `  🗡️ Quest: ${questName}`);

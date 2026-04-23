@@ -122,6 +122,7 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
     cancelProcessing,
     lastTurnEvents,
     setLastTurnEvents,
+    refreshRun,
   } = useGameState({ runId, locale });
 
   const {
@@ -729,7 +730,14 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
             onSetExpSplit={handleSetExpSplit}
           />
         )}
-        {activeTab === "sect" && <SectView state={state} locale={locale} />}
+        {activeTab === "sect" && (
+          <SectView
+            state={state}
+            locale={locale}
+            onRefresh={refreshRun}
+            processing={processing}
+          />
+        )}
         {activeTab === "inventory" && (
           <InventoryView
             state={state}
