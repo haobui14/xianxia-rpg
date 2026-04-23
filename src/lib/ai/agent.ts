@@ -23,6 +23,9 @@ interface OpenAIResponse {
     prompt_tokens: number;
     completion_tokens: number;
     total_tokens: number;
+    prompt_tokens_details?: {
+      cached_tokens?: number;
+    };
   };
 }
 
@@ -137,11 +140,12 @@ async function callOpenAI(
         requestBody.frequency_penalty = 0.2; // Penalize repeated phrases
       }
 
-      // Use correct token parameter based on model
+      // Sized for the typical narrative (120-180 words) + 2-5 choices + deltas.
+      // Watch finish_reason === "length" in logs; bump if we see truncation.
       if (useNewParams) {
-        requestBody.max_completion_tokens = 3000; // Ensure complete JSON responses
+        requestBody.max_completion_tokens = 1200;
       } else {
-        requestBody.max_tokens = 2000;
+        requestBody.max_tokens = 1200;
       }
 
       const response = await fetch(`${apiBase}/chat/completions`, {
@@ -182,10 +186,15 @@ async function callOpenAI(
       const content = data.choices[0]?.message?.content;
       const finishReason = data.choices[0]?.finish_reason;
 
-      // Log token usage and completion status
+      // Log token usage + cache-hit share so we can verify prompt-cache is live
       if (data.usage) {
+        const cached = data.usage.prompt_tokens_details?.cached_tokens ?? 0;
+        const cachePct =
+          data.usage.prompt_tokens > 0
+            ? Math.round((cached / data.usage.prompt_tokens) * 100)
+            : 0;
         console.log(
-          `AI tokens used: ${data.usage.total_tokens} (prompt: ${data.usage.prompt_tokens}, completion: ${data.usage.completion_tokens}), finish: ${finishReason}`
+          `AI tokens: total=${data.usage.total_tokens} prompt=${data.usage.prompt_tokens} (cached=${cached}, ${cachePct}%) completion=${data.usage.completion_tokens} finish=${finishReason}`
         );
       }
 

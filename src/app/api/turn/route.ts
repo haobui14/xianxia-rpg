@@ -199,8 +199,10 @@ export async function POST(request: Request) {
     // Create RNG for this turn
     const rng = createTurnRNG(run.world_seed, turnNo);
 
-    // Get recent narratives for context (increased from 3 to 5 for better anti-repetition)
-    const recentLogs = await turnLogQueries.getLastTurns(runId, 5);
+    // Get recent narratives for context. Only the most recent is sent verbatim
+    // in buildGameContext; the older ones are compacted to 140-char previews
+    // for anti-repetition signal without blowing up tokens.
+    const recentLogs = await turnLogQueries.getLastTurns(runId, 3);
     const recentNarratives = recentLogs.map((log) => log.narrative);
 
     // Track recent scene types to avoid repetition
@@ -982,11 +984,11 @@ function updateStorySummary(state: GameState, recentNarrative: string, locale: s
       ? `${state.progress.realm} tầng ${state.progress.realm_stage}. `
       : `${state.progress.realm} stage ${state.progress.realm_stage}. `;
 
-  const summary = state.story_summary + " " + recentNarrative.slice(0, 200);
+  const summary = state.story_summary + " " + recentNarrative.slice(0, 150);
 
-  // Keep summary under 1000 chars
-  if (summary.length > 1000) {
-    state.story_summary = prefix + summary.slice(-800);
+  // Keep summary tight (~300 chars) to reduce per-turn prompt tokens.
+  if (summary.length > 300) {
+    state.story_summary = prefix + summary.slice(-250);
   } else {
     state.story_summary = summary;
   }
