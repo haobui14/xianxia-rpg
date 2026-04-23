@@ -90,6 +90,7 @@ export default function InventoryView({
   } | null>(null);
   const [useMessage, setUseMessage] = useState<string | null>(null);
   const [selectedEnhanceItem, setSelectedEnhanceItem] = useState<InventoryItem | null>(null);
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
   // Sorting and filtering state
   const [sortBy, setSortBy] = useState<SortOption>("type");
@@ -136,10 +137,37 @@ export default function InventoryView({
   }, [processedItems]);
 
   const handleUseItem = async (itemId: string, itemName: string) => {
-    if (onUseItem) {
-      await onUseItem(itemId);
-      setUseMessage(locale === "vi" ? `Đã sử dụng ${itemName}` : `Used ${itemName}`);
-      setTimeout(() => setUseMessage(null), 2000);
+    if (onUseItem && !loadingAction) {
+      setLoadingAction(`use-${itemId}`);
+      try {
+        await onUseItem(itemId);
+        setUseMessage(locale === "vi" ? `Đã sử dụng ${itemName}` : `Used ${itemName}`);
+        setTimeout(() => setUseMessage(null), 2000);
+      } finally {
+        setLoadingAction(null);
+      }
+    }
+  };
+
+  const handleEquipItemAsync = async (itemId: string, action: "equip" | "unequip") => {
+    if (onEquipItem && !loadingAction) {
+      setLoadingAction(`${action}-${itemId}`);
+      try {
+        await onEquipItem(itemId, action);
+      } finally {
+        setLoadingAction(null);
+      }
+    }
+  };
+
+  const handleDiscardItemAsync = async (itemId: string, quantity: number) => {
+    if (onDiscardItem && !loadingAction) {
+      setLoadingAction(`discard-${itemId}`);
+      try {
+        await onDiscardItem(itemId, quantity);
+      } finally {
+        setLoadingAction(null);
+      }
     }
   };
 
@@ -153,7 +181,8 @@ export default function InventoryView({
     <div className="space-y-6">
       {/* Use message toast */}
       {useMessage && (
-        <div className="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-pulse">
+        <div className="fixed top-4 right-4 bg-green-900/95 border border-green-500/50 text-green-200 px-4 py-3 rounded-lg shadow-lg z-50 animate-toast-in flex items-center gap-2">
+          <span className="text-lg">✓</span>
           {useMessage}
         </div>
       )}
@@ -339,9 +368,13 @@ export default function InventoryView({
                     )}
                     {onEquipItem && (
                       <button
-                        onClick={() => onEquipItem(equipped.id, "unequip")}
-                        className="w-full px-2 py-1 bg-red-600/20 hover:bg-red-600/40 text-red-300 rounded text-xs transition-colors"
+                        onClick={() => handleEquipItemAsync(equipped.id, "unequip")}
+                        disabled={loadingAction === `unequip-${equipped.id}`}
+                        className="w-full px-2 py-1 bg-red-600/20 hover:bg-red-600/40 disabled:opacity-50 text-red-300 rounded text-xs transition-colors flex items-center justify-center gap-1"
                       >
+                        {loadingAction === `unequip-${equipped.id}` && (
+                          <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-300 inline-block"></span>
+                        )}
                         {locale === "vi" ? "Tháo" : "Unequip"}
                       </button>
                     )}
@@ -394,7 +427,8 @@ export default function InventoryView({
               {renderItems(
                 consumableItems,
                 locale,
-                onEquipItem,
+                loadingAction,
+                handleEquipItemAsync,
                 setDiscardConfirm,
                 handleUseItem,
                 setSelectedEnhanceItem
@@ -410,7 +444,8 @@ export default function InventoryView({
             {renderItems(
               equipmentItems,
               locale,
-              onEquipItem,
+              loadingAction,
+              handleEquipItemAsync,
               setDiscardConfirm,
               handleUseItem,
               setSelectedEnhanceItem
@@ -434,12 +469,11 @@ export default function InventoryView({
             <div className="flex gap-3">
               <button
                 onClick={() => {
-                  if (onDiscardItem) {
-                    onDiscardItem(discardConfirm.itemId, discardConfirm.quantity);
-                  }
+                  handleDiscardItemAsync(discardConfirm.itemId, discardConfirm.quantity);
                   setDiscardConfirm(null);
                 }}
-                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                disabled={!!loadingAction}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded transition-colors"
               >
                 {locale === "vi" ? "Vứt" : "Discard"}
               </button>
@@ -471,6 +505,7 @@ export default function InventoryView({
 function renderItems(
   items: any[],
   locale: Locale,
+  loadingAction: string | null,
   onEquipItem?: (itemId: string, action: "equip" | "unequip") => Promise<void>,
   setDiscardConfirm?: (confirm: { itemId: string; name: string; quantity: number } | null) => void,
   onUseItem?: (itemId: string, itemName: string) => void,
@@ -521,8 +556,12 @@ function renderItems(
               {isConsumable && onUseItem && (
                 <button
                   onClick={() => onUseItem(item.id, itemName)}
-                  className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-sm transition-colors"
+                  disabled={loadingAction === `use-${item.id}`}
+                  className="px-3 py-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded text-sm transition-colors flex items-center justify-center gap-1"
                 >
+                  {loadingAction === `use-${item.id}` && (
+                    <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-white inline-block"></span>
+                  )}
                   {locale === "vi" ? "Dùng" : "Use"}
                 </button>
               )}
@@ -531,8 +570,12 @@ function renderItems(
               {(item.type === "Equipment" || item.type === "Accessory") && onEquipItem && (
                 <button
                   onClick={() => onEquipItem(item.id, "equip")}
-                  className="px-3 py-1 bg-xianxia-accent hover:bg-xianxia-accent/80 text-white rounded text-sm transition-colors"
+                  disabled={loadingAction === `equip-${item.id}`}
+                  className="px-3 py-1 bg-xianxia-accent hover:bg-xianxia-accent/80 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded text-sm transition-colors flex items-center justify-center gap-1"
                 >
+                  {loadingAction === `equip-${item.id}` && (
+                    <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-white inline-block"></span>
+                  )}
                   {locale === "vi" ? "Trang bị" : "Equip"}
                 </button>
               )}

@@ -38,6 +38,7 @@ export default function CombatView({
   const [playerHit, setPlayerHit] = useState(false);
   const [enemyHit, setEnemyHit] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
+  const [logExpanded, setLogExpanded] = useState(false);
   const combatLogRef = useRef<HTMLDivElement>(null);
   const lastLogLengthRef = useRef(0);
   const { currentMove, triggerAnimation, clearAnimation } = useCombatAnimation();
@@ -143,19 +144,57 @@ export default function CombatView({
     setDamageNumbers((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
+  // Check if enemy/player is dead (must be before keyboard handler)
+  const enemyDead = enemy.hp <= 0;
+  const playerDead = playerHp <= 0;
+
   // Handle action button click
   const handleAction = useCallback(
-    (action: "attack" | "qi_attack" | "defend" | "flee" | "skill") => {
+    (action: "attack" | "qi_attack" | "defend" | "flee" | "skill", skillId?: string) => {
       if (!playerTurn) return;
-      onAction(action as any, selectedSkill || undefined);
+      onAction(action as any, skillId || selectedSkill || undefined);
       setSelectedSkill(null);
     },
     [playerTurn, onAction, selectedSkill]
   );
 
-  // Check if enemy is dead
-  const enemyDead = enemy.hp <= 0;
-  const playerDead = playerHp <= 0;
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!playerTurn || enemyDead || playerDead) return;
+      // Ignore if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      switch (e.key) {
+        case "1":
+          handleAction("attack");
+          break;
+        case "2":
+          if (state.stats.qi >= 10) handleAction("qi_attack");
+          break;
+        case "3":
+          handleAction("defend");
+          break;
+        case "4":
+          handleAction("flee");
+          break;
+        default: {
+          // Keys 5-9 for skills
+          const skillIdx = parseInt(e.key) - 5;
+          if (skillIdx >= 0 && skillIdx < (state.skills?.length || 0)) {
+            const skill = state.skills![skillIdx];
+            const cd = combatLog.length === 0 ? 0 : skill.current_cooldown || 0;
+            if (state.stats.qi >= skill.qi_cost && cd <= 0) {
+              handleAction("skill", skill.id);
+            }
+          }
+          break;
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [playerTurn, enemyDead, playerDead, handleAction, state.stats.qi, state.skills, combatLog]);
 
   // Format combat log entry
   const formatLogEntry = (entry: CombatLogEntry): string => {
@@ -211,7 +250,18 @@ export default function CombatView({
         <h2 className="text-2xl font-bold text-red-500 animate-pulse">
           {locale === "vi" ? "⚔️ CHIẾN ĐẤU ⚔️" : "⚔️ COMBAT ⚔️"}
         </h2>
-        <div className={`text-sm mt-1 ${playerTurn ? "text-green-400" : "text-red-400"}`}>
+        <div
+          className={`inline-flex items-center gap-2 mt-2 px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${
+            playerTurn
+              ? "bg-green-900/40 border border-green-500/50 text-green-400"
+              : "bg-red-900/40 border border-red-500/50 text-red-400 animate-pulse"
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          <span
+            className={`inline-block w-2 h-2 rounded-full ${playerTurn ? "bg-green-400" : "bg-red-400"}`}
+          />
           {playerTurn
             ? locale === "vi"
               ? "Lượt của bạn"
@@ -286,12 +336,30 @@ export default function CombatView({
 
       {/* Combat Log */}
       <div className="mb-6">
-        <h3 className="text-sm font-bold text-gray-400 mb-2">
-          {locale === "vi" ? "Nhật ký chiến đấu" : "Combat Log"}
-        </h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-bold text-gray-400">
+            {locale === "vi" ? "Nhật ký chiến đấu" : "Combat Log"}
+          </h3>
+          <button
+            onClick={() => setLogExpanded(!logExpanded)}
+            className="text-xs text-gray-500 hover:text-xianxia-accent transition-colors px-2 py-0.5 rounded border border-gray-700 hover:border-xianxia-accent/50"
+            aria-label={logExpanded ? "Collapse combat log" : "Expand combat log"}
+          >
+            {logExpanded
+              ? locale === "vi"
+                ? "▲ Thu gọn"
+                : "▲ Collapse"
+              : locale === "vi"
+                ? "▼ Mở rộng"
+                : "▼ Expand"}
+          </button>
+        </div>
         <div
           ref={combatLogRef}
-          className="h-32 overflow-y-auto bg-xianxia-darker rounded p-3 space-y-1 text-sm"
+          className={`${logExpanded ? "h-64" : "h-32"} overflow-y-auto bg-xianxia-darker rounded p-3 space-y-1 text-sm transition-all duration-300`}
+          role="log"
+          aria-live="polite"
+          aria-label={locale === "vi" ? "Nhật ký chiến đấu" : "Combat Log"}
         >
           {combatLog.length === 0 ? (
             <div className="text-gray-500 italic">
@@ -321,12 +389,15 @@ export default function CombatView({
             <button
               onClick={() => handleAction("attack")}
               disabled={!playerTurn}
-              className={`p-3 rounded-lg border transition-all ${
+              className={`p-3 rounded-lg border transition-all relative ${
                 playerTurn
                   ? "bg-red-900/30 border-red-500/50 hover:bg-red-900/50 text-red-400"
                   : "bg-gray-800 border-gray-600 text-gray-500 cursor-not-allowed"
               }`}
             >
+              <span className="absolute top-1 right-1.5 text-[10px] font-mono opacity-40 hidden md:inline">
+                1
+              </span>
               <div className="font-bold">{locale === "vi" ? "⚔️ Tấn Công" : "⚔️ Attack"}</div>
               <div className="text-xs opacity-70">
                 {locale === "vi" ? "Sát thương vật lý" : "Physical damage"}
@@ -336,12 +407,15 @@ export default function CombatView({
             <button
               onClick={() => handleAction("qi_attack")}
               disabled={!playerTurn || state.stats.qi < 10}
-              className={`p-3 rounded-lg border transition-all ${
+              className={`p-3 rounded-lg border transition-all relative ${
                 playerTurn && state.stats.qi >= 10
                   ? "bg-blue-900/30 border-blue-500/50 hover:bg-blue-900/50 text-blue-400"
                   : "bg-gray-800 border-gray-600 text-gray-500 cursor-not-allowed"
               }`}
             >
+              <span className="absolute top-1 right-1.5 text-[10px] font-mono opacity-40 hidden md:inline">
+                2
+              </span>
               <div className="font-bold">{locale === "vi" ? "✨ Khí Công" : "✨ Qi Attack"}</div>
               <div className="text-xs opacity-70">
                 {locale === "vi" ? "Chi phí: 10 Khí" : "Cost: 10 Qi"}
@@ -351,12 +425,15 @@ export default function CombatView({
             <button
               onClick={() => handleAction("defend")}
               disabled={!playerTurn}
-              className={`p-3 rounded-lg border transition-all ${
+              className={`p-3 rounded-lg border transition-all relative ${
                 playerTurn
                   ? "bg-yellow-900/30 border-yellow-500/50 hover:bg-yellow-900/50 text-yellow-400"
                   : "bg-gray-800 border-gray-600 text-gray-500 cursor-not-allowed"
               }`}
             >
+              <span className="absolute top-1 right-1.5 text-[10px] font-mono opacity-40 hidden md:inline">
+                3
+              </span>
               <div className="font-bold">{locale === "vi" ? "🛡️ Phòng Thủ" : "🛡️ Defend"}</div>
               <div className="text-xs opacity-70">
                 {locale === "vi" ? "Giảm sát thương" : "Reduce damage"}
@@ -366,12 +443,15 @@ export default function CombatView({
             <button
               onClick={() => handleAction("flee")}
               disabled={!playerTurn}
-              className={`p-3 rounded-lg border transition-all ${
+              className={`p-3 rounded-lg border transition-all relative ${
                 playerTurn
                   ? "bg-gray-700/30 border-gray-500/50 hover:bg-gray-700/50 text-gray-400"
                   : "bg-gray-800 border-gray-600 text-gray-500 cursor-not-allowed"
               }`}
             >
+              <span className="absolute top-1 right-1.5 text-[10px] font-mono opacity-40 hidden md:inline">
+                4
+              </span>
               <div className="font-bold">{locale === "vi" ? "🏃 Chạy Trốn" : "🏃 Flee"}</div>
               <div className="text-xs opacity-70">
                 {locale === "vi" ? "Cơ hội thoát" : "Chance to escape"}
@@ -386,7 +466,7 @@ export default function CombatView({
                 {locale === "vi" ? "Kỹ năng:" : "Skills:"}
               </h4>
               <div className="flex flex-wrap gap-2">
-                {state.skills.map((skill) => {
+                {state.skills.map((skill, index) => {
                   // At combat start (empty log), all skills should be available
                   // current_cooldown is reset to 0 for fresh combat
                   const effectiveCooldown =
@@ -405,12 +485,17 @@ export default function CombatView({
                         setSelectedSkill(null);
                       }}
                       disabled={!canUse}
-                      className={`px-3 py-2 rounded border text-sm transition-all ${
+                      className={`px-3 py-2 rounded border text-sm transition-all relative ${
                         canUse
                           ? "bg-purple-900/30 border-purple-500/50 hover:bg-purple-900/50 text-purple-400 cursor-pointer"
                           : "bg-gray-800 border-gray-600 text-gray-500 cursor-not-allowed"
                       }`}
                     >
+                      {index < 5 && (
+                        <span className="absolute top-0.5 right-1 text-[10px] font-mono opacity-40 hidden md:inline">
+                          {index + 5}
+                        </span>
+                      )}
                       <div>{locale === "vi" ? skill.name : skill.name_en}</div>
                       <div className="text-xs opacity-70">
                         {onCooldown
@@ -433,7 +518,10 @@ export default function CombatView({
 
       {/* Combat End States */}
       {enemyDead && (
-        <div className="text-center p-6 bg-green-900/20 border border-green-500/50 rounded-lg">
+        <div
+          className="text-center p-6 bg-green-900/20 border border-green-500/50 rounded-lg"
+          role="alert"
+        >
           <h3 className="text-2xl font-bold text-green-400 mb-2">
             {locale === "vi" ? "🎉 CHIẾN THẮNG! 🎉" : "🎉 VICTORY! 🎉"}
           </h3>
@@ -450,7 +538,10 @@ export default function CombatView({
       )}
 
       {playerDead && (
-        <div className="text-center p-6 bg-red-900/20 border border-red-500/50 rounded-lg">
+        <div
+          className="text-center p-6 bg-red-900/20 border border-red-500/50 rounded-lg"
+          role="alert"
+        >
           <h3 className="text-2xl font-bold text-red-400 mb-2">
             {locale === "vi" ? "💀 THẤT BẠI 💀" : "💀 DEFEAT 💀"}
           </h3>

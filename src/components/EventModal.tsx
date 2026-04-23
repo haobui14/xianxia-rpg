@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { GameState } from "@/types/game";
 import { RandomEvent, EventChoice } from "@/types/world";
 import { Locale } from "@/lib/i18n/translations";
+import Modal, { ModalCloseButton } from "./Modal";
 
 interface EventModalProps {
   event: RandomEvent | null;
@@ -46,68 +47,22 @@ export default function EventModal({ event, state, locale, onChoice, onClose }: 
     }
   };
 
-  const isChoiceAvailable = (choice: EventChoice): { available: boolean; reason?: string } => {
-    if (!choice.requirements) {
-      return { available: true };
-    }
-
-    const req = choice.requirements;
-
-    // Check stat requirement
-    if (req.stat) {
-      const parts = req.stat.key.split(".");
-      let value: any = state;
-      for (const part of parts) {
-        value = value?.[part];
-      }
-      if (typeof value !== "number" || value < req.stat.min) {
-        return {
-          available: false,
-          reason: `Requires ${parts[parts.length - 1]} >= ${req.stat.min}`,
-        };
-      }
-    }
-
-    // Check item requirement
-    if (req.item) {
-      const hasItem = state.inventory.items.some((item) => item.id === req.item);
-      if (!hasItem) {
-        return { available: false, reason: `Requires item: ${req.item}` };
-      }
-    }
-
-    // Check skill requirement
-    if (req.skill) {
-      const hasSkill = state.skills.some((skill) => skill.id === req.skill);
-      if (!hasSkill) {
-        return { available: false, reason: `Requires skill: ${req.skill}` };
-      }
-    }
-
-    // Check realm requirement
-    if (req.realm) {
-      const realms = ["PhàmNhân", "LuyệnKhí", "TrúcCơ", "KếtĐan", "NguyênAnh"];
-      const playerIndex = realms.indexOf(state.progress.realm);
-      const requiredIndex = realms.indexOf(req.realm);
-      if (playerIndex < requiredIndex) {
-        return { available: false, reason: `Requires realm: ${req.realm}` };
-      }
-    }
-
-    // Check karma
-    if (req.karma_min !== undefined && state.karma < req.karma_min) {
-      return { available: false, reason: `Requires karma >= ${req.karma_min}` };
-    }
-
-    if (req.karma_max !== undefined && state.karma > req.karma_max) {
-      return { available: false, reason: `Requires karma <= ${req.karma_max}` };
-    }
-
-    return { available: true };
-  };
+  // Check if there are any available choices, so we can offer a fallback "Leave" option
+  const availableChoices = event.choices.filter((c) => {
+    const { available } = isChoiceAvailable(c, state);
+    return available || !c.hidden_until_met;
+  });
+  const hasNoAvailableActions = availableChoices.every(
+    (c) => !isChoiceAvailable(c, state).available
+  );
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      closeOnBackdrop={!!onClose && !isProcessing}
+      closeOnEscape={!isProcessing}
+    >
       <div
         className={`max-w-2xl w-full ${RARITY_BG[event.rarity]} border-2 ${RARITY_COLORS[event.rarity]} rounded-lg shadow-2xl`}
       >
@@ -117,14 +72,7 @@ export default function EventModal({ event, state, locale, onChoice, onClose }: 
             <h2 className={`text-2xl font-bold ${RARITY_COLORS[event.rarity]}`}>
               {locale === "vi" ? event.name : event.name_en}
             </h2>
-            {onClose && (
-              <button
-                onClick={onClose}
-                className="text-gray-400 hover:text-white text-2xl leading-none"
-              >
-                ×
-              </button>
-            )}
+            {onClose && <ModalCloseButton onClose={onClose} />}
           </div>
           <div className="flex items-center gap-2">
             <span
@@ -151,7 +99,7 @@ export default function EventModal({ event, state, locale, onChoice, onClose }: 
             {locale === "vi" ? "Lựa chọn của ngươi:" : "Your choice:"}
           </div>
           {event.choices.map((choice) => {
-            const { available, reason } = isChoiceAvailable(choice);
+            const { available, reason } = isChoiceAvailable(choice, state);
             const isHidden = choice.hidden_until_met && !available;
 
             if (isHidden) return null;
@@ -187,6 +135,24 @@ export default function EventModal({ event, state, locale, onChoice, onClose }: 
               </button>
             );
           })}
+
+          {/* Fallback "Leave" option when no choices are available */}
+          {hasNoAvailableActions && onClose && (
+            <button
+              onClick={onClose}
+              disabled={isProcessing}
+              className="w-full text-left p-4 rounded-lg border-2 border-gray-600 bg-gray-800/50 hover:border-gray-500 hover:bg-gray-800 transition-all"
+            >
+              <div className="font-medium text-gray-300">
+                {locale === "vi" ? "🚶 Rời đi" : "🚶 Leave"}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {locale === "vi"
+                  ? "Bạn không đủ điều kiện cho bất kỳ lựa chọn nào"
+                  : "You don't meet the requirements for any choice"}
+              </div>
+            </button>
+          )}
         </div>
 
         {/* Footer Info */}
@@ -210,6 +176,65 @@ export default function EventModal({ event, state, locale, onChoice, onClose }: 
           )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
+}
+
+/** Check if a specific choice is available based on player state */
+function isChoiceAvailable(
+  choice: EventChoice,
+  state: GameState
+): { available: boolean; reason?: string } {
+  if (!choice.requirements) {
+    return { available: true };
+  }
+
+  const req = choice.requirements;
+
+  if (req.stat) {
+    const parts = req.stat.key.split(".");
+    let value: any = state;
+    for (const part of parts) {
+      value = value?.[part];
+    }
+    if (typeof value !== "number" || value < req.stat.min) {
+      return {
+        available: false,
+        reason: `Requires ${parts[parts.length - 1]} >= ${req.stat.min}`,
+      };
+    }
+  }
+
+  if (req.item) {
+    const hasItem = state.inventory.items.some((item) => item.id === req.item);
+    if (!hasItem) {
+      return { available: false, reason: `Requires item: ${req.item}` };
+    }
+  }
+
+  if (req.skill) {
+    const hasSkill = state.skills.some((skill) => skill.id === req.skill);
+    if (!hasSkill) {
+      return { available: false, reason: `Requires skill: ${req.skill}` };
+    }
+  }
+
+  if (req.realm) {
+    const realms = ["PhàmNhân", "LuyệnKhí", "TrúcCơ", "KếtĐan", "NguyênAnh"];
+    const playerIndex = realms.indexOf(state.progress.realm);
+    const requiredIndex = realms.indexOf(req.realm);
+    if (playerIndex < requiredIndex) {
+      return { available: false, reason: `Requires realm: ${req.realm}` };
+    }
+  }
+
+  if (req.karma_min !== undefined && state.karma < req.karma_min) {
+    return { available: false, reason: `Requires karma >= ${req.karma_min}` };
+  }
+
+  if (req.karma_max !== undefined && state.karma > req.karma_max) {
+    return { available: false, reason: `Requires karma <= ${req.karma_max}` };
+  }
+
+  return { available: true };
 }

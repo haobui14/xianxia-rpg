@@ -102,8 +102,38 @@ export function useGameState({ runId, locale }: UseGameStateProps) {
     }
   }, [runId]);
 
+  // Abort controller ref for cancelling in-flight turn requests
+  const turnAbortRef = useRef<AbortController | null>(null);
+  const turnTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const cancelProcessing = useCallback(() => {
+    if (turnAbortRef.current) {
+      turnAbortRef.current.abort();
+      turnAbortRef.current = null;
+    }
+    if (turnTimeoutRef.current) {
+      clearTimeout(turnTimeoutRef.current);
+      turnTimeoutRef.current = null;
+    }
+    setProcessing(false);
+    setSaveStatus("idle");
+  }, []);
+
   const processTurn = useCallback(
     async (choiceId: string | null, selectedChoice?: any) => {
+      // Cancel any previous in-flight request
+      if (turnAbortRef.current) {
+        turnAbortRef.current.abort();
+      }
+
+      const controller = new AbortController();
+      turnAbortRef.current = controller;
+
+      // 90-second timeout for AI generation
+      turnTimeoutRef.current = setTimeout(() => {
+        controller.abort();
+      }, 90000);
+
       setProcessing(true);
       setError("");
       setSaveStatus("saving");
@@ -126,6 +156,7 @@ export function useGameState({ runId, locale }: UseGameStateProps) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "same-origin",
+          signal: controller.signal,
           body: JSON.stringify({ runId, choiceId, selectedChoice }),
         });
 
@@ -192,16 +223,31 @@ export function useGameState({ runId, locale }: UseGameStateProps) {
           }, 3000);
         }
       } catch (err: any) {
-        console.error("Turn error:", err);
-        setError(err.message || (locale === "vi" ? "Lỗi xử lý lượt" : "Failed to process turn"));
+        // Don't show error if the request was intentionally aborted by user
+        if (err?.name === "AbortError") {
+          console.log("Turn request aborted");
+          setError(
+            locale === "vi"
+              ? "Yêu cầu đã bị hủy hoặc hết thời gian. Vui lòng thử lại."
+              : "Request was cancelled or timed out. Please try again."
+          );
+        } else {
+          console.error("Turn error:", err);
+          setError(err.message || (locale === "vi" ? "Lỗi xử lý lượt" : "Failed to process turn"));
+        }
         setSaveStatus("error");
-        setSaveError(err.message);
+        setSaveError(err?.message || "");
 
         saveStatusTimeoutRef.current = setTimeout(() => {
           setSaveStatus("idle");
           setSaveError("");
         }, 3000);
       } finally {
+        if (turnTimeoutRef.current) {
+          clearTimeout(turnTimeoutRef.current);
+          turnTimeoutRef.current = null;
+        }
+        turnAbortRef.current = null;
         setProcessing(false);
       }
     },
@@ -253,6 +299,7 @@ export function useGameState({ runId, locale }: UseGameStateProps) {
     setBreakthroughEvent,
     previousExp,
     processTurn,
+    cancelProcessing,
     lastTurnEvents,
     setLastTurnEvents,
   };

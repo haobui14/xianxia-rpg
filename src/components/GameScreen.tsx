@@ -71,6 +71,34 @@ interface GameScreenProps {
   onLocaleChange?: (locale: Locale) => void;
 }
 
+function ProcessingIndicator({ locale, onCancel }: { locale: Locale; onCancel: () => void }) {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const showCancel = elapsed >= 10;
+
+  return (
+    <div className="p-4 bg-xianxia-accent/10 border border-xianxia-accent/30 rounded-lg text-center">
+      <div className="text-xianxia-accent mb-1">
+        {locale === "vi" ? "Đang xử lý lượt chơi..." : "Processing turn..."}
+        <span className="ml-2 text-sm opacity-70">{elapsed}s</span>
+      </div>
+      {showCancel && (
+        <button
+          onClick={onCancel}
+          className="mt-2 px-4 py-1.5 text-sm bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 rounded-lg text-red-300 transition-colors"
+        >
+          {locale === "vi" ? "Hủy & Thử lại" : "Cancel & Retry"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function GameScreen({ runId, locale, onLocaleChange }: GameScreenProps) {
   // Core game state management
   const {
@@ -91,11 +119,21 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
     setBreakthroughEvent,
     previousExp,
     processTurn,
+    cancelProcessing,
     lastTurnEvents,
     setLastTurnEvents,
   } = useGameState({ runId, locale });
 
-  const { showTutorial, handleDismissTutorial } = useTutorial(runId);
+  const {
+    showTutorial,
+    currentStep,
+    totalSteps,
+    steps,
+    handleDismissTutorial,
+    handleNextStep,
+    handlePrevStep,
+    handleReopenTutorial,
+  } = useTutorial(runId);
   const [activeTab, setActiveTab] = useState<
     "game" | "character" | "sect" | "inventory" | "market" | "world"
   >("game");
@@ -241,7 +279,10 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">{t(locale, "loading")}</div>
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-xianxia-gold mx-auto" />
+          <div className="text-xl text-xianxia-accent">{t(locale, "loading")}</div>
+        </div>
       </div>
     );
   }
@@ -255,7 +296,7 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-8">
+    <div className="min-h-screen p-4 md:p-8 pb-20 md:pb-8">
       <div className="max-w-6xl mx-auto">
         {/* Save Status Indicator */}
         <div className="fixed top-4 left-4 z-50">
@@ -324,10 +365,16 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
           )}
         </div>
 
-        {/* Header with tabs */}
-        <div className="mb-6 flex flex-wrap gap-2 border-b border-xianxia-accent/30 pb-2">
+        {/* Desktop Tab Navigation */}
+        <div
+          className="mb-6 hidden md:flex flex-wrap gap-2 border-b border-xianxia-accent/30 pb-2"
+          role="tablist"
+          aria-label="Game navigation"
+        >
           <button
             onClick={() => setActiveTab("game")}
+            role="tab"
+            aria-selected={activeTab === "game"}
             className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
               activeTab === "game"
                 ? "bg-xianxia-accent text-white"
@@ -338,6 +385,8 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
           </button>
           <button
             onClick={() => setActiveTab("character")}
+            role="tab"
+            aria-selected={activeTab === "character"}
             className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
               activeTab === "character"
                 ? "bg-xianxia-accent text-white"
@@ -348,6 +397,8 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
           </button>
           <button
             onClick={() => setActiveTab("sect")}
+            role="tab"
+            aria-selected={activeTab === "sect"}
             className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
               activeTab === "sect"
                 ? "bg-xianxia-accent text-white"
@@ -358,6 +409,8 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
           </button>
           <button
             onClick={() => setActiveTab("inventory")}
+            role="tab"
+            aria-selected={activeTab === "inventory"}
             className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
               activeTab === "inventory"
                 ? "bg-xianxia-accent text-white"
@@ -368,6 +421,8 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
           </button>
           <button
             onClick={() => setActiveTab("market")}
+            role="tab"
+            aria-selected={activeTab === "market"}
             className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
               activeTab === "market"
                 ? "bg-xianxia-accent text-white"
@@ -378,6 +433,8 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
           </button>
           <button
             onClick={() => setActiveTab("world")}
+            role="tab"
+            aria-selected={activeTab === "world"}
             className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
               activeTab === "world"
                 ? "bg-xianxia-accent text-white"
@@ -392,10 +449,88 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
               onClick={() => onLocaleChange(locale === "vi" ? "en" : "vi")}
               className="ml-auto px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg bg-xianxia-dark hover:bg-xianxia-accent/20 transition-colors flex items-center gap-1"
               title={locale === "vi" ? "Switch to English" : "Chuyển sang Tiếng Việt"}
+              aria-label={locale === "vi" ? "Switch to English" : "Chuyển sang Tiếng Việt"}
             >
               🌐 {locale === "vi" ? "EN" : "VI"}
             </button>
           )}
+          {/* Help Button */}
+          <button
+            onClick={handleReopenTutorial}
+            className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg bg-xianxia-dark hover:bg-xianxia-accent/20 transition-colors ${!onLocaleChange ? "ml-auto" : ""}`}
+            title={locale === "vi" ? "Hướng dẫn" : "Tutorial"}
+            aria-label={locale === "vi" ? "Mở hướng dẫn" : "Open tutorial"}
+          >
+            ❓
+          </button>
+        </div>
+
+        {/* Mobile Bottom Navigation */}
+        <div
+          className="fixed bottom-0 left-0 right-0 md:hidden bg-xianxia-darker/95 backdrop-blur-sm border-t border-xianxia-accent/30 z-40"
+          role="tablist"
+          aria-label="Game navigation"
+        >
+          <div className="grid grid-cols-6 gap-0">
+            {(
+              [
+                { id: "game" as const, icon: "🎮", label: locale === "vi" ? "Chơi" : "Play" },
+                {
+                  id: "character" as const,
+                  icon: "👤",
+                  label: locale === "vi" ? "Nhân vật" : "Char",
+                },
+                { id: "sect" as const, icon: "⛩️", label: locale === "vi" ? "Phái" : "Sect" },
+                { id: "inventory" as const, icon: "🎒", label: locale === "vi" ? "Đồ" : "Bag" },
+                { id: "market" as const, icon: "🏪", label: locale === "vi" ? "Chợ" : "Shop" },
+                { id: "world" as const, icon: "🗺️", label: locale === "vi" ? "Map" : "Map" },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                className={`flex flex-col items-center py-2 px-1 transition-colors ${
+                  activeTab === tab.id
+                    ? "text-xianxia-gold bg-xianxia-accent/10"
+                    : "text-gray-500 hover:text-gray-300"
+                }`}
+              >
+                <span className="text-lg">{tab.icon}</span>
+                <span className="text-[10px] mt-0.5 leading-none">{tab.label}</span>
+                {activeTab === tab.id && (
+                  <div className="w-1 h-1 rounded-full bg-xianxia-gold mt-0.5" aria-hidden="true" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Mobile spacer for top + add language toggle inline on mobile */}
+        <div className="md:hidden mb-4 flex justify-between items-center">
+          <h1 className="text-lg font-bold text-xianxia-gold">
+            {locale === "vi" ? "Tu Tiên RPG" : "Xianxia RPG"}
+          </h1>
+          <div className="flex items-center gap-2">
+            {onLocaleChange && (
+              <button
+                onClick={() => onLocaleChange(locale === "vi" ? "en" : "vi")}
+                className="px-3 py-1.5 text-sm rounded-lg bg-xianxia-dark hover:bg-xianxia-accent/20 transition-colors"
+                title={locale === "vi" ? "Switch to English" : "Chuyển sang Tiếng Việt"}
+              >
+                🌐 {locale === "vi" ? "EN" : "VI"}
+              </button>
+            )}
+            <button
+              onClick={handleReopenTutorial}
+              className="px-3 py-1.5 text-sm rounded-lg bg-xianxia-dark hover:bg-xianxia-accent/20 transition-colors"
+              title={locale === "vi" ? "Hướng dẫn" : "Tutorial"}
+              aria-label={locale === "vi" ? "Mở hướng dẫn" : "Open tutorial"}
+            >
+              ❓
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -580,11 +715,7 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
               </div>
             )}
 
-            {processing && (
-              <div className="p-4 bg-xianxia-accent/10 border border-xianxia-accent/30 rounded-lg text-center text-xianxia-accent">
-                {locale === "vi" ? "Đang xử lý lượt chơi..." : "Processing turn..."}
-              </div>
-            )}
+            {processing && <ProcessingIndicator locale={locale} onCancel={cancelProcessing} />}
           </div>
         )}
 
@@ -650,39 +781,72 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
 
       {showTutorial && (
         <div className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-2xl w-full bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6 md:p-8 shadow-2xl">
-            <h2 className="text-2xl md:text-3xl font-bold text-xianxia-gold mb-4">
-              {locale === "vi" ? "Chào mừng đến với hành trình" : "Welcome to your journey"}
-            </h2>
-            <ul className="space-y-3 text-gray-200">
-              <li>
-                {locale === "vi"
-                  ? "• Chọn hành động từ danh sách hoặc nhập hành động riêng ở cuối trang."
-                  : "• Pick an action from the list or type your own at the bottom."}
-              </li>
-              <li>
-                {locale === "vi"
-                  ? "• Mỗi lựa chọn có thể tốn thể lực, khí hoặc bạc — hãy chú ý chi phí."
-                  : "• Choices can cost stamina, qi, or silver — watch the costs."}
-              </li>
-              <li>
-                {locale === "vi"
-                  ? "• Dùng các tab để xem nhân vật, túi đồ, chợ và thế giới."
-                  : "• Use the tabs to view character, inventory, market, and world."}
-              </li>
-            </ul>
-            <div className="mt-6 flex flex-col sm:flex-row gap-3">
+          <div
+            className="max-w-2xl w-full bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6 md:p-8 shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-label={locale === "vi" ? "Hướng dẫn" : "Tutorial"}
+          >
+            {/* Step indicator */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex gap-1.5">
+                {steps.map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                      i === currentStep
+                        ? "w-8 bg-xianxia-gold"
+                        : i < currentStep
+                          ? "w-4 bg-xianxia-accent"
+                          : "w-4 bg-gray-600"
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="text-xs text-gray-500">
+                {currentStep + 1} / {totalSteps}
+              </span>
+            </div>
+
+            {/* Step content */}
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-3">{steps[currentStep].icon}</div>
+              <h2 className="text-2xl md:text-3xl font-bold text-xianxia-gold mb-3">
+                {locale === "vi" ? steps[currentStep].title : steps[currentStep].title_en}
+              </h2>
+              <p className="text-gray-200 leading-relaxed max-w-lg mx-auto">
+                {locale === "vi" ? steps[currentStep].content : steps[currentStep].content_en}
+              </p>
+            </div>
+
+            {/* Navigation buttons */}
+            <div className="flex items-center justify-between gap-3">
               <button
-                onClick={handleDismissTutorial}
-                className="px-6 py-3 bg-xianxia-gold hover:bg-xianxia-gold/80 text-xianxia-darker rounded-lg font-bold transition-colors"
+                onClick={handlePrevStep}
+                disabled={currentStep === 0}
+                className="px-4 py-2.5 bg-xianxia-darker border border-xianxia-accent/50 hover:bg-xianxia-accent/20 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
               >
-                {locale === "vi" ? "Bắt đầu" : "Start"}
+                {locale === "vi" ? "← Trước" : "← Back"}
               </button>
+
               <button
                 onClick={handleDismissTutorial}
-                className="px-6 py-3 bg-xianxia-darker border border-xianxia-accent/50 hover:bg-xianxia-accent/20 rounded-lg font-medium transition-colors"
+                className="px-4 py-2.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
               >
                 {locale === "vi" ? "Bỏ qua" : "Skip"}
+              </button>
+
+              <button
+                onClick={handleNextStep}
+                className="px-6 py-2.5 bg-xianxia-gold hover:bg-xianxia-gold/80 text-xianxia-darker rounded-lg font-bold transition-colors"
+              >
+                {currentStep < totalSteps - 1
+                  ? locale === "vi"
+                    ? "Tiếp →"
+                    : "Next →"
+                  : locale === "vi"
+                    ? "Bắt đầu!"
+                    : "Start!"}
               </button>
             </div>
           </div>

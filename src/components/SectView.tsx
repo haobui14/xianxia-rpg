@@ -104,13 +104,40 @@ export default function SectView({ state, locale }: SectViewProps) {
     },
   };
 
-  // Calculate days since joined based on game time, not real time
+  // Calculate days since joined using game time consistently
+  // joined_date is stored as a game-time string or ISO date; convert to game days
   const currentGameDay = (state.time_year - 1) * 360 + (state.time_month - 1) * 30 + state.time_day;
 
-  const joinedDate = new Date(joined_date);
-  const joinedGameDay = Math.floor(joinedDate.getTime() / (1000 * 60 * 60 * 24));
+  // Parse joined_date: if it's a game-time format "Y-M-D" or ISO date
+  let joinedGameDay = 0;
+  if (joined_date) {
+    // Try parsing as "YYYY-MM-DD" game calendar
+    const parts = joined_date.split(/[-T]/);
+    if (parts.length >= 3) {
+      const jYear = parseInt(parts[0], 10) || 1;
+      const jMonth = parseInt(parts[1], 10) || 1;
+      const jDay = parseInt(parts[2], 10) || 1;
+      joinedGameDay = (jYear - 1) * 360 + (jMonth - 1) * 30 + jDay;
+    }
+  }
 
   const daysSinceJoined = Math.max(0, currentGameDay - joinedGameDay);
+
+  // Rank requirements for next rank
+  const RANK_ORDER = ["NgoạiMôn", "NộiMôn", "ChânTruyền", "TrưởngLão", "ChưởngMôn"] as const;
+  const RANK_REQUIREMENTS: Record<
+    string,
+    { contribution: number; reputation: number; missions: number }
+  > = {
+    NộiMôn: { contribution: 100, reputation: 30, missions: 5 },
+    ChânTruyền: { contribution: 500, reputation: 60, missions: 20 },
+    TrưởngLão: { contribution: 2000, reputation: 85, missions: 50 },
+    ChưởngMôn: { contribution: 10000, reputation: 100, missions: 100 },
+  };
+  const currentRankIndex = RANK_ORDER.indexOf(rank as (typeof RANK_ORDER)[number]);
+  const nextRank =
+    currentRankIndex < RANK_ORDER.length - 1 ? RANK_ORDER[currentRankIndex + 1] : null;
+  const nextRankReqs = nextRank ? RANK_REQUIREMENTS[nextRank] : null;
 
   return (
     <div className="space-y-6">
@@ -148,11 +175,34 @@ export default function SectView({ state, locale }: SectViewProps) {
                 {locale === "vi" ? rankNames.vi[rank] : rankNames.en[rank]}
               </span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">
-                {locale === "vi" ? "Danh tiếng:" : "Reputation:"}
-              </span>
-              <span className="text-green-400">{reputation}/100</span>
+            <div>
+              <div className="flex justify-between mb-1">
+                <span className="text-gray-400">
+                  {locale === "vi" ? "Danh tiếng:" : "Reputation:"}
+                </span>
+                <span className="text-green-400 font-medium">{reputation}/100</span>
+              </div>
+              <div
+                className="w-full bg-gray-700 rounded-full h-2 overflow-hidden"
+                role="progressbar"
+                aria-valuenow={reputation}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={locale === "vi" ? "Danh tiếng" : "Reputation"}
+              >
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    reputation >= 80
+                      ? "bg-green-400"
+                      : reputation >= 50
+                        ? "bg-yellow-400"
+                        : reputation >= 20
+                          ? "bg-orange-400"
+                          : "bg-red-400"
+                  }`}
+                  style={{ width: `${reputation}%` }}
+                />
+              </div>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">
@@ -335,6 +385,79 @@ export default function SectView({ state, locale }: SectViewProps) {
             {locale === "vi" ? "Chưởng Môn" : "Master"}
           </div>
         </div>
+
+        {/* Next rank requirements */}
+        {nextRank && nextRankReqs && (
+          <div className="mt-4 pt-4 border-t border-gray-700">
+            <h3 className="text-sm font-medium text-gray-300 mb-3">
+              {locale === "vi"
+                ? `Yêu cầu thăng lên ${rankNames.vi[nextRank]}:`
+                : `Requirements for ${rankNames.en[nextRank]}:`}
+            </h3>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center">
+                <div
+                  className={`text-sm font-bold ${contribution >= nextRankReqs.contribution ? "text-green-400" : "text-gray-300"}`}
+                >
+                  {contribution} / {nextRankReqs.contribution}
+                </div>
+                <div className="text-[10px] text-gray-400 mt-0.5">
+                  {locale === "vi" ? "Cống hiến" : "Contribution"}
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-1 mt-1">
+                  <div
+                    className={`h-full rounded-full transition-all ${contribution >= nextRankReqs.contribution ? "bg-green-400" : "bg-xianxia-accent"}`}
+                    style={{
+                      width: `${Math.min(100, (contribution / nextRankReqs.contribution) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="text-center">
+                <div
+                  className={`text-sm font-bold ${reputation >= nextRankReqs.reputation ? "text-green-400" : "text-gray-300"}`}
+                >
+                  {reputation} / {nextRankReqs.reputation}
+                </div>
+                <div className="text-[10px] text-gray-400 mt-0.5">
+                  {locale === "vi" ? "Danh tiếng" : "Reputation"}
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-1 mt-1">
+                  <div
+                    className={`h-full rounded-full transition-all ${reputation >= nextRankReqs.reputation ? "bg-green-400" : "bg-xianxia-accent"}`}
+                    style={{
+                      width: `${Math.min(100, (reputation / nextRankReqs.reputation) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="text-center">
+                <div
+                  className={`text-sm font-bold ${missions_completed >= nextRankReqs.missions ? "text-green-400" : "text-gray-300"}`}
+                >
+                  {missions_completed} / {nextRankReqs.missions}
+                </div>
+                <div className="text-[10px] text-gray-400 mt-0.5">
+                  {locale === "vi" ? "Nhiệm vụ" : "Missions"}
+                </div>
+                <div className="w-full bg-gray-700 rounded-full h-1 mt-1">
+                  <div
+                    className={`h-full rounded-full transition-all ${missions_completed >= nextRankReqs.missions ? "bg-green-400" : "bg-xianxia-accent"}`}
+                    style={{
+                      width: `${Math.min(100, (missions_completed / nextRankReqs.missions) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!nextRank && (
+          <div className="mt-4 pt-4 border-t border-gray-700 text-center text-xianxia-gold text-sm">
+            {locale === "vi" ? "🎉 Đã đạt cấp bậc cao nhất!" : "🎉 Highest rank achieved!"}
+          </div>
+        )}
       </div>
     </div>
   );

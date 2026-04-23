@@ -111,6 +111,49 @@ export const translations = {
 
     // Technique Type
     Main: "Chính",
+
+    // Combat
+    combat: "Chiến Đấu",
+    attack: "Tấn Công",
+    qiAttack: "Khí Công",
+    defend: "Phòng Thủ",
+    flee: "Chạy Trốn",
+    combatLog: "Nhật Ký Chiến Đấu",
+    victory: "Chiến Thắng",
+    defeat: "Thất Bại",
+    yourTurn: "Lượt của bạn",
+    enemyTurn: "Lượt của địch",
+    physicalDamage: "Sát thương vật lý",
+    qiCost: "Chi phí Khí",
+    reduceDamage: "Giảm sát thương",
+    chanceToEscape: "Cơ hội thoát",
+    collectLoot: "Thu thập chiến lợi phẩm",
+    cooldown: "Hồi chiêu",
+    skills: "Kĩ Năng",
+    techniques: "Công Pháp",
+
+    // Market
+    market: "Chợ Linh Vật",
+    buy: "Mua",
+    sell: "Bán",
+    refresh: "Làm Mới",
+    exchange: "Đổi",
+    noItemsAvailable: "Không có hàng",
+    nothingToSell: "Không có gì để bán",
+    searchItems: "Tìm vật phẩm",
+    allRarities: "Tất cả độ hiếm",
+    sortDefault: "Mặc định",
+    sortPriceAsc: "Giá tăng",
+    sortPriceDesc: "Giá giảm",
+    sortRarity: "Độ hiếm",
+    estimatedSell: "~Bán",
+    spiritMarket: "Chợ Linh Vật",
+
+    // General UI
+    expand: "Mở rộng",
+    collapse: "Thu gọn",
+    time: "Thời gian",
+    other: "Khác",
   },
 
   en: {
@@ -211,6 +254,7 @@ export const translations = {
     Attack: "Attack",
     Defense: "Defense",
     Movement: "Movement",
+    Support: "Support",
 
     // Equipment Slots
     Weapon: "Weapon",
@@ -224,7 +268,49 @@ export const translations = {
 
     // Technique Type
     Main: "Main",
-    Support: "Support",
+
+    // Combat
+    combat: "Combat",
+    attack: "Attack",
+    qiAttack: "Qi Attack",
+    defend: "Defend",
+    flee: "Flee",
+    combatLog: "Combat Log",
+    victory: "Victory",
+    defeat: "Defeat",
+    yourTurn: "Your Turn",
+    enemyTurn: "Enemy's Turn",
+    physicalDamage: "Physical damage",
+    qiCost: "Qi cost",
+    reduceDamage: "Reduce damage",
+    chanceToEscape: "Chance to escape",
+    collectLoot: "Collect Loot",
+    cooldown: "Cooldown",
+    skills: "Skills",
+    techniques: "Cultivation Techniques",
+
+    // Market
+    market: "Spirit Market",
+    buy: "Buy",
+    sell: "Sell",
+    refresh: "Refresh",
+    exchange: "Exchange",
+    noItemsAvailable: "No items available",
+    nothingToSell: "Nothing to sell",
+    searchItems: "Search items",
+    allRarities: "All Rarities",
+    sortDefault: "Default",
+    sortPriceAsc: "Price: Low to High",
+    sortPriceDesc: "Price: High to Low",
+    sortRarity: "Rarity",
+    estimatedSell: "~Sell",
+    spiritMarket: "Spirit Market",
+
+    // General UI
+    expand: "Expand",
+    collapse: "Collapse",
+    time: "Time",
+    other: "Other",
   },
 };
 

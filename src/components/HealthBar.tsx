@@ -153,6 +153,11 @@ export default function HealthBar({
       {/* Bar container */}
       <div
         className={`relative w-full ${SIZE_CLASSES[size]} rounded-full overflow-hidden border ${colors.border} ${colors.bg}`}
+        role="progressbar"
+        aria-valuenow={displayCurrent}
+        aria-valuemin={0}
+        aria-valuemax={max}
+        aria-label={label ? `${label}: ${displayCurrent} / ${max}` : `${displayCurrent} / ${max}`}
       >
         {/* Damage chunk (shows what was lost) */}
         {damageChunk !== null && (
@@ -190,7 +195,7 @@ export default function HealthBar({
 
         {/* Segment markers for medium/large bars */}
         {size !== "small" && (
-          <div className="absolute inset-0 flex">
+          <div className="absolute inset-0 flex" aria-hidden="true">
             {[25, 50, 75].map((mark) => (
               <div
                 key={mark}
@@ -206,6 +211,7 @@ export default function HealthBar({
       {isLow && type === "hp" && (
         <div
           className={`text-xs mt-1 ${isCritical ? "text-red-500 animate-pulse" : "text-red-400"}`}
+          role="alert"
         >
           {isCritical ? "!! CRITICAL !!" : "! Low Health !"}
         </div>

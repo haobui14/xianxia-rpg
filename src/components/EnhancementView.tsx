@@ -11,6 +11,7 @@ import {
   getEnhancementColor,
   EnhancementResult,
 } from "@/lib/game/enhancement";
+import Modal, { ModalCloseButton } from "./Modal";
 
 interface EnhancementViewProps {
   item: InventoryItem;
@@ -63,8 +64,8 @@ export default function EnhancementView({
     setShowAnimation(true);
     setResult(null);
 
-    // Simulate enhancement delay for dramatic effect
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    // Brief animation delay (reduced from 1.5s to 0.5s)
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     try {
       const enhanceResult = await onEnhance(item.id);
@@ -78,15 +79,10 @@ export default function EnhancementView({
   }, [canEnhanceItem, cost.canAfford, enhancing, item.id, onEnhance]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+    <Modal isOpen={true} onClose={enhancing ? undefined : onClose} closeOnBackdrop={!enhancing}>
       <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg max-w-md w-full p-6 relative">
         {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
-        >
-          ✕
-        </button>
+        {!enhancing && <ModalCloseButton onClose={onClose} className="absolute top-4 right-4" />}
 
         {/* Title */}
         <h2 className="text-xl font-bold text-xianxia-gold mb-4">
@@ -276,6 +272,6 @@ export default function EnhancementView({
           </div>
         )}
       </div>
-    </div>
+    </Modal>
   );
 }

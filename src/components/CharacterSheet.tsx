@@ -9,6 +9,7 @@ import CultivationVisualization from "./CultivationVisualization";
 import MeridianDiagram from "./MeridianDiagram";
 import DualCultivationView from "./DualCultivationView";
 import CharacterStatChart from "./CharacterStatChart";
+import CollapsibleSection from "./CollapsibleSection";
 
 // Limits for techniques and skills
 const MAX_TECHNIQUES = 5;
@@ -92,8 +93,7 @@ export default function CharacterSheet({
   return (
     <div className="space-y-6">
       {/* Location & Time */}
-      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">{t(locale, "location")}</h2>
+      <CollapsibleSection title={t(locale, "location")}>
         <div className="space-y-2">
           <div>
             <span className="text-gray-400">{t(locale, "location")}: </span>
@@ -111,11 +111,10 @@ export default function CharacterSheet({
             <span className="text-gray-400 ml-4">{t(locale, state.time_segment)}</span>
           </div>
         </div>
-      </div>
+      </CollapsibleSection>
 
       {/* Cultivation Progress - Enhanced Visualization */}
-      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">{t(locale, "cultivation")}</h2>
+      <CollapsibleSection title={t(locale, "cultivation")}>
         <div className="flex flex-col lg:flex-row gap-6 items-center">
           {/* Main Cultivation Visualization */}
           <div className="flex-1 w-full">
@@ -126,7 +125,7 @@ export default function CharacterSheet({
             <MeridianDiagram state={state} locale={locale} size="medium" />
           </div>
         </div>
-      </div>
+      </CollapsibleSection>
 
       {/* Dual Cultivation */}
       <DualCultivationView
@@ -137,8 +136,7 @@ export default function CharacterSheet({
       />
 
       {/* Spirit Root */}
-      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">{t(locale, "spiritRoot")}</h2>
+      <CollapsibleSection title={t(locale, "spiritRoot")}>
         <div className="space-y-3">
           <div>
             <span className="text-gray-400">{t(locale, "elements")}: </span>
@@ -153,20 +151,13 @@ export default function CharacterSheet({
             </span>
           </div>
         </div>
-      </div>
+      </CollapsibleSection>
 
       {/* Cultivation Techniques */}
-      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-xianxia-gold">
-            {locale === "vi" ? "Công Pháp" : "Cultivation Techniques"}
-          </h2>
-          <span className="text-sm text-gray-400">
-            {state.techniques?.length || 0}/{MAX_TECHNIQUES}
-            {locale === "vi" ? " (Tối đa 2/loại)" : " (Max 2/type)"}
-          </span>
-        </div>
-
+      <CollapsibleSection
+        title={locale === "vi" ? "Công Pháp" : "Cultivation Techniques"}
+        badge={`${state.techniques?.length || 0}/${MAX_TECHNIQUES}${locale === "vi" ? " (Tối đa 2/loại)" : " (Max 2/type)"}`}
+      >
         {/* Active Techniques */}
         {!state.techniques || state.techniques.length === 0 ? (
           <div className="text-center text-gray-400 py-4">
@@ -223,6 +214,15 @@ export default function CharacterSheet({
                       : "border-xianxia-accent/20 hover:border-xianxia-accent/50"
                   }`}
                   onClick={() => onAbilitySwap && setSelectedTech(isSelected ? null : tech.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onAbilitySwap && setSelectedTech(isSelected ? null : tech.id);
+                    }
+                  }}
+                  role={onAbilitySwap ? "button" : undefined}
+                  tabIndex={onAbilitySwap ? 0 : undefined}
+                  aria-pressed={isSelected}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex-1">
@@ -325,6 +325,15 @@ export default function CharacterSheet({
                     onClick={() =>
                       onAbilitySwap && setSelectedQueueTech(isSelected ? null : tech.id)
                     }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onAbilitySwap && setSelectedQueueTech(isSelected ? null : tech.id);
+                      }
+                    }}
+                    role={onAbilitySwap ? "button" : undefined}
+                    tabIndex={onAbilitySwap ? 0 : undefined}
+                    aria-pressed={isSelected}
                   >
                     <div className="flex justify-between items-center">
                       <div>
@@ -383,20 +392,13 @@ export default function CharacterSheet({
             </div>
           </div>
         )}
-      </div>
+      </CollapsibleSection>
 
       {/* Skills */}
-      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-xianxia-gold">
-            {locale === "vi" ? "Kĩ Năng" : "Skills"}
-          </h2>
-          <span className="text-sm text-gray-400">
-            {state.skills?.length || 0}/{MAX_SKILLS}
-            {locale === "vi" ? " (Tối đa 2/loại)" : " (Max 2/type)"}
-          </span>
-        </div>
-
+      <CollapsibleSection
+        title={locale === "vi" ? "Kĩ Năng" : "Skills"}
+        badge={`${state.skills?.length || 0}/${MAX_SKILLS}${locale === "vi" ? " (Tối đa 2/loại)" : " (Max 2/type)"}`}
+      >
         {/* Active Skills */}
         {!state.skills || state.skills.length === 0 ? (
           <div className="text-center text-gray-400 py-4">
@@ -416,6 +418,15 @@ export default function CharacterSheet({
                       : "border-xianxia-accent/20 hover:border-xianxia-accent/50"
                   }`}
                   onClick={() => onAbilitySwap && setSelectedSkill(isSelected ? null : skill.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onAbilitySwap && setSelectedSkill(isSelected ? null : skill.id);
+                    }
+                  }}
+                  role={onAbilitySwap ? "button" : undefined}
+                  tabIndex={onAbilitySwap ? 0 : undefined}
+                  aria-pressed={isSelected}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div>
@@ -514,6 +525,15 @@ export default function CharacterSheet({
                     onClick={() =>
                       onAbilitySwap && setSelectedQueueSkill(isSelected ? null : skill.id)
                     }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onAbilitySwap && setSelectedQueueSkill(isSelected ? null : skill.id);
+                      }
+                    }}
+                    role={onAbilitySwap ? "button" : undefined}
+                    tabIndex={onAbilitySwap ? 0 : undefined}
+                    aria-pressed={isSelected}
                   >
                     <div className="flex justify-between items-center">
                       <div>
@@ -572,11 +592,10 @@ export default function CharacterSheet({
             </div>
           </div>
         )}
-      </div>
+      </CollapsibleSection>
 
       {/* Stats */}
-      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">{t(locale, "stats")}</h2>
+      <CollapsibleSection title={t(locale, "stats")}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <div className="flex justify-between">
@@ -585,7 +604,14 @@ export default function CharacterSheet({
                 {state.stats.hp} / {state.stats.hp_max}
               </span>
             </div>
-            <div className="w-full bg-gray-700 rounded-full h-2">
+            <div
+              className="w-full bg-gray-700 rounded-full h-2"
+              role="progressbar"
+              aria-valuenow={state.stats.hp}
+              aria-valuemin={0}
+              aria-valuemax={state.stats.hp_max}
+              aria-label="HP"
+            >
               <div
                 className="bg-red-500 h-2 rounded-full transition-all"
                 style={{
@@ -602,7 +628,14 @@ export default function CharacterSheet({
                 {state.stats.qi} / {state.stats.qi_max}
               </span>
             </div>
-            <div className="w-full bg-gray-700 rounded-full h-2">
+            <div
+              className="w-full bg-gray-700 rounded-full h-2"
+              role="progressbar"
+              aria-valuenow={state.stats.qi}
+              aria-valuemin={0}
+              aria-valuemax={state.stats.qi_max}
+              aria-label={t(locale, "qi")}
+            >
               <div
                 className="bg-blue-500 h-2 rounded-full transition-all"
                 style={{
@@ -619,7 +652,14 @@ export default function CharacterSheet({
                 {state.stats.stamina} / {state.stats.stamina_max}
               </span>
             </div>
-            <div className="w-full bg-gray-700 rounded-full h-2">
+            <div
+              className="w-full bg-gray-700 rounded-full h-2"
+              role="progressbar"
+              aria-valuenow={state.stats.stamina}
+              aria-valuemin={0}
+              aria-valuemax={state.stats.stamina_max}
+              aria-label={t(locale, "stamina")}
+            >
               <div
                 className="bg-green-500 h-2 rounded-full transition-all"
                 style={{
@@ -629,16 +669,16 @@ export default function CharacterSheet({
             </div>
           </div>
         </div>
-      </div>
+      </CollapsibleSection>
 
       {/* Character Stat Chart */}
       <CharacterStatChart state={state} locale={locale} />
 
       {/* Attribute Effects Guide */}
-      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">
-          {locale === "vi" ? "Hướng Dẫn Thuộc Tính" : "Attribute Effects"}
-        </h2>
+      <CollapsibleSection
+        title={locale === "vi" ? "Hướng Dẫn Thuộc Tính" : "Attribute Effects"}
+        defaultOpen={false}
+      >
         <div className="space-y-3 text-sm">
           <div className="p-3 bg-xianxia-darker rounded border border-red-400/20">
             <div className="flex items-start gap-3">
@@ -762,21 +802,23 @@ export default function CharacterSheet({
             </div>
           </div>
         </div>
-      </div>
+      </CollapsibleSection>
 
       {/* Other Stats */}
-      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
+      <CollapsibleSection title={locale === "vi" ? "Khác" : "Other"}>
         <div className="grid grid-cols-2 gap-4 text-center">
           <div>
             <div className="text-sm text-gray-400">{t(locale, "karma")}</div>
             <div className="text-xl font-bold text-xianxia-accent">{state.karma}</div>
           </div>
           <div>
-            <div className="text-sm text-gray-400">Age</div>
+            <div className="text-sm text-gray-400">
+              {locale === "vi" ? t(locale, "age") : "Age"}
+            </div>
             <div className="text-xl font-bold">{state.age}</div>
           </div>
         </div>
-      </div>
+      </CollapsibleSection>
     </div>
   );
 }

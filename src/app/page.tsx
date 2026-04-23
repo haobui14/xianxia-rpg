@@ -39,24 +39,37 @@ export default function Home() {
           setLocale(session.user.user_metadata.preferred_locale as "vi" | "en");
         }
 
-        const { data: runs } = await supabase
-          .from("runs")
-          .select("id, character_id, characters(user_id)")
-          .order("updated_at", { ascending: false })
-          .limit(1);
+        // Use the API route (service role key) instead of direct client queries.
+        // Direct client queries hit RLS + DB cold-start and can hang 10-20s on free tier.
+        const controller = new AbortController();
+        const queryTimeout = setTimeout(() => controller.abort(), 12000);
 
-        if (runs && runs.length > 0) {
-          const run = runs[0] as any;
-          if (run.characters?.user_id === session.user.id) {
-            setRunId(run.id);
-            setScreen("game");
+        let apiData: { character: any; run: any; error?: string } | null = null;
+        try {
+          const res = await fetch("/api/get-character", {
+            credentials: "same-origin",
+            signal: controller.signal,
+          });
+          clearTimeout(queryTimeout);
+          if (res.ok) {
+            apiData = await res.json();
           } else {
-            setScreen("character-creation");
+            console.error("get-character API returned", res.status);
           }
+        } catch (fetchErr: any) {
+          clearTimeout(queryTimeout);
+          console.error("get-character fetch failed:", fetchErr?.message);
+        }
+
+        if (apiData?.run?.id) {
+          setRunId(apiData.run.id);
+          setScreen("game");
+        } else if (apiData?.character?.id) {
+          setScreen("character-creation");
         } else {
           setScreen("character-creation");
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to load user data:", err);
         setScreen("character-creation");
       } finally {
@@ -64,8 +77,8 @@ export default function Home() {
       }
     };
 
-    // Safety net: unblock loading after 8 s no matter what
-    const safetyTimeout = setTimeout(() => setLoading(false), 8000);
+    // Safety net: unblock loading after 15 s no matter what
+    const safetyTimeout = setTimeout(() => setLoading(false), 15000);
 
     const {
       data: { subscription },
@@ -117,8 +130,33 @@ export default function Home() {
   if (loading) {
     return (
       <main className="min-h-screen bg-xianxia-darker flex items-center justify-center">
-        <div className="text-xianxia-accent text-xl">
-          {locale === "vi" ? "Đang tải..." : "Loading..."}
+        <div className="text-center space-y-6">
+          {/* Cultivation circle animation */}
+          <div className="relative w-24 h-24 mx-auto">
+            <div
+              className="absolute inset-0 rounded-full border-2 border-xianxia-accent/30 animate-spin"
+              style={{ animationDuration: "3s" }}
+            />
+            <div
+              className="absolute inset-2 rounded-full border-2 border-xianxia-gold/40 animate-spin"
+              style={{ animationDuration: "2s", animationDirection: "reverse" }}
+            />
+            <div
+              className="absolute inset-4 rounded-full border-2 border-xianxia-accent/50 animate-spin"
+              style={{ animationDuration: "4s" }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-3xl">🧘</span>
+            </div>
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-xianxia-gold mb-2">
+              {locale === "vi" ? "Tu Tiên RPG" : "Xianxia RPG"}
+            </h1>
+            <p className="text-xianxia-accent text-sm animate-pulse">
+              {locale === "vi" ? "Đang nhập định..." : "Entering meditation..."}
+            </p>
+          </div>
         </div>
       </main>
     );
@@ -146,11 +184,7 @@ export default function Home() {
               {locale === "vi" ? "Hồ Sơ" : "Profile"}
             </button>
           </div>
-          <GameScreen
-            runId={runId}
-            locale={locale}
-            onLocaleChange={handleLocaleChange}
-          />
+          <GameScreen runId={runId} locale={locale} onLocaleChange={handleLocaleChange} />
         </div>
       )}
 
