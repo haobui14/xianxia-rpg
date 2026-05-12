@@ -10,6 +10,7 @@ import MeridianDiagram from "./MeridianDiagram";
 import DualCultivationView from "./DualCultivationView";
 import CharacterStatChart from "./CharacterStatChart";
 import CollapsibleSection from "./CollapsibleSection";
+import { SectionHead, Pill } from "@/components/ui";
 
 // Limits for techniques and skills
 const MAX_TECHNIQUES = 5;
@@ -90,8 +91,26 @@ export default function CharacterSheet({
         : "Realm Breakthrough"
       : `${state.progress.cultivation_exp}/${requiredExp}`;
 
+  const realmProgress = Math.min(
+    100,
+    Math.round(((state.progress.realm_stage ?? 0) / 9) * 100)
+  );
+
   return (
     <div className="space-y-6">
+      <SectionHead
+        han="身"
+        title={locale === "vi" ? "Bảng Tu Sĩ" : "Cultivator Sheet"}
+        subtitle={locale === "vi" ? "Thân — Tâm — Pháp" : "Body · Mind · Method"}
+        right={
+          <div style={{ display: "flex", gap: 8 }}>
+            <Pill variant="cinnabar" withDot>
+              {state.progress.realm}
+            </Pill>
+            <Pill variant="jade">{realmProgress}%</Pill>
+          </div>
+        }
+      />
       {/* Location & Time */}
       <CollapsibleSection title={t(locale, "location")}>
         <div className="space-y-2">

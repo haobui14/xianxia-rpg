@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { GameState } from "@/types/game";
 import { RegionId } from "@/types/world";
 import { Locale } from "@/lib/i18n/translations";
+import { SectionHead, Pill } from "@/components/ui";
 
 interface WorldMapProps {
   state: GameState;
@@ -187,11 +188,18 @@ export default function WorldMap({ state, locale, onTravelRegion }: WorldMapProp
   const getTierStars = (tier: number) => "⭐".repeat(tier);
 
   return (
-    <div
-      className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-4"
-      role="region"
-      aria-label={locale === "vi" ? "Bản Đồ Thế Giới" : "World Map"}
-    >
+    <div role="region" aria-label={locale === "vi" ? "Bản Đồ Thế Giới" : "World Map"}>
+      <SectionHead
+        han="界"
+        title={locale === "vi" ? "Thiên Hạ Lục Cảnh" : "Realm Map"}
+        subtitle={locale === "vi" ? "Bản đồ tu giới" : "Cultivation realm map"}
+        right={
+          <Pill variant="cinnabar" withDot>
+            {state.location.region}
+          </Pill>
+        }
+      />
+      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-4">
       <h2 className="text-xl font-bold mb-4 text-xianxia-gold flex items-center gap-2">
         🗺️ {locale === "vi" ? "Bản Đồ Thế Giới" : "World Map"}
       </h2>
@@ -462,6 +470,7 @@ export default function WorldMap({ state, locale, onTravelRegion }: WorldMapProp
           <span aria-hidden="true">⭐</span>
           {locale === "vi" ? "Cấp độ nguy hiểm" : "Danger level"}
         </div>
+      </div>
       </div>
     </div>
   );

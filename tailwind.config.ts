@@ -9,12 +9,55 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Ink Wash & Jade redesign tokens (mapped to CSS vars)
+        paper: {
+          DEFAULT: "var(--paper)",
+          deep: "var(--paper-deep)",
+          darker: "var(--paper-darker)",
+        },
+        card: {
+          DEFAULT: "var(--card)",
+          deep: "var(--card-deep)",
+        },
+        ink: {
+          DEFAULT: "var(--ink)",
+          soft: "var(--ink-soft)",
+          mute: "var(--ink-mute)",
+          faint: "var(--ink-faint)",
+        },
+        line: {
+          DEFAULT: "var(--line)",
+          soft: "var(--line-soft)",
+          strong: "var(--line-strong)",
+        },
+        jade: {
+          DEFAULT: "var(--jade)",
+          deep: "var(--jade-deep)",
+          soft: "var(--jade-soft)",
+        },
+        cinnabar: {
+          DEFAULT: "var(--cinnabar)",
+          deep: "var(--cinnabar-deep)",
+          soft: "var(--cinnabar-soft)",
+        },
+        gold: {
+          DEFAULT: "var(--gold)",
+          deep: "var(--gold-deep)",
+          soft: "var(--gold-soft)",
+        },
+        rarity: {
+          common: "var(--rarity-common)",
+          uncommon: "var(--rarity-uncommon)",
+          rare: "var(--rarity-rare)",
+          epic: "var(--rarity-epic)",
+          legendary: "var(--rarity-legendary)",
+        },
         xianxia: {
-          dark: "#0a0e1a",
-          darker: "#060810",
-          accent: "#8b5cf6",
-          gold: "#fbbf24",
-          silver: "#d1d5db",
+          dark: "var(--card)",
+          darker: "var(--paper-deep)",
+          accent: "var(--cinnabar)",
+          gold: "var(--gold-deep)",
+          silver: "var(--ink-soft)",
         },
         realm: {
           mortal: "#6b7280",

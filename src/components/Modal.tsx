@@ -29,7 +29,7 @@ export default function Modal({
   closeOnBackdrop = true,
   closeOnEscape = true,
   zLevel = "high",
-  backdropClass = "bg-black/80",
+  backdropClass = "",
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -86,7 +86,11 @@ export default function Modal({
 
   return (
     <div
-      className={`fixed inset-0 ${backdropClass} ${zClass} flex items-center justify-center p-4 animate-modal-backdrop`}
+      className={`fixed inset-0 ${zClass} flex items-center justify-center p-4 animate-modal-backdrop ${backdropClass}`}
+      style={{
+        background: "rgba(20, 24, 32, 0.55)",
+        backdropFilter: "blur(4px)",
+      }}
       onClick={(e) => {
         if (closeOnBackdrop && onClose && e.target === e.currentTarget) {
           onClose();
@@ -117,7 +121,15 @@ export function ModalCloseButton({
   return (
     <button
       onClick={onClose}
-      className={`text-gray-400 hover:text-white transition-colors text-2xl leading-none ${className}`}
+      className={className}
+      style={{
+        background: "transparent",
+        border: 0,
+        color: "var(--ink-mute)",
+        cursor: "pointer",
+        fontSize: 22,
+        lineHeight: 1,
+      }}
       aria-label="Close"
     >
       ×

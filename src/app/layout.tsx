@@ -1,16 +1,51 @@
 import type { Metadata, Viewport } from "next";
+import {
+  Cormorant_Garamond,
+  Spectral,
+  Inter,
+  Noto_Serif_SC,
+} from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/Toast";
 
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin", "latin-ext", "vietnamese"],
+  weight: ["500", "600"],
+  variable: "--font-display",
+  display: "swap",
+});
+
+const spectral = Spectral({
+  subsets: ["latin", "latin-ext", "vietnamese"],
+  weight: ["400"],
+  style: ["normal", "italic"],
+  variable: "--font-body",
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin", "latin-ext", "vietnamese"],
+  weight: ["500", "600"],
+  variable: "--font-ui",
+  display: "swap",
+});
+
+const notoSerifSC = Noto_Serif_SC({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  variable: "--font-han",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "Xianxia RPG",
+  title: "Tu Tiên Lục",
   description:
     "Text-based Xianxia cultivation RPG game powered by AI. Embark on your immortal cultivation journey.",
   keywords: ["xianxia", "rpg", "cultivation", "game", "tu tiên", "ai game", "text rpg"],
 };
 
 export const viewport: Viewport = {
-  themeColor: "#d4af37",
+  themeColor: "#9b2a26",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -19,7 +54,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html
+      lang="vi"
+      className={`${cormorant.variable} ${spectral.variable} ${inter.variable} ${notoSerifSC.variable}`}
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{

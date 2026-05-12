@@ -2,16 +2,689 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   XIANXIA — Ink Wash & Jade Design Tokens
+   ============================================================ */
+
 :root {
-  --background: #0a0e1a;
-  --foreground: #e5e7eb;
+  /* Parchment palette */
+  --paper:        #efe5cd;
+  --paper-deep:   #e2d2ab;
+  --paper-darker: #d9c89c;
+  --card:         #f7eed5;
+  --card-deep:    #ebdfb9;
+  --card-shadow:  rgba(70, 50, 20, 0.10);
+
+  /* Ink */
+  --ink:         #1c2230;
+  --ink-soft:    #3f4757;
+  --ink-mute:    #6f6856;
+  --ink-faint:   #9b917a;
+
+  /* Hairlines */
+  --line:        #c8bb96;
+  --line-soft:   #d6caa5;
+  --line-strong: #a3946a;
+
+  /* Accents */
+  --jade:        #4e7f6c;
+  --jade-deep:   #2e5246;
+  --jade-soft:   #88ad9b;
+  --jade-glow:   rgba(78, 127, 108, 0.22);
+
+  --cinnabar:      #9b2a26;
+  --cinnabar-deep: #751c18;
+  --cinnabar-soft: #c25f5b;
+
+  --gold:        #a07a2e;
+  --gold-deep:   #7a5b1c;
+  --gold-soft:   #cfa55a;
+
+  /* Realms */
+  --realm-mortal:     #6f6856;
+  --realm-qi:         #4e7f6c;
+  --realm-foundation: #3a6280;
+  --realm-core:       #6b4a7c;
+  --realm-nascent:    #a07a2e;
+
+  /* Rarity */
+  --rarity-common:    #6f6856;
+  --rarity-uncommon:  #4e7f6c;
+  --rarity-rare:      #3a6280;
+  --rarity-epic:      #6b4a7c;
+  --rarity-legendary: #9b2a26;
+
+  /* Layout */
+  --rail-w: 320px;
+  --gap: 24px;
+  --radius: 4px;
+
+  /* Legacy compatibility (some components still reference these) */
+  --background: var(--paper);
+  --foreground: var(--ink);
+}
+
+[data-theme="night"] {
+  --paper:         #181c25;
+  --paper-deep:    #11141c;
+  --paper-darker:  #0c0e14;
+  --card:          #1f2531;
+  --card-deep:     #161b25;
+  --card-shadow:   rgba(0, 0, 0, 0.5);
+
+  --ink:         #ece4cc;
+  --ink-soft:    #c4bda5;
+  --ink-mute:    #94896e;
+  --ink-faint:   #5e5641;
+
+  --line:        #3a3e48;
+  --line-soft:   #2a2e38;
+  --line-strong: #545968;
+
+  --jade:        #88ad9b;
+  --jade-deep:   #b7d3c5;
+  --jade-soft:   #4e7f6c;
+  --jade-glow:   rgba(136, 173, 155, 0.28);
+
+  --cinnabar:      #c97670;
+  --cinnabar-deep: #e89e98;
+  --cinnabar-soft: #9b2a26;
+
+  --gold:        #d6b265;
+  --gold-deep:   #ecd28e;
+  --gold-soft:   #8d6c2a;
+}
+
+[data-theme="cinnabar"] {
+  --paper:        #ecd9c1;
+  --paper-deep:   #ddc09e;
+  --paper-darker: #cba47a;
+  --card:         #f3e2c9;
+  --card-deep:    #e2c9a6;
+
+  --jade:        #6e3a30;
+  --jade-deep:   #4a221c;
+  --cinnabar:    #9b2a26;
+  --gold:        #8a5a1c;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), "Spectral", Georgia, serif;
+  color: var(--ink);
+  background: var(--paper);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "kern", "liga";
+  min-height: 100vh;
 }
+
+/* Paper texture — warm grain + subtle long fibers */
+.paper-bg {
+  position: relative;
+  background:
+    radial-gradient(ellipse at 12% 18%, rgba(160, 122, 46, 0.07) 0%, transparent 55%),
+    radial-gradient(ellipse at 88% 82%, rgba(78, 127, 108, 0.05) 0%, transparent 55%),
+    radial-gradient(ellipse at 55% 50%, var(--paper) 0%, var(--paper-deep) 110%);
+}
+.paper-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.15  0 0 0 0 0.12  0 0 0 0 0.08  0 0 0 0.22 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/></svg>");
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+}
+[data-theme="night"] .paper-bg::before {
+  mix-blend-mode: screen;
+  opacity: 0.18;
+}
+
+/* Brush stripe under section heads */
+.brush-rule {
+  height: 6px;
+  background: linear-gradient(90deg, transparent 0%, var(--ink) 6%, var(--ink) 78%, transparent 100%);
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='6'><path d='M2 4 Q 100 1 220 3 T 480 2.5 T 598 4' stroke='black' stroke-width='3.4' fill='none' stroke-linecap='round'/></svg>");
+  mask-size: 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='6'><path d='M2 4 Q 100 1 220 3 T 480 2.5 T 598 4' stroke='black' stroke-width='3.4' fill='none' stroke-linecap='round'/></svg>");
+  -webkit-mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+}
+
+/* Typography utility classes */
+.t-display { font-family: var(--font-display), "Cormorant Garamond", serif; font-weight: 500; letter-spacing: 0.005em; }
+.t-han     { font-family: var(--font-han), "Noto Serif SC", serif; font-weight: 500; }
+.t-body    { font-family: var(--font-body), "Spectral", Georgia, serif; font-weight: 400; }
+.t-ui      { font-family: var(--font-ui), Inter, system-ui, sans-serif; }
+.t-num     { font-family: var(--font-ui), Inter, ui-monospace, monospace; font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+.label {
+  font-family: var(--font-ui), Inter, system-ui, sans-serif;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.label-jade { color: var(--jade-deep); }
+.label-cinnabar { color: var(--cinnabar-deep); }
+
+.muted { color: var(--ink-mute); }
+.faint { color: var(--ink-faint); }
+
+/* ============================================================
+   Card — paper-on-paper with hairline rule
+   ============================================================ */
+.ink-card {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow:
+    0 1px 0 rgba(255, 250, 230, 0.6) inset,
+    0 1px 2px var(--card-shadow);
+}
+.ink-card.card-deep { background: var(--card-deep); }
+.card-inset {
+  background: var(--paper-deep);
+  border: 1px solid var(--line-soft);
+}
+.card-corner::after {
+  content: "";
+  position: absolute;
+  top: -1px; right: -1px;
+  width: 18px; height: 18px;
+  background: linear-gradient(225deg, var(--paper-deep) 50%, transparent 50%);
+  border-left: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+/* ============================================================
+   Seal — cinnabar square with white character
+   ============================================================ */
+.seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px; height: 36px;
+  background: var(--cinnabar);
+  color: #fbe9b8;
+  font-family: var(--font-han), "Noto Serif SC", serif;
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 1;
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 1px var(--cinnabar-deep) inset,
+    0 0 0 3px var(--cinnabar) inset,
+    0 0 0 4px var(--cinnabar-deep) inset,
+    1px 1px 0 rgba(0,0,0,0.15);
+  letter-spacing: 0;
+  position: relative;
+  overflow: hidden;
+}
+.seal.sm { width: 26px; height: 26px; font-size: 14px; }
+.seal.lg { width: 52px; height: 52px; font-size: 30px; }
+.seal::after {
+  content: "";
+  position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><filter id='n'><feTurbulence baseFrequency='1.8' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/></svg>");
+  mix-blend-mode: screen;
+  opacity: 0.4;
+  pointer-events: none;
+}
+.seal-ghost {
+  background: transparent;
+  color: var(--cinnabar);
+  box-shadow: 0 0 0 1.5px var(--cinnabar) inset;
+}
+.seal-ghost::after { display: none; }
+.seal-ink {
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow:
+    0 0 0 1px var(--ink-soft) inset,
+    0 0 0 3px var(--ink) inset,
+    0 0 0 4px var(--ink-soft) inset;
+}
+.seal-jade {
+  background: var(--jade);
+  box-shadow:
+    0 0 0 1px var(--jade-deep) inset,
+    0 0 0 3px var(--jade) inset,
+    0 0 0 4px var(--jade-deep) inset;
+}
+
+/* ============================================================
+   Pill / Chip
+   ============================================================ */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--font-ui), Inter, system-ui, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-mute); }
+.pill.jade { border-color: var(--jade); color: var(--jade-deep); }
+.pill.jade .dot { background: var(--jade); }
+.pill.cinnabar { border-color: var(--cinnabar); color: var(--cinnabar-deep); }
+.pill.cinnabar .dot { background: var(--cinnabar); }
+.pill.gold { border-color: var(--gold); color: var(--gold-deep); }
+.pill.gold .dot { background: var(--gold); }
+.pill.solid {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+
+/* ============================================================
+   Bar — for HP / Qi / Stamina
+   ============================================================ */
+.ink-bar {
+  position: relative;
+  height: 8px;
+  background: var(--paper-darker);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.ink-bar > .fill {
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  background: var(--ink);
+  border-right: 1px solid rgba(0,0,0,0.15);
+  transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+}
+.ink-bar.hp > .fill   { background: linear-gradient(90deg, #a83a3a, #c46a4a); }
+.ink-bar.qi > .fill   { background: linear-gradient(90deg, var(--jade-deep), var(--jade-soft)); }
+.ink-bar.stam > .fill { background: linear-gradient(90deg, var(--gold-deep), var(--gold-soft)); }
+.ink-bar.exp > .fill  { background: linear-gradient(90deg, var(--ink-soft), var(--ink)); }
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+.ink-btn {
+  font-family: var(--font-ui), Inter, system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding: 9px 16px;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-transform: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.ink-btn:hover { background: var(--ink); color: var(--paper); }
+.ink-btn.primary { background: var(--ink); color: var(--paper); }
+.ink-btn.primary:hover { background: var(--jade-deep); border-color: var(--jade-deep); }
+.ink-btn.ghost {
+  border-color: var(--line-strong);
+  color: var(--ink-soft);
+}
+.ink-btn.ghost:hover { background: var(--paper-deep); color: var(--ink); border-color: var(--ink-soft); }
+.ink-btn.cinnabar { border-color: var(--cinnabar); color: var(--cinnabar-deep); }
+.ink-btn.cinnabar:hover { background: var(--cinnabar); color: var(--paper); }
+.ink-btn.sm { padding: 5px 10px; font-size: 11px; }
+.ink-btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+/* ============================================================
+   Choice button — narrative options
+   ============================================================ */
+.choice {
+  position: relative;
+  width: 100%;
+  text-align: left;
+  background: var(--card);
+  border: 1px solid var(--line);
+  padding: 14px 18px 14px 56px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: var(--font-body), "Spectral", Georgia, serif;
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--ink);
+  display: block;
+  border-radius: 3px;
+}
+.choice:hover {
+  border-color: var(--ink);
+  background: var(--card-deep);
+  transform: translateX(2px);
+}
+.choice .ord {
+  position: absolute;
+  left: 14px; top: 50%;
+  transform: translateY(-50%);
+  width: 28px; height: 28px;
+  border: 1px solid var(--ink-soft);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-han), "Noto Serif SC", serif;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--paper);
+}
+.choice:hover .ord {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.choice .cost {
+  display: inline-flex;
+  gap: 10px;
+  margin-top: 6px;
+  font-family: var(--font-ui), Inter, system-ui, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--ink-mute);
+}
+.choice .cost .c-item { display: inline-flex; align-items: center; gap: 4px; }
+.choice.cant-afford { opacity: 0.55; cursor: not-allowed; }
+.choice.cant-afford:hover { transform: none; background: var(--card); border-color: var(--line); }
+.choice.cant-afford .cost .out { color: var(--cinnabar); }
+
+/* ============================================================
+   Tabs (ink wash)
+   ============================================================ */
+.ink-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0;
+}
+.ink-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border: 0;
+  background: transparent;
+  font-family: var(--font-ui), Inter, system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--ink-mute);
+  cursor: pointer;
+  position: relative;
+  transition: color 0.15s;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.ink-tab:hover { color: var(--ink); }
+.ink-tab.active {
+  color: var(--ink);
+  border-bottom-color: var(--cinnabar);
+}
+.ink-tab .han {
+  font-family: var(--font-han), "Noto Serif SC", serif;
+  font-size: 17px;
+  color: var(--cinnabar);
+  font-weight: 500;
+}
+.ink-tab.active .han { color: var(--cinnabar-deep); }
+
+/* ============================================================
+   Realm orb
+   ============================================================ */
+.realm-orb {
+  position: relative;
+  width: 168px; height: 168px;
+  margin: 0 auto;
+}
+.realm-orb svg { width: 100%; height: 100%; display: block; }
+.realm-orb .center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  pointer-events: none;
+  text-align: center;
+}
+.realm-orb .center .han {
+  font-family: var(--font-han), "Noto Serif SC", serif;
+  font-size: 30px;
+  color: var(--ink);
+  line-height: 1;
+}
+.realm-orb .center .stage {
+  font-family: var(--font-ui), Inter, system-ui, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-top: 4px;
+}
+.realm-orb .center .pct {
+  font-family: var(--font-display), "Cormorant Garamond", serif;
+  font-size: 22px;
+  margin-top: 6px;
+  color: var(--jade-deep);
+}
+
+/* ============================================================
+   Item slot (inventory)
+   ============================================================ */
+.slot {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  background: var(--paper-deep);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.slot:hover { border-color: var(--ink); background: var(--card); }
+.slot.empty {
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+  color: var(--ink-faint);
+}
+.slot.selected {
+  border-color: var(--cinnabar);
+  box-shadow: 0 0 0 2px var(--cinnabar) inset;
+}
+.slot .rarity-edge {
+  position: absolute;
+  inset: 0;
+  border: 2px solid transparent;
+  pointer-events: none;
+  border-radius: 2px;
+}
+.slot.rare-uncommon .rarity-edge { border-color: var(--rarity-uncommon); }
+.slot.rare-rare      .rarity-edge { border-color: var(--rarity-rare); }
+.slot.rare-epic      .rarity-edge { border-color: var(--rarity-epic); }
+.slot.rare-legendary .rarity-edge {
+  border-color: var(--rarity-legendary);
+  box-shadow: 0 0 16px var(--rarity-legendary);
+}
+.slot .glyph {
+  font-family: var(--font-han), "Noto Serif SC", serif;
+  font-size: 22px;
+  color: var(--ink);
+}
+.slot .qty {
+  position: absolute; right: 3px; bottom: 2px;
+  font-family: var(--font-ui), Inter, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  color: var(--ink-soft);
+  background: var(--paper);
+  padding: 0 4px;
+  border-radius: 2px;
+  line-height: 14px;
+}
+.slot .lvl {
+  position: absolute; left: 3px; top: 3px;
+  font-family: var(--font-ui), Inter, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-size: 9px;
+  color: var(--gold-deep);
+  font-weight: 600;
+}
+
+/* ============================================================
+   Misc utils
+   ============================================================ */
+.hr-line { height: 1px; background: var(--line); }
+.hr-soft { height: 1px; background: var(--line-soft); }
+.han-bg {
+  position: absolute;
+  font-family: var(--font-han), "Noto Serif SC", serif;
+  color: var(--ink);
+  opacity: 0.04;
+  pointer-events: none;
+  font-weight: 600;
+  letter-spacing: -0.05em;
+}
+
+.vsep {
+  width: 1px;
+  background-image: linear-gradient(var(--line) 50%, transparent 50%);
+  background-size: 1px 6px;
+  background-repeat: repeat-y;
+}
+
+@keyframes inkFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.ink-fade-in { animation: inkFadeIn 0.35s ease-out both; }
+
+@keyframes breathe {
+  0%, 100% { filter: drop-shadow(0 0 8px var(--jade-glow)); }
+  50%      { filter: drop-shadow(0 0 24px var(--jade-glow)); }
+}
+.breathe { animation: breathe 3.4s ease-in-out infinite; }
+
+@keyframes inkPulse {
+  0%, 100% { box-shadow: 0 0 0 4px var(--paper), 0 0 0 6px var(--cinnabar); }
+  50%      { box-shadow: 0 0 0 4px var(--paper), 0 0 0 10px transparent; }
+}
+
+/* ============================================================
+   Combat stage
+   ============================================================ */
+.combat-stage {
+  position: relative;
+  background: var(--card-deep);
+  border: 1px solid var(--line-strong);
+  min-height: 320px;
+  overflow: hidden;
+  border-radius: 3px;
+}
+.combat-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(ellipse at 20% 110%, rgba(28, 34, 48, 0.20), transparent 60%),
+    radial-gradient(ellipse at 80% 110%, rgba(155, 42, 38, 0.10), transparent 60%);
+  pointer-events: none;
+}
+
+.portrait {
+  width: 88px; height: 88px;
+  border-radius: 50%;
+  background: var(--paper-deep);
+  border: 1.5px solid var(--ink);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-han), "Noto Serif SC", serif;
+  font-size: 36px;
+  color: var(--ink);
+  position: relative;
+  flex-shrink: 0;
+}
+.portrait.enemy {
+  border-color: var(--cinnabar-deep);
+  color: var(--cinnabar-deep);
+}
+
+/* ============================================================
+   World map regions
+   ============================================================ */
+.region {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  text-align: center;
+  transition: transform 0.2s;
+}
+.region:hover { transform: translate(-50%, -50%) scale(1.04); }
+.region .pin {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 0 0 0 4px var(--paper);
+  margin-bottom: 6px;
+}
+.region.current .pin {
+  background: var(--cinnabar);
+  border-color: var(--cinnabar-deep);
+  animation: inkPulse 2s ease-in-out infinite;
+}
+.region.locked .pin {
+  background: transparent;
+  border-style: dashed;
+  opacity: 0.5;
+}
+
+.scroll-pad { padding-right: 4px; }
+.scroll-pad::-webkit-scrollbar { width: 6px; }
+.scroll-pad::-webkit-scrollbar-track { background: transparent; }
+.scroll-pad::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 3px; }
+
+/* ============================================================
+   Legacy compatibility — Tailwind text color overrides
+   The xianxia.* tokens were remapped from dark-navy to light parchment.
+   Components that have not been refactored still use text-white / text-gray-*,
+   which would be illegible on a light background. Re-target them to ink tones.
+   ============================================================ */
+.text-white { color: var(--ink) !important; }
+.text-gray-100 { color: var(--ink) !important; }
+.text-gray-200 { color: var(--ink-soft) !important; }
+.text-gray-300 { color: var(--ink-soft) !important; }
+.text-gray-400 { color: var(--ink-mute) !important; }
+.text-gray-500 { color: var(--ink-mute) !important; }
+.text-gray-600 { color: var(--ink-faint) !important; }
+
+/* Light text helpers used inside dark-styled modals should still appear bright */
+[data-theme="night"] .text-white,
+[data-theme="night"] .text-gray-100,
+[data-theme="night"] .text-gray-200,
+[data-theme="night"] .text-gray-300 { color: var(--ink) !important; }
+
+/* The legacy bg-black / bg-gray-* helpers used inside overlays should remain dark */
+.bg-black\/70, .bg-black\/80, .bg-black\/90 { background-color: rgba(20, 24, 32, 0.6) !important; }
 
 @layer utilities {
   .text-balance {

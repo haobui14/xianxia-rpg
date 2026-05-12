@@ -7,6 +7,7 @@ import HealthBar from "./HealthBar";
 import EnemyPortrait from "./EnemyPortrait";
 import { DamageNumberManager, DamageNumberData } from "./DamageNumber";
 import CombatMoveAnimation, { MoveType, useCombatAnimation } from "./CombatMoveAnimation";
+import { Seal, Pill } from "@/components/ui";
 
 interface CombatViewProps {
   state: GameState;
@@ -246,7 +247,37 @@ export default function CombatView({
   return (
     <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
       {/* Combat Title */}
-      <div className="text-center mb-6">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 14,
+          marginBottom: 18,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <Seal size="lg">戰</Seal>
+          <div>
+            <div className="label">{t(locale, "combatTitle")}</div>
+            <h2
+              className="t-display"
+              style={{
+                fontSize: 26,
+                color: "var(--ink)",
+                margin: 0,
+                lineHeight: 1.1,
+              }}
+            >
+              {locale === "vi" ? enemy.name : enemy.name_en ?? enemy.name}
+            </h2>
+          </div>
+        </div>
+        <Pill variant={playerTurn ? "jade" : "cinnabar"} withDot>
+          {playerTurn ? t(locale, "yourTurn") : t(locale, "enemyTurn")}
+        </Pill>
+      </div>
+      <div className="text-center mb-6" style={{ display: "none" }}>
         <h2 className="text-2xl font-bold text-red-500 animate-pulse">
           {locale === "vi" ? "⚔️ CHIẾN ĐẤU ⚔️" : "⚔️ COMBAT ⚔️"}
         </h2>

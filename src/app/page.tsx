@@ -129,41 +129,48 @@ export default function Home() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-xianxia-darker flex items-center justify-center">
-        <div className="text-center space-y-6">
-          {/* Cultivation circle animation */}
-          <div className="relative w-24 h-24 mx-auto">
-            <div
-              className="absolute inset-0 rounded-full border-2 border-xianxia-accent/30 animate-spin"
-              style={{ animationDuration: "3s" }}
-            />
-            <div
-              className="absolute inset-2 rounded-full border-2 border-xianxia-gold/40 animate-spin"
-              style={{ animationDuration: "2s", animationDirection: "reverse" }}
-            />
-            <div
-              className="absolute inset-4 rounded-full border-2 border-xianxia-accent/50 animate-spin"
-              style={{ animationDuration: "4s" }}
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-3xl">🧘</span>
-            </div>
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-xianxia-gold mb-2">
-              {locale === "vi" ? "Tu Tiên RPG" : "Xianxia RPG"}
-            </h1>
-            <p className="text-xianxia-accent text-sm animate-pulse">
-              {locale === "vi" ? "Đang nhập định..." : "Entering meditation..."}
-            </p>
-          </div>
+      <main
+        className="paper-bg"
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <span className="seal lg" style={{ marginBottom: 18, display: "inline-flex" }}>
+            道
+          </span>
+          <h1
+            className="t-display"
+            style={{
+              fontSize: 32,
+              margin: "18px 0 6px",
+              color: "var(--ink)",
+              fontWeight: 500,
+            }}
+          >
+            Tu Tiên Lục
+          </h1>
+          <p
+            className="t-body"
+            style={{
+              fontStyle: "italic",
+              color: "var(--ink-mute)",
+              fontSize: 14,
+              margin: 0,
+            }}
+          >
+            {locale === "vi" ? "Đang nhập định…" : "Entering meditation…"}
+          </p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-xianxia-darker">
+    <main className="paper-bg" style={{ minHeight: "100vh" }}>
       {screen === "login" && <Login locale={locale} onLocaleChange={handleLocaleChange} />}
 
       {screen === "character-creation" && (
@@ -176,11 +183,8 @@ export default function Home() {
 
       {screen === "game" && runId && (
         <div>
-          <div className="flex justify-end p-4">
-            <button
-              onClick={handleShowProfile}
-              className="px-4 py-2 bg-xianxia-accent/20 hover:bg-xianxia-accent/30 rounded-lg transition-colors"
-            >
+          <div style={{ display: "flex", justifyContent: "flex-end", padding: "16px 24px 0" }}>
+            <button onClick={handleShowProfile} className="ink-btn ghost sm">
               {locale === "vi" ? "Hồ Sơ" : "Profile"}
             </button>
           </div>

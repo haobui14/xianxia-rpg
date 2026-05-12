@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/database/client";
-import { Locale } from "@/lib/i18n/translations";
+import { Locale, t } from "@/lib/i18n/translations";
+import { Card, Seal, Pill } from "@/components/ui";
 
 interface LoginProps {
   locale: Locale;
@@ -20,7 +21,6 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
 
   const clearAllSessions = () => {
     try {
-      // Clear all localStorage
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -29,18 +29,12 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
         }
       }
       keysToRemove.forEach((key) => localStorage.removeItem(key));
-
-      // Sign out from Supabase
       supabase.auth.signOut();
-
-      // Show inline success message instead of alert
       setSuccessMessage(
         locale === "vi"
           ? "Đã xóa phiên đăng nhập. Đang tải lại..."
           : "Session cleared. Reloading..."
       );
-
-      // Reload the page after a moment
       setTimeout(() => window.location.reload(), 1000);
     } catch (err) {
       console.error("Error clearing session:", err);
@@ -53,11 +47,10 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
       new Promise<T>((_, reject) => setTimeout(() => reject(new Error(msg)), ms)),
     ]);
 
-  // Quick connectivity check — hits the Supabase REST endpoint with a short timeout
   const checkSupabaseConnectivity = async (): Promise<boolean> => {
     try {
       const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      if (!url) return true; // can't check, proceed optimistically
+      if (!url) return true;
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000);
       const res = await fetch(`${url}/rest/v1/`, {
@@ -68,7 +61,7 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
         },
       });
       clearTimeout(timeout);
-      return res.ok || res.status === 401 || res.status === 400; // any response means reachable
+      return res.ok || res.status === 401 || res.status === 400;
     } catch {
       return false;
     }
@@ -79,12 +72,9 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
     setLoading(true);
     setError("");
     let signedIn = false;
-
-    // If sign-in succeeds but page.tsx never transitions (query hang), self-recover
     let signInRecoveryTimer: ReturnType<typeof setTimeout> | null = null;
 
     try {
-      // Quick connectivity pre-check
       const reachable = await checkSupabaseConnectivity();
       if (!reachable) {
         throw new Error(
@@ -102,7 +92,6 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
             ? "Hết thời gian chờ. Máy chủ có thể đang tạm dừng — kiểm tra Supabase dashboard."
             : "Request timed out. Server may be paused — check your Supabase dashboard."
         );
-
         if (error) throw error;
 
         if (data.session) {
@@ -125,21 +114,17 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
             ? "Hết thời gian chờ. Máy chủ có thể đang tạm dừng — kiểm tra Supabase dashboard."
             : "Request timed out. Server may be paused — check your Supabase dashboard."
         );
-
         if (error) throw error;
-
         signedIn = true;
         signInRecoveryTimer = setTimeout(() => window.location.reload(), 6000);
         return;
       }
     } catch (err: any) {
-      // Only log unexpected errors — credential failures are normal user-facing cases
       if (!err?.message?.includes("Invalid login credentials") && !err?.status) {
         console.error("Auth error:", err);
       }
       setError(err.message || (locale === "vi" ? "Lỗi xác thực" : "Authentication error"));
     } finally {
-      // Don't reset loading if sign-in succeeded — page.tsx will redirect and unmount this component
       if (!signedIn) {
         setLoading(false);
         if (signInRecoveryTimer) clearTimeout(signInRecoveryTimer);
@@ -148,73 +133,206 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-xianxia-darker via-xianxia-dark to-xianxia-darker">
-      <div className="max-w-md w-full">
-        {/* Language Toggle */}
-        <div className="flex justify-end mb-6">
-          <button
-            onClick={() => onLocaleChange(locale === "vi" ? "en" : "vi")}
-            className="px-4 py-2 bg-xianxia-accent/20 hover:bg-xianxia-accent/30 rounded-lg text-sm transition-colors"
+    <div
+      className="paper-bg"
+      style={{ minHeight: "100vh", position: "relative", overflow: "hidden" }}
+    >
+      <span
+        className="han-bg"
+        style={{ fontSize: 280, top: -40, left: -30 }}
+        aria-hidden
+      >
+        道
+      </span>
+      <span
+        className="han-bg"
+        style={{ fontSize: 280, top: -30, right: -40 }}
+        aria-hidden
+      >
+        仙
+      </span>
+      <span
+        className="han-bg"
+        style={{ fontSize: 280, bottom: -60, left: -40 }}
+        aria-hidden
+      >
+        修
+      </span>
+      <span
+        className="han-bg"
+        style={{ fontSize: 280, bottom: -40, right: -30 }}
+        aria-hidden
+      >
+        緣
+      </span>
+
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          maxWidth: 960,
+          margin: "0 auto",
+          padding: "48px 24px",
+          minHeight: "100vh",
+          display: "grid",
+          gridTemplateColumns: "1.05fr 1fr",
+          gap: 40,
+          alignItems: "center",
+        }}
+        className="ink-fade-in"
+      >
+        {/* LEFT — Title + intro */}
+        <div>
+          <Seal size="lg">仙</Seal>
+          <div className="label" style={{ marginTop: 18 }}>
+            Hành Trình Tu Đạo
+          </div>
+          <h1
+            className="t-han"
+            style={{
+              fontSize: 68,
+              color: "var(--cinnabar)",
+              margin: "10px 0 0",
+              lineHeight: 1,
+              letterSpacing: "0.04em",
+            }}
           >
-            {locale === "vi" ? "EN" : "VN"}
-          </button>
-        </div>
-
-        {/* Title */}
-        <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold mb-2 text-xianxia-gold">
-            {locale === "vi" ? "Tu Tiên RPG" : "Xianxia RPG"}
+            修仙錄
           </h1>
-          <p className="text-xianxia-accent text-lg">
-            {locale === "vi" ? "Hành Trình Tu Luyện" : "Journey of Cultivation"}
+          <div
+            className="t-display"
+            style={{ fontSize: 78, lineHeight: 1, marginTop: 6, color: "var(--ink)" }}
+          >
+            Tu Tiên Lục
+          </div>
+          <div className="brush-rule" style={{ maxWidth: 280, marginTop: 18 }} />
+          <p
+            className="t-body"
+            style={{
+              fontStyle: "italic",
+              color: "var(--ink-soft)",
+              marginTop: 18,
+              fontSize: 17,
+              maxWidth: 460,
+              lineHeight: 1.6,
+            }}
+          >
+            “Đại đạo xa thẳm, một bước một bước mà nên. Ai gieo căn cơ, người sẽ gặt
+            được tiên quả.”
           </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 22 }}>
+            <Pill>
+              <span className="t-han" style={{ color: "var(--cinnabar-deep)" }}>
+                存
+              </span>
+              Tự động lưu hành trình
+            </Pill>
+            <Pill>
+              <span className="t-han" style={{ color: "var(--cinnabar-deep)" }}>
+                機
+              </span>
+              Trí huệ AI dẫn truyện
+            </Pill>
+            <Pill>
+              <span className="t-han" style={{ color: "var(--cinnabar-deep)" }}>
+                器
+              </span>
+              Mọi thiết bị
+            </Pill>
+          </div>
         </div>
 
-        {/* Login Card */}
-        <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-8 shadow-2xl">
-          <h2 className="text-2xl font-bold text-center mb-6 text-xianxia-gold">
-            {isSignUp
-              ? locale === "vi"
-                ? "Đăng Ký"
-                : "Sign Up"
-              : locale === "vi"
-                ? "Đăng Nhập"
-                : "Sign In"}
-          </h2>
+        {/* RIGHT — auth card */}
+        <Card padding={36} className="card-corner">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 18,
+            }}
+          >
+            <Seal variant="ink" size="md">
+              {isSignUp ? "新" : "入"}
+            </Seal>
+            <button
+              type="button"
+              onClick={() => onLocaleChange(locale === "vi" ? "en" : "vi")}
+              className="ink-btn ghost sm"
+              style={{ cursor: "pointer" }}
+            >
+              🌐 {locale === "vi" ? "EN" : "VN"}
+            </button>
+          </div>
 
-          <p className="text-gray-400 text-center mb-6 text-sm">
-            {locale === "vi"
-              ? "Đăng nhập để lưu tiến trình tu luyện của bạn"
-              : "Sign in to save your cultivation progress"}
+          <div className="label" style={{ marginBottom: 6 }}>
+            {isSignUp ? "Tạo Tài Khoản" : "Đăng Nhập"}
+          </div>
+          <h2
+            className="t-display"
+            style={{ fontSize: 32, lineHeight: 1.1, margin: 0, color: "var(--ink)" }}
+          >
+            {t(locale, isSignUp ? "authSignupTitle" : "authSigninTitle")}
+          </h2>
+          <p
+            className="t-body"
+            style={{
+              fontStyle: "italic",
+              color: "var(--ink-mute)",
+              marginTop: 6,
+              fontSize: 14,
+            }}
+          >
+            {t(locale, isSignUp ? "authSignupSubtitle" : "authSigninSubtitle")}
           </p>
 
           {successMessage && (
-            <div className="mb-4 p-4 bg-green-900/30 border border-green-500/50 rounded-lg text-green-200 text-sm flex items-center gap-2">
-              <span>✓</span>
+            <div
+              style={{
+                marginTop: 18,
+                padding: 12,
+                background: "var(--paper-deep)",
+                borderLeft: "3px solid var(--jade)",
+                color: "var(--jade-deep)",
+                fontSize: 13,
+              }}
+            >
               {successMessage}
             </div>
           )}
 
           {error && (
-            <div className="mb-4 p-4 bg-red-900/30 border border-red-500/50 rounded-lg text-red-200 text-sm">
-              <p>{error}</p>
+            <div
+              style={{
+                marginTop: 18,
+                padding: 12,
+                background: "var(--paper-deep)",
+                borderLeft: "3px solid var(--cinnabar)",
+                color: "var(--cinnabar-deep)",
+                fontSize: 13,
+              }}
+            >
+              <div>{error}</div>
               {(error.includes("timed out") ||
                 error.includes("Hết thời gian") ||
                 error.includes("Cannot reach") ||
                 error.includes("Không thể kết nối")) && (
                 <button
                   onClick={handleSubmit as any}
-                  className="mt-2 px-3 py-1 text-xs bg-red-600/30 hover:bg-red-600/50 border border-red-500/30 rounded transition-colors"
+                  className="ink-btn sm cinnabar"
+                  style={{ marginTop: 8 }}
                 >
-                  {locale === "vi" ? "↻ Thử lại" : "↻ Retry"}
+                  ↻ {locale === "vi" ? "Thử lại" : "Retry"}
                 </button>
               )}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Email</label>
+          <form onSubmit={handleSubmit} style={{ marginTop: 22 }}>
+            <div style={{ marginBottom: 16 }}>
+              <label className="label" style={{ display: "block", marginBottom: 6 }}>
+                {t(locale, "authEmailLabel")}
+              </label>
               <input
                 type="email"
                 value={email}
@@ -222,18 +340,28 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
                   setEmail(e.target.value);
                   setError("");
                 }}
-                className="w-full px-4 py-3 bg-xianxia-darker border border-xianxia-accent/30 rounded-lg focus:outline-none focus:border-xianxia-accent"
-                placeholder={locale === "vi" ? "email@example.com" : "email@example.com"}
+                className="t-body"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  background: "var(--paper)",
+                  border: "1px solid var(--line-strong)",
+                  borderRadius: 2,
+                  color: "var(--ink)",
+                  fontSize: 15,
+                  outline: "none",
+                }}
+                placeholder="dao.huu@thien.gioi"
                 disabled={loading}
                 required
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                {locale === "vi" ? "Mật khẩu" : "Password"}
+            <div style={{ marginBottom: 18 }}>
+              <label className="label" style={{ display: "block", marginBottom: 6 }}>
+                {t(locale, "authPasswordLabel")}
               </label>
-              <div className="relative">
+              <div style={{ position: "relative" }}>
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
@@ -241,7 +369,17 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
                     setPassword(e.target.value);
                     setError("");
                   }}
-                  className="w-full px-4 py-3 pr-12 bg-xianxia-darker border border-xianxia-accent/30 rounded-lg focus:outline-none focus:border-xianxia-accent"
+                  className="t-body"
+                  style={{
+                    width: "100%",
+                    padding: "10px 44px 10px 12px",
+                    background: "var(--paper)",
+                    border: "1px solid var(--line-strong)",
+                    borderRadius: 2,
+                    color: "var(--ink)",
+                    fontSize: 15,
+                    outline: "none",
+                  }}
                   placeholder={locale === "vi" ? "Tối thiểu 6 ký tự" : "Minimum 6 characters"}
                   disabled={loading}
                   required
@@ -250,11 +388,24 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-xianxia-accent transition-colors p-1"
+                  className="t-han"
+                  style={{
+                    position: "absolute",
+                    right: 8,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: 28,
+                    height: 28,
+                    background: "transparent",
+                    border: 0,
+                    cursor: "pointer",
+                    color: "var(--ink-mute)",
+                    fontSize: 17,
+                  }}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                   tabIndex={-1}
                 >
-                  {showPassword ? "🙈" : "👁️"}
+                  {showPassword ? "閉" : "視"}
                 </button>
               </div>
             </div>
@@ -262,23 +413,21 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-xianxia-gold hover:bg-xianxia-gold/80 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-bold transition-colors text-xianxia-darker"
+              className="ink-btn primary"
+              style={{ width: "100%", justifyContent: "center", padding: "12px 16px" }}
             >
+              <span className="t-han" style={{ fontSize: 16, color: "inherit" }}>
+                {isSignUp ? "立" : "入"}
+              </span>
               {loading
                 ? locale === "vi"
                   ? "Đang xử lý..."
                   : "Processing..."
-                : isSignUp
-                  ? locale === "vi"
-                    ? "Đăng Ký"
-                    : "Sign Up"
-                  : locale === "vi"
-                    ? "Đăng Nhập"
-                    : "Sign In"}
+                : t(locale, isSignUp ? "authCtaSignup" : "authCtaSignin")}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div style={{ marginTop: 14, textAlign: "center" }}>
             <button
               onClick={() => {
                 setIsSignUp(!isSignUp);
@@ -286,45 +435,61 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
                 setSuccessMessage("");
               }}
               disabled={loading}
-              className="text-sm text-xianxia-accent hover:text-xianxia-gold transition-colors"
+              style={{
+                background: "transparent",
+                border: 0,
+                fontStyle: "italic",
+                fontSize: 13,
+                color: "var(--ink-soft)",
+                cursor: "pointer",
+                borderBottom: "1px dotted var(--ink-faint)",
+                padding: "2px 0",
+              }}
             >
-              {isSignUp
-                ? locale === "vi"
-                  ? "Đã có tài khoản? Đăng nhập"
-                  : "Already have an account? Sign in"
-                : locale === "vi"
-                  ? "Chưa có tài khoản? Đăng ký"
-                  : "Don't have an account? Sign up"}
+              {t(locale, isSignUp ? "authToggleToSignin" : "authToggleToSignup")}
             </button>
           </div>
 
-          {/* Clear Session Button */}
-          <div className="mt-4 text-center">
-            <button
-              onClick={clearAllSessions}
-              className="text-xs text-gray-500 hover:text-xianxia-accent transition-colors"
-              title={locale === "vi" ? "Xóa phiên đăng nhập cũ" : "Clear old session"}
-            >
-              {locale === "vi" ? "🔄 Xóa phiên cũ" : "🔄 Clear old session"}
-            </button>
-          </div>
-        </div>
+          <div className="hr-soft" style={{ margin: "20px 0 14px" }} />
 
-        {/* Features */}
-        <div className="mt-8 space-y-3 text-sm text-gray-400">
-          <div className="flex items-center gap-2">
-            <span className="text-xianxia-accent">✓</span>
-            <span>{locale === "vi" ? "Lưu tiến trình tự động" : "Auto-save progress"}</span>
+          <div style={{ textAlign: "center", fontSize: 13, color: "var(--ink-mute)" }}>
+            {t(locale, "authOr")}{" "}
+            <span
+              className="t-display"
+              style={{ color: "var(--cinnabar-deep)", fontStyle: "italic" }}
+            >
+              [{t(locale, "authGuest")}]
+            </span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xianxia-accent">✓</span>
-            <span>{locale === "vi" ? "Chơi trên mọi thiết bị" : "Play on any device"}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xianxia-accent">✓</span>
-            <span>{locale === "vi" ? "Kể chuyện bằng AI" : "AI-powered storytelling"}</span>
-          </div>
-        </div>
+        </Card>
+      </div>
+
+      {/* Floating clear-session link */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          textAlign: "center",
+          paddingBottom: 24,
+          marginTop: -16,
+        }}
+      >
+        <button
+          onClick={clearAllSessions}
+          style={{
+            background: "transparent",
+            border: 0,
+            fontStyle: "italic",
+            fontSize: 11,
+            color: "var(--ink-faint)",
+            cursor: "pointer",
+            borderBottom: "1px dotted var(--ink-faint)",
+            padding: 0,
+          }}
+          title={t(locale, "authClearSession")}
+        >
+          {t(locale, "authClearSession")}
+        </button>
       </div>
     </div>
   );

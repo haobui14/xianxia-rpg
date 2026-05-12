@@ -20,6 +20,7 @@ import {
   FILTER_LABELS,
   SORT_LABELS,
 } from "@/lib/game/inventory";
+import { SectionHead, Pill } from "@/components/ui";
 
 interface InventoryViewProps {
   state: GameState;
@@ -177,8 +178,20 @@ export default function InventoryView({
     return result;
   };
 
+  const slotUsage = getInventoryUsage(state.inventory);
+
   return (
     <div className="space-y-6">
+      <SectionHead
+        han="物"
+        title={locale === "vi" ? "Túi Đồ Trữ Vật" : "Inventory"}
+        subtitle={locale === "vi" ? "Vật phẩm tu sĩ" : "Cultivator's belongings"}
+        right={
+          <Pill variant="jade">
+            {slotUsage.used}/{slotUsage.total}
+          </Pill>
+        }
+      />
       {/* Use message toast */}
       {useMessage && (
         <div className="fixed top-4 right-4 bg-green-900/95 border border-green-500/50 text-green-200 px-4 py-3 rounded-lg shadow-lg z-50 animate-toast-in flex items-center gap-2">

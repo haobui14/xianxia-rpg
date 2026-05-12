@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import { Choice, Enemy, ActivityType } from "@/types/game";
+import { Choice, Enemy } from "@/types/game";
 import { t, Locale } from "@/lib/i18n/translations";
 import DebugInventory from "./DebugInventory";
 import BreakthroughModal from "./BreakthroughModal";
-import CultivatorDashboard from "./CultivatorDashboard";
+import CultivatorRail from "./CultivatorRail";
 import EventModal from "./EventModal";
+import { Card, Seal, Pill } from "@/components/ui";
 import { useGameState } from "@/hooks/useGameState";
 import { useItemHandlers } from "@/hooks/useItemHandlers";
 import { useTutorial } from "@/hooks/useTutorial";
@@ -19,49 +20,63 @@ import { useEventHandlers } from "@/hooks/useEventHandlers";
 const CharacterSheet = dynamic(() => import("./CharacterSheet"), {
   ssr: false,
   loading: () => (
-    <div className="p-6 bg-xianxia-dark border border-xianxia-accent/30 rounded-lg">Loading...</div>
+    <div className="ink-card" style={{ padding: 24 }}>
+      <span className="label">Loading…</span>
+    </div>
   ),
 });
 
 const SectView = dynamic(() => import("./SectView"), {
   ssr: false,
   loading: () => (
-    <div className="p-6 bg-xianxia-dark border border-xianxia-accent/30 rounded-lg">Loading...</div>
+    <div className="ink-card" style={{ padding: 24 }}>
+      <span className="label">Loading…</span>
+    </div>
   ),
 });
 
 const InventoryView = dynamic(() => import("./InventoryView"), {
   ssr: false,
   loading: () => (
-    <div className="p-6 bg-xianxia-dark border border-xianxia-accent/30 rounded-lg">Loading...</div>
+    <div className="ink-card" style={{ padding: 24 }}>
+      <span className="label">Loading…</span>
+    </div>
   ),
 });
 
 const MarketView = dynamic(() => import("./MarketView"), {
   ssr: false,
   loading: () => (
-    <div className="p-6 bg-xianxia-dark border border-xianxia-accent/30 rounded-lg">Loading...</div>
+    <div className="ink-card" style={{ padding: 24 }}>
+      <span className="label">Loading…</span>
+    </div>
   ),
 });
 
 const WorldMap = dynamic(() => import("./WorldMap"), {
   ssr: false,
   loading: () => (
-    <div className="p-6 bg-xianxia-dark border border-xianxia-accent/30 rounded-lg">Loading...</div>
+    <div className="ink-card" style={{ padding: 24 }}>
+      <span className="label">Loading…</span>
+    </div>
   ),
 });
 
 const DungeonView = dynamic(() => import("./DungeonView"), {
   ssr: false,
   loading: () => (
-    <div className="p-6 bg-xianxia-dark border border-xianxia-accent/30 rounded-lg">Loading...</div>
+    <div className="ink-card" style={{ padding: 24 }}>
+      <span className="label">Loading…</span>
+    </div>
   ),
 });
 
 const CombatView = dynamic(() => import("./CombatView"), {
   ssr: false,
   loading: () => (
-    <div className="p-6 bg-xianxia-dark border border-xianxia-accent/30 rounded-lg">Loading...</div>
+    <div className="ink-card" style={{ padding: 24 }}>
+      <span className="label">Loading…</span>
+    </div>
   ),
 });
 
@@ -70,6 +85,21 @@ interface GameScreenProps {
   locale: Locale;
   onLocaleChange?: (locale: Locale) => void;
 }
+
+type Tab = "game" | "character" | "sect" | "inventory" | "market" | "world";
+
+const TAB_META: Record<Tab, { han: string; key: string }> = {
+  game: { han: "途", key: "tabGame" },
+  character: { han: "身", key: "tabCharacter" },
+  sect: { han: "派", key: "tabSect" },
+  inventory: { han: "物", key: "tabInventory" },
+  market: { han: "市", key: "tabMarket" },
+  world: { han: "界", key: "tabWorld" },
+};
+
+const TAB_ORDER: Tab[] = ["game", "character", "sect", "inventory", "market", "world"];
+
+const ORDINAL_HAN = ["一", "二", "三", "四", "五", "六", "七", "八"];
 
 function ProcessingIndicator({ locale, onCancel }: { locale: Locale; onCancel: () => void }) {
   const [elapsed, setElapsed] = useState(0);
@@ -82,25 +112,109 @@ function ProcessingIndicator({ locale, onCancel }: { locale: Locale; onCancel: (
   const showCancel = elapsed >= 10;
 
   return (
-    <div className="p-4 bg-xianxia-accent/10 border border-xianxia-accent/30 rounded-lg text-center">
-      <div className="text-xianxia-accent mb-1">
-        {locale === "vi" ? "Đang xử lý lượt chơi..." : "Processing turn..."}
-        <span className="ml-2 text-sm opacity-70">{elapsed}s</span>
+    <Card padding={16} style={{ borderLeft: "3px solid var(--jade)", textAlign: "center" }}>
+      <div className="label" style={{ marginBottom: 4 }}>
+        {locale === "vi" ? "Thiên Cơ Đang Vận Hành" : "Heaven's Will Unfolds"}
+      </div>
+      <div className="t-body" style={{ fontStyle: "italic", color: "var(--ink-soft)" }}>
+        {locale === "vi" ? "Đang xử lý lượt chơi…" : "Processing turn…"}{" "}
+        <span className="t-num" style={{ color: "var(--ink-mute)" }}>
+          {elapsed}s
+        </span>
       </div>
       {showCancel && (
-        <button
-          onClick={onCancel}
-          className="mt-2 px-4 py-1.5 text-sm bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 rounded-lg text-red-300 transition-colors"
-        >
+        <button onClick={onCancel} className="ink-btn cinnabar sm" style={{ marginTop: 10 }}>
           {locale === "vi" ? "Hủy & Thử lại" : "Cancel & Retry"}
         </button>
       )}
-    </div>
+    </Card>
   );
 }
 
+function SaveStatusChip({
+  saveStatus,
+  saveError,
+  setSaveStatus,
+  setSaveError,
+  locale,
+}: {
+  saveStatus: string;
+  saveError: string;
+  setSaveStatus: (s: any) => void;
+  setSaveError: (s: string) => void;
+  locale: Locale;
+}) {
+  if (saveStatus === "idle") return null;
+
+  const baseStyle: React.CSSProperties = {
+    position: "fixed",
+    top: 16,
+    left: 16,
+    zIndex: 50,
+    padding: "8px 14px",
+    borderRadius: 2,
+    fontSize: 12,
+    fontFamily: "var(--font-ui), Inter, sans-serif",
+    background: "var(--card)",
+    border: "1px solid var(--line)",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  };
+
+  if (saveStatus === "saving") {
+    return (
+      <div style={{ ...baseStyle, borderLeft: "3px solid var(--ink-soft)" }}>
+        <span className="label" style={{ letterSpacing: "0.1em" }}>
+          {locale === "vi" ? "Đang lưu…" : "Saving…"}
+        </span>
+      </div>
+    );
+  }
+  if (saveStatus === "saved") {
+    return (
+      <div style={{ ...baseStyle, borderLeft: "3px solid var(--jade)" }}>
+        <span className="label" style={{ color: "var(--jade-deep)", letterSpacing: "0.1em" }}>
+          ✓ {locale === "vi" ? "Đã lưu" : "Saved"}
+        </span>
+      </div>
+    );
+  }
+  if (saveStatus === "error") {
+    return (
+      <div
+        style={{
+          ...baseStyle,
+          borderLeft: "3px solid var(--cinnabar)",
+          flexDirection: "column",
+          alignItems: "flex-start",
+          maxWidth: 280,
+        }}
+      >
+        <span className="label" style={{ color: "var(--cinnabar-deep)" }}>
+          {locale === "vi" ? "Lỗi lưu dữ liệu" : "Save failed"}
+        </span>
+        {saveError && (
+          <span style={{ fontSize: 11, color: "var(--ink-mute)" }}>{saveError}</span>
+        )}
+        <button
+          onClick={() => {
+            setSaveStatus("idle");
+            setSaveError("");
+          }}
+          className="ink-btn ghost sm"
+          style={{ marginTop: 4 }}
+        >
+          {locale === "vi" ? "Bỏ qua" : "Dismiss"}
+        </button>
+      </div>
+    );
+  }
+  return null;
+}
+
 export default function GameScreen({ runId, locale, onLocaleChange }: GameScreenProps) {
-  // Core game state management
   const {
     state,
     setState,
@@ -135,13 +249,26 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
     handlePrevStep,
     handleReopenTutorial,
   } = useTutorial(runId);
-  const [activeTab, setActiveTab] = useState<
-    "game" | "character" | "sect" | "inventory" | "market" | "world"
-  >("game");
-  const [customAction, setCustomAction] = useState("");
-  const marketInitializedRef = useRef(false);
 
-  // Combat hook
+  const [activeTab, setActiveTab] = useState<Tab>("game");
+  const [customAction, setCustomAction] = useState("");
+  const [characterName, setCharacterName] = useState<string | null>(null);
+  const marketInitializedRef = useRef(false);
+  const nameFetchedRef = useRef(false);
+
+  // Fetch character name once on mount (separate from useGameState which only fetches the run)
+  useEffect(() => {
+    if (nameFetchedRef.current) return;
+    nameFetchedRef.current = true;
+    fetch("/api/get-character", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.character?.name) setCharacterName(data.character.name);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Combat
   const {
     testCombat,
     setTestCombat,
@@ -153,7 +280,6 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
     handleActiveCombatEnd,
   } = useCombat({ runId, locale, state, setState, setNarrative });
 
-  // Item handlers hook
   const {
     handleEquipItem,
     handleMarketAction,
@@ -164,7 +290,6 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
     handleEnhanceItem,
   } = useItemHandlers({ locale, setState, setError });
 
-  // Travel handlers hook
   const { handleTravelArea, handleTravelRegion, handleDungeonAction } = useTravelHandlers({
     locale,
     setState,
@@ -172,39 +297,24 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
     setActiveCombat,
   });
 
-  // Ability handlers hook
-  const { handleAbilitySwap, handleToggleDualCultivation, handleSetExpSplit } = useAbilityHandlers({
-    runId,
-    locale,
-    setState,
-    setError,
-  });
+  const { handleAbilitySwap, handleToggleDualCultivation, handleSetExpSplit } =
+    useAbilityHandlers({ runId, locale, setState, setError });
 
-  // Event handlers hook
   const { handleEventChoice } = useEventHandlers({ locale, processTurn, setError });
 
-  // Handle combat encounters from AI turn results
   useEffect(() => {
     if (!lastTurnEvents || lastTurnEvents.length === 0) return;
-
     const combatEncounter = lastTurnEvents.find(
       (e: { type: string; data?: { enemy?: Enemy } }) => e.type === "combat_encounter"
     );
     if (combatEncounter?.data?.enemy) {
       const enemy = combatEncounter.data.enemy as Enemy;
-      if (!enemy.hp_max) {
-        enemy.hp_max = enemy.hp;
-      }
-      setActiveCombat({
-        enemy,
-        log: [],
-        playerTurn: true,
-      });
+      if (!enemy.hp_max) enemy.hp_max = enemy.hp;
+      setActiveCombat({ enemy, log: [], playerTurn: true });
     }
     setLastTurnEvents([]);
   }, [lastTurnEvents, setLastTurnEvents, setActiveCombat]);
 
-  // Initialize market when market tab is opened (only once per session)
   useEffect(() => {
     const initMarket = async () => {
       if (activeTab === "market" && state && !marketInitializedRef.current) {
@@ -214,32 +324,26 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
               method: "GET",
               credentials: "same-origin",
             });
-
             if (response.ok) {
               const result = await response.json();
               if (result.state && result.state.market && result.state.market.items.length > 0) {
                 setState(result.state);
                 marketInitializedRef.current = true;
               }
-            } else {
-              console.error("Failed to initialize market:", await response.text());
             }
-          } catch (error) {
-            console.error("Failed to initialize market:", error);
+          } catch (e) {
+            console.error("Failed to initialize market:", e);
           }
         } else {
           marketInitializedRef.current = true;
         }
       }
     };
-
     initMarket();
   }, [activeTab, state?.market?.items?.length]);
 
   const handleChoice = async (choiceId: string) => {
     const selectedChoice = choices.find((c) => c.id === choiceId);
-
-    // Check if can afford the cost
     if (selectedChoice?.cost && state) {
       if (selectedChoice.cost.stamina && state.stats.stamina < selectedChoice.cost.stamina) {
         setError(locale === "vi" ? "Không đủ Thể Lực!" : "Not enough Stamina!");
@@ -249,7 +353,10 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
         setError(locale === "vi" ? "Không đủ Linh Lực!" : "Not enough Qi!");
         return;
       }
-      if (selectedChoice.cost.silver && state.inventory.silver < selectedChoice.cost.silver) {
+      if (
+        selectedChoice.cost.silver &&
+        state.inventory.silver < selectedChoice.cost.silver
+      ) {
         setError(locale === "vi" ? "Không đủ Bạc!" : "Not enough Silver!");
         return;
       }
@@ -261,28 +368,32 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
         return;
       }
     }
-
     await processTurn(choiceId, selectedChoice);
   };
 
   const handleCustomAction = async () => {
     if (!customAction.trim()) return;
-
-    const customChoice: Choice = {
-      id: "custom_action",
-      text: customAction.trim(),
-    };
-
+    const customChoice: Choice = { id: "custom_action", text: customAction.trim() };
     await processTurn("custom_action", customChoice);
     setCustomAction("");
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-xianxia-gold mx-auto" />
-          <div className="text-xl text-xianxia-accent">{t(locale, "loading")}</div>
+      <div
+        className="paper-bg"
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <Seal size="lg">道</Seal>
+          <div className="label" style={{ marginTop: 16, color: "var(--ink-mute)" }}>
+            {t(locale, "loading")}
+          </div>
         </div>
       </div>
     );
@@ -290,564 +401,585 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
 
   if (!state) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl text-red-500">{error || t(locale, "error")}</div>
+      <div
+        className="paper-bg"
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Card padding={28} style={{ maxWidth: 420, borderLeft: "3px solid var(--cinnabar)" }}>
+          <div className="label" style={{ color: "var(--cinnabar-deep)" }}>
+            {t(locale, "error")}
+          </div>
+          <p style={{ marginTop: 8, color: "var(--ink)" }}>{error || t(locale, "error")}</p>
+        </Card>
       </div>
     );
   }
 
+  const season =
+    state.time_segment === "Sáng"
+      ? "🌅"
+      : state.time_segment === "Chiều"
+        ? "☀️"
+        : state.time_segment === "Tối"
+          ? "🌆"
+          : "🌙";
+
   return (
-    <div className="min-h-screen p-4 md:p-8 pb-20 md:pb-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Save Status Indicator */}
-        <div className="fixed top-4 left-4 z-50">
-          {saveStatus === "saving" && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-blue-900/90 border border-blue-500/50 rounded-lg text-sm text-blue-200 animate-pulse shadow-lg backdrop-blur-sm">
-              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              <span>{locale === "vi" ? "Đang lưu..." : "Saving..."}</span>
-            </div>
-          )}
-          {saveStatus === "saved" && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-green-900/90 border border-green-500/50 rounded-lg text-sm text-green-200 animate-fade-in shadow-lg backdrop-blur-sm">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <span>{locale === "vi" ? "Đã lưu" : "Saved"}</span>
-            </div>
-          )}
-          {saveStatus === "error" && (
-            <div className="flex flex-col gap-1 px-3 py-2 bg-red-900/90 border border-red-500/50 rounded-lg text-sm text-red-200 animate-shake shadow-lg backdrop-blur-sm max-w-xs">
-              <div className="flex items-center gap-2">
-                <svg
-                  className="w-4 h-4 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  />
-                </svg>
-                <span>{locale === "vi" ? "Lỗi lưu dữ liệu" : "Save Failed"}</span>
-              </div>
-              {saveError && <p className="text-xs text-red-300/80 ml-6">{saveError}</p>}
-              <button
-                onClick={() => {
-                  setSaveStatus("idle");
-                  setSaveError("");
-                }}
-                className="ml-6 text-xs text-red-400 hover:text-red-300 underline"
-              >
-                {locale === "vi" ? "Bỏ qua" : "Dismiss"}
-              </button>
-            </div>
-          )}
-        </div>
+    <div className="paper-bg" style={{ minHeight: "100vh", position: "relative" }}>
+      <SaveStatusChip
+        saveStatus={saveStatus}
+        saveError={saveError}
+        setSaveStatus={setSaveStatus}
+        setSaveError={setSaveError}
+        locale={locale}
+      />
 
-        {/* Desktop Tab Navigation */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          maxWidth: 1280,
+          margin: "0 auto",
+          padding: "24px 24px 80px",
+        }}
+      >
+        {/* Tab strip */}
         <div
-          className="mb-6 hidden md:flex flex-wrap gap-2 border-b border-xianxia-accent/30 pb-2"
+          className="ink-tabs"
+          style={{ marginBottom: 24, alignItems: "center", gap: 4 }}
           role="tablist"
-          aria-label="Game navigation"
         >
-          <button
-            onClick={() => setActiveTab("game")}
-            role="tab"
-            aria-selected={activeTab === "game"}
-            className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
-              activeTab === "game"
-                ? "bg-xianxia-accent text-white"
-                : "bg-xianxia-dark hover:bg-xianxia-accent/20"
-            }`}
-          >
-            {t(locale, "tabGame")}
-          </button>
-          <button
-            onClick={() => setActiveTab("character")}
-            role="tab"
-            aria-selected={activeTab === "character"}
-            className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
-              activeTab === "character"
-                ? "bg-xianxia-accent text-white"
-                : "bg-xianxia-dark hover:bg-xianxia-accent/20"
-            }`}
-          >
-            {t(locale, "tabCharacter")}
-          </button>
-          <button
-            onClick={() => setActiveTab("sect")}
-            role="tab"
-            aria-selected={activeTab === "sect"}
-            className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
-              activeTab === "sect"
-                ? "bg-xianxia-accent text-white"
-                : "bg-xianxia-dark hover:bg-xianxia-accent/20"
-            }`}
-          >
-            {locale === "vi" ? "⛩️ Môn Phái" : "⛩️ Sect"}
-          </button>
-          <button
-            onClick={() => setActiveTab("inventory")}
-            role="tab"
-            aria-selected={activeTab === "inventory"}
-            className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
-              activeTab === "inventory"
-                ? "bg-xianxia-accent text-white"
-                : "bg-xianxia-dark hover:bg-xianxia-accent/20"
-            }`}
-          >
-            {t(locale, "tabInventory")}
-          </button>
-          <button
-            onClick={() => setActiveTab("market")}
-            role="tab"
-            aria-selected={activeTab === "market"}
-            className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
-              activeTab === "market"
-                ? "bg-xianxia-accent text-white"
-                : "bg-xianxia-dark hover:bg-xianxia-accent/20"
-            }`}
-          >
-            {locale === "vi" ? "Chợ" : "Market"}
-          </button>
-          <button
-            onClick={() => setActiveTab("world")}
-            role="tab"
-            aria-selected={activeTab === "world"}
-            className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg transition-colors ${
-              activeTab === "world"
-                ? "bg-xianxia-accent text-white"
-                : "bg-xianxia-dark hover:bg-xianxia-accent/20"
-            }`}
-          >
-            {locale === "vi" ? "🗺️ Thế Giới" : "🗺️ World"}
-          </button>
-          {/* Language Toggle */}
-          {onLocaleChange && (
-            <button
-              onClick={() => onLocaleChange(locale === "vi" ? "en" : "vi")}
-              className="ml-auto px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg bg-xianxia-dark hover:bg-xianxia-accent/20 transition-colors flex items-center gap-1"
-              title={locale === "vi" ? "Switch to English" : "Chuyển sang Tiếng Việt"}
-              aria-label={locale === "vi" ? "Switch to English" : "Chuyển sang Tiếng Việt"}
-            >
-              🌐 {locale === "vi" ? "EN" : "VI"}
-            </button>
-          )}
-          {/* Help Button */}
-          <button
-            onClick={handleReopenTutorial}
-            className={`px-3 py-2 text-sm md:px-4 md:text-base rounded-t-lg bg-xianxia-dark hover:bg-xianxia-accent/20 transition-colors ${!onLocaleChange ? "ml-auto" : ""}`}
-            title={locale === "vi" ? "Hướng dẫn" : "Tutorial"}
-            aria-label={locale === "vi" ? "Mở hướng dẫn" : "Open tutorial"}
-          >
-            ❓
-          </button>
-        </div>
-
-        {/* Mobile Bottom Navigation */}
-        <div
-          className="fixed bottom-0 left-0 right-0 md:hidden bg-xianxia-darker/95 backdrop-blur-sm border-t border-xianxia-accent/30 z-40"
-          role="tablist"
-          aria-label="Game navigation"
-        >
-          <div className="grid grid-cols-6 gap-0">
-            {(
-              [
-                { id: "game" as const, icon: "🎮", label: locale === "vi" ? "Chơi" : "Play" },
-                {
-                  id: "character" as const,
-                  icon: "👤",
-                  label: locale === "vi" ? "Nhân vật" : "Char",
-                },
-                { id: "sect" as const, icon: "⛩️", label: locale === "vi" ? "Phái" : "Sect" },
-                { id: "inventory" as const, icon: "🎒", label: locale === "vi" ? "Đồ" : "Bag" },
-                { id: "market" as const, icon: "🏪", label: locale === "vi" ? "Chợ" : "Shop" },
-                { id: "world" as const, icon: "🗺️", label: locale === "vi" ? "Map" : "Map" },
-              ] as const
-            ).map((tab) => (
+          {TAB_ORDER.map((tab) => {
+            const meta = TAB_META[tab];
+            const isActive = activeTab === tab;
+            return (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                key={tab}
+                onClick={() => setActiveTab(tab)}
                 role="tab"
-                aria-selected={activeTab === tab.id}
-                className={`flex flex-col items-center py-2 px-1 transition-colors ${
-                  activeTab === tab.id
-                    ? "text-xianxia-gold bg-xianxia-accent/10"
-                    : "text-gray-500 hover:text-gray-300"
-                }`}
+                aria-selected={isActive}
+                className={`ink-tab ${isActive ? "active" : ""}`}
               >
-                <span className="text-lg">{tab.icon}</span>
-                <span className="text-[10px] mt-0.5 leading-none">{tab.label}</span>
-                {activeTab === tab.id && (
-                  <div className="w-1 h-1 rounded-full bg-xianxia-gold mt-0.5" aria-hidden="true" />
-                )}
+                <span className="han">{meta.han}</span>
+                <span>{t(locale, meta.key)}</span>
               </button>
-            ))}
-          </div>
-        </div>
+            );
+          })}
 
-        {/* Mobile spacer for top + add language toggle inline on mobile */}
-        <div className="md:hidden mb-4 flex justify-between items-center">
-          <h1 className="text-lg font-bold text-xianxia-gold">
-            {locale === "vi" ? "Tu Tiên RPG" : "Xianxia RPG"}
-          </h1>
-          <div className="flex items-center gap-2">
+          <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
             {onLocaleChange && (
               <button
                 onClick={() => onLocaleChange(locale === "vi" ? "en" : "vi")}
-                className="px-3 py-1.5 text-sm rounded-lg bg-xianxia-dark hover:bg-xianxia-accent/20 transition-colors"
-                title={locale === "vi" ? "Switch to English" : "Chuyển sang Tiếng Việt"}
+                className="ink-btn ghost sm"
+                title={
+                  locale === "vi" ? "Switch to English" : "Chuyển sang Tiếng Việt"
+                }
               >
                 🌐 {locale === "vi" ? "EN" : "VI"}
               </button>
             )}
             <button
               onClick={handleReopenTutorial}
-              className="px-3 py-1.5 text-sm rounded-lg bg-xianxia-dark hover:bg-xianxia-accent/20 transition-colors"
+              className="ink-btn ghost sm"
               title={locale === "vi" ? "Hướng dẫn" : "Tutorial"}
-              aria-label={locale === "vi" ? "Mở hướng dẫn" : "Open tutorial"}
             >
-              ❓
+              ?
             </button>
           </div>
         </div>
 
-        {/* Content */}
-        {activeTab === "game" && (
-          <div className="space-y-6">
-            {/* Cultivation Simulator Dashboard */}
-            <CultivatorDashboard
-              state={state}
-              locale={locale}
-              onActivityStart={(activityType: ActivityType, duration: number) => {
-                const activityChoiceText =
-                  locale === "vi"
-                    ? `Bắt đầu ${activityType} trong ${duration} canh giờ`
-                    : `Start ${activityType} for ${duration} segments`;
-                processTurn(`activity_${activityType}_${duration}`, {
-                  id: `activity_${activityType}_${duration}`,
-                  text: activityChoiceText,
-                });
-              }}
-              onActivityInterrupt={() => {
-                const interruptText =
-                  locale === "vi" ? "Dừng hoạt động hiện tại" : "Stop current activity";
-                processTurn("interrupt_activity", {
-                  id: "interrupt_activity",
-                  text: interruptText,
-                });
-              }}
-              compact={true}
-            />
+        {activeTab === "game" ? (
+          <div
+            className="ink-fade-in"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "320px 1fr",
+              gap: 28,
+              alignItems: "flex-start",
+            }}
+          >
+            <CultivatorRail state={state} locale={locale} characterName={characterName} />
 
-            {/* Narrative */}
-            <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-              <div className="prose prose-invert max-w-none">
-                {narrative ? (
-                  <p className="whitespace-pre-wrap leading-relaxed">{narrative}</p>
-                ) : (
-                  <p className="text-gray-500 italic">
-                    {processing
-                      ? locale === "vi"
-                        ? "Đang tạo câu chuyện..."
-                        : "Generating story..."
-                      : locale === "vi"
-                        ? "Bắt đầu cuộc phiêu lưu..."
-                        : "Start your adventure..."}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Error */}
-            {error && (
-              <div className="p-4 bg-red-900/30 border border-red-500/50 rounded-lg text-red-200">
-                {error}
-              </div>
-            )}
-
-            {/* Choices */}
-            {!processing && choices.length > 0 && (
-              <div className="space-y-3">
-                {choices.map((choice) => {
-                  const canAfford =
-                    !choice.cost ||
-                    ((!choice.cost.stamina ||
-                      (state && state.stats.stamina >= choice.cost.stamina)) &&
-                      (!choice.cost.qi || (state && state.stats.qi >= choice.cost.qi)) &&
-                      (!choice.cost.silver ||
-                        (state && state.inventory.silver >= choice.cost.silver)) &&
-                      (!choice.cost.spirit_stones ||
-                        (state && state.inventory.spirit_stones >= choice.cost.spirit_stones)));
-
-                  return (
-                    <button
-                      key={choice.id}
-                      onClick={() => handleChoice(choice.id)}
-                      disabled={processing || !canAfford}
-                      className={`w-full text-left p-4 border rounded-lg transition-colors ${
-                        !canAfford
-                          ? "bg-red-900/20 border-red-500/30 opacity-60 cursor-not-allowed"
-                          : "bg-xianxia-accent/10 hover:bg-xianxia-accent/20 border-xianxia-accent/30"
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+            <div style={{ display: "flex", flexDirection: "column", gap: 22, minWidth: 0 }}>
+              {/* Time + setting strip */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 16,
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <Seal variant="ink">境</Seal>
+                  <div>
+                    <div className="label">{t(locale, "worldCurrentLocation")}</div>
+                    <div
+                      className="t-display"
+                      style={{ fontSize: 22, color: "var(--ink)", lineHeight: 1.1 }}
                     >
-                      <div className="font-medium">{choice.text}</div>
-                      {choice.cost && (
-                        <div className="text-sm mt-1 flex flex-wrap gap-2">
-                          {choice.cost.stamina && (
-                            <span
-                              className={
-                                state && state.stats.stamina < choice.cost.stamina
-                                  ? "text-red-400"
-                                  : "text-gray-400"
-                              }
-                            >
-                              {t(locale, "stamina")}: {choice.cost.stamina}
-                            </span>
-                          )}
-                          {choice.cost.qi && (
-                            <span
-                              className={
-                                state && state.stats.qi < choice.cost.qi
-                                  ? "text-red-400"
-                                  : "text-gray-400"
-                              }
-                            >
-                              {t(locale, "qi")}: {choice.cost.qi}
-                            </span>
-                          )}
-                          {choice.cost.silver && (
-                            <span
-                              className={
-                                state && state.inventory.silver < choice.cost.silver
-                                  ? "text-red-400"
-                                  : "text-gray-400"
-                              }
-                            >
-                              {t(locale, "silver")}: {choice.cost.silver}
-                            </span>
-                          )}
-                          {choice.cost.spirit_stones && (
-                            <span
-                              className={
-                                state && state.inventory.spirit_stones < choice.cost.spirit_stones
-                                  ? "text-red-400"
-                                  : "text-gray-400"
-                              }
-                            >
-                              {t(locale, "spiritStones")}: {choice.cost.spirit_stones}
-                            </span>
-                          )}
-                          {choice.cost.time_segments && (
-                            <span className="text-gray-400">Time: {choice.cost.time_segments}</span>
-                          )}
-                        </div>
-                      )}
-                      {!canAfford && (
-                        <div className="text-xs text-red-400 mt-1">
-                          {locale === "vi" ? "(Không đủ điều kiện)" : "(Cannot afford)"}
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-
-                {/* Custom Action Input */}
-                <div className="mt-4 p-4 bg-xianxia-darker border border-xianxia-accent/30 rounded-lg">
-                  <label className="block text-sm font-medium text-xianxia-accent mb-2">
-                    {locale === "vi"
-                      ? "✍️ Hoặc nhập hành động của bạn:"
-                      : "✍️ Or type your own action:"}
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={customAction}
-                      onChange={(e) => setCustomAction(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !processing && customAction.trim()) {
-                          handleCustomAction();
-                        }
-                      }}
-                      disabled={processing}
-                      placeholder={
-                        locale === "vi"
-                          ? "Ví dụ: Tôi muốn khám phá hang động phía đông..."
-                          : "Example: I want to explore the cave to the east..."
-                      }
-                      className="flex-1 px-4 py-2 bg-xianxia-dark border border-xianxia-accent/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-xianxia-accent disabled:opacity-50"
-                    />
-                    <button
-                      onClick={handleCustomAction}
-                      disabled={processing || !customAction.trim()}
-                      className="px-6 py-2 bg-xianxia-accent hover:bg-xianxia-accent/80 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
-                    >
-                      {locale === "vi" ? "Gửi" : "Submit"}
-                    </button>
+                      {state.location.region} — {state.location.place}
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    {locale === "vi"
-                      ? "Bạn có thể nhập bất kỳ hành động nào bạn muốn thực hiện. AI sẽ xử lý và tạo kết quả phù hợp với câu chuyện."
-                      : "You can type any action you want to take. The AI will process it and generate results fitting the story."}
-                  </p>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 14,
+                  }}
+                >
+                  <div style={{ textAlign: "right" }}>
+                    <div className="label">{t(locale, "time")}</div>
+                    <div
+                      className="t-num"
+                      style={{ fontSize: 16, color: "var(--ink)", marginTop: 2 }}
+                    >
+                      {locale === "vi" ? "Năm" : "Y"} {state.time_year} · {locale === "vi" ? "Tháng" : "M"}{" "}
+                      {state.time_month} · {locale === "vi" ? "Ngày" : "D"} {state.time_day}
+                    </div>
+                    <div
+                      className="t-body"
+                      style={{
+                        fontStyle: "italic",
+                        color: "var(--ink-mute)",
+                        fontSize: 12,
+                        marginTop: 2,
+                      }}
+                    >
+                      {state.time_segment}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: "50%",
+                      background: "var(--card-deep)",
+                      border: "1px solid var(--line)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 24,
+                    }}
+                  >
+                    {season}
+                  </div>
                 </div>
               </div>
-            )}
 
-            {processing && <ProcessingIndicator locale={locale} onCancel={cancelProcessing} />}
-          </div>
-        )}
-
-        {activeTab === "character" && (
-          <CharacterSheet
-            state={state}
-            locale={locale}
-            previousExp={previousExp}
-            onAbilitySwap={handleAbilitySwap}
-            onToggleDualCultivation={handleToggleDualCultivation}
-            onSetExpSplit={handleSetExpSplit}
-          />
-        )}
-        {activeTab === "sect" && (
-          <SectView
-            state={state}
-            locale={locale}
-            onRefresh={refreshRun}
-            processing={processing}
-          />
-        )}
-        {activeTab === "inventory" && (
-          <InventoryView
-            state={state}
-            locale={locale}
-            onEquipItem={handleEquipItem}
-            onDiscardItem={handleDiscardItem}
-            onUseItem={handleUseItem}
-            onEnhanceItem={handleEnhanceItem}
-          />
-        )}
-        {activeTab === "market" && (
-          <MarketView
-            state={state}
-            locale={locale}
-            onBuyItem={(id) => handleMarketAction(id, "buy")}
-            onSellItem={(id) => handleMarketAction(id, "sell")}
-            onRefreshMarket={handleRefreshMarket}
-            onExchange={handleExchange}
-          />
-        )}
-        {activeTab === "world" && (
-          <div className="space-y-6">
-            {/* Error Display */}
-            {error && (
-              <div className="p-4 bg-red-900/30 border border-red-500/50 rounded-lg text-red-200 flex items-center justify-between">
-                <span>{error}</span>
-                <button
-                  onClick={() => setError("")}
-                  className="ml-4 text-sm underline hover:text-red-100"
+              {/* Narrative */}
+              <Card padding={28} className="card-corner" style={{ position: "relative" }}>
+                <span
+                  className="han-bg"
+                  style={{
+                    position: "absolute",
+                    top: -10,
+                    right: -16,
+                    fontSize: 220,
+                  }}
+                  aria-hidden
                 >
-                  {locale === "vi" ? "Đóng" : "Dismiss"}
-                </button>
-              </div>
-            )}
+                  道
+                </span>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    marginBottom: 14,
+                    position: "relative",
+                    zIndex: 1,
+                  }}
+                >
+                  <Seal variant="cinnabar" size="sm">
+                    章
+                  </Seal>
+                  <div>
+                    <div className="label">
+                      {locale === "vi" ? "Hồi" : "Chapter"} {state.turn_count + 1}
+                    </div>
+                  </div>
+                </div>
+                <div className="brush-rule" style={{ marginBottom: 14 }} />
+                <div className="t-body" style={{ position: "relative", zIndex: 1, fontSize: 16, lineHeight: 1.75 }}>
+                  {narrative ? (
+                    <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{narrative}</p>
+                  ) : (
+                    <p style={{ fontStyle: "italic", color: "var(--ink-mute)", margin: 0 }}>
+                      {processing
+                        ? locale === "vi"
+                          ? "Đang tạo câu chuyện…"
+                          : "Spinning the thread of fate…"
+                        : locale === "vi"
+                          ? "Bắt đầu cuộc phiêu lưu…"
+                          : "Begin your journey…"}
+                    </p>
+                  )}
+                </div>
+              </Card>
 
-            {/* World Map */}
+              {/* Error */}
+              {error && (
+                <Card
+                  padding={14}
+                  style={{ borderLeft: "3px solid var(--cinnabar)" }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <span style={{ color: "var(--cinnabar-deep)" }}>{error}</span>
+                    <button
+                      onClick={() => setError("")}
+                      className="ink-btn ghost sm"
+                    >
+                      {locale === "vi" ? "Đóng" : "Dismiss"}
+                    </button>
+                  </div>
+                </Card>
+              )}
+
+              {/* Choices */}
+              {!processing && choices.length > 0 && (
+                <div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "baseline",
+                      gap: 12,
+                      marginBottom: 12,
+                    }}
+                  >
+                    <span
+                      className="t-han"
+                      style={{ fontSize: 24, color: "var(--cinnabar)" }}
+                    >
+                      抉
+                    </span>
+                    <h2
+                      className="t-display"
+                      style={{
+                        fontSize: 22,
+                        margin: 0,
+                        color: "var(--ink)",
+                        lineHeight: 1.1,
+                      }}
+                    >
+                      {t(locale, "gameChooseAction")}
+                    </h2>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {choices.map((choice, idx) => {
+                      const canAfford =
+                        !choice.cost ||
+                        ((!choice.cost.stamina ||
+                          state.stats.stamina >= choice.cost.stamina) &&
+                          (!choice.cost.qi || state.stats.qi >= choice.cost.qi) &&
+                          (!choice.cost.silver ||
+                            state.inventory.silver >= choice.cost.silver) &&
+                          (!choice.cost.spirit_stones ||
+                            state.inventory.spirit_stones >= choice.cost.spirit_stones));
+
+                      return (
+                        <button
+                          key={choice.id}
+                          onClick={() => handleChoice(choice.id)}
+                          disabled={processing || !canAfford}
+                          className={`choice ${!canAfford ? "cant-afford" : ""}`}
+                        >
+                          <span className="ord">
+                            {ORDINAL_HAN[idx] ?? idx + 1}
+                          </span>
+                          <div>{choice.text}</div>
+                          {choice.cost && (
+                            <div className="cost">
+                              {choice.cost.qi != null && (
+                                <span
+                                  className={`c-item ${
+                                    state.stats.qi < choice.cost.qi ? "out" : ""
+                                  }`}
+                                >
+                                  <span className="t-han">氣</span>
+                                  {choice.cost.qi}
+                                </span>
+                              )}
+                              {choice.cost.stamina != null && (
+                                <span
+                                  className={`c-item ${
+                                    state.stats.stamina < choice.cost.stamina
+                                      ? "out"
+                                      : ""
+                                  }`}
+                                >
+                                  <span className="t-han">力</span>
+                                  {choice.cost.stamina}
+                                </span>
+                              )}
+                              {choice.cost.silver != null && (
+                                <span
+                                  className={`c-item ${
+                                    state.inventory.silver < choice.cost.silver
+                                      ? "out"
+                                      : ""
+                                  }`}
+                                >
+                                  <span className="t-han">銀</span>
+                                  {choice.cost.silver}
+                                </span>
+                              )}
+                              {choice.cost.spirit_stones != null && (
+                                <span
+                                  className={`c-item ${
+                                    state.inventory.spirit_stones <
+                                    choice.cost.spirit_stones
+                                      ? "out"
+                                      : ""
+                                  }`}
+                                >
+                                  <span className="t-han">靈</span>
+                                  {choice.cost.spirit_stones}
+                                </span>
+                              )}
+                              {choice.cost.time_segments != null && (
+                                <span className="c-item">
+                                  <span className="t-han">時</span>
+                                  {choice.cost.time_segments}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom action input */}
+                  <div
+                    style={{
+                      marginTop: 16,
+                      padding: 18,
+                      background: "var(--paper-deep)",
+                      border: "1px dashed var(--line-strong)",
+                      borderRadius: 3,
+                    }}
+                  >
+                    <div className="label" style={{ marginBottom: 8 }}>
+                      或 — {t(locale, "gameCustomAction")}
+                    </div>
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <input
+                        type="text"
+                        value={customAction}
+                        onChange={(e) => setCustomAction(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (
+                            e.key === "Enter" &&
+                            !processing &&
+                            customAction.trim()
+                          ) {
+                            handleCustomAction();
+                          }
+                        }}
+                        disabled={processing}
+                        placeholder={t(locale, "gameCustomPlaceholder")}
+                        className="t-body"
+                        style={{
+                          flex: 1,
+                          padding: "10px 12px",
+                          background: "var(--paper)",
+                          border: "1px solid var(--line-strong)",
+                          borderRadius: 2,
+                          color: "var(--ink)",
+                          fontSize: 14,
+                          fontStyle: "italic",
+                          outline: "none",
+                        }}
+                      />
+                      <button
+                        onClick={handleCustomAction}
+                        disabled={processing || !customAction.trim()}
+                        className="ink-btn primary"
+                      >
+                        <span className="t-han">刻</span>
+                        {t(locale, "gameSubmit")}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {processing && (
+                <ProcessingIndicator locale={locale} onCancel={cancelProcessing} />
+              )}
+            </div>
+          </div>
+        ) : activeTab === "character" ? (
+          <div className="ink-fade-in">
+            <CharacterSheet
+              state={state}
+              locale={locale}
+              previousExp={previousExp}
+              onAbilitySwap={handleAbilitySwap}
+              onToggleDualCultivation={handleToggleDualCultivation}
+              onSetExpSplit={handleSetExpSplit}
+            />
+          </div>
+        ) : activeTab === "sect" ? (
+          <div className="ink-fade-in">
+            <SectView
+              state={state}
+              locale={locale}
+              onRefresh={refreshRun}
+              processing={processing}
+            />
+          </div>
+        ) : activeTab === "inventory" ? (
+          <div className="ink-fade-in">
+            <InventoryView
+              state={state}
+              locale={locale}
+              onEquipItem={handleEquipItem}
+              onDiscardItem={handleDiscardItem}
+              onUseItem={handleUseItem}
+              onEnhanceItem={handleEnhanceItem}
+            />
+          </div>
+        ) : activeTab === "market" ? (
+          <div className="ink-fade-in">
+            <MarketView
+              state={state}
+              locale={locale}
+              onBuyItem={(id) => handleMarketAction(id, "buy")}
+              onSellItem={(id) => handleMarketAction(id, "sell")}
+              onRefreshMarket={handleRefreshMarket}
+              onExchange={handleExchange}
+            />
+          </div>
+        ) : activeTab === "world" ? (
+          <div
+            className="ink-fade-in"
+            style={{ display: "flex", flexDirection: "column", gap: 16 }}
+          >
+            {error && (
+              <Card padding={14} style={{ borderLeft: "3px solid var(--cinnabar)" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span style={{ color: "var(--cinnabar-deep)" }}>{error}</span>
+                  <button onClick={() => setError("")} className="ink-btn ghost sm">
+                    {locale === "vi" ? "Đóng" : "Dismiss"}
+                  </button>
+                </div>
+              </Card>
+            )}
             <WorldMap
               state={state}
               locale={locale}
               onTravelArea={handleTravelArea}
               onTravelRegion={handleTravelRegion}
             />
-
-            {/* Dungeon View (only show if in dungeon) */}
             <DungeonView state={state} locale={locale} onAction={handleDungeonAction} />
           </div>
-        )}
+        ) : null}
       </div>
 
       {showTutorial && (
-        <div className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div
-            className="max-w-2xl w-full bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6 md:p-8 shadow-2xl"
-            role="dialog"
-            aria-modal="true"
-            aria-label={locale === "vi" ? "Hướng dẫn" : "Tutorial"}
-          >
-            {/* Step indicator */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex gap-1.5">
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 60,
+            background: "rgba(20, 24, 32, 0.55)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <Card padding={28} style={{ maxWidth: 640, width: "100%" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ display: "flex", gap: 6 }}>
                 {steps.map((_, i) => (
                   <div
                     key={i}
-                    className={`h-1.5 rounded-full transition-all duration-300 ${
-                      i === currentStep
-                        ? "w-8 bg-xianxia-gold"
-                        : i < currentStep
-                          ? "w-4 bg-xianxia-accent"
-                          : "w-4 bg-gray-600"
-                    }`}
+                    style={{
+                      height: 4,
+                      width: i === currentStep ? 30 : 14,
+                      borderRadius: 2,
+                      background:
+                        i === currentStep
+                          ? "var(--cinnabar)"
+                          : i < currentStep
+                            ? "var(--ink)"
+                            : "var(--line)",
+                      transition: "all 0.3s",
+                    }}
                   />
                 ))}
               </div>
-              <span className="text-xs text-gray-500">
+              <span className="label" style={{ fontSize: 10 }}>
                 {currentStep + 1} / {totalSteps}
               </span>
             </div>
 
-            {/* Step content */}
-            <div className="text-center mb-6">
-              <div className="text-4xl mb-3">{steps[currentStep].icon}</div>
-              <h2 className="text-2xl md:text-3xl font-bold text-xianxia-gold mb-3">
+            <div style={{ textAlign: "center", marginBottom: 22 }}>
+              <div style={{ fontSize: 36, marginBottom: 10 }}>{steps[currentStep].icon}</div>
+              <h2
+                className="t-display"
+                style={{ fontSize: 26, color: "var(--ink)", margin: "0 0 10px" }}
+              >
                 {locale === "vi" ? steps[currentStep].title : steps[currentStep].title_en}
               </h2>
-              <p className="text-gray-200 leading-relaxed max-w-lg mx-auto">
+              <p
+                className="t-body"
+                style={{ color: "var(--ink-soft)", maxWidth: 480, margin: "0 auto" }}
+              >
                 {locale === "vi" ? steps[currentStep].content : steps[currentStep].content_en}
               </p>
             </div>
 
-            {/* Navigation buttons */}
-            <div className="flex items-center justify-between gap-3">
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
               <button
                 onClick={handlePrevStep}
                 disabled={currentStep === 0}
-                className="px-4 py-2.5 bg-xianxia-darker border border-xianxia-accent/50 hover:bg-xianxia-accent/20 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
+                className="ink-btn ghost"
               >
-                {locale === "vi" ? "← Trước" : "← Back"}
+                ← {locale === "vi" ? "Trước" : "Back"}
               </button>
-
-              <button
-                onClick={handleDismissTutorial}
-                className="px-4 py-2.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
-              >
+              <button onClick={handleDismissTutorial} className="ink-btn ghost sm">
                 {locale === "vi" ? "Bỏ qua" : "Skip"}
               </button>
-
-              <button
-                onClick={handleNextStep}
-                className="px-6 py-2.5 bg-xianxia-gold hover:bg-xianxia-gold/80 text-xianxia-darker rounded-lg font-bold transition-colors"
-              >
+              <button onClick={handleNextStep} className="ink-btn primary">
                 {currentStep < totalSteps - 1
                   ? locale === "vi"
                     ? "Tiếp →"
@@ -857,26 +989,34 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
                     : "Start!"}
               </button>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
       {process.env.NODE_ENV === "development" && (
-        <div className="fixed bottom-4 right-4 flex gap-2">
+        <div style={{ position: "fixed", bottom: 16, right: 16, display: "flex", gap: 8 }}>
           <DebugInventory />
-          <button
-            onClick={startTestCombat}
-            className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg shadow-lg transition-colors"
-          >
-            {locale === "vi" ? "⚔️ Test Combat" : "⚔️ Test Combat"}
+          <button onClick={startTestCombat} className="ink-btn cinnabar sm">
+            ⚔ Test Combat
           </button>
         </div>
       )}
 
-      {/* Test Combat View */}
       {testCombat && state && (
-        <div className="fixed inset-0 z-40 bg-black/80 flex items-center justify-center p-4">
-          <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 60,
+            background: "rgba(20, 24, 32, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div style={{ maxWidth: 960, width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
             <CombatView
               state={state}
               enemy={testCombat.enemy}
@@ -889,7 +1029,8 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
             />
             <button
               onClick={() => setTestCombat(null)}
-              className="mt-4 w-full py-2 bg-gray-600 hover:bg-gray-500 rounded-lg transition-colors"
+              className="ink-btn ghost"
+              style={{ width: "100%", justifyContent: "center", marginTop: 12 }}
             >
               {locale === "vi" ? "Đóng Test Combat" : "Close Test Combat"}
             </button>
@@ -897,10 +1038,21 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
         </div>
       )}
 
-      {/* Active Combat View - Triggered by AI combat_encounter */}
       {activeCombat && state && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
-          <div className="max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 70,
+            background: "rgba(20, 24, 32, 0.7)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div style={{ maxWidth: 960, width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
             <CombatView
               state={state}
               enemy={activeCombat.enemy}
@@ -914,7 +1066,6 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
         </div>
       )}
 
-      {/* Breakthrough Modal */}
       {breakthroughEvent && (
         <BreakthroughModal
           event={breakthroughEvent}
@@ -923,7 +1074,6 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
         />
       )}
 
-      {/* Event Modal */}
       {state?.events?.active_event && (
         <EventModal
           event={state.events.active_event}

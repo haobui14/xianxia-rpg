@@ -44,11 +44,11 @@ export function useToast() {
   };
 }
 
-const TOAST_STYLES: Record<ToastType, string> = {
-  success: "bg-green-900/95 border-green-500/50 text-green-200",
-  error: "bg-red-900/95 border-red-500/50 text-red-200",
-  warning: "bg-yellow-900/95 border-yellow-500/50 text-yellow-200",
-  info: "bg-blue-900/95 border-blue-500/50 text-blue-200",
+const TOAST_ACCENT: Record<ToastType, string> = {
+  success: "var(--jade)",
+  error: "var(--cinnabar)",
+  warning: "var(--gold)",
+  info: "var(--ink-soft)",
 };
 
 const TOAST_ICONS: Record<ToastType, string> = {
@@ -78,15 +78,42 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
 
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg backdrop-blur-sm transition-all duration-300 ${
-        TOAST_STYLES[toast.type]
-      } ${isExiting ? "opacity-0 translate-x-4" : "opacity-100 translate-x-0 animate-toast-in"}`}
+      className={`ink-card ${isExiting ? "" : "animate-toast-in"}`}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "12px 14px",
+        borderLeft: `3px solid ${TOAST_ACCENT[toast.type]}`,
+        background: "var(--card)",
+        color: "var(--ink)",
+        boxShadow: "0 4px 12px rgba(70, 50, 20, 0.18)",
+        opacity: isExiting ? 0 : 1,
+        transform: isExiting ? "translateX(16px)" : "translateX(0)",
+        transition: "all 0.3s ease",
+      }}
     >
-      <span className="text-lg flex-shrink-0">{TOAST_ICONS[toast.type]}</span>
-      <span className="text-sm flex-1">{toast.message}</span>
+      <span
+        className="t-han"
+        style={{
+          fontSize: 18,
+          color: TOAST_ACCENT[toast.type],
+          flexShrink: 0,
+        }}
+      >
+        {TOAST_ICONS[toast.type]}
+      </span>
+      <span style={{ fontSize: 14, flex: 1, color: "var(--ink)" }}>{toast.message}</span>
       <button
         onClick={() => onRemove(toast.id)}
-        className="text-gray-400 hover:text-white transition-colors text-sm ml-2 flex-shrink-0"
+        style={{
+          background: "transparent",
+          border: 0,
+          color: "var(--ink-mute)",
+          cursor: "pointer",
+          fontSize: 16,
+          padding: 0,
+        }}
         aria-label="Dismiss"
       >
         ×

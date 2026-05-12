@@ -3,6 +3,7 @@
 import { GameState, MarketItem, InventoryItem } from "@/types/game";
 import { Locale } from "@/lib/i18n/translations";
 import { useState, useMemo } from "react";
+import { SectionHead } from "@/components/ui";
 
 interface MarketViewProps {
   state: GameState;
@@ -131,6 +132,15 @@ export default function MarketView({
 
   return (
     <div className="space-y-6">
+      <SectionHead
+        han="市"
+        title={locale === "vi" ? "Chợ Linh Vật" : "Spirit Market"}
+        subtitle={
+          locale === "vi"
+            ? "Buôn bán giao dịch — quầy đổi mới mỗi 3 ngày"
+            : "Trade and exchange — stalls refresh every 3 days"
+        }
+      />
       {/* Market Info */}
       <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
         <h2 className="text-2xl font-bold mb-2 text-xianxia-gold">

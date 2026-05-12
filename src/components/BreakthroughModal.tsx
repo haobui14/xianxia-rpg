@@ -114,7 +114,9 @@ export default function BreakthroughModal({ event, locale, onClose }: Breakthrou
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 cursor-pointer"
+      data-theme="night"
+      className="fixed inset-0 z-50 flex items-center justify-center cursor-pointer"
+      style={{ background: "rgba(8, 10, 16, 0.85)", backdropFilter: "blur(6px)" }}
       onClick={handleClick}
     >
       {/* Background effects */}

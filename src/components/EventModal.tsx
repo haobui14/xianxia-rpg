@@ -64,6 +64,7 @@ export default function EventModal({ event, state, locale, onChoice, onClose }: 
       closeOnEscape={!isProcessing}
     >
       <div
+        data-theme="night"
         className={`max-w-2xl w-full ${RARITY_BG[event.rarity]} border-2 ${RARITY_COLORS[event.rarity]} rounded-lg shadow-2xl`}
       >
         {/* Header */}

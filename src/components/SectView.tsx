@@ -4,6 +4,7 @@ import { GameState } from "@/types/game";
 import { Locale } from "@/lib/i18n/translations";
 import SectMissionsPanel, { SectRelationsPanel } from "./SectMissionsPanel";
 import SectWarBanner from "./SectWarBanner";
+import { SectionHead, Pill } from "@/components/ui";
 
 interface SectViewProps {
   state: GameState;
@@ -18,6 +19,12 @@ export default function SectView({ state, locale, onRefresh, processing }: SectV
   // Not in a sect
   if (!sect_membership && !state.sect) {
     return (
+      <>
+        <SectionHead
+          han="派"
+          title={locale === "vi" ? "Môn Phái" : "Sect"}
+          subtitle={locale === "vi" ? "Tu đồ chưa quy môn" : "Unaffiliated"}
+        />
       <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-8">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">
@@ -35,12 +42,19 @@ export default function SectView({ state, locale, onRefresh, processing }: SectV
           </div>
         </div>
       </div>
+      </>
     );
   }
 
   // Simple sect display (legacy)
   if (state.sect && !sect_membership) {
     return (
+      <>
+        <SectionHead
+          han="派"
+          title={locale === "vi" ? "Môn Phái" : "Sect"}
+          subtitle={locale === "vi" ? state.sect ?? "" : state.sect_en ?? ""}
+        />
       <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-8">
         <h2 className="text-2xl font-bold mb-6 text-xianxia-gold text-center">
           {locale === "vi" ? "Môn Phái" : "Sect"}
@@ -52,6 +66,7 @@ export default function SectView({ state, locale, onRefresh, processing }: SectV
           <div className="text-sm text-gray-400">{locale === "vi" ? "Thành viên" : "Member"}</div>
         </div>
       </div>
+      </>
     );
   }
 
@@ -145,6 +160,16 @@ export default function SectView({ state, locale, onRefresh, processing }: SectV
 
   return (
     <div className="space-y-6">
+      <SectionHead
+        han="派"
+        title={locale === "vi" ? sect.name : sect.name_en}
+        subtitle={locale === "vi" ? `${rank} · ${mentor ?? ""}` : `${rank} · ${mentor_en ?? ""}`}
+        right={
+          <Pill variant="cinnabar" withDot>
+            {locale === "vi" ? `Cống ${contribution}` : `Merit ${contribution}`}
+          </Pill>
+        }
+      />
       {/* Sect Header */}
       <div className="bg-gradient-to-r from-xianxia-dark via-purple-900/20 to-xianxia-dark border border-xianxia-accent/30 rounded-lg p-8">
         <div className="text-center">
