@@ -45,11 +45,15 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#9b2a26",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#efe5cd" },
+    { media: "(prefers-color-scheme: dark)", color: "#181c25" },
+  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

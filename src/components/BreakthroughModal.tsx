@@ -189,34 +189,65 @@ export default function BreakthroughModal({ event, locale, onClose }: Breakthrou
         {/* Realm breakthrough title */}
         {(phase === "reveal" || phase === "stats" || phase === "complete") && (
           <div className="mb-8">
+            <div
+              style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}
+              className="animate-realm-reveal opacity-0"
+            >
+              <span
+                className="seal lg"
+                style={{
+                  background: colors.primary,
+                  color: "#fbe9b8",
+                  boxShadow: `0 0 0 1px ${colors.primary} inset, 0 0 0 3px ${colors.primary} inset, 0 0 0 4px ${colors.glow} inset, 0 0 24px ${colors.glow}`,
+                }}
+              >
+                破
+              </span>
+            </div>
             {isRealmBreakthrough && (
               <div
-                className="text-lg mb-2 animate-realm-reveal opacity-0"
+                className="label animate-realm-reveal opacity-0"
                 style={{
                   color: colors.primary,
                   animationFillMode: "forwards",
+                  letterSpacing: "0.2em",
                 }}
               >
-                {locale === "vi" ? "Đột Phá Cảnh Giới!" : "Realm Breakthrough!"}
+                {locale === "vi" ? "Đột Phá Cảnh Giới" : "Realm Breakthrough"}
               </div>
             )}
             <h1
-              className="text-5xl font-bold animate-realm-reveal opacity-0"
+              className="t-display animate-realm-reveal opacity-0"
               style={{
                 color: colors.primary,
                 textShadow: `0 0 20px ${colors.glow}, 0 0 40px ${colors.glow}`,
                 animationFillMode: "forwards",
                 animationDelay: "0.2s",
+                fontSize: 52,
+                margin: "10px 0 4px",
+                lineHeight: 1,
               }}
             >
               {t(locale, newRealm)}
             </h1>
             <div
-              className="text-2xl mt-2 animate-realm-reveal opacity-0"
+              className="brush-rule animate-realm-reveal opacity-0"
+              style={{
+                maxWidth: 220,
+                margin: "12px auto",
+                animationFillMode: "forwards",
+                animationDelay: "0.3s",
+                background: `linear-gradient(90deg, transparent 0%, ${colors.primary} 8%, ${colors.primary} 78%, transparent 100%)`,
+              }}
+            />
+            <div
+              className="t-display animate-realm-reveal opacity-0"
               style={{
                 color: colors.primary,
                 animationFillMode: "forwards",
                 animationDelay: "0.4s",
+                fontSize: 22,
+                fontStyle: "italic",
               }}
             >
               {locale === "vi" ? `Tầng ${newStage}` : `Stage ${newStage}`}
@@ -226,31 +257,50 @@ export default function BreakthroughModal({ event, locale, onClose }: Breakthrou
 
         {/* Stat increases */}
         {(phase === "stats" || phase === "complete") && (
-          <div className="space-y-2">
+          <div>
             <div
-              className="text-sm text-gray-400 mb-4 animate-stat-count opacity-0"
-              style={{ animationFillMode: "forwards" }}
+              className="label animate-stat-count opacity-0"
+              style={{
+                animationFillMode: "forwards",
+                marginBottom: 12,
+                color: "var(--ink-mute)",
+              }}
             >
-              {locale === "vi" ? "Chỉ số tăng:" : "Stats increased:"}
+              {locale === "vi" ? "Thuộc Tính Tăng Tiến" : "Stats Increased"}
             </div>
             <div className="grid grid-cols-2 gap-3">
               {Object.entries(statIncreases).map(([key, value]) => {
                 if (!value || value <= 0) return null;
                 const isVisible = showStats.includes(key);
-
                 return (
                   <div
                     key={key}
-                    className={`p-3 rounded-lg border transition-all duration-300 ${
-                      isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-                    }`}
+                    className="ink-card"
                     style={{
+                      padding: 12,
                       borderColor: colors.primary,
-                      backgroundColor: `${colors.glow}`,
+                      background: "var(--card)",
+                      boxShadow: `0 0 18px ${colors.glow}, 0 1px 0 rgba(255,250,230,0.06) inset`,
+                      transition: "all 0.3s",
+                      opacity: isVisible ? 1 : 0,
+                      transform: isVisible ? "translateY(0)" : "translateY(8px)",
                     }}
                   >
-                    <div className="text-sm text-gray-300">{formatStatName(key)}</div>
-                    <div className="text-2xl font-bold" style={{ color: colors.primary }}>
+                    <div
+                      className="label"
+                      style={{ color: "var(--ink-mute)", fontSize: 10 }}
+                    >
+                      {formatStatName(key)}
+                    </div>
+                    <div
+                      className="t-num"
+                      style={{
+                        fontSize: 24,
+                        fontWeight: 600,
+                        color: colors.primary,
+                        marginTop: 2,
+                      }}
+                    >
                       +{value}
                     </div>
                   </div>
@@ -260,10 +310,12 @@ export default function BreakthroughModal({ event, locale, onClose }: Breakthrou
           </div>
         )}
 
-        {/* Click to continue prompt */}
         {phase === "complete" && (
-          <div className="mt-8 text-gray-400 text-sm animate-pulse">
-            {locale === "vi" ? "Nhấn để tiếp tục..." : "Click to continue..."}
+          <div
+            className="label animate-pulse"
+            style={{ marginTop: 28, color: "var(--ink-mute)", letterSpacing: "0.2em" }}
+          >
+            {locale === "vi" ? "Nhấn để tiếp tục" : "Click to continue"}
           </div>
         )}
       </div>

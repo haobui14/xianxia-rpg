@@ -8,10 +8,9 @@ import DebugInventory from "./DebugInventory";
 import BreakthroughModal from "./BreakthroughModal";
 import CultivatorRail from "./CultivatorRail";
 import EventModal from "./EventModal";
-import { Card, Seal, Pill } from "@/components/ui";
+import { Card, Seal } from "@/components/ui";
 import { useGameState } from "@/hooks/useGameState";
 import { useItemHandlers } from "@/hooks/useItemHandlers";
-import { useTutorial } from "@/hooks/useTutorial";
 import { useTravelHandlers } from "@/hooks/useTravelHandlers";
 import { useAbilityHandlers } from "@/hooks/useAbilityHandlers";
 import { useCombat } from "@/hooks/useCombat";
@@ -83,7 +82,6 @@ const CombatView = dynamic(() => import("./CombatView"), {
 interface GameScreenProps {
   runId: string;
   locale: Locale;
-  onLocaleChange?: (locale: Locale) => void;
 }
 
 type Tab = "game" | "character" | "sect" | "inventory" | "market" | "world";
@@ -214,7 +212,7 @@ function SaveStatusChip({
   return null;
 }
 
-export default function GameScreen({ runId, locale, onLocaleChange }: GameScreenProps) {
+export default function GameScreen({ runId, locale }: GameScreenProps) {
   const {
     state,
     setState,
@@ -238,17 +236,6 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
     setLastTurnEvents,
     refreshRun,
   } = useGameState({ runId, locale });
-
-  const {
-    showTutorial,
-    currentStep,
-    totalSteps,
-    steps,
-    handleDismissTutorial,
-    handleNextStep,
-    handlePrevStep,
-    handleReopenTutorial,
-  } = useTutorial(runId);
 
   const [activeTab, setActiveTab] = useState<Tab>("game");
   const [customAction, setCustomAction] = useState("");
@@ -440,12 +427,13 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
       />
 
       <div
+        className="page-pad"
         style={{
           position: "relative",
           zIndex: 1,
           maxWidth: 1280,
           margin: "0 auto",
-          padding: "24px 24px 80px",
+          padding: "18px 24px 80px",
         }}
       >
         {/* Tab strip */}
@@ -470,44 +458,16 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
               </button>
             );
           })}
-
-          <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
-            {onLocaleChange && (
-              <button
-                onClick={() => onLocaleChange(locale === "vi" ? "en" : "vi")}
-                className="ink-btn ghost sm"
-                title={
-                  locale === "vi" ? "Switch to English" : "Chuyển sang Tiếng Việt"
-                }
-              >
-                🌐 {locale === "vi" ? "EN" : "VI"}
-              </button>
-            )}
-            <button
-              onClick={handleReopenTutorial}
-              className="ink-btn ghost sm"
-              title={locale === "vi" ? "Hướng dẫn" : "Tutorial"}
-            >
-              ?
-            </button>
-          </div>
         </div>
 
         {activeTab === "game" ? (
-          <div
-            className="ink-fade-in"
-            style={{
-              display: "grid",
-              gridTemplateColumns: "320px 1fr",
-              gap: 28,
-              alignItems: "flex-start",
-            }}
-          >
+          <div className="ink-fade-in game-shell">
             <CultivatorRail state={state} locale={locale} characterName={characterName} />
 
             <div style={{ display: "flex", flexDirection: "column", gap: 22, minWidth: 0 }}>
               {/* Time + setting strip */}
               <div
+                className="time-strip"
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
@@ -529,6 +489,7 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
                   </div>
                 </div>
                 <div
+                  className="time-block"
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -897,101 +858,6 @@ export default function GameScreen({ runId, locale, onLocaleChange }: GameScreen
           </div>
         ) : null}
       </div>
-
-      {showTutorial && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 60,
-            background: "rgba(20, 24, 32, 0.55)",
-            backdropFilter: "blur(4px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-          }}
-        >
-          <Card padding={28} style={{ maxWidth: 640, width: "100%" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 12,
-              }}
-            >
-              <div style={{ display: "flex", gap: 6 }}>
-                {steps.map((_, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      height: 4,
-                      width: i === currentStep ? 30 : 14,
-                      borderRadius: 2,
-                      background:
-                        i === currentStep
-                          ? "var(--cinnabar)"
-                          : i < currentStep
-                            ? "var(--ink)"
-                            : "var(--line)",
-                      transition: "all 0.3s",
-                    }}
-                  />
-                ))}
-              </div>
-              <span className="label" style={{ fontSize: 10 }}>
-                {currentStep + 1} / {totalSteps}
-              </span>
-            </div>
-
-            <div style={{ textAlign: "center", marginBottom: 22 }}>
-              <div style={{ fontSize: 36, marginBottom: 10 }}>{steps[currentStep].icon}</div>
-              <h2
-                className="t-display"
-                style={{ fontSize: 26, color: "var(--ink)", margin: "0 0 10px" }}
-              >
-                {locale === "vi" ? steps[currentStep].title : steps[currentStep].title_en}
-              </h2>
-              <p
-                className="t-body"
-                style={{ color: "var(--ink-soft)", maxWidth: 480, margin: "0 auto" }}
-              >
-                {locale === "vi" ? steps[currentStep].content : steps[currentStep].content_en}
-              </p>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 12,
-              }}
-            >
-              <button
-                onClick={handlePrevStep}
-                disabled={currentStep === 0}
-                className="ink-btn ghost"
-              >
-                ← {locale === "vi" ? "Trước" : "Back"}
-              </button>
-              <button onClick={handleDismissTutorial} className="ink-btn ghost sm">
-                {locale === "vi" ? "Bỏ qua" : "Skip"}
-              </button>
-              <button onClick={handleNextStep} className="ink-btn primary">
-                {currentStep < totalSteps - 1
-                  ? locale === "vi"
-                    ? "Tiếp →"
-                    : "Next →"
-                  : locale === "vi"
-                    ? "Bắt đầu!"
-                    : "Start!"}
-              </button>
-            </div>
-          </Card>
-        </div>
-      )}
 
       {process.env.NODE_ENV === "development" && (
         <div style={{ position: "fixed", bottom: 16, right: 16, display: "flex", gap: 8 }}>

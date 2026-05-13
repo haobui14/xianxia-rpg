@@ -139,25 +139,54 @@ export default function SectMissionsPanel({
 
   return (
     <>
-      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-xianxia-gold">
-            {locale === "vi" ? "📜 Bảng Nhiệm Vụ" : "📜 Mission Board"}
+      <div className="ink-card" style={{ padding: 22 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "baseline",
+            marginBottom: 14,
+          }}
+        >
+          <h2
+            className="t-display"
+            style={{
+              fontSize: 20,
+              color: "var(--ink)",
+              margin: 0,
+              display: "flex",
+              alignItems: "baseline",
+              gap: 10,
+            }}
+          >
+            <span className="t-han" style={{ fontSize: 22, color: "var(--cinnabar)" }}>
+              任
+            </span>
+            {locale === "vi" ? "Bảng Nhiệm Vụ" : "Mission Board"}
           </h2>
           <button
             type="button"
             onClick={openBrowse}
-            className="px-3 py-1.5 text-sm bg-xianxia-accent/20 hover:bg-xianxia-accent/30 border border-xianxia-accent/40 rounded text-xianxia-accent transition"
+            className="ink-btn ghost sm"
           >
-            {locale === "vi" ? "Xem nhiệm vụ mới" : "Browse available"}
+            <span className="t-han">覽</span>
+            {locale === "vi" ? "Xem Nhiệm Vụ" : "Browse"}
           </button>
         </div>
 
         {active.length === 0 ? (
-          <p className="text-sm text-gray-500">
+          <p
+            className="t-body"
+            style={{
+              fontStyle: "italic",
+              color: "var(--ink-mute)",
+              fontSize: 13,
+              margin: 0,
+            }}
+          >
             {locale === "vi"
-              ? "Chưa nhận nhiệm vụ nào. Bấm \"Xem nhiệm vụ mới\" để nhận."
-              : 'No missions active. Click "Browse available" to accept one.'}
+              ? "Chưa nhận nhiệm vụ nào. Bấm \"Xem Nhiệm Vụ\" để xem các nhiệm vụ khả dụng."
+              : 'No missions active. Click "Browse" to view available missions.'}
           </p>
         ) : (
           <ul className="space-y-3">
@@ -177,15 +206,52 @@ export default function SectMissionsPanel({
       </div>
 
       <Modal isOpen={showBrowse} onClose={() => setShowBrowse(false)} zLevel="high">
-        <div className="bg-xianxia-dark border border-xianxia-accent/40 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-xianxia-gold">
-              {locale === "vi" ? "Nhiệm vụ khả dụng" : "Available Missions"}
+        <div
+          className="ink-card"
+          style={{
+            padding: 24,
+            maxWidth: 640,
+            width: "100%",
+            maxHeight: "80vh",
+            overflowY: "auto",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              marginBottom: 14,
+            }}
+          >
+            <h3
+              className="t-display"
+              style={{
+                fontSize: 22,
+                color: "var(--ink)",
+                margin: 0,
+                display: "flex",
+                alignItems: "baseline",
+                gap: 10,
+              }}
+            >
+              <span className="t-han" style={{ color: "var(--cinnabar)" }}>
+                榜
+              </span>
+              {locale === "vi" ? "Nhiệm Vụ Khả Dụng" : "Available Missions"}
             </h3>
             <button
               type="button"
               onClick={() => setShowBrowse(false)}
-              className="text-gray-400 hover:text-white text-2xl leading-none"
+              style={{
+                background: "transparent",
+                border: 0,
+                color: "var(--ink-mute)",
+                cursor: "pointer",
+                fontSize: 22,
+                lineHeight: 1,
+              }}
               aria-label={locale === "vi" ? "Đóng" : "Close"}
             >
               ×
@@ -193,13 +259,30 @@ export default function SectMissionsPanel({
           </div>
 
           {loading && (
-            <p className="text-center text-gray-400 py-8">
-              {locale === "vi" ? "Đang tải..." : "Loading..."}
+            <p
+              className="t-body"
+              style={{
+                textAlign: "center",
+                fontStyle: "italic",
+                color: "var(--ink-mute)",
+                padding: "30px 0",
+              }}
+            >
+              {locale === "vi" ? "Đang tải…" : "Loading…"}
             </p>
           )}
 
           {!loading && available && available.length === 0 && (
-            <p className="text-center text-gray-500 py-8">
+            <p
+              className="t-body"
+              style={{
+                textAlign: "center",
+                fontStyle: "italic",
+                color: "var(--ink-mute)",
+                padding: "30px 0",
+                fontSize: 14,
+              }}
+            >
               {locale === "vi"
                 ? "Không có nhiệm vụ phù hợp cho tông môn này."
                 : "No missions available for your sect type."}
@@ -222,9 +305,24 @@ export default function SectMissionsPanel({
             </ul>
           )}
 
-          <div className="mt-4 flex items-center justify-end gap-3">
+          <div
+            style={{
+              marginTop: 16,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              gap: 12,
+            }}
+          >
             {rerollCooldown > 0 && (
-              <span className="text-[11px] text-gray-500">
+              <span
+                className="t-body"
+                style={{
+                  fontStyle: "italic",
+                  color: "var(--ink-faint)",
+                  fontSize: 11,
+                }}
+              >
                 {locale === "vi"
                   ? `Còn ${rerollCooldown} lượt mới đổi được`
                   : `Reroll in ${rerollCooldown} turns`}
@@ -234,9 +332,10 @@ export default function SectMissionsPanel({
               type="button"
               onClick={() => listMissions(true)}
               disabled={loading || rerollCooldown > 0}
-              className="px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed rounded text-gray-200"
+              className="ink-btn ghost sm"
             >
-              {locale === "vi" ? "Lấy nhiệm vụ khác" : "Reroll"}
+              <span className="t-han">換</span>
+              {locale === "vi" ? "Đổi Bảng" : "Reroll"}
             </button>
           </div>
         </div>
@@ -276,12 +375,8 @@ function objectiveLabel(obj: SectMissionObjective, locale: Locale, progress?: nu
 }
 
 function difficultyBadge(diff: "easy" | "medium" | "hard", locale: Locale) {
-  const color =
-    diff === "easy"
-      ? "bg-green-700/40 text-green-300 border-green-600/40"
-      : diff === "medium"
-        ? "bg-yellow-700/40 text-yellow-300 border-yellow-600/40"
-        : "bg-red-700/40 text-red-300 border-red-600/40";
+  const variant =
+    diff === "easy" ? "jade" : diff === "medium" ? "gold" : "cinnabar";
   const label =
     locale === "vi"
       ? diff === "easy"
@@ -291,7 +386,10 @@ function difficultyBadge(diff: "easy" | "medium" | "hard", locale: Locale) {
           : "Khó"
       : diff.charAt(0).toUpperCase() + diff.slice(1);
   return (
-    <span className={`text-[10px] px-1.5 py-0.5 rounded border ${color} uppercase tracking-wide`}>
+    <span
+      className={`pill ${variant}`}
+      style={{ fontSize: 10, padding: "1px 8px" }}
+    >
       {label}
     </span>
   );
@@ -342,37 +440,92 @@ function ActiveMissionRow({
   const pct = Math.min(100, (mission.progress / Math.max(1, goalCount)) * 100);
 
   return (
-    <li className="bg-gray-900/40 border border-gray-700/60 rounded-lg p-3">
-      <div className="flex items-center justify-between gap-3 mb-1">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-medium text-gray-200">{title}</span>
+    <li
+      className="card-inset"
+      style={{ padding: 14, borderRadius: 3, listStyle: "none" }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: 4,
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span
+            className="t-display"
+            style={{ fontSize: 16, color: "var(--ink)" }}
+          >
+            {title}
+          </span>
           {template && difficultyBadge(template.difficulty, locale)}
         </div>
-        <span className={`text-xs ${urgent ? "text-red-400" : "text-gray-400"}`}>
+        <span
+          className="t-num"
+          style={{
+            fontSize: 11,
+            color: urgent ? "var(--cinnabar-deep)" : "var(--ink-mute)",
+          }}
+        >
           {locale === "vi" ? `còn ${turnsLeft} lượt` : `${turnsLeft} turns left`}
         </span>
       </div>
-      <div className="text-xs text-gray-400 mb-2">
+      <div
+        className="t-body"
+        style={{
+          fontStyle: "italic",
+          color: "var(--ink-soft)",
+          fontSize: 12,
+          marginBottom: 8,
+        }}
+      >
         {objectiveLabel(mission.objective, locale, mission.progress)}
       </div>
-      <div className="w-full bg-gray-700 rounded-full h-1.5 overflow-hidden mb-2">
+      <div
+        style={{
+          height: 6,
+          background: "var(--paper-darker)",
+          border: "1px solid var(--line)",
+          borderRadius: 2,
+          overflow: "hidden",
+          marginBottom: 8,
+        }}
+      >
         <div
-          className="h-full bg-xianxia-accent transition-all"
-          style={{ width: `${pct}%` }}
+          style={{
+            height: "100%",
+            width: `${pct}%`,
+            background:
+              "linear-gradient(90deg, var(--jade-deep), var(--jade-soft))",
+            transition: "width 0.4s",
+          }}
         />
       </div>
       {template && (
-        <div className="text-[11px] text-gray-500 mb-2">
-          {locale === "vi" ? "Thưởng: " : "Reward: "}
+        <div
+          className="label"
+          style={{
+            marginBottom: 8,
+            color: "var(--gold-deep)",
+            fontSize: 10,
+            letterSpacing: "0.1em",
+          }}
+        >
+          <span className="t-han" style={{ marginRight: 4 }}>
+            賞
+          </span>
           {rewardSummary(template.reward, locale)}
         </div>
       )}
-      <div className="flex justify-end">
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button
           type="button"
           onClick={onAbandon}
           disabled={abandoning || disabled}
-          className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="ink-btn cinnabar sm"
           title={
             disabled && !abandoning
               ? locale === "vi"
@@ -381,12 +534,13 @@ function ActiveMissionRow({
               : undefined
           }
         >
+          <span className="t-han">棄</span>
           {abandoning
             ? locale === "vi"
-              ? "Đang bỏ..."
-              : "Abandoning..."
+              ? "Đang bỏ…"
+              : "Abandoning…"
             : locale === "vi"
-              ? "Bỏ nhiệm vụ"
+              ? "Bỏ Nhiệm Vụ"
               : "Abandon"}
         </button>
       </div>
@@ -412,29 +566,72 @@ function AvailableMissionRow({
   const title = locale === "vi" ? template.name : template.name_en;
   const desc = locale === "vi" ? template.description : template.description_en;
   return (
-    <li className="bg-gray-900/40 border border-gray-700/60 rounded-lg p-3">
-      <div className="flex items-center justify-between gap-2 mb-1">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-gray-200">{title}</span>
+    <li
+      className="card-inset"
+      style={{ padding: 14, borderRadius: 3, listStyle: "none" }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: 4,
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span
+            className="t-display"
+            style={{ fontSize: 16, color: "var(--ink)" }}
+          >
+            {title}
+          </span>
           {difficultyBadge(template.difficulty, locale)}
         </div>
-        <span className="text-xs text-gray-500">
+        <span
+          className="t-num"
+          style={{ fontSize: 11, color: "var(--ink-mute)" }}
+        >
           {locale === "vi"
-            ? `Hạn: ${template.deadline_turns} lượt`
-            : `Deadline: ${template.deadline_turns} turns`}
+            ? `Hạn ${template.deadline_turns} lượt`
+            : `Deadline ${template.deadline_turns} turns`}
         </span>
       </div>
-      <p className="text-xs text-gray-400 mb-2">{desc}</p>
-      <div className="text-[11px] text-gray-500 mb-2">
-        {locale === "vi" ? "Mục tiêu: " : "Goal: "}
-        {objectiveLabel(template.objective, locale)} · {rewardSummary(template.reward, locale)}
+      <p
+        className="t-body"
+        style={{
+          fontStyle: "italic",
+          color: "var(--ink-soft)",
+          fontSize: 13,
+          marginBottom: 8,
+        }}
+      >
+        {desc}
+      </p>
+      <div
+        className="label"
+        style={{
+          marginBottom: 10,
+          color: "var(--ink-mute)",
+          fontSize: 10,
+          letterSpacing: "0.1em",
+        }}
+      >
+        <span className="t-han" style={{ marginRight: 4 }}>
+          的
+        </span>
+        {objectiveLabel(template.objective, locale)} ·{" "}
+        <span style={{ color: "var(--gold-deep)" }}>
+          {rewardSummary(template.reward, locale)}
+        </span>
       </div>
-      <div className="flex justify-end">
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
         <button
           type="button"
           onClick={onAccept}
           disabled={disabled || accepting}
-          className="text-xs px-3 py-1 bg-xianxia-accent/20 hover:bg-xianxia-accent/30 disabled:opacity-50 disabled:cursor-not-allowed border border-xianxia-accent/40 rounded text-xianxia-accent"
+          className="ink-btn primary sm"
         >
           {accepting
             ? locale === "vi"
@@ -471,11 +668,27 @@ export function SectRelationsPanel({ state, locale }: { state: GameState; locale
   if (!state.sect_membership) return null;
   if (entries.length === 0) {
     return (
-      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <h2 className="text-xl font-bold mb-2 text-xianxia-gold">
-          {locale === "vi" ? "🌐 Quan hệ tông môn" : "🌐 Sect Relations"}
+      <div className="ink-card" style={{ padding: 22 }}>
+        <h2
+          className="t-display"
+          style={{
+            fontSize: 18,
+            color: "var(--ink)",
+            margin: "0 0 6px",
+            display: "flex",
+            alignItems: "baseline",
+            gap: 10,
+          }}
+        >
+          <span className="t-han" style={{ color: "var(--cinnabar)" }}>
+            交
+          </span>
+          {locale === "vi" ? "Quan Hệ Tông Môn" : "Sect Relations"}
         </h2>
-        <p className="text-sm text-gray-500">
+        <p
+          className="t-body"
+          style={{ fontStyle: "italic", color: "var(--ink-mute)", fontSize: 13, margin: 0 }}
+        >
           {locale === "vi" ? "Chưa có dữ liệu quan hệ." : "No relation data yet."}
         </p>
       </div>
@@ -483,44 +696,89 @@ export function SectRelationsPanel({ state, locale }: { state: GameState; locale
   }
 
   return (
-    <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-      <h2 className="text-xl font-bold mb-4 text-xianxia-gold">
-        {locale === "vi" ? "🌐 Quan hệ tông môn" : "🌐 Sect Relations"}
+    <div className="ink-card" style={{ padding: 22 }}>
+      <h2
+        className="t-display"
+        style={{
+          fontSize: 18,
+          color: "var(--ink)",
+          margin: "0 0 14px",
+          display: "flex",
+          alignItems: "baseline",
+          gap: 10,
+        }}
+      >
+        <span className="t-han" style={{ color: "var(--cinnabar)" }}>
+          交
+        </span>
+        {locale === "vi" ? "Quan Hệ Tông Môn" : "Sect Relations"}
       </h2>
-      <ul className="space-y-2">
+      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
         {entries.map((rel) => {
           const sect = getSectById(rel.sect_id);
           const name = sect ? (locale === "vi" ? sect.name : sect.name_en) : rel.sect_id;
-          const label =
+          const tier =
             rel.relation <= -50
-              ? { vi: "Địch", en: "Hostile", color: "text-red-400" }
+              ? { vi: "Địch", en: "Hostile", color: "var(--cinnabar-deep)" }
               : rel.relation < 0
-                ? { vi: "Lạnh nhạt", en: "Cool", color: "text-orange-400" }
+                ? { vi: "Lạnh Nhạt", en: "Cool", color: "var(--gold-deep)" }
                 : rel.relation === 0
-                  ? { vi: "Trung lập", en: "Neutral", color: "text-gray-400" }
+                  ? { vi: "Trung Lập", en: "Neutral", color: "var(--ink-mute)" }
                   : rel.relation < 50
-                    ? { vi: "Thân thiện", en: "Friendly", color: "text-green-400" }
-                    : { vi: "Đồng minh", en: "Ally", color: "text-blue-400" };
+                    ? { vi: "Thân Thiện", en: "Friendly", color: "var(--jade-deep)" }
+                    : { vi: "Đồng Minh", en: "Ally", color: "#3a6280" };
           const pct = Math.round(((rel.relation + 100) / 200) * 100);
+          const barColor =
+            rel.relation < 0
+              ? "var(--cinnabar)"
+              : rel.relation === 0
+                ? "var(--ink-mute)"
+                : "var(--jade)";
           return (
-            <li key={rel.sect_id} className="space-y-1">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-200">{name}</span>
-                <span className={`text-xs ${label.color}`}>
-                  {locale === "vi" ? label.vi : label.en} ({rel.relation > 0 ? "+" : ""}
+            <li key={rel.sect_id}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "baseline",
+                  marginBottom: 4,
+                }}
+              >
+                <span
+                  className="t-display"
+                  style={{ fontSize: 14, color: "var(--ink)" }}
+                >
+                  {name}
+                </span>
+                <span
+                  className="label"
+                  style={{
+                    color: tier.color,
+                    fontSize: 10,
+                    letterSpacing: "0.14em",
+                  }}
+                >
+                  {locale === "vi" ? tier.vi : tier.en} (
+                  {rel.relation > 0 ? "+" : ""}
                   {rel.relation})
                 </span>
               </div>
-              <div className="w-full bg-gray-700 rounded-full h-1.5 overflow-hidden">
+              <div
+                style={{
+                  height: 4,
+                  background: "var(--paper-darker)",
+                  border: "1px solid var(--line-soft)",
+                  borderRadius: 2,
+                  overflow: "hidden",
+                }}
+              >
                 <div
-                  className={`h-full ${
-                    rel.relation < 0
-                      ? "bg-red-500"
-                      : rel.relation === 0
-                        ? "bg-gray-500"
-                        : "bg-green-500"
-                  }`}
-                  style={{ width: `${pct}%` }}
+                  style={{
+                    height: "100%",
+                    width: `${pct}%`,
+                    background: barColor,
+                    transition: "width 0.4s",
+                  }}
                 />
               </div>
             </li>

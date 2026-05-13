@@ -610,13 +610,7 @@ export default function CharacterCreation({
             </div>
           </Card>
         ) : step === "form" ? (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1.05fr",
-              gap: 24,
-            }}
-          >
+          <div className="creation-grid">
             <Card padding={28} className="card-corner" style={{ position: "relative" }}>
               <span
                 className="han-bg"
@@ -841,16 +835,7 @@ export default function CharacterCreation({
                 >
                   根
                 </span>
-                <div
-                  style={{
-                    position: "relative",
-                    zIndex: 1,
-                    display: "grid",
-                    gridTemplateColumns: "240px 1fr",
-                    gap: 28,
-                    alignItems: "center",
-                  }}
-                >
+                <div className="reveal-grid" style={{ position: "relative", zIndex: 1 }}>
                   <ElementWheel elements={spiritRoot.elements} />
                   <div>
                     <div className="label">{t(locale, "creationRevealTitle")}</div>

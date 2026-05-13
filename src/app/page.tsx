@@ -7,6 +7,8 @@ import Login from "@/components/Login";
 import CharacterCreation from "@/components/CharacterCreation";
 import GameScreen from "@/components/GameScreen";
 import Profile from "@/components/Profile";
+import { useTutorial } from "@/hooks/useTutorial";
+import { Card } from "@/components/ui";
 
 type Screen = "login" | "character-creation" | "game" | "profile";
 
@@ -182,17 +184,179 @@ export default function Home() {
       )}
 
       {screen === "game" && runId && (
-        <div>
-          <div style={{ display: "flex", justifyContent: "flex-end", padding: "16px 24px 0" }}>
-            <button onClick={handleShowProfile} className="ink-btn ghost sm">
-              {locale === "vi" ? "Hồ Sơ" : "Profile"}
-            </button>
-          </div>
-          <GameScreen runId={runId} locale={locale} onLocaleChange={handleLocaleChange} />
-        </div>
+        <GameScreenWithHeader
+          runId={runId}
+          locale={locale}
+          onLocaleChange={handleLocaleChange}
+          onShowProfile={handleShowProfile}
+        />
       )}
 
       {screen === "profile" && <Profile locale={locale} onBack={handleBackFromProfile} />}
     </main>
+  );
+}
+
+/**
+ * Wraps GameScreen with the unified top header (EN/VI + ? + Hồ Sơ) and the
+ * tutorial modal. Lifted here from GameScreen so the locale toggle, tutorial
+ * trigger, and Profile button live in one row instead of scattered between
+ * page.tsx and the tab strip.
+ */
+function GameScreenWithHeader({
+  runId,
+  locale,
+  onLocaleChange,
+  onShowProfile,
+}: {
+  runId: string;
+  locale: "vi" | "en";
+  onLocaleChange: (l: "vi" | "en") => void;
+  onShowProfile: () => void;
+}) {
+  const {
+    showTutorial,
+    currentStep,
+    totalSteps,
+    steps,
+    handleDismissTutorial,
+    handleNextStep,
+    handlePrevStep,
+    handleReopenTutorial,
+  } = useTutorial(runId);
+
+  return (
+    <>
+      <div className="topbar">
+        <div className="topbar-inner">
+          <button
+            onClick={() => onLocaleChange(locale === "vi" ? "en" : "vi")}
+            className="ink-btn ghost sm"
+            title={locale === "vi" ? "Switch to English" : "Chuyển sang Tiếng Việt"}
+            aria-label={locale === "vi" ? "Switch to English" : "Chuyển sang Tiếng Việt"}
+          >
+            🌐 {locale === "vi" ? "EN" : "VI"}
+          </button>
+          <button
+            onClick={handleReopenTutorial}
+            className="ink-btn ghost sm"
+            title={locale === "vi" ? "Hướng dẫn" : "Tutorial"}
+            aria-label={locale === "vi" ? "Mở hướng dẫn" : "Open tutorial"}
+          >
+            <span className="t-han" style={{ fontSize: 14 }}>
+              問
+            </span>
+            ?
+          </button>
+          <button
+            onClick={onShowProfile}
+            className="ink-btn ghost sm"
+            aria-label={locale === "vi" ? "Hồ sơ" : "Profile"}
+          >
+            <span className="t-han" style={{ fontSize: 14 }}>
+              己
+            </span>
+            {locale === "vi" ? "Hồ Sơ" : "Profile"}
+          </button>
+        </div>
+      </div>
+
+      <GameScreen runId={runId} locale={locale} />
+
+      {showTutorial && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 60,
+            background: "rgba(20, 24, 32, 0.55)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <Card padding={26} style={{ maxWidth: 640, width: "100%" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ display: "flex", gap: 6 }}>
+                {steps.map((_, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      height: 4,
+                      width: i === currentStep ? 30 : 14,
+                      borderRadius: 2,
+                      background:
+                        i === currentStep
+                          ? "var(--cinnabar)"
+                          : i < currentStep
+                            ? "var(--ink)"
+                            : "var(--line)",
+                      transition: "all 0.3s",
+                    }}
+                  />
+                ))}
+              </div>
+              <span className="label" style={{ fontSize: 10 }}>
+                {currentStep + 1} / {totalSteps}
+              </span>
+            </div>
+            <div style={{ textAlign: "center", marginBottom: 22 }}>
+              <div style={{ fontSize: 36, marginBottom: 10 }}>{steps[currentStep].icon}</div>
+              <h2
+                className="t-display"
+                style={{ fontSize: 26, color: "var(--ink)", margin: "0 0 10px" }}
+              >
+                {locale === "vi" ? steps[currentStep].title : steps[currentStep].title_en}
+              </h2>
+              <p
+                className="t-body"
+                style={{ color: "var(--ink-soft)", maxWidth: 480, margin: "0 auto" }}
+              >
+                {locale === "vi"
+                  ? steps[currentStep].content
+                  : steps[currentStep].content_en}
+              </p>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              <button
+                onClick={handlePrevStep}
+                disabled={currentStep === 0}
+                className="ink-btn ghost"
+              >
+                ← {locale === "vi" ? "Trước" : "Back"}
+              </button>
+              <button onClick={handleDismissTutorial} className="ink-btn ghost sm">
+                {locale === "vi" ? "Bỏ qua" : "Skip"}
+              </button>
+              <button onClick={handleNextStep} className="ink-btn primary">
+                {currentStep < totalSteps - 1
+                  ? locale === "vi"
+                    ? "Tiếp →"
+                    : "Next →"
+                  : locale === "vi"
+                    ? "Bắt đầu!"
+                    : "Start!"}
+              </button>
+            </div>
+          </Card>
+        </div>
+      )}
+    </>
   );
 }

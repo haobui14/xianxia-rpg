@@ -174,12 +174,8 @@ export default function Login({ locale, onLocaleChange }: LoginProps) {
           margin: "0 auto",
           padding: "48px 24px",
           minHeight: "100vh",
-          display: "grid",
-          gridTemplateColumns: "1.05fr 1fr",
-          gap: 40,
-          alignItems: "center",
         }}
-        className="ink-fade-in"
+        className="ink-fade-in auth-grid"
       >
         {/* LEFT — Title + intro */}
         <div>

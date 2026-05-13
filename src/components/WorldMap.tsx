@@ -3,8 +3,8 @@
 import { useState, useMemo } from "react";
 import { GameState } from "@/types/game";
 import { RegionId } from "@/types/world";
-import { Locale } from "@/lib/i18n/translations";
-import { SectionHead, Pill } from "@/components/ui";
+import { Locale, t } from "@/lib/i18n/translations";
+import { Card, Pill, SectionHead, Seal, SmallHead, Stat } from "@/components/ui";
 
 interface WorldMapProps {
   state: GameState;
@@ -13,91 +13,98 @@ interface WorldMapProps {
   onTravelRegion?: (regionId: RegionId) => Promise<void>;
 }
 
-// Region display data
-const REGION_DATA: Record<
-  RegionId,
-  {
-    name: string;
-    name_en: string;
-    description: string;
-    description_en: string;
-    color: string;
-    bgColor: string;
-    borderColor: string;
-    element: string;
-    element_en: string;
-    tier: number;
-    position: { x: number; y: number };
-  }
-> = {
+interface RegionMeta {
+  name: string;
+  name_en: string;
+  description: string;
+  description_en: string;
+  han: string;
+  fullHan: string;
+  color: string;
+  element: string;
+  element_en: string;
+  tier: number;
+  position: { x: number; y: number };
+}
+
+const REGION_DATA: Record<RegionId, RegionMeta> = {
   thanh_van: {
     name: "Thanh Vân",
     name_en: "Azure Cloud",
-    description: "Vùng đất yên bình với linh khí dồi dào, nơi lý tưởng cho người mới tu luyện.",
-    description_en: "A peaceful land rich with spiritual energy, ideal for beginning cultivators.",
-    color: "text-green-400",
-    bgColor: "bg-green-900/50",
-    borderColor: "border-green-400/30",
-    element: "🌿 Mộc",
-    element_en: "🌿 Wood",
+    description:
+      "Vùng đất yên bình với linh khí dồi dào, nơi lý tưởng cho người mới tu luyện. Sương khói lượn quanh sườn núi, suối nguồn chảy róc rách suốt ngày đêm.",
+    description_en:
+      "A peaceful land rich with spiritual energy — ideal for beginning cultivators. Mist drapes the mountainside; springs murmur day and night.",
+    han: "雲",
+    fullHan: "青雲",
+    color: "var(--jade-deep)",
+    element: "Mộc",
+    element_en: "Wood",
     tier: 1,
-    position: { x: 50, y: 70 },
+    position: { x: 28, y: 65 },
   },
   hoa_son: {
     name: "Hỏa Sơn",
     name_en: "Fire Mountain",
-    description: "Ngọn núi lửa cổ đại, nơi rèn luyện ý chí và sức mạnh trong lửa nóng.",
-    description_en: "An ancient volcanic mountain, where will and power are forged in flame.",
-    color: "text-red-400",
-    bgColor: "bg-red-900/50",
-    borderColor: "border-red-400/30",
-    element: "🔥 Hỏa",
-    element_en: "🔥 Fire",
+    description:
+      "Ngọn núi lửa cổ đại, nơi rèn luyện ý chí và sức mạnh trong lửa nóng. Tro than rơi như tuyết, kim đan sư tới đây tôi lò.",
+    description_en:
+      "An ancient volcanic mountain — will and power forged in flame. Cinders fall like snow; alchemists come here to temper their cauldrons.",
+    han: "火",
+    fullHan: "火山",
+    color: "var(--cinnabar-deep)",
+    element: "Hỏa",
+    element_en: "Fire",
     tier: 2,
-    position: { x: 20, y: 40 },
+    position: { x: 60, y: 30 },
   },
   huyen_thuy: {
     name: "Huyền Thủy",
     name_en: "Mystic Waters",
-    description: "Vùng sông hồ huyền bí, ẩn chứa nhiều bí ẩn trong làn nước sâu thẳm.",
-    description_en: "A mystical waterland concealing secrets in its boundless depths.",
-    color: "text-blue-400",
-    bgColor: "bg-blue-900/50",
-    borderColor: "border-blue-400/30",
-    element: "💧 Thủy",
-    element_en: "💧 Water",
+    description:
+      "Vùng sông hồ huyền bí, ẩn chứa nhiều bí ẩn trong làn nước sâu thẳm. Ngư long ẩn cư, thủy linh thường hiện hình.",
+    description_en:
+      "A mystical waterland concealing secrets in its boundless depths. Fish-dragons dwell here; water spirits often take form.",
+    han: "水",
+    fullHan: "玄水",
+    color: "#3a6280",
+    element: "Thủy",
+    element_en: "Water",
     tier: 3,
-    position: { x: 80, y: 40 },
+    position: { x: 80, y: 55 },
   },
   tram_loi: {
     name: "Trầm Lôi",
     name_en: "Silent Thunder",
-    description: "Vùng đất u tĩnh nhưng ẩn chứa sấm sét, thử thách những kẻ mạnh.",
-    description_en: "A deceptively quiet land where hidden thunder tests the strong.",
-    color: "text-yellow-400",
-    bgColor: "bg-yellow-900/50",
-    borderColor: "border-yellow-400/30",
-    element: "⚡ Kim",
-    element_en: "⚡ Metal",
+    description:
+      "Vùng đất u tĩnh nhưng ẩn chứa sấm sét, thử thách những kẻ mạnh. Một chớp sáng đủ để chôn vùi cả tu sĩ Trúc Cơ.",
+    description_en:
+      "Deceptively quiet land where hidden thunder tests the strong. A single flash can bury a Foundation-stage cultivator.",
+    han: "雷",
+    fullHan: "沉雷",
+    color: "var(--gold-deep)",
+    element: "Kim",
+    element_en: "Metal",
     tier: 4,
-    position: { x: 30, y: 15 },
+    position: { x: 22, y: 22 },
   },
   vong_linh: {
     name: "Vọng Linh",
     name_en: "Spirit Watch",
-    description: "Vùng đất thiêng liêng nơi ranh giới giữa cõi sống và cõi chết mờ nhạt.",
-    description_en: "Sacred ground where the boundary between life and death grows thin.",
-    color: "text-purple-400",
-    bgColor: "bg-purple-900/50",
-    borderColor: "border-purple-400/30",
-    element: "🌍 Thổ",
-    element_en: "🌍 Earth",
+    description:
+      "Vùng đất thiêng liêng nơi ranh giới giữa cõi sống và cõi chết mờ nhạt. Cô hồn dã quỷ lang thang, song cũng là nơi đắc đạo.",
+    description_en:
+      "Sacred ground where the boundary between life and death grows thin. Wandering ghosts roam — yet enlightenment also comes here.",
+    han: "靈",
+    fullHan: "望靈",
+    color: "var(--rarity-epic)",
+    element: "Thổ",
+    element_en: "Earth",
     tier: 5,
-    position: { x: 70, y: 15 },
+    position: { x: 50, y: 78 },
   },
 };
 
-// Single source of truth for region adjacency
 const ADJACENCY: Record<RegionId, RegionId[]> = {
   thanh_van: ["hoa_son", "huyen_thuy"],
   hoa_son: ["thanh_van", "tram_loi"],
@@ -106,7 +113,6 @@ const ADJACENCY: Record<RegionId, RegionId[]> = {
   vong_linh: ["huyen_thuy", "tram_loi"],
 };
 
-// Derive connection edges from adjacency (deduplicated)
 const REGION_CONNECTIONS: [RegionId, RegionId][] = (() => {
   const edges: [RegionId, RegionId][] = [];
   const seen = new Set<string>();
@@ -128,7 +134,6 @@ export default function WorldMap({ state, locale, onTravelRegion }: WorldMapProp
   const [selectedRegion, setSelectedRegion] = useState<RegionId | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [hoveredRegion, setHoveredRegion] = useState<RegionId | null>(null);
 
   const currentRegion = state.travel?.current_region || "thanh_van";
   const discoveredAreas = state.travel?.discovered_areas || ({} as Record<RegionId, string[]>);
@@ -139,11 +144,9 @@ export default function WorldMap({ state, locale, onTravelRegion }: WorldMapProp
     return ADJACENCY[currentRegion]?.includes(regionId) || regionId === currentRegion;
   };
 
-  const hasDiscoveredArea = (regionId: RegionId) => {
-    return (discoveredAreas[regionId]?.length || 0) > 0;
-  };
+  const hasDiscoveredArea = (regionId: RegionId) =>
+    (discoveredAreas[regionId]?.length || 0) > 0;
 
-  // Compute path hint: how many hops to reach region from current
   const regionDistances = useMemo(() => {
     const dist: Record<string, number> = { [currentRegion]: 0 };
     const queue: RegionId[] = [currentRegion];
@@ -160,13 +163,8 @@ export default function WorldMap({ state, locale, onTravelRegion }: WorldMapProp
   }, [currentRegion]);
 
   const handleRegionClick = (regionId: RegionId) => {
-    if (regionId === currentRegion) {
-      setSelectedRegion(selectedRegion === regionId ? null : regionId);
-      setShowConfirm(false);
-    } else {
-      setSelectedRegion(regionId);
-      setShowConfirm(false);
-    }
+    setSelectedRegion(regionId);
+    setShowConfirm(false);
   };
 
   const handleTravelToRegion = async (regionId: RegionId) => {
@@ -185,7 +183,12 @@ export default function WorldMap({ state, locale, onTravelRegion }: WorldMapProp
     }
   };
 
-  const getTierStars = (tier: number) => "⭐".repeat(tier);
+  const detail = selectedRegion ? REGION_DATA[selectedRegion] : REGION_DATA[currentRegion];
+  const detailId = selectedRegion ?? currentRegion;
+  const detailIsCurrent = detailId === currentRegion;
+  const detailIsAccessible = isRegionAccessible(detailId);
+  const detailHasVisited = hasDiscoveredArea(detailId);
+  const detailDistance = regionDistances[detailId] ?? 99;
 
   return (
     <div role="region" aria-label={locale === "vi" ? "Bản Đồ Thế Giới" : "World Map"}>
@@ -195,282 +198,480 @@ export default function WorldMap({ state, locale, onTravelRegion }: WorldMapProp
         subtitle={locale === "vi" ? "Bản đồ tu giới" : "Cultivation realm map"}
         right={
           <Pill variant="cinnabar" withDot>
-            {state.location.region}
+            {locale === "vi"
+              ? REGION_DATA[currentRegion].name
+              : REGION_DATA[currentRegion].name_en}
           </Pill>
         }
       />
-      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-4">
-      <h2 className="text-xl font-bold mb-4 text-xianxia-gold flex items-center gap-2">
-        🗺️ {locale === "vi" ? "Bản Đồ Thế Giới" : "World Map"}
-      </h2>
 
-      {/* Current Location + Stamina */}
-      <div className="mb-4 p-3 bg-xianxia-darker rounded-lg flex items-center justify-between">
-        <div>
-          <div className="text-sm text-gray-400">
-            {locale === "vi" ? "Vị trí hiện tại" : "Current Location"}
-          </div>
-          <div className={`font-bold ${REGION_DATA[currentRegion].color}`}>
-            {locale === "vi" ? REGION_DATA[currentRegion].name : REGION_DATA[currentRegion].name_en}
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-sm text-gray-400">{locale === "vi" ? "Thể lực" : "Stamina"}</div>
-          <div className={`font-bold ${canAffordTravel ? "text-green-400" : "text-red-400"}`}>
-            ⚡ {playerStamina}
-          </div>
-        </div>
-      </div>
-
-      {/* Map View */}
-      <div className="relative w-full h-72 md:h-80 lg:h-96 bg-gray-900/50 rounded-lg overflow-hidden mb-4">
-        {/* Connection Lines */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
-          {REGION_CONNECTIONS.map(([from, to], idx) => {
-            const fromPos = REGION_DATA[from].position;
-            const toPos = REGION_DATA[to].position;
-            const isActive = from === currentRegion || to === currentRegion;
-            return (
-              <line
-                key={idx}
-                x1={`${fromPos.x}%`}
-                y1={`${fromPos.y}%`}
-                x2={`${toPos.x}%`}
-                y2={`${toPos.y}%`}
-                stroke={isActive ? "#fbbf24" : "#4b5563"}
-                strokeWidth={isActive ? "3" : "2"}
-                strokeDasharray={isActive ? "none" : "5,5"}
-                opacity={isActive ? 0.7 : 0.4}
-              />
-            );
-          })}
-        </svg>
-
-        {/* Region Nodes */}
-        {(Object.keys(REGION_DATA) as RegionId[]).map((regionId) => {
-          const data = REGION_DATA[regionId];
-          const isCurrent = regionId === currentRegion;
-          const accessible = isRegionAccessible(regionId);
-          const isSelected = selectedRegion === regionId;
-          const isHovered = hoveredRegion === regionId;
-          const hasVisited = hasDiscoveredArea(regionId);
-          const distance = regionDistances[regionId] ?? 99;
-
-          return (
-            <button
-              key={regionId}
-              onClick={() => handleRegionClick(regionId)}
-              onMouseEnter={() => setHoveredRegion(regionId)}
-              onMouseLeave={() => setHoveredRegion(null)}
-              onFocus={() => setHoveredRegion(regionId)}
-              onBlur={() => setHoveredRegion(null)}
-              aria-label={`${locale === "vi" ? data.name : data.name_en} — ${
-                isCurrent
-                  ? locale === "vi"
-                    ? "Vị trí hiện tại"
-                    : "Current location"
-                  : accessible
-                    ? locale === "vi"
-                      ? "Có thể di chuyển"
-                      : "Can travel"
-                    : locale === "vi"
-                      ? `Cách ${distance} vùng`
-                      : `${distance} regions away`
-              }`}
-              aria-pressed={isSelected}
-              className={`absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-200 group focus:outline-none focus-visible:ring-2 focus-visible:ring-xianxia-gold ${
-                isSelected ? "scale-110 z-10" : "hover:scale-105"
-              } ${!accessible && !isCurrent ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+      <div className="world-grid">
+        {/* Map card */}
+        <Card padding={0} style={{ overflow: "hidden" }}>
+          <div
+            style={{
+              position: "relative",
+              aspectRatio: "16 / 10",
+              background:
+                "linear-gradient(180deg, var(--paper) 0%, var(--paper-deep) 100%)",
+              overflow: "hidden",
+            }}
+          >
+            {/* Paper grid */}
+            <svg
+              viewBox="0 0 1000 625"
+              preserveAspectRatio="xMidYMid slice"
               style={{
-                left: `${data.position.x}%`,
-                top: `${data.position.y}%`,
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                pointerEvents: "none",
+              }}
+              aria-hidden
+            >
+              <defs>
+                <pattern
+                  id="paperGrid"
+                  width="50"
+                  height="50"
+                  patternUnits="userSpaceOnUse"
+                >
+                  <path
+                    d="M 50 0 L 0 0 0 50"
+                    fill="none"
+                    stroke="var(--line-soft)"
+                    strokeWidth="0.5"
+                    opacity="0.4"
+                  />
+                </pattern>
+                <linearGradient id="mountainFar" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor="var(--ink)" stopOpacity="0.18" />
+                  <stop offset="100%" stopColor="var(--ink)" stopOpacity="0.05" />
+                </linearGradient>
+                <linearGradient id="mountainMid" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor="var(--ink)" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="var(--ink)" stopOpacity="0.1" />
+                </linearGradient>
+                <linearGradient id="mountainNear" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor="var(--ink)" stopOpacity="0.45" />
+                  <stop offset="100%" stopColor="var(--ink)" stopOpacity="0.15" />
+                </linearGradient>
+              </defs>
+              <rect width="1000" height="625" fill="url(#paperGrid)" />
+
+              {/* Far mountains */}
+              <path
+                d="M 0 280 L 80 220 L 160 250 L 240 180 L 340 240 L 440 200 L 540 230 L 640 190 L 760 240 L 860 210 L 1000 250 L 1000 320 L 0 320 Z"
+                fill="url(#mountainFar)"
+              />
+              {/* Mid mountains */}
+              <path
+                d="M 0 360 L 120 280 L 220 320 L 320 240 L 460 310 L 580 270 L 700 320 L 820 280 L 1000 340 L 1000 420 L 0 420 Z"
+                fill="url(#mountainMid)"
+              />
+              {/* Near mountains */}
+              <path
+                d="M 0 440 L 140 360 L 260 410 L 380 350 L 520 410 L 660 360 L 800 410 L 940 360 L 1000 400 L 1000 520 L 0 520 Z"
+                fill="url(#mountainNear)"
+              />
+
+              {/* Jade river */}
+              <path
+                d="M 100 540 Q 280 500 460 540 T 820 520 T 1000 500"
+                fill="none"
+                stroke="var(--jade)"
+                strokeWidth="3"
+                opacity="0.55"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 100 540 Q 280 500 460 540 T 820 520 T 1000 500"
+                fill="none"
+                stroke="var(--jade-soft)"
+                strokeWidth="6"
+                opacity="0.25"
+                strokeLinecap="round"
+              />
+
+              {/* Connection lines */}
+              {REGION_CONNECTIONS.map(([from, to], idx) => {
+                const fromPos = REGION_DATA[from].position;
+                const toPos = REGION_DATA[to].position;
+                const isActive =
+                  from === currentRegion || to === currentRegion;
+                return (
+                  <line
+                    key={idx}
+                    x1={`${fromPos.x * 10}`}
+                    y1={`${fromPos.y * 6.25}`}
+                    x2={`${toPos.x * 10}`}
+                    y2={`${toPos.y * 6.25}`}
+                    stroke={isActive ? "var(--cinnabar)" : "var(--ink-mute)"}
+                    strokeWidth={isActive ? "2" : "1.2"}
+                    strokeDasharray={isActive ? "8 6" : "3 8"}
+                    opacity={isActive ? 0.7 : 0.45}
+                  />
+                );
+              })}
+            </svg>
+
+            {/* Compass */}
+            <svg
+              width={60}
+              height={60}
+              viewBox="0 0 60 60"
+              style={{ position: "absolute", top: 14, left: 14 }}
+              aria-hidden
+            >
+              <circle
+                cx="30"
+                cy="30"
+                r="26"
+                fill="var(--paper)"
+                stroke="var(--ink)"
+                strokeWidth="1"
+                opacity="0.9"
+              />
+              <circle
+                cx="30"
+                cy="30"
+                r="20"
+                fill="none"
+                stroke="var(--line-strong)"
+                strokeWidth="0.6"
+              />
+              <path d="M 30 6 L 34 30 L 30 26 L 26 30 Z" fill="var(--cinnabar)" />
+              <path
+                d="M 30 54 L 34 30 L 30 34 L 26 30 Z"
+                fill="var(--ink-soft)"
+              />
+              <text
+                x="30"
+                y="14"
+                textAnchor="middle"
+                fontFamily='"Noto Serif SC", serif'
+                fontSize="8"
+                fill="var(--cinnabar-deep)"
+                fontWeight="600"
+              >
+                北
+              </text>
+              <text
+                x="30"
+                y="54"
+                textAnchor="middle"
+                fontFamily='"Noto Serif SC", serif'
+                fontSize="8"
+                fill="var(--ink-soft)"
+              >
+                南
+              </text>
+            </svg>
+
+            {/* Center watermark */}
+            <div
+              className="han-bg"
+              style={{
+                position: "absolute",
+                left: "50%",
+                top: "50%",
+                transform: "translate(-50%, -50%)",
+                fontSize: 260,
+                opacity: 0.06,
+              }}
+              aria-hidden
+            >
+              界
+            </div>
+
+            {/* Region pins */}
+            {(Object.keys(REGION_DATA) as RegionId[]).map((regionId) => {
+              const data = REGION_DATA[regionId];
+              const isCurrent = regionId === currentRegion;
+              const accessible = isRegionAccessible(regionId);
+              const isSelected = selectedRegion === regionId;
+              const cls = `region ${isCurrent ? "current" : ""} ${!accessible && !isCurrent ? "locked" : ""}`;
+              return (
+                <button
+                  key={regionId}
+                  className={cls}
+                  onClick={() => handleRegionClick(regionId)}
+                  aria-label={locale === "vi" ? data.name : data.name_en}
+                  aria-pressed={isSelected}
+                  style={{
+                    left: `${data.position.x}%`,
+                    top: `${data.position.y}%`,
+                    transform: "translate(-50%, -50%)",
+                    background: "transparent",
+                    border: 0,
+                    padding: 0,
+                    cursor:
+                      !accessible && !isCurrent ? "not-allowed" : "pointer",
+                    zIndex: isSelected ? 10 : 2,
+                  }}
+                >
+                  <div className="pin" aria-hidden />
+                  <div
+                    style={{
+                      padding: "4px 10px",
+                      background: "var(--paper)",
+                      border: `1px solid ${isSelected ? "var(--ink)" : "var(--ink-soft)"}`,
+                      borderRadius: 2,
+                      fontSize: 12,
+                      lineHeight: 1.2,
+                      whiteSpace: "nowrap",
+                      boxShadow: "0 1px 3px rgba(70, 50, 20, 0.18)",
+                    }}
+                  >
+                    <span
+                      className="t-han"
+                      style={{
+                        fontSize: 14,
+                        color: "var(--cinnabar)",
+                        marginRight: 4,
+                      }}
+                    >
+                      {data.han}
+                    </span>
+                    <span
+                      style={{
+                        color: "var(--ink)",
+                        fontFamily:
+                          "var(--font-display), 'Cormorant Garamond', serif",
+                      }}
+                    >
+                      {locale === "vi" ? data.name : data.name_en}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+
+            {/* Scale chip */}
+            <div
+              style={{
+                position: "absolute",
+                right: 16,
+                bottom: 16,
+                padding: "5px 10px",
+                background: "var(--paper)",
+                border: "1px solid var(--line-strong)",
+                borderRadius: 2,
+                fontSize: 11,
+                color: "var(--ink-mute)",
+                fontFamily: "var(--font-ui), Inter, sans-serif",
               }}
             >
-              <div
-                className={`${data.bgColor} ${
-                  isCurrent ? "ring-2 ring-xianxia-gold" : ""
-                } ${isSelected ? "ring-2 ring-white" : ""} rounded-lg p-2.5 md:p-3 min-w-[90px] md:min-w-[100px]`}
-              >
-                <div className={`text-sm md:text-base font-bold ${data.color} leading-tight`}>
-                  {locale === "vi" ? data.name : data.name_en}
-                </div>
-                <div className="text-xs text-gray-400">
-                  {locale === "vi" ? data.element : data.element_en}
-                </div>
-                <div className="text-xs">{getTierStars(data.tier)}</div>
-                {hasVisited && !isCurrent && <div className="text-xs text-green-400">✓</div>}
-                {isCurrent && (
-                  <div className="text-[10px] text-xianxia-gold font-medium mt-0.5">
-                    {locale === "vi" ? "Đang ở đây" : "You are here"}
-                  </div>
-                )}
-              </div>
-              {isCurrent && (
-                <div
-                  className="absolute -top-1 -right-1 w-3 h-3 bg-xianxia-gold rounded-full animate-pulse"
-                  aria-hidden="true"
-                />
-              )}
-
-              {/* Hover Tooltip */}
-              {isHovered && !isSelected && (
-                <div className="absolute z-20 left-1/2 -translate-x-1/2 top-full mt-2 w-48 bg-xianxia-darker border border-xianxia-accent/50 rounded-lg p-3 text-left shadow-xl pointer-events-none">
-                  <div className={`font-bold text-sm ${data.color}`}>
-                    {locale === "vi" ? data.name : data.name_en}
-                  </div>
-                  <div className="text-xs text-gray-300 mt-1">
-                    {locale === "vi" ? data.description : data.description_en}
-                  </div>
-                  <div className="text-xs text-gray-400 mt-1.5 flex items-center justify-between">
-                    <span>{locale === "vi" ? data.element : data.element_en}</span>
-                    <span>{getTierStars(data.tier)}</span>
-                  </div>
-                  {!isCurrent && (
-                    <div className="text-xs mt-1.5 border-t border-gray-700 pt-1.5">
-                      {accessible ? (
-                        <span className="text-yellow-400">
-                          {locale === "vi"
-                            ? `Di chuyển: ${REGION_TRAVEL_STAMINA} thể lực`
-                            : `Travel: ${REGION_TRAVEL_STAMINA} stamina`}
-                        </span>
-                      ) : (
-                        <span className="text-gray-500">
-                          {locale === "vi" ? `Cách ${distance} vùng` : `${distance} regions away`}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Selected Region Info */}
-      {selectedRegion && selectedRegion !== currentRegion && (
-        <div
-          className={`p-4 rounded-lg ${REGION_DATA[selectedRegion].bgColor} border ${REGION_DATA[selectedRegion].borderColor} transition-all`}
-          role="region"
-          aria-label={
-            locale === "vi"
-              ? `Thông tin ${REGION_DATA[selectedRegion].name}`
-              : `${REGION_DATA[selectedRegion].name_en} details`
-          }
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <div className={`font-bold text-lg ${REGION_DATA[selectedRegion].color}`}>
-                {locale === "vi"
-                  ? REGION_DATA[selectedRegion].name
-                  : REGION_DATA[selectedRegion].name_en}
-              </div>
-              <div className="text-sm text-gray-400">
-                {locale === "vi" ? "Cấp độ" : "Tier"}:{" "}
-                {getTierStars(REGION_DATA[selectedRegion].tier)}
-              </div>
-              <div className="text-xs text-gray-300 mt-1 max-w-xs">
-                {locale === "vi"
-                  ? REGION_DATA[selectedRegion].description
-                  : REGION_DATA[selectedRegion].description_en}
-              </div>
+              一 = 三百里 · 1 tấc = 300 lý
             </div>
-            <div className="text-3xl">{REGION_DATA[selectedRegion].element.split(" ")[0]}</div>
           </div>
+        </Card>
 
-          {isRegionAccessible(selectedRegion) ? (
-            <div className="space-y-2 mt-3">
-              {/* Stamina warning */}
-              {!canAffordTravel && (
-                <div
-                  className="text-xs text-red-400 bg-red-900/20 border border-red-500/30 rounded px-3 py-1.5"
-                  role="alert"
-                >
-                  {locale === "vi"
-                    ? `Không đủ thể lực! Cần ${REGION_TRAVEL_STAMINA}, hiện có ${playerStamina}.`
-                    : `Not enough stamina! Need ${REGION_TRAVEL_STAMINA}, have ${playerStamina}.`}
-                </div>
-              )}
-
-              {/* Confirm step */}
-              {showConfirm ? (
-                <div className="space-y-2">
-                  <div className="text-sm text-yellow-200 bg-yellow-900/20 border border-yellow-500/30 rounded px-3 py-2">
-                    {locale === "vi"
-                      ? `Xác nhận di chuyển đến ${REGION_DATA[selectedRegion].name}?`
-                      : `Confirm travel to ${REGION_DATA[selectedRegion].name_en}?`}
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleTravelToRegion(selectedRegion)}
-                      disabled={isLoading || !canAffordTravel}
-                      className="flex-1 py-2 bg-xianxia-accent hover:bg-xianxia-accent/80 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
-                    >
-                      {isLoading
-                        ? locale === "vi"
-                          ? "Đang di chuyển..."
-                          : "Traveling..."
-                        : locale === "vi"
-                          ? "✓ Xác nhận"
-                          : "✓ Confirm"}
-                    </button>
-                    <button
-                      onClick={() => setShowConfirm(false)}
-                      disabled={isLoading}
-                      className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 rounded-lg font-medium transition-colors"
-                    >
-                      {locale === "vi" ? "Hủy" : "Cancel"}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => handleTravelToRegion(selectedRegion)}
-                  disabled={isLoading || !canAffordTravel}
-                  className="w-full py-2 bg-xianxia-accent hover:bg-xianxia-accent/80 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
-                >
-                  {locale === "vi"
-                    ? `Di chuyển đến (${REGION_TRAVEL_STAMINA} thể lực)`
-                    : `Travel (${REGION_TRAVEL_STAMINA} stamina)`}
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="text-center text-gray-400 py-2 mt-2">
-              <div>
-                {locale === "vi" ? "Không thể di chuyển trực tiếp" : "Cannot travel directly"}
-              </div>
-              <div className="text-xs mt-1 text-gray-500">
-                {locale === "vi"
-                  ? `Cách ${regionDistances[selectedRegion] ?? "?"} vùng từ vị trí hiện tại`
-                  : `${regionDistances[selectedRegion] ?? "?"} regions from current location`}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Legend */}
-      <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-400">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-xianxia-gold rounded-full" aria-hidden="true" />
-          {locale === "vi" ? "Vị trí hiện tại" : "Current location"}
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 border-2 border-yellow-500 rounded-full" aria-hidden="true" />
-          {locale === "vi" ? "Có thể di chuyển" : "Can travel"}
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-green-400" aria-hidden="true">
-            ✓
+        {/* Region detail */}
+        <Card
+          padding={22}
+          className="card-corner"
+          style={{ position: "relative", minWidth: 0 }}
+        >
+          <span
+            className="han-bg"
+            style={{ position: "absolute", top: -24, right: -16, fontSize: 240 }}
+            aria-hidden
+          >
+            {detail.han}
           </span>
-          {locale === "vi" ? "Đã khám phá" : "Explored"}
-        </div>
-        <div className="flex items-center gap-2">
-          <span aria-hidden="true">⭐</span>
-          {locale === "vi" ? "Cấp độ nguy hiểm" : "Danger level"}
-        </div>
-      </div>
+          <div style={{ position: "relative", zIndex: 1 }}>
+            <SmallHead>
+              {locale === "vi" ? "Chi Tiết Vùng" : "Region Detail"}
+            </SmallHead>
+            <h3
+              style={{
+                margin: "0 0 4px",
+                display: "flex",
+                alignItems: "baseline",
+                gap: 12,
+              }}
+            >
+              <span
+                className="t-han"
+                style={{
+                  fontSize: 38,
+                  color: detail.color,
+                  lineHeight: 1,
+                  letterSpacing: "0.04em",
+                }}
+              >
+                {detail.fullHan}
+              </span>
+              <span
+                className="t-display"
+                style={{ fontSize: 22, color: "var(--ink)", lineHeight: 1 }}
+              >
+                {locale === "vi" ? detail.name : detail.name_en}
+              </span>
+            </h3>
+            <div className="label" style={{ marginBottom: 8 }}>
+              {locale === "vi"
+                ? `Cấp ${detail.tier} · ${detail.element}`
+                : `Tier ${detail.tier} · ${detail.element_en}`}
+            </div>
+            <p
+              className="t-body"
+              style={{
+                fontStyle: "italic",
+                color: "var(--ink-soft)",
+                fontSize: 14,
+                lineHeight: 1.6,
+                margin: 0,
+              }}
+            >
+              {locale === "vi" ? detail.description : detail.description_en}
+            </p>
+
+            <div className="hr-soft" style={{ margin: "14px 0 10px" }} />
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "0 16px",
+              }}
+            >
+              <Stat
+                label={locale === "vi" ? "Phí thể lực" : "Stamina cost"}
+                value={detailIsCurrent ? "—" : `${REGION_TRAVEL_STAMINA}`}
+                icon="力"
+              />
+              <Stat
+                label={locale === "vi" ? "Nguy hiểm" : "Danger"}
+                value={"★".repeat(detail.tier)}
+                icon="險"
+              />
+              <Stat
+                label={locale === "vi" ? "Khoảng cách" : "Distance"}
+                value={
+                  detailIsCurrent
+                    ? locale === "vi"
+                      ? "Đang tại"
+                      : "Here"
+                    : detailIsAccessible
+                      ? "1"
+                      : String(detailDistance)
+                }
+                icon="程"
+              />
+              <Stat
+                label={locale === "vi" ? "Đã khám phá" : "Explored"}
+                value={detailHasVisited ? "✓" : "—"}
+                icon="蹤"
+              />
+            </div>
+
+            {showConfirm && detailIsAccessible && !detailIsCurrent && (
+              <div
+                style={{
+                  marginTop: 14,
+                  padding: 10,
+                  background: "var(--paper-deep)",
+                  borderLeft: "3px solid var(--cinnabar)",
+                  color: "var(--cinnabar-deep)",
+                  fontSize: 13,
+                }}
+              >
+                {locale === "vi"
+                  ? `Xác nhận du hành đến ${detail.name}?`
+                  : `Confirm travel to ${detail.name_en}?`}
+              </div>
+            )}
+
+            {!detailIsCurrent && !detailIsAccessible && (
+              <p
+                className="t-body"
+                style={{
+                  fontStyle: "italic",
+                  color: "var(--ink-mute)",
+                  fontSize: 12,
+                  marginTop: 10,
+                }}
+              >
+                {locale === "vi"
+                  ? "Phải đi qua những vùng kế cận trước khi tới đây."
+                  : "You must travel through adjacent regions first."}
+              </p>
+            )}
+
+            <div
+              style={{
+                marginTop: 16,
+                display: "flex",
+                gap: 8,
+                flexWrap: "wrap",
+              }}
+            >
+              {detailIsCurrent ? (
+                <button
+                  className="ink-btn ghost"
+                  disabled
+                  style={{ flex: 1, justifyContent: "center" }}
+                >
+                  <span className="t-han">居</span>
+                  {t(locale, "worldHere")}
+                </button>
+              ) : !detailIsAccessible ? (
+                <button
+                  className="ink-btn ghost"
+                  disabled
+                  style={{ flex: 1, justifyContent: "center" }}
+                >
+                  <span className="t-han">封</span>
+                  {t(locale, "worldLocked")}
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() =>
+                      selectedRegion && handleTravelToRegion(selectedRegion)
+                    }
+                    disabled={isLoading || !canAffordTravel || !selectedRegion}
+                    className="ink-btn primary"
+                    style={{ flex: 1, justifyContent: "center" }}
+                  >
+                    <span className="t-han">行</span>
+                    {isLoading
+                      ? locale === "vi"
+                        ? "Đang đi…"
+                        : "Traveling…"
+                      : showConfirm
+                        ? locale === "vi"
+                          ? "Xác Nhận"
+                          : "Confirm"
+                        : t(locale, "worldTravel")}
+                  </button>
+                  <button className="ink-btn ghost" disabled>
+                    <span className="t-han">卜</span>
+                    {locale === "vi" ? "Suy Bốc" : "Divine"}
+                  </button>
+                </>
+              )}
+            </div>
+
+            {!canAffordTravel && !detailIsCurrent && detailIsAccessible && (
+              <p
+                className="t-body"
+                style={{
+                  fontStyle: "italic",
+                  color: "var(--cinnabar-deep)",
+                  fontSize: 12,
+                  marginTop: 10,
+                }}
+              >
+                {locale === "vi"
+                  ? `Không đủ thể lực — cần ${REGION_TRAVEL_STAMINA}, hiện có ${playerStamina}.`
+                  : `Not enough stamina — need ${REGION_TRAVEL_STAMINA}, have ${playerStamina}.`}
+              </p>
+            )}
+          </div>
+        </Card>
       </div>
     </div>
   );

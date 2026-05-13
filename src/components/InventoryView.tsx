@@ -8,7 +8,6 @@ import {
   EnhancementResult,
   canEnhance,
   getEnhancedItemName,
-  getEnhancementColor,
 } from "@/lib/game/enhancement";
 import {
   sortItems,
@@ -17,10 +16,18 @@ import {
   getInventoryUsage,
   SortOption,
   FilterOption,
-  FILTER_LABELS,
-  SORT_LABELS,
 } from "@/lib/game/inventory";
-import { SectionHead, Pill } from "@/components/ui";
+import {
+  Card,
+  ItemSlot,
+  Pill,
+  Resource,
+  SectionHead,
+  Seal,
+  SlotRarity,
+  SmallHead,
+  Stat,
+} from "@/components/ui";
 
 interface InventoryViewProps {
   state: GameState;
@@ -32,12 +39,14 @@ interface InventoryViewProps {
   onStateUpdate?: (state: GameState) => void;
 }
 
-// Vietnamese translations for item types and rarities
 const ITEM_TYPE_VI: Record<string, string> = {
   Medicine: "Đan Dược",
   Material: "Nguyên Liệu",
   Equipment: "Trang Bị",
   Manual: "Bí Kíp",
+  Book: "Bí Tịch",
+  Effect: "Linh Phù",
+  Accessory: "Phụ Kiện",
   Misc: "Khác",
 };
 
@@ -60,19 +69,61 @@ const SLOT_VI: Record<string, string> = {
   Artifact: "Bảo Vật",
 };
 
-const EFFECT_VI: Record<string, string> = {
-  hp_restore: "Hồi HP",
-  qi_restore: "Hồi Khí",
-  stamina_restore: "Hồi Thể Lực",
-  cultivation_exp: "Tu Vi",
-  permanent_hp: "HP Vĩnh Viễn",
-  permanent_qi: "Khí Vĩnh Viễn",
-  permanent_str: "Sức Mạnh Vĩnh Viễn",
-  permanent_agi: "Thân Pháp Vĩnh Viễn",
-  permanent_int: "Trí Tuệ Vĩnh Viễn",
-  permanent_perception: "Cảm Quan Vĩnh Viễn",
-  permanent_luck: "May Mắn Vĩnh Viễn",
+const SLOT_HAN: Record<string, string> = {
+  Weapon: "兵",
+  Head: "首",
+  Chest: "甲",
+  Legs: "腿",
+  Feet: "履",
+  Hands: "手",
+  Accessory: "佩",
+  Artifact: "寶",
 };
+
+const ITEM_HAN: Record<string, string> = {
+  Medicine: "丹",
+  Material: "材",
+  Equipment: "器",
+  Manual: "卷",
+  Book: "書",
+  Effect: "符",
+  Accessory: "佩",
+  Misc: "物",
+};
+
+const RARITY_TO_SLOT: Record<string, SlotRarity> = {
+  Common: "common",
+  Uncommon: "uncommon",
+  Rare: "rare",
+  Epic: "epic",
+  Legendary: "legendary",
+};
+
+const FILTERS: { id: FilterOption; han: string; vi: string; en: string }[] = [
+  { id: "all", han: "全", vi: "Tất Cả", en: "All" },
+  { id: "equipment", han: "器", vi: "Trang Bị", en: "Equipment" },
+  { id: "consumable", han: "丹", vi: "Đan Dược", en: "Pills" },
+  { id: "material", han: "材", vi: "Nguyên Liệu", en: "Materials" },
+  { id: "book", han: "卷", vi: "Bí Kíp", en: "Manuals" },
+];
+
+const EQUIPPED_SLOTS = [
+  "Weapon",
+  "Head",
+  "Chest",
+  "Hands",
+  "Legs",
+  "Feet",
+  "Accessory",
+  "Artifact",
+] as const;
+
+const GRID_SIZE = 32;
+
+function getItemHan(item: InventoryItem): string {
+  if ((item as any).han) return (item as any).han;
+  return ITEM_HAN[item.type] ?? "物";
+}
 
 export default function InventoryView({
   state,
@@ -81,9 +132,7 @@ export default function InventoryView({
   onDiscardItem,
   onUseItem,
   onEnhanceItem,
-  onStateUpdate,
 }: InventoryViewProps) {
-  const [activeTab, setActiveTab] = useState<"consumable" | "equipment">("consumable");
   const [discardConfirm, setDiscardConfirm] = useState<{
     itemId: string;
     name: string;
@@ -93,415 +142,653 @@ export default function InventoryView({
   const [selectedEnhanceItem, setSelectedEnhanceItem] = useState<InventoryItem | null>(null);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
-  // Sorting and filtering state
-  const [sortBy, setSortBy] = useState<SortOption>("type");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortAscending, setSortAscending] = useState(true);
+  const [sortBy] = useState<SortOption>("type");
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
 
-  // Get inventory capacity info
   const inventoryUsage = getInventoryUsage(state.inventory);
 
-  // Filter out techniques/skills that shouldn't be in inventory
   const validInventoryItems = useMemo(() => {
     return state.inventory.items.filter(
-      (item) => !["Main", "Support", "Attack", "Defense", "Movement"].includes(item.type)
+      (item) =>
+        !["Main", "Support", "Attack", "Defense", "Movement"].includes(item.type)
     );
   }, [state.inventory.items]);
 
-  // Apply search, filter, and sort
   const processedItems = useMemo(() => {
     let items = validInventoryItems;
-
-    // Apply search
-    if (searchQuery) {
-      items = searchItems(items, searchQuery, locale);
-    }
-
-    // Apply filter
+    if (searchQuery) items = searchItems(items, searchQuery, locale);
     items = filterItems(items, filterBy);
-
-    // Apply sort
-    items = sortItems(items, sortBy, sortAscending);
-
+    items = sortItems(items, sortBy, true);
     return items;
-  }, [validInventoryItems, searchQuery, filterBy, sortBy, sortAscending, locale]);
+  }, [validInventoryItems, searchQuery, filterBy, sortBy, locale]);
 
-  const consumableItems = useMemo(() => {
-    return processedItems.filter((item) =>
-      ["Medicine", "Material", "Manual", "Misc", "Book", "Effect"].includes(item.type)
-    );
-  }, [processedItems]);
+  const selectedItem = useMemo(
+    () => processedItems.find((i) => i.id === selectedItemId) ?? null,
+    [processedItems, selectedItemId]
+  );
 
-  const equipmentItems = useMemo(() => {
-    return processedItems.filter((item) => ["Equipment", "Accessory"].includes(item.type));
-  }, [processedItems]);
-
-  const handleUseItem = async (itemId: string, itemName: string) => {
-    if (onUseItem && !loadingAction) {
-      setLoadingAction(`use-${itemId}`);
-      try {
-        await onUseItem(itemId);
-        setUseMessage(locale === "vi" ? `Đã sử dụng ${itemName}` : `Used ${itemName}`);
-        setTimeout(() => setUseMessage(null), 2000);
-      } finally {
-        setLoadingAction(null);
-      }
+  const handleUseItem = async (item: InventoryItem) => {
+    if (!onUseItem || loadingAction) return;
+    const itemName = locale === "vi" ? item.name : item.name_en;
+    setLoadingAction(`use-${item.id}`);
+    try {
+      await onUseItem(item.id);
+      setUseMessage(locale === "vi" ? `Đã sử dụng ${itemName}` : `Used ${itemName}`);
+      setTimeout(() => setUseMessage(null), 2000);
+    } finally {
+      setLoadingAction(null);
     }
   };
 
-  const handleEquipItemAsync = async (itemId: string, action: "equip" | "unequip") => {
-    if (onEquipItem && !loadingAction) {
-      setLoadingAction(`${action}-${itemId}`);
-      try {
-        await onEquipItem(itemId, action);
-      } finally {
-        setLoadingAction(null);
-      }
+  const handleEquip = async (item: InventoryItem) => {
+    if (!onEquipItem || loadingAction) return;
+    setLoadingAction(`equip-${item.id}`);
+    try {
+      await onEquipItem(item.id, "equip");
+    } finally {
+      setLoadingAction(null);
     }
   };
 
-  const handleDiscardItemAsync = async (itemId: string, quantity: number) => {
-    if (onDiscardItem && !loadingAction) {
-      setLoadingAction(`discard-${itemId}`);
-      try {
-        await onDiscardItem(itemId, quantity);
-      } finally {
-        setLoadingAction(null);
-      }
+  const handleUnequip = async (item: InventoryItem) => {
+    if (!onEquipItem || loadingAction) return;
+    setLoadingAction(`unequip-${item.id}`);
+    try {
+      await onEquipItem(item.id, "unequip");
+    } finally {
+      setLoadingAction(null);
     }
   };
 
-  const handleEnhance = async (itemId: string): Promise<EnhancementResult | null> => {
+  const handleDiscard = async (itemId: string, quantity: number) => {
+    if (!onDiscardItem || loadingAction) return;
+    setLoadingAction(`discard-${itemId}`);
+    try {
+      await onDiscardItem(itemId, quantity);
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleEnhance = async (itemId: string) => {
     if (!onEnhanceItem) return null;
-    const result = await onEnhanceItem(itemId);
-    return result;
+    return await onEnhanceItem(itemId);
   };
 
-  const slotUsage = getInventoryUsage(state.inventory);
+  // Build slot grid (padded to GRID_SIZE)
+  const gridSlots = useMemo(() => {
+    const slots: (InventoryItem | null)[] = processedItems.slice(0, GRID_SIZE);
+    while (slots.length < GRID_SIZE) slots.push(null);
+    return slots;
+  }, [processedItems]);
 
   return (
-    <div className="space-y-6">
-      <SectionHead
-        han="物"
-        title={locale === "vi" ? "Túi Đồ Trữ Vật" : "Inventory"}
-        subtitle={locale === "vi" ? "Vật phẩm tu sĩ" : "Cultivator's belongings"}
-        right={
-          <Pill variant="jade">
-            {slotUsage.used}/{slotUsage.total}
-          </Pill>
-        }
-      />
-      {/* Use message toast */}
+    <div>
       {useMessage && (
-        <div className="fixed top-4 right-4 bg-green-900/95 border border-green-500/50 text-green-200 px-4 py-3 rounded-lg shadow-lg z-50 animate-toast-in flex items-center gap-2">
-          <span className="text-lg">✓</span>
-          {useMessage}
+        <div
+          className="ink-card"
+          style={{
+            position: "fixed",
+            top: 16,
+            right: 16,
+            zIndex: 50,
+            padding: "10px 14px",
+            borderLeft: "3px solid var(--jade)",
+            background: "var(--card)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            boxShadow: "0 4px 12px rgba(70, 50, 20, 0.18)",
+          }}
+        >
+          <span className="t-han" style={{ color: "var(--jade-deep)", fontSize: 18 }}>
+            用
+          </span>
+          <span style={{ color: "var(--ink)", fontSize: 14 }}>{useMessage}</span>
         </div>
       )}
 
-      {/* Currency & Storage Ring */}
-      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold">
-          {locale === "vi" ? "Tài Sản" : "Resources"}
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <div className="text-center p-4 bg-xianxia-darker rounded-lg">
-            <div className="text-sm text-gray-400">{t(locale, "silver")}</div>
-            <div className="text-3xl font-bold text-xianxia-silver">
-              {state.inventory.silver.toLocaleString()}
-            </div>
-          </div>
-          <div className="text-center p-4 bg-xianxia-darker rounded-lg">
-            <div className="text-sm text-gray-400">{t(locale, "spiritStones")}</div>
-            <div className="text-3xl font-bold text-xianxia-accent">
-              {state.inventory.spirit_stones.toLocaleString()}
-            </div>
-          </div>
-          {/* Inventory Capacity */}
-          <div className="text-center p-4 bg-xianxia-darker rounded-lg">
-            <div className="text-sm text-gray-400">{locale === "vi" ? "Túi đồ" : "Inventory"}</div>
-            <div
-              className={`text-2xl font-bold ${inventoryUsage.percentage >= 90 ? "text-red-400" : inventoryUsage.percentage >= 70 ? "text-yellow-400" : "text-green-400"}`}
-            >
+      <SectionHead
+        han="物"
+        title={locale === "vi" ? "Túi Đồ Trữ Vật" : "Cultivator Inventory"}
+        subtitle={locale === "vi" ? "Vật phẩm tu sĩ" : "Cultivator's belongings"}
+        right={
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <Pill variant="jade" withDot>
               {inventoryUsage.used}/{inventoryUsage.total}
-            </div>
-            {/* Capacity bar */}
-            <div className="mt-2 h-2 bg-gray-700 rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all ${inventoryUsage.percentage >= 90 ? "bg-red-500" : inventoryUsage.percentage >= 70 ? "bg-yellow-500" : "bg-green-500"}`}
-                style={{ width: `${inventoryUsage.percentage}%` }}
-              />
-            </div>
+            </Pill>
             {state.inventory.storage_ring && (
-              <div className="text-xs text-purple-400 mt-1">
-                💍{" "}
+              <Pill variant="cinnabar">
+                <span className="t-han">袋</span>{" "}
                 {locale === "vi"
                   ? state.inventory.storage_ring.name
                   : state.inventory.storage_ring.name_en}
-              </div>
+              </Pill>
             )}
           </div>
-        </div>
-      </div>
+        }
+      />
 
-      {/* Search and Filter Controls */}
-      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-4">
-        <div className="flex flex-wrap gap-4 items-center">
+      <div className="inventory-grid" style={{ marginTop: 4 }}>
+        {/* LEFT — filters + slot grid */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, minWidth: 0 }}>
+          {/* Resource counters */}
+          <Card padding={18} deep>
+            <div style={{ display: "flex", justifyContent: "space-around", gap: 12 }}>
+              <Resource
+                glyph="銀"
+                amount={state.inventory.silver}
+                label={t(locale, "silver")}
+                variant="silver"
+              />
+              <Resource
+                glyph="靈"
+                amount={state.inventory.spirit_stones}
+                label={t(locale, "spiritStones")}
+                variant="stone"
+              />
+              <Resource
+                glyph="袋"
+                amount={inventoryUsage.used}
+                label={locale === "vi" ? "Số ô" : "Slots"}
+              />
+            </div>
+          </Card>
+
+          {/* Filter pill row */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {FILTERS.map((f) => {
+              const active = filterBy === f.id;
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => setFilterBy(f.id)}
+                  className={`pill ${active ? "solid" : ""}`}
+                  style={{ cursor: "pointer" }}
+                  type="button"
+                >
+                  <span
+                    className="t-han"
+                    style={{
+                      fontSize: 13,
+                      color: active ? "var(--paper)" : "var(--cinnabar-deep)",
+                    }}
+                  >
+                    {f.han}
+                  </span>
+                  {locale === "vi" ? f.vi : f.en}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Search */}
-          <div className="flex-1 min-w-[200px]">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={locale === "vi" ? "🔍 Tìm kiếm vật phẩm..." : "🔍 Search items..."}
-              className="w-full px-4 py-2 bg-xianxia-darker border border-xianxia-accent/30 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-xianxia-accent"
-            />
-          </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={locale === "vi" ? "Tìm vật phẩm…" : "Search items…"}
+            className="t-body"
+            style={{
+              padding: "8px 12px",
+              background: "var(--paper)",
+              border: "1px solid var(--line-strong)",
+              borderRadius: 2,
+              color: "var(--ink)",
+              fontSize: 14,
+              outline: "none",
+              fontStyle: "italic",
+            }}
+          />
 
-          {/* Filter dropdown */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-400">{locale === "vi" ? "Lọc:" : "Filter:"}</span>
-            <select
-              value={filterBy}
-              onChange={(e) => setFilterBy(e.target.value as FilterOption)}
-              className="px-3 py-2 bg-xianxia-darker border border-xianxia-accent/30 rounded-lg text-white focus:outline-none focus:border-xianxia-accent"
-            >
-              {(Object.keys(FILTER_LABELS) as FilterOption[]).map((filter) => (
-                <option key={filter} value={filter}>
-                  {locale === "vi" ? FILTER_LABELS[filter].vi : FILTER_LABELS[filter].en}
-                </option>
+          {/* Slot grid */}
+          <Card padding={18}>
+            <div className="inventory-slot-grid">
+              {gridSlots.map((item, idx) => (
+                <ItemSlot
+                  key={item ? `${item.id}-${idx}` : `empty-${idx}`}
+                  item={
+                    item
+                      ? {
+                          glyph: getItemHan(item),
+                          name: locale === "vi" ? item.name : item.name_en,
+                          rarity: RARITY_TO_SLOT[item.rarity] ?? "common",
+                          qty: item.quantity,
+                          lvl: (item as any).enhancement_level,
+                        }
+                      : null
+                  }
+                  selected={!!item && item.id === selectedItemId}
+                  onClick={() => item && setSelectedItemId(item.id)}
+                />
               ))}
-            </select>
-          </div>
+            </div>
 
-          {/* Sort dropdown */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-400">{locale === "vi" ? "Sắp xếp:" : "Sort:"}</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="px-3 py-2 bg-xianxia-darker border border-xianxia-accent/30 rounded-lg text-white focus:outline-none focus:border-xianxia-accent"
+            <div className="hr-soft" style={{ margin: "14px 0 10px" }} />
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
             >
-              {(Object.keys(SORT_LABELS) as SortOption[]).map((sort) => (
-                <option key={sort} value={sort}>
-                  {locale === "vi" ? SORT_LABELS[sort].vi : SORT_LABELS[sort].en}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={() => setSortAscending(!sortAscending)}
-              className="px-2 py-2 bg-xianxia-darker border border-xianxia-accent/30 rounded-lg text-white hover:bg-xianxia-accent/20 transition-colors"
-              title={
-                sortAscending
-                  ? locale === "vi"
-                    ? "Tăng dần"
-                    : "Ascending"
-                  : locale === "vi"
-                    ? "Giảm dần"
-                    : "Descending"
+              <span
+                className="t-body"
+                style={{ fontStyle: "italic", color: "var(--ink-mute)", fontSize: 12 }}
+              >
+                {locale === "vi"
+                  ? `${processedItems.length} / ${validInventoryItems.length} vật phẩm`
+                  : `${processedItems.length} of ${validInventoryItems.length} items`}
+              </span>
+              <div style={{ display: "flex", gap: 4 }}>
+                <Pill>
+                  <span className="t-han" style={{ color: "var(--rarity-uncommon)" }}>
+                    ●
+                  </span>
+                  Hạ
+                </Pill>
+                <Pill>
+                  <span className="t-han" style={{ color: "var(--rarity-rare)" }}>
+                    ●
+                  </span>
+                  Trung
+                </Pill>
+                <Pill>
+                  <span className="t-han" style={{ color: "var(--rarity-epic)" }}>
+                    ●
+                  </span>
+                  Thượng
+                </Pill>
+                <Pill>
+                  <span className="t-han" style={{ color: "var(--rarity-legendary)" }}>
+                    ●
+                  </span>
+                  Cực
+                </Pill>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* RIGHT — worn + detail */}
+        <div
+          className="inventory-detail"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 16,
+            minWidth: 0,
+          }}
+        >
+          {/* Worn equipment */}
+          <Card padding={20}>
+            <SmallHead
+              right={
+                <Pill variant="jade">
+                  {locale === "vi" ? "Trang Bị" : "Equipped"}
+                </Pill>
               }
             >
-              {sortAscending ? "↑" : "↓"}
-            </button>
-          </div>
-
-          {/* Clear filters */}
-          {(searchQuery || filterBy !== "all" || sortBy !== "type") && (
-            <button
-              onClick={() => {
-                setSearchQuery("");
-                setFilterBy("all");
-                setSortBy("type");
-                setSortAscending(true);
+              {locale === "vi" ? "Đang Trang Bị" : "Currently Worn"}
+            </SmallHead>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(4, 1fr)",
+                gap: 8,
               }}
-              className="px-3 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-300 rounded-lg text-sm transition-colors"
             >
-              {locale === "vi" ? "✕ Xóa bộ lọc" : "✕ Clear filters"}
-            </button>
-          )}
-        </div>
-
-        {/* Results count */}
-        <div className="mt-2 text-sm text-gray-500">
-          {locale === "vi"
-            ? `Hiển thị ${processedItems.length} / ${validInventoryItems.length} vật phẩm`
-            : `Showing ${processedItems.length} of ${validInventoryItems.length} items`}
-        </div>
-      </div>
-
-      {/* Equipped Items */}
-      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        <h2 className="text-2xl font-bold mb-4 text-xianxia-gold flex items-center gap-2">
-          ⚔️ {locale === "vi" ? "Đang Trang Bị" : "Currently Equipped"}
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {(
-            ["Weapon", "Head", "Chest", "Legs", "Feet", "Hands", "Accessory", "Artifact"] as const
-          ).map((slot) => {
-            const equipped = state.equipped_items[slot];
-            const rarityColors = {
-              Legendary: "border-orange-500/50 bg-orange-900/10",
-              Epic: "border-purple-500/50 bg-purple-900/10",
-              Rare: "border-blue-500/50 bg-blue-900/10",
-              Uncommon: "border-green-500/50 bg-green-900/10",
-              Common: "border-gray-500/30 bg-gray-900/10",
-            };
-            return (
-              <div
-                key={slot}
-                className={`p-3 rounded-lg border transition-all ${
-                  equipped
-                    ? rarityColors[equipped.rarity as keyof typeof rarityColors] ||
-                      "border-xianxia-accent/20 bg-xianxia-darker"
-                    : "border-dashed border-gray-700/50 bg-xianxia-darker/50"
-                }`}
-              >
-                <div className="text-xs text-gray-400 mb-2 font-medium">
-                  {locale === "vi" ? SLOT_VI[slot] : slot}
-                </div>
-                {equipped ? (
-                  <>
+              {EQUIPPED_SLOTS.map((slot) => {
+                const equipped = state.equipped_items[slot] as InventoryItem | undefined;
+                return (
+                  <div key={slot} style={{ textAlign: "center" }}>
+                    <ItemSlot
+                      item={
+                        equipped
+                          ? {
+                              glyph: getItemHan(equipped),
+                              name:
+                                locale === "vi" ? equipped.name : equipped.name_en,
+                              rarity:
+                                RARITY_TO_SLOT[equipped.rarity] ?? "common",
+                              lvl: (equipped as any).enhancement_level,
+                            }
+                          : null
+                      }
+                      emptyGlyph={SLOT_HAN[slot]}
+                      onClick={() =>
+                        equipped && setSelectedItemId(equipped.id)
+                      }
+                    />
                     <div
-                      className="text-sm font-semibold text-white mb-1 truncate"
-                      title={locale === "vi" ? equipped.name : equipped.name_en}
+                      className="label"
+                      style={{ marginTop: 4, fontSize: 9, letterSpacing: "0.12em" }}
                     >
-                      {getEnhancedItemName(equipped, locale)}
+                      {locale === "vi" ? SLOT_VI[slot] : slot}
                     </div>
-                    {equipped.bonus_stats && (
-                      <div className="text-xs text-green-400 mb-2">
-                        {Object.entries(equipped.bonus_stats)
-                          .slice(0, 2)
-                          .map(([key, val]) => (
-                            <div key={key}>
-                              +{val} {key.toUpperCase()}
-                            </div>
-                          ))}
-                      </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
+          {/* Selected item detail */}
+          <Card padding={22} className="card-corner" style={{ position: "relative" }}>
+            {selectedItem ? (
+              <>
+                <span
+                  className="han-bg"
+                  style={{
+                    position: "absolute",
+                    top: -16,
+                    right: -20,
+                    fontSize: 200,
+                  }}
+                  aria-hidden
+                >
+                  {getItemHan(selectedItem)}
+                </span>
+                <div style={{ position: "relative", zIndex: 1 }}>
+                  <div className="label">
+                    {locale === "vi" ? "Chi Tiết Vật Phẩm" : "Item Detail"}
+                  </div>
+                  <h3
+                    className="t-display"
+                    style={{
+                      fontSize: 22,
+                      margin: "4px 0 0",
+                      color: "var(--ink)",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {getEnhancedItemName(selectedItem, locale)}
+                  </h3>
+                  <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+                    <Pill>
+                      {locale === "vi"
+                        ? ITEM_TYPE_VI[selectedItem.type] ?? selectedItem.type
+                        : selectedItem.type}
+                    </Pill>
+                    <span
+                      className="pill"
+                      style={{
+                        borderColor: `var(--rarity-${RARITY_TO_SLOT[selectedItem.rarity] ?? "common"})`,
+                        color: `var(--rarity-${RARITY_TO_SLOT[selectedItem.rarity] ?? "common"})`,
+                      }}
+                    >
+                      {locale === "vi"
+                        ? RARITY_VI[selectedItem.rarity] ?? selectedItem.rarity
+                        : selectedItem.rarity}
+                    </span>
+                    {selectedItem.quantity > 1 && (
+                      <Pill variant="gold">
+                        <span className="t-han">數</span> {selectedItem.quantity}
+                      </Pill>
                     )}
-                    {onEquipItem && (
-                      <button
-                        onClick={() => handleEquipItemAsync(equipped.id, "unequip")}
-                        disabled={loadingAction === `unequip-${equipped.id}`}
-                        className="w-full px-2 py-1 bg-red-600/20 hover:bg-red-600/40 disabled:opacity-50 text-red-300 rounded text-xs transition-colors flex items-center justify-center gap-1"
+                  </div>
+                  <p
+                    className="t-body"
+                    style={{
+                      fontStyle: "italic",
+                      color: "var(--ink-soft)",
+                      fontSize: 14,
+                      marginTop: 12,
+                      lineHeight: 1.55,
+                    }}
+                  >
+                    {locale === "vi"
+                      ? selectedItem.description
+                      : selectedItem.description_en}
+                  </p>
+
+                  {selectedItem.bonus_stats && Object.keys(selectedItem.bonus_stats).length > 0 && (
+                    <>
+                      <div className="hr-soft" style={{ margin: "14px 0 8px" }} />
+                      <SmallHead>
+                        {locale === "vi" ? "Chỉ Số Bổ Trợ" : "Bonus Stats"}
+                      </SmallHead>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: "0 16px",
+                        }}
                       >
-                        {loadingAction === `unequip-${equipped.id}` && (
-                          <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-300 inline-block"></span>
+                        {Object.entries(selectedItem.bonus_stats).map(
+                          ([key, val]) => (
+                            <Stat
+                              key={key}
+                              label={key.toUpperCase()}
+                              value={`+${val}`}
+                              icon="加"
+                            />
+                          )
                         )}
-                        {locale === "vi" ? "Tháo" : "Unequip"}
+                      </div>
+                    </>
+                  )}
+
+                  {selectedItem.effects && Object.keys(selectedItem.effects).length > 0 && (
+                    <>
+                      <div className="hr-soft" style={{ margin: "14px 0 8px" }} />
+                      <SmallHead>
+                        {locale === "vi" ? "Hiệu Quả" : "Effects"}
+                      </SmallHead>
+                      <div>
+                        {Object.entries(selectedItem.effects).map(([key, value]) => (
+                          <Stat
+                            key={key}
+                            label={key.replace(/_/g, " ")}
+                            value={`+${String(value)}`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {selectedItem.equipment_slot && (
+                    <div style={{ marginTop: 10, display: "flex", gap: 6 }}>
+                      <Pill variant="cinnabar">
+                        <span className="t-han">
+                          {SLOT_HAN[selectedItem.equipment_slot] ?? "位"}
+                        </span>
+                        {locale === "vi"
+                          ? SLOT_VI[selectedItem.equipment_slot] ?? selectedItem.equipment_slot
+                          : selectedItem.equipment_slot}
+                      </Pill>
+                    </div>
+                  )}
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 8,
+                      marginTop: 18,
+                    }}
+                  >
+                    {(selectedItem.type === "Medicine" ||
+                      selectedItem.type === "Book" ||
+                      selectedItem.effects) &&
+                      onUseItem && (
+                        <button
+                          onClick={() => handleUseItem(selectedItem)}
+                          disabled={loadingAction === `use-${selectedItem.id}`}
+                          className="ink-btn primary"
+                        >
+                          <span className="t-han">用</span>
+                          {locale === "vi" ? "Dùng" : "Use"}
+                        </button>
+                      )}
+
+                    {(selectedItem.type === "Equipment" ||
+                      selectedItem.type === "Accessory") &&
+                      onEquipItem &&
+                      !isEquipped(state, selectedItem) && (
+                        <button
+                          onClick={() => handleEquip(selectedItem)}
+                          disabled={loadingAction === `equip-${selectedItem.id}`}
+                          className="ink-btn primary"
+                        >
+                          <span className="t-han">裝</span>
+                          {locale === "vi" ? "Trang Bị" : "Equip"}
+                        </button>
+                      )}
+
+                    {(selectedItem.type === "Equipment" ||
+                      selectedItem.type === "Accessory") &&
+                      onEquipItem &&
+                      isEquipped(state, selectedItem) && (
+                        <button
+                          onClick={() => handleUnequip(selectedItem)}
+                          disabled={loadingAction === `unequip-${selectedItem.id}`}
+                          className="ink-btn ghost"
+                        >
+                          <span className="t-han">脫</span>
+                          {locale === "vi" ? "Tháo" : "Unequip"}
+                        </button>
+                      )}
+
+                    {(selectedItem.type === "Equipment" ||
+                      selectedItem.type === "Accessory") &&
+                      canEnhance(selectedItem) && (
+                        <button
+                          onClick={() => setSelectedEnhanceItem(selectedItem)}
+                          className="ink-btn ghost"
+                        >
+                          <span className="t-han">煉</span>
+                          {locale === "vi" ? "Khắc Trận" : "Enhance"}
+                        </button>
+                      )}
+
+                    {onDiscardItem && (
+                      <button
+                        onClick={() =>
+                          setDiscardConfirm({
+                            itemId: selectedItem.id,
+                            name:
+                              locale === "vi"
+                                ? selectedItem.name
+                                : selectedItem.name_en,
+                            quantity: selectedItem.quantity,
+                          })
+                        }
+                        className="ink-btn cinnabar"
+                      >
+                        <span className="t-han">棄</span>
+                        {locale === "vi" ? "Vứt" : "Discard"}
                       </button>
                     )}
-                  </>
-                ) : (
-                  <div className="text-sm text-gray-600 italic text-center py-2">
-                    {locale === "vi" ? "Trống" : "Empty"}
                   </div>
-                )}
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign: "center", padding: "30px 12px" }}>
+                <Seal variant="ghost" size="md">
+                  物
+                </Seal>
+                <p
+                  className="t-body"
+                  style={{
+                    fontStyle: "italic",
+                    color: "var(--ink-mute)",
+                    fontSize: 13,
+                    marginTop: 14,
+                  }}
+                >
+                  {locale === "vi"
+                    ? "Chọn một vật phẩm trong túi để xem chi tiết."
+                    : "Select an item from the grid to view its detail."}
+                </p>
               </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Items with Tabs */}
-      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6">
-        {/* Tab Headers */}
-        <div className="flex gap-2 mb-4 border-b border-xianxia-accent/30">
-          <button
-            onClick={() => setActiveTab("consumable")}
-            className={`px-4 py-2 font-bold transition-colors ${
-              activeTab === "consumable"
-                ? "text-xianxia-gold border-b-2 border-xianxia-gold"
-                : "text-gray-400 hover:text-gray-300"
-            }`}
-          >
-            {locale === "vi" ? "Vật Phẩm" : "Consumables"} ({consumableItems.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("equipment")}
-            className={`px-4 py-2 font-bold transition-colors ${
-              activeTab === "equipment"
-                ? "text-xianxia-gold border-b-2 border-xianxia-gold"
-                : "text-gray-400 hover:text-gray-300"
-            }`}
-          >
-            {locale === "vi" ? "Trang Bị" : "Equipment"} ({equipmentItems.length})
-          </button>
-        </div>
-
-        {/* Tab Content */}
-        {activeTab === "consumable" ? (
-          consumableItems.length === 0 ? (
-            <p className="text-center text-gray-400 py-8">
-              {locale === "vi" ? "Không có vật phẩm" : "No items"}
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {renderItems(
-                consumableItems,
-                locale,
-                loadingAction,
-                handleEquipItemAsync,
-                setDiscardConfirm,
-                handleUseItem,
-                setSelectedEnhanceItem
-              )}
-            </div>
-          )
-        ) : equipmentItems.length === 0 ? (
-          <p className="text-center text-gray-400 py-8">
-            {locale === "vi" ? "Không có trang bị" : "No equipment"}
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {renderItems(
-              equipmentItems,
-              locale,
-              loadingAction,
-              handleEquipItemAsync,
-              setDiscardConfirm,
-              handleUseItem,
-              setSelectedEnhanceItem
             )}
-          </div>
-        )}
+          </Card>
+        </div>
       </div>
 
-      {/* Discard Confirmation Dialog */}
+      {/* Discard confirmation */}
       {discardConfirm && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-xianxia-dark border border-xianxia-accent rounded-lg p-6 max-w-md mx-4">
-            <h3 className="text-xl font-bold text-xianxia-gold mb-4">
-              {locale === "vi" ? "Xác Nhận Vứt" : "Confirm Discard"}
-            </h3>
-            <p className="text-gray-300 mb-6">
-              {locale === "vi"
-                ? `Bạn có chắc muốn vứt ${discardConfirm.quantity}x ${discardConfirm.name}?`
-                : `Are you sure you want to discard ${discardConfirm.quantity}x ${discardConfirm.name}?`}
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  handleDiscardItemAsync(discardConfirm.itemId, discardConfirm.quantity);
-                  setDiscardConfirm(null);
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 60,
+            background: "rgba(20, 24, 32, 0.55)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={() => setDiscardConfirm(null)}
+        >
+          <Card
+            padding={26}
+            style={{ maxWidth: 440, width: "100%" }}
+          >
+            <div onClick={(e) => e.stopPropagation()}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  marginBottom: 12,
                 }}
-                disabled={!!loadingAction}
-                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded transition-colors"
               >
-                {locale === "vi" ? "Vứt" : "Discard"}
-              </button>
-              <button
-                onClick={() => setDiscardConfirm(null)}
-                className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors"
+                <Seal variant="cinnabar" size="sm">
+                  棄
+                </Seal>
+                <h3
+                  className="t-display"
+                  style={{
+                    margin: 0,
+                    fontSize: 22,
+                    color: "var(--ink)",
+                  }}
+                >
+                  {locale === "vi" ? "Xác Nhận Vứt" : "Confirm Discard"}
+                </h3>
+              </div>
+              <p
+                className="t-body"
+                style={{
+                  fontStyle: "italic",
+                  color: "var(--ink-soft)",
+                  fontSize: 14,
+                  marginBottom: 22,
+                }}
               >
-                {locale === "vi" ? "Hủy" : "Cancel"}
-              </button>
+                {locale === "vi"
+                  ? `Có chắc muốn vứt ${discardConfirm.quantity}× ${discardConfirm.name}? Việc này không thể hoàn tác.`
+                  : `Really discard ${discardConfirm.quantity}× ${discardConfirm.name}? This cannot be undone.`}
+              </p>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button
+                  onClick={() => {
+                    handleDiscard(discardConfirm.itemId, discardConfirm.quantity);
+                    setDiscardConfirm(null);
+                  }}
+                  disabled={!!loadingAction}
+                  className="ink-btn cinnabar"
+                  style={{ flex: 1, justifyContent: "center" }}
+                >
+                  {locale === "vi" ? "Vứt Bỏ" : "Discard"}
+                </button>
+                <button
+                  onClick={() => setDiscardConfirm(null)}
+                  className="ink-btn ghost"
+                  style={{ flex: 1, justifyContent: "center" }}
+                >
+                  {locale === "vi" ? "Hủy" : "Cancel"}
+                </button>
+              </div>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
-      {/* Enhancement Modal */}
       {selectedEnhanceItem && (
         <EnhancementView
           item={selectedEnhanceItem}
@@ -515,241 +802,6 @@ export default function InventoryView({
   );
 }
 
-function renderItems(
-  items: any[],
-  locale: Locale,
-  loadingAction: string | null,
-  onEquipItem?: (itemId: string, action: "equip" | "unequip") => Promise<void>,
-  setDiscardConfirm?: (confirm: { itemId: string; name: string; quantity: number } | null) => void,
-  onUseItem?: (itemId: string, itemName: string) => void,
-  setSelectedEnhanceItem?: (item: any) => void
-) {
-  return items.map((item, index) => {
-    const isConsumable = item.type === "Medicine" || item.type === "Book" || item.effects;
-    const itemName = locale === "vi" ? item.name : item.name_en;
-
-    return (
-      <div
-        key={`${item.id}-${index}`}
-        className="p-4 bg-xianxia-darker rounded-lg border border-xianxia-accent/20"
-      >
-        <div className="flex justify-between items-start">
-          <div className="flex-1">
-            <div className="font-bold text-lg">{itemName}</div>
-            <div className="text-sm text-gray-400 mt-1">
-              {locale === "vi" ? item.description : item.description_en}
-            </div>
-            <div className="flex gap-3 mt-2 text-xs">
-              <span className="px-2 py-1 bg-xianxia-accent/20 rounded">
-                {locale === "vi" ? ITEM_TYPE_VI[item.type] || item.type : item.type}
-              </span>
-              <span
-                className={`px-2 py-1 rounded ${
-                  item.rarity === "Legendary"
-                    ? "bg-orange-500/20 text-orange-300"
-                    : item.rarity === "Epic"
-                      ? "bg-purple-500/20 text-purple-300"
-                      : item.rarity === "Rare"
-                        ? "bg-blue-500/20 text-blue-300"
-                        : item.rarity === "Uncommon"
-                          ? "bg-green-500/20 text-green-300"
-                          : "bg-gray-500/20 text-gray-300"
-                }`}
-              >
-                {locale === "vi" ? RARITY_VI[item.rarity] || item.rarity : item.rarity}
-              </span>
-            </div>
-          </div>
-          <div className="text-right ml-4">
-            <div className="text-sm text-gray-400">{locale === "vi" ? "Số lượng" : "Qty"}</div>
-            <div className="text-2xl font-bold">{item.quantity}</div>
-
-            <div className="flex flex-col gap-2 mt-2">
-              {/* Use button for consumables */}
-              {isConsumable && onUseItem && (
-                <button
-                  onClick={() => onUseItem(item.id, itemName)}
-                  disabled={loadingAction === `use-${item.id}`}
-                  className="px-3 py-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded text-sm transition-colors flex items-center justify-center gap-1"
-                >
-                  {loadingAction === `use-${item.id}` && (
-                    <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-white inline-block"></span>
-                  )}
-                  {locale === "vi" ? "Dùng" : "Use"}
-                </button>
-              )}
-
-              {/* Equip button for equipment and accessories */}
-              {(item.type === "Equipment" || item.type === "Accessory") && onEquipItem && (
-                <button
-                  onClick={() => onEquipItem(item.id, "equip")}
-                  disabled={loadingAction === `equip-${item.id}`}
-                  className="px-3 py-1 bg-xianxia-accent hover:bg-xianxia-accent/80 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded text-sm transition-colors flex items-center justify-center gap-1"
-                >
-                  {loadingAction === `equip-${item.id}` && (
-                    <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-white inline-block"></span>
-                  )}
-                  {locale === "vi" ? "Trang bị" : "Equip"}
-                </button>
-              )}
-
-              {/* Enhance button for equipment and accessories */}
-              {(item.type === "Equipment" || item.type === "Accessory") &&
-                canEnhance(item) &&
-                setSelectedEnhanceItem && (
-                  <button
-                    onClick={() => setSelectedEnhanceItem(item)}
-                    className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-sm transition-colors"
-                  >
-                    {locale === "vi" ? "✨ Cường Hóa" : "✨ Enhance"}
-                  </button>
-                )}
-
-              {/* Discard button */}
-              {setDiscardConfirm && (
-                <button
-                  onClick={() =>
-                    setDiscardConfirm({
-                      itemId: item.id,
-                      name: itemName,
-                      quantity: item.quantity,
-                    })
-                  }
-                  className="px-3 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-300 rounded text-sm transition-colors"
-                >
-                  {locale === "vi" ? "Vứt" : "Discard"}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Show bonus stats for equipment */}
-        {item.bonus_stats && Object.keys(item.bonus_stats).length > 0 && (
-          <div className="mt-3 pt-3 border-t border-xianxia-accent/20">
-            <div className="text-sm text-green-400 font-semibold">
-              {locale === "vi" ? "Chỉ số bonus:" : "Bonus Stats:"}
-            </div>
-            <div className="text-sm text-gray-300 mt-1 grid grid-cols-2 gap-1">
-              {item.bonus_stats.hp && <div>HP: +{item.bonus_stats.hp}</div>}
-              {item.bonus_stats.qi && (
-                <div>
-                  {locale === "vi" ? "Khí" : "Qi"}: +{item.bonus_stats.qi}
-                </div>
-              )}
-              {item.bonus_stats.stamina && (
-                <div>
-                  {locale === "vi" ? "Thể Lực" : "Stamina"}: +{item.bonus_stats.stamina}
-                </div>
-              )}
-              {item.bonus_stats.str && (
-                <div>
-                  {locale === "vi" ? "Sức Mạnh" : "STR"}: +{item.bonus_stats.str}
-                </div>
-              )}
-              {item.bonus_stats.agi && (
-                <div>
-                  {locale === "vi" ? "Thân Pháp" : "AGI"}: +{item.bonus_stats.agi}
-                </div>
-              )}
-              {item.bonus_stats.int && (
-                <div>
-                  {locale === "vi" ? "Trí Tuệ" : "INT"}: +{item.bonus_stats.int}
-                </div>
-              )}
-              {item.bonus_stats.perception && (
-                <div>
-                  {locale === "vi" ? "Cảm Quan" : "PER"}: +{item.bonus_stats.perception}
-                </div>
-              )}
-              {item.bonus_stats.luck && (
-                <div>
-                  {locale === "vi" ? "May Mắn" : "LUCK"}: +{item.bonus_stats.luck}
-                </div>
-              )}
-              {item.bonus_stats.cultivation_speed && (
-                <div>
-                  {locale === "vi" ? "Tốc độ tu luyện" : "Cultivation Speed"}: +
-                  {item.bonus_stats.cultivation_speed}%
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Show effects for consumables */}
-        {item.effects && Object.keys(item.effects).length > 0 && (
-          <div className="mt-3 pt-3 border-t border-xianxia-accent/20">
-            <div className="text-sm text-xianxia-accent font-semibold">
-              {locale === "vi" ? "Hiệu quả:" : "Effects:"}
-            </div>
-            <div className="text-sm text-gray-300 mt-1">
-              {Object.entries(item.effects).map(([key, value]) => (
-                <div key={key}>
-                  {locale === "vi"
-                    ? EFFECT_VI[key] || key.replace(/_/g, " ")
-                    : key.replace(/_/g, " ")}
-                  : +{String(value)}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Show teachings for books */}
-        {item.type === "Book" && (item.teaches_technique || item.teaches_skill) && (
-          <div className="mt-3 pt-3 border-t border-xianxia-accent/20">
-            <div className="text-sm text-yellow-400 font-semibold">
-              {locale === "vi" ? "📖 Dạy:" : "📖 Teaches:"}
-            </div>
-            {item.teaches_technique && (
-              <div className="text-sm text-gray-300 mt-1">
-                <div className="font-semibold text-purple-400">
-                  {locale === "vi" ? "🔮 Công Pháp: " : "🔮 Technique: "}
-                  {locale === "vi" ? item.teaches_technique.name : item.teaches_technique.name_en}
-                </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  {locale === "vi"
-                    ? item.teaches_technique.description
-                    : item.teaches_technique.description_en}
-                </div>
-                <div className="text-xs text-green-400 mt-1">
-                  {locale === "vi" ? "Tốc độ tu luyện:" : "Cultivation Speed:"} +
-                  {item.teaches_technique.cultivation_speed_bonus}%
-                </div>
-              </div>
-            )}
-            {item.teaches_skill && (
-              <div className="text-sm text-gray-300 mt-1">
-                <div className="font-semibold text-orange-400">
-                  {locale === "vi" ? "⚔️ Kỹ Năng: " : "⚔️ Skill: "}
-                  {locale === "vi" ? item.teaches_skill.name : item.teaches_skill.name_en}
-                </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  {locale === "vi"
-                    ? item.teaches_skill.description
-                    : item.teaches_skill.description_en}
-                </div>
-                <div className="text-xs text-red-400 mt-1">
-                  {locale === "vi" ? "Sát thương:" : "Damage:"} ×
-                  {item.teaches_skill.damage_multiplier} |
-                  {locale === "vi" ? " Tiêu Qi:" : " Qi Cost:"} {item.teaches_skill.qi_cost}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Show equipment slot */}
-        {item.equipment_slot && (
-          <div className="mt-2 text-xs text-blue-400">
-            {locale === "vi" ? "Vị trí:" : "Slot:"}{" "}
-            {locale === "vi"
-              ? SLOT_VI[item.equipment_slot] || item.equipment_slot
-              : item.equipment_slot}
-          </div>
-        )}
-      </div>
-    );
-  });
+function isEquipped(state: GameState, item: InventoryItem): boolean {
+  return Object.values(state.equipped_items).some((eq) => eq?.id === item.id);
 }

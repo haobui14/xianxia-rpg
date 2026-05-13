@@ -71,10 +71,9 @@ export default function CultivatorRail({
   return (
     <aside
       style={{
-        width: 320,
+        width: "100%",
+        maxWidth: 320,
         flexShrink: 0,
-        position: "sticky",
-        top: 16,
         display: "flex",
         flexDirection: "column",
         gap: 16,

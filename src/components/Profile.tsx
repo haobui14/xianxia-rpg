@@ -5,6 +5,15 @@ import { supabase } from "@/lib/database/client";
 import { User } from "@supabase/supabase-js";
 import { Locale } from "@/lib/i18n/translations";
 import { GameState } from "@/types/game";
+import {
+  Card,
+  Pill,
+  Resource,
+  SectionHead,
+  Seal,
+  SmallHead,
+  Stat,
+} from "@/components/ui";
 
 interface ProfileProps {
   locale: Locale;
@@ -39,22 +48,14 @@ export default function Profile({ locale, onBack, state }: ProfileProps) {
 
   const handleResetGame = async () => {
     if (!user) return;
-
     setResetting(true);
     setError("");
-
     try {
-      // Call API to delete all user data
       const response = await fetch("/api/reset-game", {
         method: "POST",
         credentials: "same-origin",
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to reset game");
-      }
-
-      // Reload page to start fresh
+      if (!response.ok) throw new Error("Failed to reset game");
       window.location.reload();
     } catch (err) {
       console.error("Reset error:", err);
@@ -65,269 +66,376 @@ export default function Profile({ locale, onBack, state }: ProfileProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-xianxia-darker">
-        <div className="text-xianxia-accent">{locale === "vi" ? "Đang tải..." : "Loading..."}</div>
+      <div
+        className="paper-bg"
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <span className="label" style={{ color: "var(--ink-mute)", letterSpacing: "0.2em" }}>
+          {locale === "vi" ? "Đang tải…" : "Loading…"}
+        </span>
       </div>
     );
   }
 
-  // Calculate game time display
   const gameYear = state?.time_year ?? 1;
   const gameMonth = state?.time_month ?? 1;
   const gameDay = state?.time_day ?? 1;
 
   return (
-    <div className="min-h-screen bg-xianxia-darker p-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <button
-            onClick={onBack}
-            className="px-4 py-2 bg-xianxia-accent/20 hover:bg-xianxia-accent/30 rounded-lg transition-colors"
-          >
-            ← {locale === "vi" ? "Quay lại" : "Back"}
+    <div className="paper-bg" style={{ minHeight: "100vh", position: "relative" }}>
+      <span
+        className="han-bg"
+        style={{ position: "absolute", top: -30, left: -20, fontSize: 280 }}
+        aria-hidden
+      >
+        己
+      </span>
+      <div
+        className="page-pad"
+        style={{
+          position: "relative",
+          zIndex: 1,
+          maxWidth: 720,
+          margin: "0 auto",
+          padding: "32px 24px 80px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 18,
+            gap: 12,
+          }}
+        >
+          <button onClick={onBack} className="ink-btn ghost sm">
+            ← {locale === "vi" ? "Quay Lại" : "Back"}
           </button>
-          <h1 className="text-3xl font-bold text-xianxia-gold">
-            {locale === "vi" ? "Hồ Sơ" : "Profile"}
-          </h1>
-          <div className="w-24"></div>
         </div>
 
-        {/* Character Summary (if game state available) */}
+        <SectionHead
+          han="己"
+          title={locale === "vi" ? "Hồ Sơ Tu Sĩ" : "Profile"}
+          subtitle={locale === "vi" ? "Lai lịch & tài khoản" : "Cultivator & account"}
+        />
+
         {state && (
-          <div className="bg-gradient-to-r from-xianxia-dark via-purple-900/20 to-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-bold text-xianxia-gold mb-4 flex items-center gap-2">
-              🧘 {locale === "vi" ? "Thông Tin Tu Luyện" : "Cultivation Summary"}
-            </h2>
-            <div className="grid grid-cols-2 gap-4">
-              {/* Realm */}
-              <div className="bg-xianxia-darker/50 rounded-lg p-3">
-                <div className="text-xs text-gray-400">
-                  {locale === "vi" ? "Cảnh giới" : "Realm"}
-                </div>
-                <div className="text-lg font-bold text-xianxia-accent">
-                  {state.progress?.realm || "???"}
-                </div>
-                {state.progress?.realm_stage != null && state.progress.realm_stage > 0 && (
-                  <div className="text-xs text-gray-300">
-                    {locale === "vi" ? "Giai đoạn" : "Stage"}: {state.progress.realm_stage}
-                  </div>
-                )}
-              </div>
+          <Card padding={26} className="card-corner" style={{ marginBottom: 18, position: "relative" }}>
+            <span
+              className="han-bg"
+              style={{ position: "absolute", top: -16, right: -12, fontSize: 200 }}
+              aria-hidden
+            >
+              修
+            </span>
+            <div style={{ position: "relative", zIndex: 1 }}>
+              <SmallHead>
+                {locale === "vi" ? "Thông Tin Tu Luyện" : "Cultivation Summary"}
+              </SmallHead>
 
-              {/* Age */}
-              <div className="bg-xianxia-darker/50 rounded-lg p-3">
-                <div className="text-xs text-gray-400">{locale === "vi" ? "Tuổi" : "Age"}</div>
-                <div className="text-lg font-bold text-white">{state.age ?? "?"}</div>
-                {state.lifespan && (
-                  <div className="text-xs text-gray-300">
-                    {locale === "vi" ? "Tuổi thọ" : "Lifespan"}: {state.lifespan.max_lifespan}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 12,
+                }}
+              >
+                <div className="card-inset" style={{ padding: 12, borderRadius: 3 }}>
+                  <div className="label">
+                    {locale === "vi" ? "Cảnh Giới" : "Realm"}
                   </div>
-                )}
-              </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "baseline",
+                      gap: 8,
+                      marginTop: 4,
+                    }}
+                  >
+                    <span
+                      className="t-han"
+                      style={{ fontSize: 18, color: "var(--cinnabar)" }}
+                    >
+                      {state.progress?.realm?.charAt(0) ?? "?"}
+                    </span>
+                    <span
+                      className="t-display"
+                      style={{ fontSize: 16, color: "var(--ink)" }}
+                    >
+                      {state.progress?.realm ?? "???"}
+                    </span>
+                  </div>
+                  {state.progress?.realm_stage != null && state.progress.realm_stage > 0 && (
+                    <div
+                      className="t-num"
+                      style={{
+                        fontSize: 11,
+                        color: "var(--ink-mute)",
+                        marginTop: 2,
+                      }}
+                    >
+                      {locale === "vi" ? "Tầng" : "Stage"} {state.progress.realm_stage}
+                    </div>
+                  )}
+                </div>
 
-              {/* Sect */}
-              <div className="bg-xianxia-darker/50 rounded-lg p-3">
-                <div className="text-xs text-gray-400">{locale === "vi" ? "Môn phái" : "Sect"}</div>
-                <div className="text-sm font-bold text-purple-400">
-                  {state.sect_membership
-                    ? locale === "vi"
-                      ? state.sect_membership.sect.name
-                      : state.sect_membership.sect.name_en
-                    : state.sect
-                      ? locale === "vi"
-                        ? state.sect
-                        : state.sect_en
-                      : locale === "vi"
-                        ? "Chưa có"
-                        : "None"}
-                </div>
-              </div>
-
-              {/* Region */}
-              <div className="bg-xianxia-darker/50 rounded-lg p-3">
-                <div className="text-xs text-gray-400">
-                  {locale === "vi" ? "Vùng hiện tại" : "Current Region"}
-                </div>
-                <div className="text-sm font-bold text-green-400">
-                  {state.travel?.current_region?.replace(/_/g, " ") || "???"}
-                </div>
-              </div>
-            </div>
-
-            {/* Game Stats */}
-            <div className="mt-4 pt-4 border-t border-gray-700">
-              <h3 className="text-sm font-medium text-gray-300 mb-3">
-                {locale === "vi" ? "📊 Thống kê" : "📊 Game Statistics"}
-              </h3>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="text-center">
-                  <div className="text-lg font-bold text-xianxia-gold">{state.turn_count ?? 0}</div>
-                  <div className="text-[10px] text-gray-400">
-                    {locale === "vi" ? "Tổng lượt" : "Total Turns"}
+                <div className="card-inset" style={{ padding: 12, borderRadius: 3 }}>
+                  <div className="label">
+                    {locale === "vi" ? "Tuổi & Tuổi Thọ" : "Age & Lifespan"}
                   </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-yellow-400">
-                    {state.inventory?.silver ?? 0}
-                  </div>
-                  <div className="text-[10px] text-gray-400">
-                    {locale === "vi" ? "Bạc" : "Silver"}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-cyan-400">
-                    {state.inventory?.spirit_stones ?? 0}
-                  </div>
-                  <div className="text-[10px] text-gray-400">
-                    {locale === "vi" ? "Linh thạch" : "Spirit Stones"}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-blue-400">{state.skills?.length ?? 0}</div>
-                  <div className="text-[10px] text-gray-400">
-                    {locale === "vi" ? "Kỹ năng" : "Skills"}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-purple-400">
-                    {state.techniques?.length ?? 0}
-                  </div>
-                  <div className="text-[10px] text-gray-400">
-                    {locale === "vi" ? "Công pháp" : "Techniques"}
-                  </div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-green-400">
-                    {state.inventory?.items?.length ?? 0}
-                  </div>
-                  <div className="text-[10px] text-gray-400">
-                    {locale === "vi" ? "Vật phẩm" : "Items"}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Game Time */}
-            <div className="mt-3 text-center text-xs text-gray-400">
-              {locale === "vi"
-                ? `Ngày ${gameDay} tháng ${gameMonth} năm ${gameYear} (trong game)`
-                : `Day ${gameDay}, Month ${gameMonth}, Year ${gameYear} (in-game)`}
-            </div>
-          </div>
-        )}
-
-        {/* Profile Card */}
-        <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-bold text-xianxia-gold mb-4">
-            {locale === "vi" ? "Thông Tin Tài Khoản" : "Account Information"}
-          </h2>
-
-          {user && (
-            <div className="space-y-3">
-              <div>
-                <span className="text-gray-400 text-sm">Email:</span>
-                <div className="text-white mt-1">{user.email}</div>
-              </div>
-
-              {user.user_metadata?.full_name && (
-                <div>
-                  <span className="text-gray-400 text-sm">
-                    {locale === "vi" ? "Tên:" : "Name:"}
-                  </span>
-                  <div className="text-white mt-1">{user.user_metadata.full_name}</div>
-                </div>
-              )}
-
-              {user.created_at && (
-                <div>
-                  <span className="text-gray-400 text-sm">
-                    {locale === "vi" ? "Ngày tạo tài khoản:" : "Account created:"}
-                  </span>
-                  <div className="text-white mt-1">
-                    {new Date(user.created_at).toLocaleDateString(
-                      locale === "vi" ? "vi-VN" : "en-US",
-                      {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      }
+                  <div
+                    className="t-num"
+                    style={{ fontSize: 18, color: "var(--ink)", marginTop: 4 }}
+                  >
+                    {state.age ?? "?"}
+                    {state.lifespan && (
+                      <span style={{ color: "var(--ink-faint)", fontSize: 13 }}>
+                        {" "}
+                        / {state.lifespan.max_lifespan}
+                      </span>
                     )}
                   </div>
                 </div>
+
+                <div className="card-inset" style={{ padding: 12, borderRadius: 3 }}>
+                  <div className="label">{locale === "vi" ? "Môn Phái" : "Sect"}</div>
+                  <div
+                    className="t-display"
+                    style={{ fontSize: 15, color: "var(--ink)", marginTop: 4 }}
+                  >
+                    {state.sect_membership
+                      ? locale === "vi"
+                        ? state.sect_membership.sect.name
+                        : state.sect_membership.sect.name_en
+                      : state.sect
+                        ? locale === "vi"
+                          ? state.sect
+                          : state.sect_en
+                        : locale === "vi"
+                          ? "Chưa có"
+                          : "None"}
+                  </div>
+                </div>
+
+                <div className="card-inset" style={{ padding: 12, borderRadius: 3 }}>
+                  <div className="label">
+                    {locale === "vi" ? "Vùng Hiện Tại" : "Current Region"}
+                  </div>
+                  <div
+                    className="t-display"
+                    style={{ fontSize: 15, color: "var(--ink)", marginTop: 4 }}
+                  >
+                    {state.travel?.current_region?.replace(/_/g, " ") ?? "???"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="hr-soft" style={{ margin: "16px 0 12px" }} />
+              <SmallHead>
+                {locale === "vi" ? "Thống Kê" : "Statistics"}
+              </SmallHead>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr",
+                  gap: 12,
+                }}
+              >
+                <Stat
+                  icon="輪"
+                  label={locale === "vi" ? "Lượt" : "Turns"}
+                  value={state.turn_count ?? 0}
+                />
+                <Stat
+                  icon="銀"
+                  label={locale === "vi" ? "Bạc" : "Silver"}
+                  value={(state.inventory?.silver ?? 0).toLocaleString()}
+                />
+                <Stat
+                  icon="靈"
+                  label={locale === "vi" ? "Linh Thạch" : "Stones"}
+                  value={(state.inventory?.spirit_stones ?? 0).toLocaleString()}
+                />
+                <Stat
+                  icon="法"
+                  label={locale === "vi" ? "Công Pháp" : "Techniques"}
+                  value={state.techniques?.length ?? 0}
+                />
+                <Stat
+                  icon="技"
+                  label={locale === "vi" ? "Kỹ Năng" : "Skills"}
+                  value={state.skills?.length ?? 0}
+                />
+                <Stat
+                  icon="物"
+                  label={locale === "vi" ? "Vật Phẩm" : "Items"}
+                  value={state.inventory?.items?.length ?? 0}
+                />
+              </div>
+
+              <div
+                className="t-body"
+                style={{
+                  textAlign: "center",
+                  fontStyle: "italic",
+                  color: "var(--ink-mute)",
+                  fontSize: 12,
+                  marginTop: 12,
+                }}
+              >
+                {locale === "vi"
+                  ? `Ngày ${gameDay} · Tháng ${gameMonth} · Năm ${gameYear} (lịch tu giới)`
+                  : `Day ${gameDay} · Month ${gameMonth} · Year ${gameYear} (cultivation calendar)`}
+              </div>
+            </div>
+          </Card>
+        )}
+
+        <Card padding={22} style={{ marginBottom: 18 }}>
+          <SmallHead
+            right={
+              <Pill>
+                <span className="t-han">入</span>
+                {locale === "vi" ? "Linh Đài" : "Altar"}
+              </Pill>
+            }
+          >
+            {locale === "vi" ? "Thông Tin Tài Khoản" : "Account Information"}
+          </SmallHead>
+          {user && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+              <Stat icon="郵" label="Email" value={user.email ?? "—"} />
+              {user.user_metadata?.full_name && (
+                <Stat
+                  icon="名"
+                  label={locale === "vi" ? "Tên" : "Name"}
+                  value={user.user_metadata.full_name}
+                />
+              )}
+              {user.created_at && (
+                <Stat
+                  icon="始"
+                  label={locale === "vi" ? "Ngày Tạo" : "Created"}
+                  value={new Date(user.created_at).toLocaleDateString(
+                    locale === "vi" ? "vi-VN" : "en-US",
+                    {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    }
+                  )}
+                />
               )}
             </div>
           )}
-        </div>
+        </Card>
 
-        {/* Danger Zone */}
-        <div className="bg-xianxia-dark border border-red-500/30 rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-bold text-red-400 mb-4">
+        <Card
+          padding={22}
+          style={{
+            marginBottom: 18,
+            borderLeft: "3px solid var(--cinnabar)",
+          }}
+        >
+          <SmallHead
+            right={
+              <Pill variant="cinnabar">
+                <span className="t-han">危</span>
+                {locale === "vi" ? "Nguy Hiểm" : "Danger"}
+              </Pill>
+            }
+          >
             {locale === "vi" ? "Vùng Nguy Hiểm" : "Danger Zone"}
-          </h2>
+          </SmallHead>
 
-          <div className="space-y-4">
-            {/* Reset Game */}
-            <div>
-              <h3 className="font-medium text-white mb-2">
-                {locale === "vi" ? "Đặt Lại Trò Chơi" : "Reset Game"}
-              </h3>
-              <p className="text-gray-400 text-sm mb-3">
-                {locale === "vi"
-                  ? "Xóa tất cả nhân vật, tiến trình và bắt đầu lại từ đầu. Hành động này không thể hoàn tác."
-                  : "Delete all characters, progress and start over from scratch. This action cannot be undone."}
-              </p>
+          <h3
+            className="t-display"
+            style={{
+              margin: "8px 0 6px",
+              fontSize: 16,
+              color: "var(--ink)",
+            }}
+          >
+            {locale === "vi" ? "Đặt Lại Trò Chơi" : "Reset Game"}
+          </h3>
+          <p
+            className="t-body"
+            style={{
+              fontStyle: "italic",
+              color: "var(--ink-soft)",
+              fontSize: 13,
+              margin: "0 0 14px",
+            }}
+          >
+            {locale === "vi"
+              ? "Xóa toàn bộ nhân vật, tiến trình, hành trang. Một khi đoạn diệt thì không thể quay đầu."
+              : "Erase every character, item and chapter. Once severed, the thread cannot be re-spun."}
+          </p>
 
-              {error && (
-                <div
-                  className="mb-3 p-3 bg-red-900/30 border border-red-500/50 rounded text-red-200 text-sm"
-                  role="alert"
-                >
-                  {error}
-                </div>
-              )}
-
-              {!showConfirm ? (
-                <button
-                  onClick={() => setShowConfirm(true)}
-                  disabled={resetting}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-white transition-colors"
-                >
-                  {locale === "vi" ? "Đặt Lại Trò Chơi" : "Reset Game"}
-                </button>
-              ) : (
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleResetGame}
-                    disabled={resetting}
-                    className="px-4 py-2 bg-red-700 hover:bg-red-800 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-white transition-colors"
-                  >
-                    {resetting
-                      ? locale === "vi"
-                        ? "Đang xóa..."
-                        : "Deleting..."
-                      : locale === "vi"
-                        ? "Xác Nhận Xóa"
-                        : "Confirm Delete"}
-                  </button>
-                  <button
-                    onClick={() => setShowConfirm(false)}
-                    disabled={resetting}
-                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-800 rounded-lg text-white transition-colors"
-                  >
-                    {locale === "vi" ? "Hủy" : "Cancel"}
-                  </button>
-                </div>
-              )}
+          {error && (
+            <div
+              style={{
+                marginBottom: 12,
+                padding: 10,
+                background: "var(--paper-deep)",
+                borderLeft: "3px solid var(--cinnabar)",
+                color: "var(--cinnabar-deep)",
+                fontSize: 13,
+              }}
+              role="alert"
+            >
+              {error}
             </div>
-          </div>
-        </div>
+          )}
 
-        {/* Sign Out */}
+          {!showConfirm ? (
+            <button
+              onClick={() => setShowConfirm(true)}
+              disabled={resetting}
+              className="ink-btn cinnabar"
+            >
+              <span className="t-han">滅</span>
+              {locale === "vi" ? "Đặt Lại Trò Chơi" : "Reset Game"}
+            </button>
+          ) : (
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={handleResetGame}
+                disabled={resetting}
+                className="ink-btn cinnabar"
+              >
+                <span className="t-han">滅</span>
+                {resetting
+                  ? locale === "vi"
+                    ? "Đang xóa…"
+                    : "Deleting…"
+                  : locale === "vi"
+                    ? "Xác Nhận"
+                    : "Confirm"}
+              </button>
+              <button
+                onClick={() => setShowConfirm(false)}
+                disabled={resetting}
+                className="ink-btn ghost"
+              >
+                {locale === "vi" ? "Hủy" : "Cancel"}
+              </button>
+            </div>
+          )}
+        </Card>
+
         <button
           onClick={handleSignOut}
-          className="w-full py-3 bg-xianxia-accent hover:bg-xianxia-accent/80 rounded-lg font-medium transition-colors"
+          className="ink-btn"
+          style={{ width: "100%", justifyContent: "center", padding: "12px 16px" }}
         >
+          <span className="t-han">出</span>
           {locale === "vi" ? "Đăng Xuất" : "Sign Out"}
         </button>
       </div>

@@ -189,9 +189,22 @@ export default function DungeonView({ state, locale, onAction }: DungeonViewProp
 
   if (!isInDungeon) {
     return (
-      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-4">
-        <h2 className="text-xl font-bold mb-4 text-xianxia-gold flex items-center gap-2">
-          🏛️ {locale === "vi" ? "Bí Cảnh & Mê Cung" : "Dungeons & Secret Realms"}
+      <div className="ink-card" style={{ padding: 22 }}>
+        <h2
+          className="t-display"
+          style={{
+            margin: "0 0 14px",
+            fontSize: 20,
+            color: "var(--ink)",
+            display: "flex",
+            alignItems: "baseline",
+            gap: 10,
+          }}
+        >
+          <span className="t-han" style={{ color: "var(--cinnabar)" }}>
+            秘
+          </span>
+          {locale === "vi" ? "Bí Cảnh & Mê Cung" : "Dungeons & Secret Realms"}
         </h2>
 
         <div className="text-center py-8">
@@ -218,15 +231,16 @@ export default function DungeonView({ state, locale, onAction }: DungeonViewProp
           <button
             onClick={fetchDungeonList}
             disabled={isLoading}
-            className="px-6 py-2 bg-xianxia-accent hover:bg-xianxia-accent/80 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
+            className="ink-btn primary"
           >
+            <span className="t-han">尋</span>
             {isLoading
               ? locale === "vi"
-                ? "Đang tải..."
-                : "Loading..."
+                ? "Đang tải…"
+                : "Loading…"
               : locale === "vi"
-                ? "Xem danh sách bí cảnh"
-                : "View available dungeons"}
+                ? "Xem Danh Sách"
+                : "View Dungeons"}
           </button>
         </div>
 
@@ -313,23 +327,27 @@ export default function DungeonView({ state, locale, onAction }: DungeonViewProp
 
   if (!progress) {
     return (
-      <div className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-4">
+      <div className="ink-card" style={{ padding: 22, textAlign: "center" }}>
         {fetchError ? (
-          <div className="text-center py-4">
-            <div className="text-red-400 mb-2" role="alert">
+          <>
+            <div
+              className="t-body"
+              style={{ color: "var(--cinnabar-deep)", marginBottom: 10, fontStyle: "italic" }}
+              role="alert"
+            >
               {fetchError}
             </div>
-            <button
-              onClick={fetchProgress}
-              className="text-sm text-xianxia-accent underline hover:text-xianxia-gold"
-            >
-              {locale === "vi" ? "Thử lại" : "Retry"}
+            <button onClick={fetchProgress} className="ink-btn ghost sm">
+              {locale === "vi" ? "Thử Lại" : "Retry"}
             </button>
-          </div>
+          </>
         ) : (
-          <div className="text-center py-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-xianxia-gold mx-auto"></div>
-          </div>
+          <span
+            className="label"
+            style={{ color: "var(--ink-mute)", letterSpacing: "0.2em" }}
+          >
+            {locale === "vi" ? "Đang dẫn lối…" : "Loading…"}
+          </span>
         )}
       </div>
     );
@@ -340,16 +358,37 @@ export default function DungeonView({ state, locale, onAction }: DungeonViewProp
 
   return (
     <div
-      className="bg-xianxia-dark border border-xianxia-accent/30 rounded-lg p-4"
+      className="ink-card"
+      style={{ padding: 22 }}
       role="region"
       aria-label={locale === "vi" ? "Bí cảnh" : "Dungeon"}
     >
-      {/* Header */}
-      <div className="mb-4">
-        <h2 className="text-xl font-bold text-xianxia-gold mb-1">
-          🏛️ {locale === "vi" ? progress.dungeon_name : progress.dungeon_name_en}
+      <div style={{ marginBottom: 14 }}>
+        <h2
+          className="t-display"
+          style={{
+            margin: 0,
+            fontSize: 22,
+            color: "var(--ink)",
+            display: "flex",
+            alignItems: "baseline",
+            gap: 10,
+          }}
+        >
+          <span className="t-han" style={{ color: "var(--cinnabar)" }}>
+            秘
+          </span>
+          {locale === "vi" ? progress.dungeon_name : progress.dungeon_name_en}
         </h2>
-        <div className="text-gray-400 text-sm">
+        <div
+          className="t-body"
+          style={{
+            fontStyle: "italic",
+            color: "var(--ink-mute)",
+            fontSize: 13,
+            marginTop: 4,
+          }}
+        >
           {locale === "vi" ? progress.floor_name : progress.floor_name_en}
         </div>
       </div>
