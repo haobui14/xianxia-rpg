@@ -310,7 +310,18 @@ function GameScreenWithHeader({
               </span>
             </div>
             <div style={{ textAlign: "center", marginBottom: 22 }}>
-              <div style={{ fontSize: 36, marginBottom: 10 }}>{steps[currentStep].icon}</div>
+              <div
+                className="t-han"
+                style={{
+                  fontSize: 56,
+                  marginBottom: 10,
+                  color: "var(--cinnabar)",
+                  lineHeight: 1,
+                  letterSpacing: "0.04em",
+                }}
+              >
+                {steps[currentStep].icon}
+              </div>
               <h2
                 className="t-display"
                 style={{ fontSize: 26, color: "var(--ink)", margin: "0 0 10px" }}

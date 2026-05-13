@@ -725,6 +725,33 @@ body {
   gap: 8px;
 }
 
+/* Narrative drop-cap — first character (Han or Latin) floats as a 78-px cinnabar
+   ornament, mimicking the prototype's chapter-opening glyph. */
+.narrative {
+  font-family: var(--font-body), "Spectral", Georgia, serif;
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--ink);
+  white-space: pre-wrap;
+  margin: 0;
+}
+.narrative::first-letter {
+  float: left;
+  font-family: var(--font-han), "Noto Serif SC", serif;
+  font-size: 78px;
+  line-height: 0.85;
+  color: var(--cinnabar);
+  padding: 6px 12px 0 0;
+  margin-top: 2px;
+  font-weight: 500;
+}
+@media (max-width: 768px) {
+  .narrative::first-letter {
+    font-size: 58px;
+    padding-right: 10px;
+  }
+}
+
 /* Combat stage layout — 3-col on desktop, stacked on phone */
 .combat-stage-grid {
   display: grid;
@@ -736,6 +763,38 @@ body {
 /* Touch target / interaction polish for all buttons */
 button, .ink-btn, .choice, .ink-tab, .region {
   touch-action: manipulation; /* removes 300 ms double-tap delay */
+}
+
+/* Ink-wash keyboard focus — a cinnabar ring matching the seal accent.
+   :focus-visible only paints when navigating by keyboard, so touch / mouse
+   users never see the outline. */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--cinnabar);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--cinnabar);
+  outline-offset: 0;
+  border-color: var(--cinnabar) !important;
+}
+.choice:focus-visible {
+  outline-offset: 0;
+  border-color: var(--cinnabar);
+  background: var(--card-deep);
+}
+.ink-tab:focus-visible {
+  outline-offset: -2px;
+}
+.slot:focus-visible {
+  outline-offset: -2px;
+  border-color: var(--cinnabar);
+}
+.region:focus-visible {
+  outline-offset: 4px;
 }
 
 .grid-3-col {

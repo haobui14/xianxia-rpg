@@ -569,11 +569,20 @@ export default function GameScreen({ runId, locale }: GameScreenProps) {
                   </div>
                 </div>
                 <div className="brush-rule" style={{ marginBottom: 14 }} />
-                <div className="t-body" style={{ position: "relative", zIndex: 1, fontSize: 16, lineHeight: 1.75 }}>
+                <div style={{ position: "relative", zIndex: 1 }}>
                   {narrative ? (
-                    <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{narrative}</p>
+                    <p className="narrative">{narrative}</p>
                   ) : (
-                    <p style={{ fontStyle: "italic", color: "var(--ink-mute)", margin: 0 }}>
+                    <p
+                      className="t-body"
+                      style={{
+                        fontStyle: "italic",
+                        color: "var(--ink-mute)",
+                        margin: 0,
+                        fontSize: 16,
+                        lineHeight: 1.75,
+                      }}
+                    >
                       {processing
                         ? locale === "vi"
                           ? "Đang tạo câu chuyện…"
@@ -860,10 +869,26 @@ export default function GameScreen({ runId, locale }: GameScreenProps) {
       </div>
 
       {process.env.NODE_ENV === "development" && (
-        <div style={{ position: "fixed", bottom: 16, right: 16, display: "flex", gap: 8 }}>
+        <div
+          style={{
+            position: "fixed",
+            right: "max(16px, env(safe-area-inset-right))",
+            bottom: "max(16px, calc(env(safe-area-inset-bottom) + 12px))",
+            zIndex: 50,
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+            justifyContent: "flex-end",
+          }}
+        >
           <DebugInventory />
-          <button onClick={startTestCombat} className="ink-btn cinnabar sm">
-            ⚔ Test Combat
+          <button
+            onClick={startTestCombat}
+            className="ink-btn cinnabar sm"
+            type="button"
+          >
+            <span className="t-han">戰</span>
+            Test Combat
           </button>
         </div>
       )}

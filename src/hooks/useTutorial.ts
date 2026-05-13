@@ -12,51 +12,63 @@ export interface TutorialStep {
 const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: "welcome",
-    title: "Chào mừng đến với Tu Tiên RPG",
-    title_en: "Welcome to Xianxia RPG",
-    content: "Con đường tu tiên bắt đầu từ đây. Hãy cùng tìm hiểu cách chơi qua vài bước nhanh.",
-    content_en: "Your cultivation journey begins here. Let's quickly learn how to play.",
-    icon: "⛩️",
+    title: "Chào Mừng Đến Tu Tiên Lục",
+    title_en: "Welcome to Tu Tiên Lục",
+    content:
+      "Con đường tu đạo bắt đầu từ đây. Vài bước ngắn để ngươi quen với hành trình.",
+    content_en:
+      "Your cultivation path begins here. A few short steps to walk the journey.",
+    icon: "道",
   },
   {
     id: "actions",
     title: "Chọn Hành Động",
-    title_en: "Choose Actions",
+    title_en: "Choose Your Path",
     content:
-      "Mỗi lượt, bạn sẽ thấy các lựa chọn ở tab Chơi. Mỗi lựa chọn có thể tốn thể lực, khí hoặc bạc — hãy chú ý chi phí. Bạn cũng có thể nhập hành động riêng ở cuối trang.",
+      "Mỗi lượt trong tab Hành Trình hiện ra các lựa chọn (一/二/三/四). Một số tốn khí, lực, bạc, linh thạch hay thời thần — chú ý phí tổn. Hoặc nhập hành động riêng vào ô '或 — Tự Nói Hành Động Riêng' ở cuối.",
     content_en:
-      "Each turn, you'll see choices on the Play tab. Choices can cost stamina, qi, or silver — watch the costs. You can also type your own action at the bottom.",
-    icon: "🎮",
+      "Each turn the Journey tab shows ordered choices (一/二/三/四). Some cost qi, stamina, silver, spirit stones, or time — watch the prices. You may also type a custom action in the '或' panel.",
+    icon: "抉",
   },
   {
-    id: "cultivation",
-    title: "Tu Luyện & Đột Phá",
-    title_en: "Cultivation & Breakthrough",
+    id: "rail",
+    title: "Cột Tu Sĩ Bên Trái",
+    title_en: "The Cultivator Rail",
     content:
-      "Chọn hoạt động tu luyện từ bảng điều khiển phía trên để tăng tu vi. Khi đủ kinh nghiệm, bạn có thể đột phá lên cảnh giới cao hơn.",
+      "Cột bên trái (hoặc bên dưới trên điện thoại) hiển thị danh hiệu, cảnh giới hiện tại, sinh khí (HP/Khí/Thể), hoạt động đang tiến hành, và vật tài. Đó là tâm thái của ngươi.",
     content_en:
-      "Choose cultivation activities from the dashboard above to gain experience. When ready, you can breakthrough to a higher realm.",
-    icon: "🧘",
+      "The left rail (or the block below the story on mobile) shows your title, current realm, vitality (HP/Qi/Stamina), any active activity, and resources. That's your living state.",
+    icon: "身",
   },
   {
     id: "tabs",
-    title: "Dùng Các Tab",
-    title_en: "Use the Tabs",
+    title: "Sáu Tab Chính",
+    title_en: "Six Main Tabs",
     content:
-      "Dùng các tab ở trên (hoặc thanh điều hướng phía dưới trên điện thoại) để xem: Nhân vật, Môn Phái, Túi đồ, Chợ, và Bản đồ Thế giới.",
+      "Phía trên là sáu tab: 途 Hành Trình · 身 Tu Sĩ · 派 Môn Phái · 物 Túi Đồ · 市 Chợ · 界 Thiên Hạ. Mỗi tab có Han ghi đầu để dễ nhận.",
     content_en:
-      "Use the tabs at the top (or bottom bar on mobile) to view: Character, Sect, Inventory, Market, and World Map.",
-    icon: "📑",
+      "Six tabs sit at the top: 途 Journey · 身 Cultivator · 派 Sect · 物 Inventory · 市 Market · 界 Realm. Each one is led by its Han glyph.",
+    icon: "途",
+  },
+  {
+    id: "header",
+    title: "Thanh Đầu Trang",
+    title_en: "The Top Bar",
+    content:
+      "Góc trên bên phải có ba nút: 🌐 EN/VI để đổi ngôn ngữ, 問 ? mở lại hướng dẫn này, và 己 Hồ Sơ để xem tài khoản và đặt lại trò chơi.",
+    content_en:
+      "The top-right corner holds three controls: 🌐 EN/VI to switch language, 問 ? to reopen this guide, and 己 Profile for account & reset.",
+    icon: "問",
   },
   {
     id: "world",
-    title: "Khám Phá Thế Giới",
-    title_en: "Explore the World",
+    title: "Du Hành Thiên Hạ",
+    title_en: "Travel the Realm",
     content:
-      "Mở tab Bản đồ để di chuyển giữa các vùng, khám phá bí cảnh, và chiến đấu với kẻ thù. Mỗi vùng có nguyên tố và cấp độ nguy hiểm riêng.",
+      "Tab 界 Thiên Hạ là bản đồ sumi-e với 5 vùng. Bấm vào một vùng kế cận để xem chi tiết rồi 行 Du Hành. Mỗi vùng có nguyên tố và cấp độ nguy hiểm riêng.",
     content_en:
-      "Open the World tab to travel between regions, explore dungeons, and fight enemies. Each region has its own element and danger level.",
-    icon: "🗺️",
+      "Tab 界 Realm shows a sumi-e map with 5 regions. Tap an adjacent region for its details, then 行 Travel. Each region has its own element and danger tier.",
+    icon: "界",
   },
 ];
 
