@@ -99,6 +99,45 @@ const RARITY_TO_SLOT: Record<string, SlotRarity> = {
   Legendary: "legendary",
 };
 
+const STAT_LABELS: Record<string, { vi: string; en: string }> = {
+  hp: { vi: "Sinh Lực", en: "HP" },
+  qi: { vi: "Linh Khí", en: "Qi" },
+  stamina: { vi: "Thể Lực", en: "Stamina" },
+  str: { vi: "Sức Mạnh", en: "STR" },
+  agi: { vi: "Nhanh Nhẹn", en: "AGI" },
+  int: { vi: "Linh Trí", en: "INT" },
+  perception: { vi: "Cảm Nhận", en: "PER" },
+  luck: { vi: "May Mắn", en: "LUCK" },
+  cultivation_speed: { vi: "Tốc Độ Tu Luyện", en: "Cultivation Speed" },
+};
+
+const EFFECT_LABELS: Record<string, { vi: string; en: string }> = {
+  hp_restore: { vi: "Hồi Sinh Lực", en: "HP Restore" },
+  qi_restore: { vi: "Hồi Linh Khí", en: "Qi Restore" },
+  stamina_restore: { vi: "Hồi Thể Lực", en: "Stamina Restore" },
+  cultivation_exp: { vi: "Tu Vi", en: "Cultivation EXP" },
+  body_exp: { vi: "Luyện Thể", en: "Body EXP" },
+  crafting: { vi: "Luyện Đan / Chế Tạo", en: "Crafting" },
+};
+
+function statLabel(key: string, locale: Locale): string {
+  const entry = STAT_LABELS[key];
+  if (entry) return locale === "vi" ? entry.vi : entry.en;
+  return key.toUpperCase();
+}
+
+function effectLabel(key: string, locale: Locale): string {
+  const entry = EFFECT_LABELS[key];
+  if (entry) return locale === "vi" ? entry.vi : entry.en;
+  return key.replace(/_/g, " ");
+}
+
+function formatStatValue(key: string, val: unknown): string {
+  if (typeof val !== "number") return String(val);
+  if (key === "cultivation_speed") return `${val > 0 ? "+" : ""}${val}%`;
+  return `${val > 0 ? "+" : ""}${val}`;
+}
+
 const FILTERS: { id: FilterOption; han: string; vi: string; en: string }[] = [
   { id: "all", han: "全", vi: "Tất Cả", en: "All" },
   { id: "equipment", han: "器", vi: "Trang Bị", en: "Equipment" },
@@ -557,14 +596,15 @@ export default function InventoryView({
                         }}
                       >
                         {Object.entries(selectedItem.bonus_stats).map(
-                          ([key, val]) => (
-                            <Stat
-                              key={key}
-                              label={key.toUpperCase()}
-                              value={`+${val}`}
-                              icon="加"
-                            />
-                          )
+                          ([key, val]) =>
+                            val ? (
+                              <Stat
+                                key={key}
+                                label={statLabel(key, locale)}
+                                value={formatStatValue(key, val)}
+                                icon="加"
+                              />
+                            ) : null
                         )}
                       </div>
                     </>
@@ -577,13 +617,19 @@ export default function InventoryView({
                         {locale === "vi" ? "Hiệu Quả" : "Effects"}
                       </SmallHead>
                       <div>
-                        {Object.entries(selectedItem.effects).map(([key, value]) => (
-                          <Stat
-                            key={key}
-                            label={key.replace(/_/g, " ")}
-                            value={`+${String(value)}`}
-                          />
-                        ))}
+                        {Object.entries(selectedItem.effects).map(([key, value]) =>
+                          value !== undefined && value !== null && value !== false ? (
+                            <Stat
+                              key={key}
+                              label={effectLabel(key, locale)}
+                              value={
+                                typeof value === "number"
+                                  ? `+${value}`
+                                  : String(value)
+                              }
+                            />
+                          ) : null
+                        )}
                       </div>
                     </>
                   )}

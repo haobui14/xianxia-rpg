@@ -160,6 +160,39 @@ export function validateAIResponse(data: unknown): AITurnResult {
     fixedData.events = [];
   }
 
+  // Fix: filter out events with unknown types (AI sometimes invents new ones
+  // like "cultivation_pressure" / "cultivation_risk_event"). Dropping unknown
+  // events is safer than failing the whole turn — the narrative still applies.
+  if (Array.isArray(fixedData.events)) {
+    const validEventTypes = new Set([
+      "combat",
+      "combat_encounter",
+      "loot",
+      "breakthrough",
+      "status_effect",
+      "quest_update",
+      "npc_interaction",
+      "sect_join",
+      "sect_promotion",
+      "sect_mission",
+      "sect_expulsion",
+    ]);
+    const events = fixedData.events as unknown[];
+    const before = events.length;
+    const filtered = events.filter(
+      (event) =>
+        !!event &&
+        typeof event === "object" &&
+        validEventTypes.has((event as { type?: string }).type ?? "")
+    );
+    fixedData.events = filtered;
+    if (filtered.length !== before) {
+      console.warn(
+        `[AI Fix] Dropped ${before - filtered.length} event(s) with unknown type`
+      );
+    }
+  }
+
   // Fix: locale missing or invalid
   if (!fixedData.locale || !["vi", "en"].includes(fixedData.locale as string)) {
     fixedData.locale = "vi"; // Default to Vietnamese

@@ -35,8 +35,8 @@ export function createInitialState(
     hp_max: 100,
     qi: 0,
     qi_max: 0,
-    stamina: 100,
-    stamina_max: 100,
+    stamina: 150,
+    stamina_max: 150,
   };
 
   const baseAttrs: CharacterAttributes = {
@@ -302,16 +302,30 @@ export function updateStamina(state: GameState, delta: number): void {
   state.stats.stamina = clampStat(state.stats.stamina + delta, 0, state.stats.stamina_max);
 }
 
+const STAMINA_BASE_MAX = 150;
+const STAMINA_REGEN_PER_MINUTE = 2;
+
 /**
- * Regenerate stamina based on real-time elapsed (1 stamina per minute)
+ * Regenerate stamina based on real-time elapsed (2 stamina per minute).
+ * Also retroactively raises stamina_max for legacy saves that started at 100.
  */
 export function regenerateStamina(state: GameState): void {
+  // Migrate legacy saves: bump base pool without touching cultivation-earned bonuses
+  if (state.stats.stamina_max < STAMINA_BASE_MAX) {
+    const gain = STAMINA_BASE_MAX - state.stats.stamina_max;
+    state.stats.stamina_max = STAMINA_BASE_MAX;
+    state.stats.stamina += gain;
+  }
+
   const now = new Date();
   const lastRegen = state.last_stamina_regen ? new Date(state.last_stamina_regen) : now;
   const minutesElapsed = Math.floor((now.getTime() - lastRegen.getTime()) / 60000);
 
   if (minutesElapsed > 0 && state.stats.stamina < state.stats.stamina_max) {
-    const staminaToRegen = Math.min(minutesElapsed, state.stats.stamina_max - state.stats.stamina);
+    const staminaToRegen = Math.min(
+      minutesElapsed * STAMINA_REGEN_PER_MINUTE,
+      state.stats.stamina_max - state.stats.stamina
+    );
     state.stats.stamina += staminaToRegen;
     state.last_stamina_regen = now.toISOString();
   }

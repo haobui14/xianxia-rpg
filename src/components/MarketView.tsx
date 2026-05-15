@@ -53,6 +53,45 @@ function getHan(item: { type: string; han?: string }): string {
   return (item as any).han || ITEM_HAN[item.type] || "物";
 }
 
+const STAT_LABELS: Record<string, { vi: string; en: string }> = {
+  hp: { vi: "Sinh Lực", en: "HP" },
+  qi: { vi: "Linh Khí", en: "Qi" },
+  stamina: { vi: "Thể Lực", en: "Stamina" },
+  str: { vi: "Sức Mạnh", en: "STR" },
+  agi: { vi: "Nhanh Nhẹn", en: "AGI" },
+  int: { vi: "Linh Trí", en: "INT" },
+  perception: { vi: "Cảm Nhận", en: "PER" },
+  luck: { vi: "May Mắn", en: "LUCK" },
+  cultivation_speed: { vi: "Tốc Độ Tu Luyện", en: "Cultivation Speed" },
+};
+
+const EFFECT_LABELS: Record<string, { vi: string; en: string }> = {
+  hp_restore: { vi: "Hồi Sinh Lực", en: "HP Restore" },
+  qi_restore: { vi: "Hồi Linh Khí", en: "Qi Restore" },
+  stamina_restore: { vi: "Hồi Thể Lực", en: "Stamina Restore" },
+  cultivation_exp: { vi: "Tu Vi", en: "Cultivation EXP" },
+  body_exp: { vi: "Luyện Thể", en: "Body EXP" },
+  crafting: { vi: "Luyện Đan / Chế Tạo", en: "Crafting" },
+};
+
+function statLabel(key: string, locale: Locale): string {
+  const entry = STAT_LABELS[key];
+  if (entry) return locale === "vi" ? entry.vi : entry.en;
+  return key.toUpperCase();
+}
+
+function effectLabel(key: string, locale: Locale): string {
+  const entry = EFFECT_LABELS[key];
+  if (entry) return locale === "vi" ? entry.vi : entry.en;
+  return key.replace(/_/g, " ");
+}
+
+function formatStatValue(key: string, val: unknown): string {
+  if (typeof val !== "number") return String(val);
+  if (key === "cultivation_speed") return `${val > 0 ? "+" : ""}${val}%`;
+  return `${val > 0 ? "+" : ""}${val}`;
+}
+
 type SubTab = "buy" | "sell" | "exchange";
 
 export default function MarketView({
@@ -610,6 +649,84 @@ function ListingCard({
         >
           {locale === "vi" ? item.description : item.description_en}
         </p>
+
+        {item.bonus_stats && Object.keys(item.bonus_stats).length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "2px 12px",
+              margin: "0 0 10px",
+            }}
+          >
+            {Object.entries(item.bonus_stats).map(([key, val]) =>
+              val ? (
+                <span
+                  key={key}
+                  className="t-body"
+                  style={{
+                    fontSize: 12,
+                    color: "var(--ink-soft)",
+                    display: "inline-flex",
+                    gap: 4,
+                    alignItems: "baseline",
+                  }}
+                >
+                  <span style={{ color: "var(--ink-mute)" }}>{statLabel(key, locale)}</span>
+                  <span
+                    className="t-num"
+                    style={{ color: "var(--jade-deep)", fontWeight: 600 }}
+                  >
+                    {formatStatValue(key, val)}
+                  </span>
+                </span>
+              ) : null
+            )}
+          </div>
+        )}
+
+        {item.effects && Object.keys(item.effects).length > 0 && (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "2px 12px",
+              margin: "0 0 10px",
+            }}
+          >
+            {Object.entries(item.effects).map(([key, val]) =>
+              val !== undefined && val !== null && val !== false ? (
+                <span
+                  key={key}
+                  className="t-body"
+                  style={{
+                    fontSize: 12,
+                    color: "var(--ink-soft)",
+                    display: "inline-flex",
+                    gap: 4,
+                    alignItems: "baseline",
+                  }}
+                >
+                  <span style={{ color: "var(--ink-mute)" }}>{effectLabel(key, locale)}</span>
+                  <span
+                    className="t-num"
+                    style={{ color: "var(--cinnabar-deep)", fontWeight: 600 }}
+                  >
+                    {typeof val === "number" ? `+${val}` : String(val)}
+                  </span>
+                </span>
+              ) : null
+            )}
+          </div>
+        )}
+
+        {item.equipment_slot && (
+          <div style={{ margin: "0 0 10px" }}>
+            <Pill variant="cinnabar">
+              {locale === "vi" ? "Vị trí" : "Slot"}: {item.equipment_slot}
+            </Pill>
+          </div>
+        )}
 
         <div
           style={{
