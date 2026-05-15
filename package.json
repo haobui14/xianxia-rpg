@@ -13,16 +13,16 @@
     "migrate": "tsx src/scripts/migrate-to-tables.ts"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.10.2",
-    "@supabase/supabase-js": "^2.104.1",
-    "next": "16.2.4",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.105.4",
+    "next": "16.2.6",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "seedrandom": "^3.0.5",
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@netlify/plugin-nextjs": "^5.15.9",
+    "@netlify/plugin-nextjs": "^5.15.11",
     "@types/node": "^20",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -30,13 +30,13 @@
     "autoprefixer": "^10.5.0",
     "dotenv": "^17.4.2",
     "eslint": "^9",
-    "eslint-config-next": "16.2.4",
+    "eslint-config-next": "16.2.6",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
-    "postcss": "^8.5.10",
+    "postcss": "^8.5.14",
     "prettier": "^3.8.3",
     "tailwindcss": "^3.3.0",
-    "tsx": "^4.21.0",
+    "tsx": "^4.22.0",
     "typescript": "^5"
   }
 }

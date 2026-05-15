@@ -303,10 +303,13 @@ export function updateStamina(state: GameState, delta: number): void {
 }
 
 const STAMINA_BASE_MAX = 150;
-const STAMINA_REGEN_PER_MINUTE = 2;
+// 20 stamina per real-time minute — full pool (150) refills in ~7.5 minutes.
+// Keep this in sync with the client-side preview in src/hooks/useGameState.ts
+// so the bar doesn't lurch when the player reopens the run.
+export const STAMINA_REGEN_PER_MINUTE = 20;
 
 /**
- * Regenerate stamina based on real-time elapsed (2 stamina per minute).
+ * Regenerate stamina based on real-time elapsed (20 stamina per minute).
  * Also retroactively raises stamina_max for legacy saves that started at 100.
  */
 export function regenerateStamina(state: GameState): void {

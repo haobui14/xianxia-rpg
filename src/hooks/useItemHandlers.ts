@@ -101,6 +101,18 @@ export function useItemHandlers({ locale, setState, setError }: UseItemHandlersP
 
   const handleEnhanceItem = useCallback(
     async (itemId: string) => {
+      // Known API error strings → localized copy. Keeps the failure modal
+      // banner in the player's language without round-tripping a code.
+      const VI_ERRORS: Record<string, string> = {
+        "Insufficient resources for enhancement":
+          "Không đủ tài nguyên — kiểm tra bạc và đá cường hóa.",
+        "Item cannot be enhanced (max level reached or invalid type)":
+          "Vật phẩm đã đạt cấp tối đa hoặc không thể cường hóa.",
+        "Item not found": "Không tìm thấy vật phẩm.",
+        "Missing itemId": "Thiếu mã vật phẩm.",
+        "Failed to enhance item": "Cường hóa thất bại.",
+      };
+
       try {
         const response = await fetch("/api/enhance-item", {
           method: "POST",
@@ -110,20 +122,43 @@ export function useItemHandlers({ locale, setState, setError }: UseItemHandlersP
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to enhance item");
+          // Expected user-facing failures (insufficient resources, max level,
+          // not found, etc.) come back as 4xx with an `error` string. Surface
+          // them inline through the modal instead of throwing — throwing here
+          // would trigger Next.js dev's red error overlay and the page-level
+          // error banner for what is a normal gameplay state.
+          let rawMessage: string;
+          try {
+            const errorData = await response.json();
+            rawMessage =
+              errorData.error || (locale === "vi" ? "Không thể cường hóa" : "Cannot enhance");
+          } catch {
+            rawMessage = locale === "vi" ? "Không thể cường hóa" : "Cannot enhance";
+          }
+          const errorMessage =
+            locale === "vi" ? (VI_ERRORS[rawMessage] ?? rawMessage) : rawMessage;
+          return { success: false, errorMessage, newLevel: 0, previousLevel: 0 };
         }
 
         const result = await response.json();
         setState(result.state);
         return result.result; // Return the enhancement result for the modal
       } catch (err: any) {
-        console.error("Enhance error:", err);
-        setError(err.message || (locale === "vi" ? "Lỗi cường hóa" : "Error enhancing item"));
-        return null;
+        // Real network/server failure — keep the dev-only console.error for
+        // debugging but don't bubble the throw up to the modal's caller.
+        if (process.env.NODE_ENV === "development") {
+          console.error("Enhance error:", err);
+        }
+        return {
+          success: false,
+          errorMessage:
+            err?.message || (locale === "vi" ? "Lỗi mạng" : "Network error"),
+          newLevel: 0,
+          previousLevel: 0,
+        };
       }
     },
-    [locale, setState, setError]
+    [locale, setState]
   );
 
   return {

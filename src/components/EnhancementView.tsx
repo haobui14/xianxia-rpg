@@ -85,15 +85,32 @@ export default function EnhancementView({
     setResult(null);
     await new Promise((resolve) => setTimeout(resolve, 500));
     try {
+      // handleEnhanceItem (in useItemHandlers) now returns a result object
+      // with `errorMessage` for expected failures instead of throwing.
       const enhanceResult = await onEnhance(item.id);
       setResult(enhanceResult);
     } catch (error) {
-      console.error("Enhancement error:", error);
+      // Truly unexpected failure (e.g. hook contract change). Surface inline
+      // without spamming the dev-mode error overlay.
+      if (process.env.NODE_ENV === "development") {
+        console.warn("Unexpected enhancement throw:", error);
+      }
+      setResult({
+        success: false,
+        newLevel: 0,
+        previousLevel: 0,
+        errorMessage:
+          error instanceof Error
+            ? error.message
+            : locale === "vi"
+              ? "Đã xảy ra lỗi"
+              : "Something went wrong",
+      });
     } finally {
       setEnhancing(false);
       setTimeout(() => setShowAnimation(false), 500);
     }
-  }, [canEnhanceItem, cost.canAfford, enhancing, item.id, onEnhance]);
+  }, [canEnhanceItem, cost.canAfford, enhancing, item.id, onEnhance, locale]);
 
   return (
     <Modal isOpen={true} onClose={enhancing ? undefined : onClose} closeOnBackdrop={!enhancing}>
@@ -257,6 +274,20 @@ export default function EnhancementView({
                   }}
                 >
                   +{result.previousLevel} → +{result.newLevel}
+                </div>
+              )}
+              {!result.success && result.errorMessage && (
+                <div
+                  className="t-body"
+                  style={{
+                    fontStyle: "italic",
+                    fontSize: 12,
+                    color: "var(--cinnabar-deep)",
+                    marginTop: 6,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {result.errorMessage}
                 </div>
               )}
             </div>

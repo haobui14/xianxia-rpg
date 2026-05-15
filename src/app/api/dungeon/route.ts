@@ -26,6 +26,7 @@ import {
   hasFloorBoss,
   canUnlockShortcut,
   getDifficultyRating,
+  getAvailableChests,
 } from "@/lib/world/dungeon-engine";
 import { getDungeonById, getDungeonsInRegion } from "@/lib/world/dungeons";
 import { DeterministicRNG } from "@/lib/game/rng";
@@ -396,6 +397,7 @@ export async function POST(request: NextRequest) {
         const progress = getDungeonProgress(state.dungeon!);
         const dungeon = getCurrentDungeon(state.dungeon!);
         const floor = getCurrentFloor(state.dungeon!);
+        const floorChests = getAvailableChests(state.dungeon!);
 
         return NextResponse.json({
           success: true,
@@ -409,6 +411,9 @@ export async function POST(request: NextRequest) {
             has_floor_boss: hasFloorBoss(state.dungeon!) !== null,
             boss_defeated: state.dungeon!.boss_defeated,
             is_complete: isDungeonComplete(state.dungeon!),
+            // Chests on the current floor (so the UI can offer "Open Chest")
+            floor_chests: floorChests,
+            current_floor: state.dungeon!.current_floor,
           },
         });
       }

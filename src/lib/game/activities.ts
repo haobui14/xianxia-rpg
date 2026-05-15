@@ -28,6 +28,7 @@ import {
   DURATION_OPTIONS,
   getDurationOption,
 } from "./time";
+import { getEnhancedBonusStats } from "./enhancement";
 
 // =====================================================
 // ACTIVITY DEFINITIONS
@@ -548,10 +549,13 @@ export function calculateActivityBonuses(type: ActivityType, state: GameState): 
 
   // Equipment bonus
   if (def.affected_by.includes("equipment")) {
-    // Sum cultivation_speed from equipped items
+    // Sum cultivation_speed from equipped items, scaled by enhancement level
+    // (so "+5 Linh Vũ Pháp Bào" actually grants 5% more cultivation speed)
     Object.values(state.equipped_items).forEach((item) => {
-      if (item?.bonus_stats?.cultivation_speed) {
-        bonuses.equipment += item.bonus_stats.cultivation_speed;
+      if (!item) return;
+      const stats = getEnhancedBonusStats(item);
+      if (stats.cultivation_speed) {
+        bonuses.equipment += stats.cultivation_speed;
       }
     });
   }

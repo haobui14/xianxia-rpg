@@ -15,6 +15,7 @@ import {
 import {
   getElementCompatibility,
   getRequiredExp,
+  getTechniqueBonus,
 } from "@/lib/game/mechanics";
 import CollapsibleSection from "./CollapsibleSection";
 import DualCultivationView from "./DualCultivationView";
@@ -180,6 +181,7 @@ export default function CharacterSheet({
   const meridians = buildMeridians(state);
 
   const activeTechs = state.techniques ?? [];
+  const techniqueBonusPct = Math.round((getTechniqueBonus(state) - 1) * 100);
 
   return (
     <div>
@@ -376,7 +378,14 @@ export default function CharacterSheet({
           />
 
           <div className="hr-soft" style={{ margin: "14px 0 10px" }} />
-          <SmallHead>
+          <SmallHead
+            right={
+              <Pill variant={techniqueBonusPct > 0 ? "jade" : "default"}>
+                {techniqueBonusPct >= 0 ? "+" : ""}
+                {techniqueBonusPct}% {locale === "vi" ? "Tu Vi" : "Exp"}
+              </Pill>
+            }
+          >
             {locale === "vi" ? "Tu Vi" : "Cultivation"}
           </SmallHead>
           <Bar
@@ -386,6 +395,30 @@ export default function CharacterSheet({
             max={requiredExp === Infinity ? state.progress.cultivation_exp || 1 : requiredExp}
             showNums={requiredExp !== Infinity}
           />
+          <div
+            style={{
+              marginTop: 8,
+              fontSize: 12,
+              color: "var(--ink-mute)",
+              display: "flex",
+              justifyContent: "space-between",
+            }}
+          >
+            <span>
+              {locale === "vi"
+                ? "Tổng bonus từ công pháp"
+                : "Total technique bonus"}
+            </span>
+            <span
+              className="t-num"
+              style={{
+                color: techniqueBonusPct > 0 ? "var(--jade-deep)" : "var(--ink-mute)",
+              }}
+            >
+              {techniqueBonusPct >= 0 ? "+" : ""}
+              {techniqueBonusPct}%
+            </span>
+          </div>
         </Card>
 
         {/* Right: Meridians + Sect Standing */}
@@ -576,6 +609,10 @@ export default function CharacterSheet({
                       <div style={{ display: "flex", gap: 6 }}>
                         <Pill>{tech.type}</Pill>
                         <Pill variant="gold">{tech.grade}</Pill>
+                        <Pill variant="jade">
+                          +{tech.cultivation_speed_bonus ?? 0}%{" "}
+                          {locale === "vi" ? "Tu Vi" : "Exp"}
+                        </Pill>
                       </div>
                     </div>
                     {isSelected && onAbilitySwap && (
@@ -1005,14 +1042,23 @@ function TechCard({
             color: "var(--ink-mute)",
           }}
         >
-          <span style={{ color: "var(--jade-deep)" }}>
-            <span className="t-han">氣</span>{" "}
-            {(tech as any).qi_cost ?? "—"}
+          <span style={{ color: "var(--jade-deep)" }} title={locale === "vi" ? "Bonus tu vi" : "Cultivation exp bonus"}>
+            <span className="t-han">經</span>{" "}
+            +{tech.cultivation_speed_bonus ?? 0}%
           </span>
-          <span className="faint">
-            <span className="t-han">封</span>{" "}
-            {(tech as any).cooldown ?? "—"}
-          </span>
+          {tech.breakthrough_bonus ? (
+            <span className="faint" title={locale === "vi" ? "Bonus đột phá" : "Breakthrough bonus"}>
+              <span className="t-han">破</span> +{tech.breakthrough_bonus}%
+            </span>
+          ) : tech.qi_recovery_bonus ? (
+            <span className="faint" title={locale === "vi" ? "Hồi khí" : "Qi recovery"}>
+              <span className="t-han">氣</span> +{tech.qi_recovery_bonus}%
+            </span>
+          ) : (
+            <span className="faint">
+              <span className="t-han">階</span> {tech.grade}
+            </span>
+          )}
         </div>
         {tech.elements && tech.elements.length > 0 && (
           <div style={{ marginTop: 8, display: "flex", gap: 4, flexWrap: "wrap" }}>

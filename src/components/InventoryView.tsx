@@ -8,6 +8,7 @@ import {
   EnhancementResult,
   canEnhance,
   getEnhancedItemName,
+  getEnhancedBonusStats,
 } from "@/lib/game/enhancement";
 import {
   sortItems,
@@ -203,10 +204,31 @@ export default function InventoryView({
     return items;
   }, [validInventoryItems, searchQuery, filterBy, sortBy, locale]);
 
-  const selectedItem = useMemo(
-    () => processedItems.find((i) => i.id === selectedItemId) ?? null,
-    [processedItems, selectedItemId]
+  // Equipped items live in `state.equipped_items[slot]`, NOT in `state.inventory.items`
+  // (the equip API splices the row out). So when the player taps a worn item slot we
+  // also have to search the equipped record — otherwise the detail card stays empty
+  // and the Unequip / Enhance / Discard buttons never appear.
+  const equippedList = useMemo(
+    () =>
+      Object.values(state.equipped_items).filter(
+        (v): v is InventoryItem => v != null
+      ),
+    [state.equipped_items]
   );
+
+  const selectedItem = useMemo(() => {
+    if (!selectedItemId) return null;
+    return (
+      processedItems.find((i) => i.id === selectedItemId) ??
+      equippedList.find((i) => i.id === selectedItemId) ??
+      null
+    );
+  }, [processedItems, equippedList, selectedItemId]);
+
+  const selectedItemIsEquipped = useMemo(() => {
+    if (!selectedItem) return false;
+    return equippedList.some((eq) => eq.id === selectedItem.id);
+  }, [equippedList, selectedItem]);
 
   const handleUseItem = async (item: InventoryItem) => {
     if (!onUseItem || loadingAction) return;
@@ -566,6 +588,12 @@ export default function InventoryView({
                         <span className="t-han">數</span> {selectedItem.quantity}
                       </Pill>
                     )}
+                    {selectedItemIsEquipped && (
+                      <Pill variant="jade" withDot>
+                        <span className="t-han">裝</span>{" "}
+                        {locale === "vi" ? "Đang Đeo" : "Equipped"}
+                      </Pill>
+                    )}
                   </div>
                   <p
                     className="t-body"
@@ -585,7 +613,16 @@ export default function InventoryView({
                   {selectedItem.bonus_stats && Object.keys(selectedItem.bonus_stats).length > 0 && (
                     <>
                       <div className="hr-soft" style={{ margin: "14px 0 8px" }} />
-                      <SmallHead>
+                      <SmallHead
+                        right={
+                          (selectedItem.enhancement_level ?? 0) > 0 ? (
+                            <Pill variant="gold">
+                              <span className="t-han">煉</span> +
+                              {selectedItem.enhancement_level}
+                            </Pill>
+                          ) : undefined
+                        }
+                      >
                         {locale === "vi" ? "Chỉ Số Bổ Trợ" : "Bonus Stats"}
                       </SmallHead>
                       <div
@@ -595,7 +632,7 @@ export default function InventoryView({
                           gap: "0 16px",
                         }}
                       >
-                        {Object.entries(selectedItem.bonus_stats).map(
+                        {Object.entries(getEnhancedBonusStats(selectedItem)).map(
                           ([key, val]) =>
                             val ? (
                               <Stat
@@ -672,7 +709,7 @@ export default function InventoryView({
                     {(selectedItem.type === "Equipment" ||
                       selectedItem.type === "Accessory") &&
                       onEquipItem &&
-                      !isEquipped(state, selectedItem) && (
+                      !selectedItemIsEquipped && (
                         <button
                           onClick={() => handleEquip(selectedItem)}
                           disabled={loadingAction === `equip-${selectedItem.id}`}
@@ -686,7 +723,7 @@ export default function InventoryView({
                     {(selectedItem.type === "Equipment" ||
                       selectedItem.type === "Accessory") &&
                       onEquipItem &&
-                      isEquipped(state, selectedItem) && (
+                      selectedItemIsEquipped && (
                         <button
                           onClick={() => handleUnequip(selectedItem)}
                           disabled={loadingAction === `unequip-${selectedItem.id}`}
@@ -709,7 +746,7 @@ export default function InventoryView({
                         </button>
                       )}
 
-                    {onDiscardItem && (
+                    {onDiscardItem && !selectedItemIsEquipped && (
                       <button
                         onClick={() =>
                           setDiscardConfirm({
@@ -848,6 +885,3 @@ export default function InventoryView({
   );
 }
 
-function isEquipped(state: GameState, item: InventoryItem): boolean {
-  return Object.values(state.equipped_items).some((eq) => eq?.id === item.id);
-}

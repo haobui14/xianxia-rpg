@@ -38,7 +38,9 @@ export function useGameState({ runId, locale }: UseGameStateProps) {
       const data = await response.json();
       console.log("Loaded run data:", data.run.current_state);
 
-      // Regenerate stamina based on real-time elapsed
+      // Regenerate stamina based on real-time elapsed (20 / minute — must
+      // match STAMINA_REGEN_PER_MINUTE in src/lib/game/mechanics.ts).
+      const STAMINA_REGEN_PER_MINUTE = 20;
       const loadedState = data.run.current_state;
       if (
         loadedState.last_stamina_regen &&
@@ -50,7 +52,7 @@ export function useGameState({ runId, locale }: UseGameStateProps) {
 
         if (minutesElapsed > 0) {
           const staminaToRegen = Math.min(
-            minutesElapsed,
+            minutesElapsed * STAMINA_REGEN_PER_MINUTE,
             loadedState.stats.stamina_max - loadedState.stats.stamina
           );
           loadedState.stats.stamina += staminaToRegen;

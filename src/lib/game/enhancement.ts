@@ -52,6 +52,12 @@ export interface EnhancementResult {
   previousLevel: number;
   itemDestroyed?: boolean; // For future: high level failures might destroy item
   statIncrease?: Record<string, number>;
+  /**
+   * Set when the API rejected the request (insufficient resources, max level
+   * reached, item not found, etc.). The modal renders this inline as a
+   * cinnabar banner instead of bubbling an exception to the page.
+   */
+  errorMessage?: string;
 }
 
 /**
@@ -158,6 +164,23 @@ export function calculateEnhancedStats(
   }
 
   return enhancedStats;
+}
+
+/**
+ * Read-time helper: returns an item's `bonus_stats` scaled by its
+ * `enhancement_level`. Use this anywhere equipment bonuses are aggregated for
+ * gameplay (attribute totals, max-HP/Qi, cultivation speed, AI prompts).
+ *
+ * Why this exists: enhancement only mutates `enhancement_level` on the item to
+ * preserve the base values for diff-preview math. Applying the multiplier at
+ * read time keeps a single source of truth and works for both items in the
+ * inventory list and items currently equipped.
+ */
+export function getEnhancedBonusStats(item: InventoryItem): Record<string, number> {
+  if (!item.bonus_stats) return {};
+  const level = item.enhancement_level || 0;
+  if (level === 0) return item.bonus_stats as Record<string, number>;
+  return calculateEnhancedStats(item.bonus_stats as Record<string, number>, level);
 }
 
 /**
