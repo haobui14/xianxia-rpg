@@ -72,6 +72,7 @@ export const translations = {
     // Tabs (Vietnamese)
     tabGame: "Hành Trình",
     tabCharacter: "Tu Sĩ",
+    tabJournal: "Nhật Ký",
     tabSect: "Môn Phái",
     tabInventory: "Túi Đồ",
     tabMarket: "Chợ",
@@ -111,9 +112,6 @@ export const translations = {
     Hands: "Tay",
     Accessory: "Phụ Kiện",
     Artifact: "Bảo Vật",
-
-    // Technique Type
-    Main: "Chính",
 
     // Combat
     combat: "Chiến Đấu",
@@ -294,6 +292,7 @@ export const translations = {
     // Tabs
     tabGame: "Journey",
     tabCharacter: "Cultivator",
+    tabJournal: "Journal",
     tabSect: "Sect",
     tabInventory: "Inventory",
     tabMarket: "Market",
@@ -333,9 +332,6 @@ export const translations = {
     Hands: "Hands",
     Accessory: "Accessory",
     Artifact: "Artifact",
-
-    // Technique Type
-    Main: "Main",
 
     // Combat
     combat: "Combat",

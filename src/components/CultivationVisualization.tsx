@@ -367,7 +367,7 @@ export default function CultivationVisualization({
         <Tooltip
           content={
             locale === "vi"
-              ? `Linh Căn ${state.spirit_root.grade}: Phẩm chất linh căn ảnh hưởng trực tiếp đến tốc độ hấp thụ linh khí`
+              ? `Linh Căn ${t(locale, state.spirit_root.grade)}: Phẩm chất linh căn ảnh hưởng trực tiếp đến tốc độ hấp thụ linh khí`
               : `${state.spirit_root.grade} Spirit Root: Root quality directly affects qi absorption speed`
           }
         >

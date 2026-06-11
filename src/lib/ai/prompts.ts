@@ -1,13 +1,20 @@
 import { z } from "zod";
 import { Locale, GameState, GameTime, AITurnResult, TimeSegment } from "@/types/game";
 import { calculateTotalAttributes } from "@/lib/game/equipment";
-import { getRequiredExp, getSpiritRootBonus, getTechniqueBonus } from "@/lib/game/mechanics";
+import {
+  getRequiredExp,
+  getSpiritRootBonus,
+  getTechniqueBonus,
+  getTechniqueEffectiveBonus,
+} from "@/lib/game/mechanics";
 import {
   getSeasonFromMonth,
   calculateTimeCultivationBonus,
   getSpecialTimeBonus,
 } from "@/lib/game/time";
 import { getMissionTemplate } from "@/lib/game/sect-missions";
+import { REGIONS } from "@/lib/world/regions";
+import { resolveLootTable } from "@/lib/game/loot";
 
 // Zod schemas for validation
 export const ChoiceSchema = z.object({
@@ -150,6 +157,29 @@ export function validateAIResponse(data: unknown): AITurnResult {
           }
         }
 
+        // Fix: normalize both add_item spellings to the bare form
+        if (fixedDelta.field === "inventory.add_item") {
+          fixedDelta.field = "add_item";
+        }
+
+        // Fix: fill bilingual item fields — the prompt asks the AI to author
+        // only one locale's description to save output tokens; mirror the
+        // missing side here so the UI always has both.
+        if (
+          fixedDelta.field === "add_item" &&
+          fixedDelta.value &&
+          typeof fixedDelta.value === "object"
+        ) {
+          const item = fixedDelta.value as Record<string, any>;
+          item.name = item.name || item.name_en;
+          item.name_en = item.name_en || item.name;
+          item.description = item.description || item.description_en || "";
+          item.description_en = item.description_en || item.description;
+          if (typeof item.quantity !== "number" || item.quantity < 1) {
+            item.quantity = 1;
+          }
+        }
+
         return fixedDelta;
       })
       .filter((delta: any) => delta.field && delta.operation && delta.value !== undefined);
@@ -220,15 +250,16 @@ const DELTA_SCHEMA = {
   skill_exp:
     '{"field": "skills.gain_exp", "operation": "add", "value": {skill_id: "skill_id", exp: 20-50}} (when practicing skills)',
   resources: '{"field": "inventory.[spirit_stones|silver]", "operation": "add", "value": N}',
+  loot: '{"field": "inventory.loot", "operation": "add", "value": "common_herbs|bandit_loot|cave_treasure|dungeon_boss|ancient_treasure"} (server rolls silver + stones + 1-3 curated items)',
   location:
     '{"field": "location.place", "operation": "set", "value": "New Place"} or {"field": "location.region", "operation": "set", "value": "New Region"}',
   sect: '{"field": "sect.[join|leave|promote|contribution]", "operation": "set|add", "value": {sect_object}|N}',
 };
 
 const ITEM_SCHEMA = {
-  base: "id, name, name_en, description, description_en, type, rarity, quantity",
+  base: "id (snake_case), name (vi), name_en, description in ONE locale only ≤15 words (other locale auto-filled by server), type, rarity, quantity",
   medicine:
-    'type="Medicine", effects: {hp_restore?, qi_restore?, cultivation_exp?, permanent_[stat]?}',
+    'type="Medicine", effects: {hp_restore?, qi_restore?, stamina_restore?, cultivation_exp?, permanent_[hp|qi|str|agi|int|perception|luck]?} — ONLY these keys work; others do nothing',
   equipment:
     'type="Equipment", equipment_slot: Weapon|Head|Chest|Legs|Feet|Hands|Accessory|Artifact, bonus_stats: {str?, agi?, int?, perception?, luck?, hp?, qi?, cultivation_speed?}, enhancement_level?: 0-10',
   book: 'type="Book", teaches_technique?: {TECHNIQUE_SCHEMA} OR teaches_skill?: {SKILL_SCHEMA}. Books teach ONE technique OR ONE skill when used.',
@@ -239,7 +270,7 @@ const ITEM_SCHEMA = {
 };
 
 const TECHNIQUE_SCHEMA =
-  'id, name, name_en, description, description_en, grade: Mortal|Earth|Heaven, type: Main|Support, elements: ["Kim"|"Mộc"|"Thủy"|"Hỏa"|"Thổ"], cultivation_speed_bonus, qi_recovery_bonus?, breakthrough_bonus?';
+  'id, name, name_en, description, description_en, grade: Mortal|Earth|Heaven, elements: ["Kim"|"Mộc"|"Thủy"|"Hỏa"|"Thổ"], cultivation_speed_bonus, qi_recovery_bonus?, breakthrough_bonus?';
 
 const SKILL_SCHEMA =
   "id, name, name_en, description, description_en, type: attack|defense|support (LOWERCASE!), element?: Kim|Mộc|Thủy|Hỏa|Thổ, level, max_level, damage_multiplier (1.5=150% normal), qi_cost (10-50), cooldown (1-5 turns), effects?: {stun_chance?, bleed_damage?, defense_break?, heal_percent?, defense_boost?}";
@@ -269,12 +300,12 @@ NPCs speak in classical style (fellow daoist, senior, junior). Every turn must i
 
   const role = isVi
     ? `VAI TRÒ:
-1. KỂ CHUYỆN 120-180 từ, đậm chất tiên hiệp. KHÔNG dùng số — nói "mạnh hơn", "linh khí dao động", KHÔNG "sức mạnh +8".
-2. LỰA CHỌN 2-5, MỖI lựa chọn một LOẠI khác nhau (tu luyện / chiến đấu / khám phá / xã hội / nghỉ / sự kiện). KHÔNG 2 lựa chọn cùng loại hoặc đều "đi đến"/"nói chuyện".
+1. KỂ CHUYỆN 100-150 từ, đậm chất tiên hiệp. KHÔNG dùng số — nói "mạnh hơn", "linh khí dao động", KHÔNG "sức mạnh +8".
+2. LỰA CHỌN 2-5, MỖI lựa chọn một LOẠI khác nhau (tu luyện / chiến đấu / khám phá / xã hội / nghỉ / sự kiện). KHÔNG 2 lựa chọn cùng loại hoặc đều "đi đến"/"nói chuyện". Text mỗi lựa chọn ≤12 từ.
 3. NHẤT QUÁN: mọi vật phẩm / công pháp / kỹ năng / tông môn / địa điểm nhắc trong narrative PHẢI có proposed_delta tương ứng. Mô tả không thay thế delta.`
     : `ROLE:
-1. STORY 120-180 words, xianxia tone. NO numbers — say "feels stronger", "qi fluctuates", NOT "strength +8".
-2. CHOICES 2-5, each a DIFFERENT type (cultivate / combat / explore / social / rest / event). Never two of the same type or both "go to"/"talk to".
+1. STORY 100-150 words, xianxia tone. NO numbers — say "feels stronger", "qi fluctuates", NOT "strength +8".
+2. CHOICES 2-5, each a DIFFERENT type (cultivate / combat / explore / social / rest / event). Never two of the same type or both "go to"/"talk to". Choice text ≤12 words.
 3. CONSISTENCY: every item / technique / skill / sect / location mentioned in narrative MUST have a matching proposed_delta. Describing ≠ emitting the delta.`;
 
   const variety = isVi
@@ -329,13 +360,13 @@ SEASONS: Spring Wood+20/Water+10, Summer Fire+20/Wood+10, Autumn Metal+20/Earth+
     ? `CHIẾN ĐẤU:
 KHI gặp yêu thú / ma tu / kẻ địch → PHẢI thêm event combat_encounter. KHÔNG giảm HP/Qi trong proposed_deltas (combat mode sẽ xử lý).
 Dùng "⚔️ SỨC MẠNH CHIẾN ĐẤU" trong context để cân bằng: HP ~ phys_atk×2-4, ATK ~ phys_atk×0.6-1.2, DEF ~ def×0.6-1.2. Boss ×2+ gợi ý.
-Enemy data: {id, name, name_en, hp, hp_max, atk, def, behavior: "Aggressive"|"Defensive"|"Balanced", loot_table_id: "common_loot"|"rare_loot"|"boss_loot", rival_sect_id?: "<sect_id>"}.
+Enemy data: {id, name, name_en, hp, hp_max, atk, def, behavior: "Aggressive"|"Defensive"|"Balanced", loot_table_id: "common_herbs"|"bandit_loot"|"cave_treasure"|"dungeon_boss"|"ancient_treasure", rival_sect_id?: "<sect_id>"}.
 ⚠️ Nếu kẻ địch là đệ tử một tông môn cụ thể (vd huyet_sat_ma_tong, thanh_van_kiem) → PHẢI đặt rival_sect_id để nhiệm vụ truy sát tông môn địch đếm đúng.
 Narrative chỉ mô tả gặp địch, KHÔNG mô tả kết quả. Luôn có lựa chọn "Bỏ chạy" nếu hợp lý.`
     : `COMBAT:
 WHEN encountering beast / demonic cultivator / enemy → MUST add combat_encounter event. DO NOT subtract HP/Qi in proposed_deltas (combat mode handles it).
 Use "⚔️ COMBAT POWER" in context for balance: HP ~ phys_atk×2-4, ATK ~ phys_atk×0.6-1.2, DEF ~ def×0.6-1.2. Bosses ×2+ of suggested.
-Enemy data: {id, name, name_en, hp, hp_max, atk, def, behavior: "Aggressive"|"Defensive"|"Balanced", loot_table_id: "common_loot"|"rare_loot"|"boss_loot", rival_sect_id?: "<sect_id>"}.
+Enemy data: {id, name, name_en, hp, hp_max, atk, def, behavior: "Aggressive"|"Defensive"|"Balanced", loot_table_id: "common_herbs"|"bandit_loot"|"cave_treasure"|"dungeon_boss"|"ancient_treasure", rival_sect_id?: "<sect_id>"}.
 ⚠️ If the enemy is a disciple of a specific sect (e.g. huyet_sat_ma_tong, thanh_van_kiem) → MUST set rival_sect_id so hunt-rival-sect missions count the kill.
 Narrative describes the encounter only, NOT the outcome. Always include a "Flee" choice when reasonable.`;
 
@@ -366,12 +397,28 @@ WHEN granting techniques / skills → MUST also emit techniques.add OR skills.ad
   const exploration = isVi
     ? `KHÁM PHÁ & DI CHUYỂN:
 Khi narrative nói nhân vật tới nơi khác → BẮT BUỘC {"field":"location.place","operation":"set","value":"<nơi>"}. Mô tả không thay thế delta.
-Sau 2 lượt cùng chỗ: lượt kế phải có biến cố lớn hoặc di chuyển. Sau 3 lượt: BẮT BUỘC di chuyển.
+ƯU TIÊN địa danh THẬT từ context "Lối đi / Vùng lân cận" cho lựa chọn di chuyển và location.place — khu đánh dấu (?) chưa khám phá là cơ hội nội dung mới.
 Luôn có ≥1 lựa chọn di chuyển. Mỗi địa điểm phải có đặc thù (kiến trúc, NPC, không khí).`
     : `EXPLORATION & MOVEMENT:
 When narrative says the character moves → REQUIRED {"field":"location.place","operation":"set","value":"<place>"}. Describing ≠ emitting the delta.
-After 2 turns at same place: next turn must have a major event or movement. After 3 turns: MUST move.
+PREFER the REAL place names from the context's "Paths / Adjacent regions" for movement choices and location.place — areas marked (?) are undiscovered and prime material for fresh content.
 Always include ≥1 movement choice. Each location has distinct traits (architecture, NPCs, atmosphere).`;
+
+  const npcArc = isVi
+    ? `NPC & TUYẾN TRUYỆN (CHỐNG LẶP — quan trọng):
+NPC: ƯU TIÊN tái sử dụng "Nhân vật quen" trong context (đúng tính cách, nhớ chuyện cũ, quan hệ tiến triển) thay vì bịa người lạ mới mỗi lượt.
+NPC mới ĐÁNG NHỚ (sư phụ, bằng hữu, kẻ thù, thương nhân quen) → {"field":"npc.add","operation":"add","value":{id,name,name_en,role,location,relationship:-100..100,notes:"≤10 từ"}}. KHÔNG lưu người qua đường.
+Quan hệ thay đổi → {"field":"npc.update","operation":"set","value":{id,relationship_delta:±5..20,notes?}}.
+TUYẾN TRUYỆN: luôn giữ 1-2 arc active (xem "📖 TUYẾN TRUYỆN" trong context). Chưa có → mở arc {"field":"arc.start","operation":"add","value":{id,title,title_en,hook:"mục tiêu kế ≤15 từ",total_stages:2-5}}.
+Mỗi 2-3 lượt PHẢI đẩy 1 arc tiến triển → {"field":"arc.advance","operation":"add","value":{id,hook:"tình hình mới"}}. Kết thúc → {"field":"arc.complete","operation":"set","value":{id,resolution}}.
+Arc ví dụ: truy tìm bảo vật theo manh mối, ân oán với kẻ thù cũ, bí mật thân thế, đại hội/thí luyện sắp diễn ra, ơn nghĩa phải trả.`
+    : `NPCs & STORY ARCS (ANTI-REPETITION — important):
+NPCs: PREFER reusing "Known NPCs" from context (consistent personality, remembers past events, evolving relationship) over inventing a new stranger every turn.
+A MEMORABLE new NPC (mentor, friend, rival, recurring merchant) → {"field":"npc.add","operation":"add","value":{id,name,name_en,role,location,relationship:-100..100,notes:"≤10 words"}}. Do NOT register one-off passersby.
+Relationship shifts → {"field":"npc.update","operation":"set","value":{id,relationship_delta:±5..20,notes?}}.
+ARCS: always keep 1-2 active arcs (see "📖 ACTIVE STORY ARCS" in context). None active → open one {"field":"arc.start","operation":"add","value":{id,title,title_en,hook:"next objective ≤15 words",total_stages:2-5}}.
+Every 2-3 turns MUST advance an arc → {"field":"arc.advance","operation":"add","value":{id,hook:"new situation"}}. Conclude → {"field":"arc.complete","operation":"set","value":{id,resolution}}.
+Arc examples: treasure hunt following clues, feud with an old enemy, mystery of one's origins, upcoming tournament/trial, a debt that must be repaid.`;
 
   const regions = isVi
     ? `VÙNG (5, nội dung PHẢI khớp vùng trong context 🗺️ Vùng):
@@ -402,23 +449,27 @@ turnsRemaining ≤10 → SEVERE warning "Time is running out!". Defeat final-flo
 Khám phá 40%: kho báu ẩn (silver 50-500, linh thạch 1-10), NPC tặng quà, dược liệu quý, trang bị rơi, trận pháp cổ (giải → kỹ thuật), thừa kế di sản.
 Di chuyển 25%: phục kích cướp (chiến đấu / trả tiền), đoàn thương (giao dịch), thời tiết khắc nghiệt, phát hiện cổng (lối tắt / bí cảnh).
 Tu luyện 15%: tẩu hỏa nhập ma (rủi ro), cơ hội đột phá (+exp), nội ma (test ý chí), ngộ đạo (bonus lớn).
-Deltas ví dụ: silver {"field":"inventory.silver","operation":"add","value":200}; linh thạch {"field":"inventory.spirit_stones","operation":"add","value":20}; vật phẩm {"field":"add_item","operation":"add","value":{item}}.`
+Deltas ví dụ: silver {"field":"inventory.silver","operation":"add","value":200}; linh thạch {"field":"inventory.spirit_stones","operation":"add","value":20}; đồ thường {"field":"inventory.loot","operation":"add","value":"<bảng>"}; vật phẩm đặc biệt {"field":"add_item","operation":"add","value":{item}}.`
     : `RANDOM EVENTS (1-2 per 3-5 turns, driven by PERCEPTION/LUCK, MUST match region and realm):
 Explore 40%: hidden treasure (silver 50-500, stones 1-10), NPC gift, rare herbs, dropped equipment, ancient formation (solve → technique), legacy inheritance.
 Travel 25%: bandit ambush (fight / pay toll), merchant caravan (trade), weather event, portal discovery (shortcut / dungeon).
 Cultivate 15%: qi deviation (risk), breakthrough opportunity (+exp), inner demon (willpower test), enlightenment (major bonus).
-Delta examples: silver {"field":"inventory.silver","operation":"add","value":200}; spirit stones {"field":"inventory.spirit_stones","operation":"add","value":20}; item {"field":"add_item","operation":"add","value":{item}}.`;
+Delta examples: silver {"field":"inventory.silver","operation":"add","value":200}; spirit stones {"field":"inventory.spirit_stones","operation":"add","value":20}; routine drops {"field":"inventory.loot","operation":"add","value":"<table>"}; unique item {"field":"add_item","operation":"add","value":{item}}.`;
 
   const schemas = `
 DELTA FIELDS: ${JSON.stringify(DELTA_SCHEMA)}
 
-ITEMS (inventory.add_item): ${ITEM_SCHEMA.base}. Medicine: ${ITEM_SCHEMA.medicine}. Equipment: ${ITEM_SCHEMA.equipment}. Book: ${ITEM_SCHEMA.book}. StorageRing: ${ITEM_SCHEMA.storage_ring}. EnhanceStone: ${ITEM_SCHEMA.enhancement_stone}. Rarity: Common|Uncommon|Rare|Epic|Legendary.
-${isVi ? 'Nhặt/nhận vật phẩm trong narrative → PHẢI {"field":"add_item","operation":"add","value":{item}}. Mô tả không thay thế delta.' : 'Finding/receiving items in narrative → MUST {"field":"add_item","operation":"add","value":{item}}. Describing ≠ emitting the delta.'}
+LOOT TABLES (routine drops — ALWAYS PREFER over add_item): {"field":"inventory.loot","operation":"add","value":"<table_id>"} — server rolls silver + stones + 1-3 curated items. Generic: common_herbs (T1 herbs/medicine), bandit_loot (T1 humanoid/basic gear), cave_treasure (T2 ruins/caves), dungeon_boss (T3 strong foes), ancient_treasure (T4 rare finds). Regional (themed): thanh_van_wilds (T1 wood), hoa_son_volcanic (T2 fire), huyen_thuy_depths (T3 water), tram_loi_storm (T4 lightning), vong_linh_spirit (T5 soul). PREFER the "loot table" id shown in the area context line; match tier to region/enemy.
 
-TECHNIQUES (techniques.add, cultivation-speed ONLY, NOT combat): ${TECHNIQUE_SCHEMA}. Grade bonus: Mortal +5-15%, Earth +15-30%, Heaven +30-50%.
-${isVi ? "Học/tìm công pháp → PHẢI techniques.add, HOẶC cho Book với teaches_technique." : "Learn/find technique → MUST techniques.add, OR give Book with teaches_technique."}
+ITEMS (add_item — ONLY for unique/story-significant items): ${ITEM_SCHEMA.base}. Medicine: ${ITEM_SCHEMA.medicine}. Equipment: ${ITEM_SCHEMA.equipment}. Book: ${ITEM_SCHEMA.book}. StorageRing: ${ITEM_SCHEMA.storage_ring}. EnhanceStone: ${ITEM_SCHEMA.enhancement_stone}. Rarity: Common|Uncommon|Rare|Epic|Legendary.
+${isVi ? 'Nhặt/nhận vật phẩm trong narrative → PHẢI có delta: đồ thường → inventory.loot, vật phẩm đặc biệt → add_item. Mô tả không thay thế delta.' : 'Finding/receiving items in narrative → MUST emit a delta: routine drops → inventory.loot, unique items → add_item. Describing ≠ emitting the delta.'}
 
-SKILLS (skills.add, combat, consumes qi): ${SKILL_SCHEMA}.
+TECHNIQUES (techniques.add — cultivation-speed ONLY, NEVER combat): ${TECHNIQUE_SCHEMA}. Grade bonus: Mortal +5-15%, Earth +15-30%, Heaven +30-50%.
+Decision rule: if it has \`damage_multiplier\`, \`qi_cost\`, \`cooldown\`, or \`type: attack|defense|support\`, it is a SKILL — use skills.add. A technique MUST have \`grade\` and \`cultivation_speed_bonus\` and NO combat fields.
+${isVi ? "Học/tìm công pháp tu luyện → PHẢI techniques.add, HOẶC cho Book với teaches_technique." : "Learn/find a cultivation technique → MUST techniques.add, OR give Book with teaches_technique."}
+
+SKILLS (skills.add — combat moves, consume qi): ${SKILL_SCHEMA}.
+Decision rule: if the ability is used in battle, deals damage, blocks, buffs, or has a cooldown, it is a SKILL — use skills.add. NEVER put combat moves under techniques.add.
 ${isVi ? 'Học kỹ năng chiến đấu → PHẢI skills.add, HOẶC Book với teaches_skill. Luyện kỹ năng → {"field":"skills.gain_exp","operation":"add","value":{"skill_id":"<id>","exp":20-50}}.' : 'Learn combat skill → MUST skills.add, OR Book with teaches_skill. Practicing skill → {"field":"skills.gain_exp","operation":"add","value":{"skill_id":"<id>","exp":20-50}}.'}
 
 SECTS (sect.[join|leave|promote|contribution]): ${SECT_SCHEMA.sect}. Ranks: ${SECT_SCHEMA.ranks}. Membership: ${SECT_SCHEMA.membership}.
@@ -433,14 +484,16 @@ STORAGE RINGS: Accessory with effects.storage_capacity (10-100). Common+10, Unco
 OUTPUT JSON ONLY:
 {
   "locale": "${locale}",
-  "narrative": "120-180 words, no numbers",
+  "narrative": "100-150 words, no numbers",
   "choices": [{"id":"action","text":"...","cost":{"stamina":N,"time_segments":N}}, ...],
   "proposed_deltas": [
     {"field":"stats.stamina","operation":"subtract","value":2},
     {"field":"progress.cultivation_exp","operation":"add","value":50},
-    ${isVi ? '{"field":"add_item","operation":"add","value":{item}} ← nếu nhặt/nhận vật phẩm,' : '{"field":"add_item","operation":"add","value":{item}} ← if finding/receiving item,'}
+    ${isVi ? '{"field":"inventory.loot","operation":"add","value":"bandit_loot"} ← loot thường,' : '{"field":"inventory.loot","operation":"add","value":"bandit_loot"} ← routine loot,'}
+    ${isVi ? '{"field":"add_item","operation":"add","value":{item}} ← CHỈ vật phẩm đặc biệt,' : '{"field":"add_item","operation":"add","value":{item}} ← unique/story item ONLY,'}
     ${isVi ? '{"field":"techniques.add","operation":"add","value":{technique}} ← nếu học công pháp,' : '{"field":"techniques.add","operation":"add","value":{technique}} ← if learning technique,'}
     ${isVi ? '{"field":"skills.add","operation":"add","value":{skill}} ← nếu học kỹ năng,' : '{"field":"skills.add","operation":"add","value":{skill}} ← if learning skill,'}
+    ${isVi ? '{"field":"arc.advance","operation":"add","value":{"id":"<arc_id>","hook":"tình hình mới"}} ← đẩy tuyến truyện mỗi 2-3 lượt,' : '{"field":"arc.advance","operation":"add","value":{"id":"<arc_id>","hook":"new situation"}} ← advance an arc every 2-3 turns,'}
     ${isVi ? '{"field":"sect.join","operation":"set","value":{membership}} ← nếu gia nhập tông môn' : '{"field":"sect.join","operation":"set","value":{membership}} ← if joining sect'}
   ],
   "events": [ ${isVi ? '← nếu gặp địch: {"type":"combat_encounter","data":{"enemy":{...}}}' : '← if encountering enemy: {"type":"combat_encounter","data":{"enemy":{...}}}'} ]
@@ -458,6 +511,7 @@ ${isVi ? "LƯU Ý: mọi vật phẩm/kỹ năng/công pháp/tông môn trong na
     combat,
     sect,
     exploration,
+    npcArc,
     regions,
     dungeons,
     events,
@@ -575,6 +629,17 @@ export function buildGameContext(
     ctx.push("");
   }
 
+  // Active story arcs — long-term goals the AI must keep weaving in
+  const activeArcs = (state.story_arcs || []).filter((a) => a.status === "active");
+  if (activeArcs.length > 0) {
+    ctx.push(locale === "vi" ? "📖 TUYẾN TRUYỆN ĐANG MỞ:" : "📖 ACTIVE STORY ARCS:");
+    for (const arc of activeArcs) {
+      const title = locale === "vi" ? arc.title : arc.title_en || arc.title;
+      ctx.push(`  ${title} [${arc.id}] — ${arc.stage}/${arc.total_stages}: ${arc.hook}`);
+    }
+    ctx.push("");
+  }
+
   // Story summary
   ctx.push(locale === "vi" ? "=== TÓM TẮT ===" : "=== STORY SUMMARY ===");
   ctx.push(state.story_summary);
@@ -600,25 +665,77 @@ export function buildGameContext(
   // Current state
   ctx.push(locale === "vi" ? "=== TRẠNG THÁI ===" : "=== CURRENT STATE ===");
 
-  // World location (region system)
-  if (state.travel) {
-    const regionNames: Record<string, { vi: string; en: string }> = {
-      thanh_van: { vi: "Thanh Vân", en: "Azure Cloud" },
-      hoa_son: { vi: "Hỏa Sơn", en: "Fire Mountain" },
-      huyen_thuy: { vi: "Huyền Thủy", en: "Mystic Waters" },
-      tram_loi: { vi: "Trầm Lôi", en: "Silent Thunder" },
-      vong_linh: { vi: "Vọng Linh", en: "Spirit Watch" },
-    };
-    const regionOrder = ["thanh_van", "hoa_son", "huyen_thuy", "tram_loi", "vong_linh"];
-    const region = regionNames[state.travel.current_region];
-    const tier = regionOrder.indexOf(state.travel.current_region) + 1;
-    const areaDiscovered = (state.travel.discovered_areas[state.travel.current_region] || [])
-      .length;
-    ctx.push(
+  // World location — grounded in the real map (regions/areas) so the AI can
+  // reference actual places instead of inventing generic ones.
+  const region = state.travel ? REGIONS[state.travel.current_region] : undefined;
+  if (state.travel && region) {
+    const travel = state.travel;
+    const discovered = new Set(travel.discovered_areas?.[travel.current_region] || []);
+    const area = region.areas.find((a) => a.id === travel.current_area);
+    const regionName = locale === "vi" ? region.name : region.name_en;
+
+    let line =
       locale === "vi"
-        ? `🗺️ Vùng: ${region?.vi || state.travel.current_region} (Cấp ${tier}) — đã khám phá ${areaDiscovered} khu vực`
-        : `🗺️ Region: ${region?.en || state.travel.current_region} (Tier ${tier}) — ${areaDiscovered} areas discovered`
-    );
+        ? `🗺️ Vùng: ${regionName} (Cấp ${region.tier}, ${region.element})`
+        : `🗺️ Region: ${regionName} (Tier ${region.tier}, ${region.element})`;
+    if (area) {
+      const areaName = locale === "vi" ? area.name : area.name_en;
+      const safety = area.is_safe
+        ? locale === "vi"
+          ? "an toàn"
+          : "safe"
+        : locale === "vi"
+          ? `nguy hiểm ${area.danger_level}/5`
+          : `danger ${area.danger_level}/5`;
+      const bonus = area.cultivation_bonus
+        ? locale === "vi"
+          ? `, tu luyện +${area.cultivation_bonus}%`
+          : `, cultivation +${area.cultivation_bonus}%`
+        : "";
+      line +=
+        locale === "vi"
+          ? ` | Khu: ${areaName} (${area.type}, ${safety}${bonus})`
+          : ` | Area: ${areaName} (${area.type}, ${safety}${bonus})`;
+    }
+    ctx.push(line);
+
+    // Real movement options: connected areas (mark undiscovered ones) and
+    // adjacent regions — use these names in choices and location deltas.
+    const connections = (area?.connected_areas || [])
+      .map((id) => {
+        const a = region.areas.find((x) => x.id === id);
+        if (!a) return null;
+        const nm = locale === "vi" ? a.name : a.name_en;
+        return discovered.has(id) ? nm : `${nm} (?)`;
+      })
+      .filter(Boolean)
+      .join(", ");
+    const adjacent = region.adjacent_regions
+      .map((id) => {
+        const r = REGIONS[id];
+        return r ? (locale === "vi" ? r.name : r.name_en) : id;
+      })
+      .join(", ");
+    if (connections || adjacent) {
+      ctx.push(
+        locale === "vi"
+          ? `   Lối đi: ${connections || "—"} [(?) = chưa khám phá] | Vùng lân cận: ${adjacent}`
+          : `   Paths: ${connections || "—"} [(?) = undiscovered] | Adjacent regions: ${adjacent}`
+      );
+    }
+
+    // Area flavor pools — themed inspiration so each location feels distinct
+    if (area && (area.event_pool.length > 0 || area.enemy_pool.length > 0)) {
+      const humanize = (s: string) => s.replace(/_/g, " ");
+      const eventHints = area.event_pool.slice(0, 3).map(humanize).join(", ");
+      const enemyHints = area.enemy_pool.slice(0, 3).map(humanize).join(", ");
+      const areaLootTable = resolveLootTable(area.loot_table, region.tier);
+      ctx.push(
+        locale === "vi"
+          ? `   Chất liệu khu này — sự kiện: ${eventHints || "—"} | địch: ${enemyHints || "—"} | bảng loot: ${areaLootTable}`
+          : `   Area flavor — events: ${eventHints || "—"} | enemies: ${enemyHints || "—"} | loot table: ${areaLootTable}`
+      );
+    }
   } else {
     ctx.push(
       locale === "vi"
@@ -686,6 +803,22 @@ export function buildGameContext(
       locale === "vi"
         ? `${warn ? "⚠️" : "📅"} Tuổi: ${state.lifespan.current_age}/${state.lifespan.max_lifespan} (còn ${yearsRemaining} năm)${warn ? " - CẦN ĐỘT PHÁ!" : ""}`
         : `${warn ? "⚠️" : "📅"} Age: ${state.lifespan.current_age}/${state.lifespan.max_lifespan} (${yearsRemaining} yrs left)${warn ? " - NEED BREAKTHROUGH!" : ""}`
+    );
+  }
+
+  // Ultimate goal framing (win condition): peak Nguyên Anh before lifespan ends
+  const atPeak = state.progress.realm === "NguyênAnh" && state.progress.realm_stage >= 9;
+  if (atPeak) {
+    ctx.push(
+      locale === "vi"
+        ? `🏆 ĐỈNH PHONG: đã đạt Nguyên Anh viên mãn! Hướng nội dung về chuẩn bị thiên kiếp phi thăng — mở/luyện arc "arc_ascension" (tụ khí vận, tìm pháp bảo hộ kiếp, giải quyết ân oán trần thế).`
+        : `🏆 PEAK REALM: Nascent Soul stage 9 reached! Steer content toward ascension tribulation prep — open/advance arc "arc_ascension" (gather fortune, seek tribulation artifacts, settle worldly debts).`
+    );
+  } else if (state.lifespan && state.lifespan.years_remaining <= 5) {
+    ctx.push(
+      locale === "vi"
+        ? `⚰️ TỬ KỲ CẬN KỀ: thọ nguyên chỉ còn ${Math.max(0, state.lifespan.years_remaining)} năm — narrative phải nhuốm cảm giác thời gian cạn dần; đột phá cảnh giới là cách duy nhất kéo dài thọ nguyên.`
+        : `⚰️ DEATH APPROACHES: only ${Math.max(0, state.lifespan.years_remaining)} years of lifespan remain — the narrative must carry that urgency; a realm breakthrough is the only way to extend life.`
     );
   }
 
@@ -805,51 +938,46 @@ export function buildGameContext(
       : `Resources: ${state.inventory.silver} silver, ${state.inventory.spirit_stones} spirit stones | Bag ${usedSlots}/${totalCapacity}${state.inventory.storage_ring ? ` (💍 +${ringCapacity})` : ""}`
   );
 
-  // Equipped items — concise one-line-per-slot
-  const equippedCount = Object.values(state.equipped_items).filter(Boolean).length;
-  if (equippedCount > 0) {
-    ctx.push(locale === "vi" ? "Trang bị:" : "Equipped:");
-    Object.entries(state.equipped_items).forEach(([slot, item]) => {
-      if (item) {
-        const baseName = locale === "vi" ? item.name : item.name_en;
-        const enhanceLevel = item.enhancement_level || 0;
-        const name = enhanceLevel > 0 ? `${baseName} +${enhanceLevel}` : baseName;
-        const stats: string[] = [];
-        if (item.bonus_stats) {
-          if (item.bonus_stats.str) stats.push(`STR+${item.bonus_stats.str}`);
-          if (item.bonus_stats.agi) stats.push(`AGI+${item.bonus_stats.agi}`);
-          if (item.bonus_stats.int) stats.push(`INT+${item.bonus_stats.int}`);
-          if (item.bonus_stats.perception) stats.push(`PER+${item.bonus_stats.perception}`);
-          if (item.bonus_stats.luck) stats.push(`LUCK+${item.bonus_stats.luck}`);
-          if (item.bonus_stats.hp) stats.push(`HP+${item.bonus_stats.hp}`);
-          if (item.bonus_stats.qi) stats.push(`Qi+${item.bonus_stats.qi}`);
-        }
-        if (item.effects?.storage_capacity) stats.push(`+${item.effects.storage_capacity} slots`);
-        ctx.push(`  ${slot}: ${name} [${item.rarity}]${stats.length ? ` ${stats.join(" ")}` : ""}`);
-      }
-    });
+  // Equipped items — single combined line
+  const equippedParts: string[] = [];
+  Object.entries(state.equipped_items).forEach(([slot, item]) => {
+    if (!item) return;
+    const baseName = locale === "vi" ? item.name : item.name_en;
+    const enhanceLevel = item.enhancement_level || 0;
+    const name = enhanceLevel > 0 ? `${baseName} +${enhanceLevel}` : baseName;
+    const stats: string[] = [];
+    if (item.bonus_stats) {
+      if (item.bonus_stats.str) stats.push(`STR+${item.bonus_stats.str}`);
+      if (item.bonus_stats.agi) stats.push(`AGI+${item.bonus_stats.agi}`);
+      if (item.bonus_stats.int) stats.push(`INT+${item.bonus_stats.int}`);
+      if (item.bonus_stats.perception) stats.push(`PER+${item.bonus_stats.perception}`);
+      if (item.bonus_stats.luck) stats.push(`LUCK+${item.bonus_stats.luck}`);
+      if (item.bonus_stats.hp) stats.push(`HP+${item.bonus_stats.hp}`);
+      if (item.bonus_stats.qi) stats.push(`Qi+${item.bonus_stats.qi}`);
+    }
+    if (item.effects?.storage_capacity) stats.push(`+${item.effects.storage_capacity} slots`);
+    equippedParts.push(`${slot}: ${name} [${item.rarity}]${stats.length ? ` ${stats.join(" ")}` : ""}`);
+  });
+  if (equippedParts.length > 0) {
+    ctx.push((locale === "vi" ? "Trang bị: " : "Equipped: ") + equippedParts.join(" | "));
   }
 
-  // Inventory: only show up to 6 items, terse
+  // Inventory: up to 6 items on one line
   if (state.inventory.items.length > 0) {
-    ctx.push(
-      locale === "vi"
-        ? `Vật phẩm (${state.inventory.items.length}):`
-        : `Items (${state.inventory.items.length}):`
-    );
-    state.inventory.items.slice(0, 6).forEach((item) => {
+    const shown = state.inventory.items.slice(0, 6).map((item) => {
       const baseName = locale === "vi" ? item.name : item.name_en;
       const enhanceLevel = item.enhancement_level || 0;
       const name = enhanceLevel > 0 ? `${baseName} +${enhanceLevel}` : baseName;
-      ctx.push(`  - ${name} x${item.quantity} [${item.rarity} ${item.type}]`);
+      return `${name} x${item.quantity} [${item.rarity} ${item.type}]`;
     });
-    if (state.inventory.items.length > 6) {
-      ctx.push(
-        locale === "vi"
-          ? `  … và ${state.inventory.items.length - 6} vật phẩm khác`
-          : `  … and ${state.inventory.items.length - 6} more`
-      );
-    }
+    const more = state.inventory.items.length - 6;
+    ctx.push(
+      (locale === "vi"
+        ? `Vật phẩm (${state.inventory.items.length}): `
+        : `Items (${state.inventory.items.length}): `) +
+        shown.join(", ") +
+        (more > 0 ? (locale === "vi" ? ` … +${more} khác` : ` … +${more} more`) : "")
+    );
   }
   ctx.push("");
 
@@ -862,30 +990,64 @@ export function buildGameContext(
     return grade;
   };
 
-  // Techniques (for cultivation speed) — terse
+  // Techniques (for cultivation speed) — single line, level-scaled bonus
   if (state.techniques && state.techniques.length > 0) {
-    ctx.push(locale === "vi" ? "Công pháp:" : "Techniques:");
-    state.techniques.forEach((tech) => {
+    const list = state.techniques.map((tech) => {
       const name = locale === "vi" ? tech.name : tech.name_en;
       const elements =
         tech.elements && tech.elements.length > 0 ? `[${tech.elements.join("/")}]` : "[—]";
-      const speedBonus = tech.cultivation_speed_bonus ? `+${tech.cultivation_speed_bonus}%` : "";
-      ctx.push(`  - ${name} ${elements} ${translateGrade(tech.grade)}/${tech.type} ${speedBonus}`);
+      const effective = Math.round(getTechniqueEffectiveBonus(tech));
+      const level = tech.level && tech.level > 1 ? ` Lv${tech.level}` : "";
+      return `${name} ${elements} ${translateGrade(tech.grade)}${level}${effective ? ` +${effective}%` : ""}`;
     });
+    ctx.push((locale === "vi" ? "Công pháp: " : "Techniques: ") + list.join(" | "));
   }
 
-  // Skills (for combat) — terse
+  // Skills (for combat) — single line
   if (state.skills && state.skills.length > 0) {
-    ctx.push(locale === "vi" ? "Kỹ năng:" : "Skills:");
-    state.skills.forEach((skill) => {
+    const list = state.skills.map((skill) => {
       const name = locale === "vi" ? skill.name : skill.name_en;
-      const element = skill.element ? `[${skill.element}]` : "";
-      const dmg = skill.damage_multiplier ? `${skill.damage_multiplier}x` : "";
-      const cost = skill.qi_cost ? `${skill.qi_cost}qi` : "";
-      ctx.push(
-        `  - ${name} ${element} Lv${skill.level}/${skill.max_level} ${skill.type} ${dmg} ${cost}`
-      );
+      const element = skill.element ? ` [${skill.element}]` : "";
+      const dmg = skill.damage_multiplier ? ` ${skill.damage_multiplier}x` : "";
+      const cost = skill.qi_cost ? ` ${skill.qi_cost}qi` : "";
+      return `${name}${element} Lv${skill.level}/${skill.max_level} ${skill.type}${dmg}${cost}`;
     });
+    ctx.push((locale === "vi" ? "Kỹ năng: " : "Skills: ") + list.join(" | "));
+  }
+
+  // Known NPCs — single line; NPCs at the current location first (marked 📍)
+  // so the AI naturally reuses whoever is actually nearby.
+  if (state.npcs && state.npcs.length > 0) {
+    const hereNames: string[] = [state.location.place];
+    if (state.travel) {
+      const r = REGIONS[state.travel.current_region];
+      const a = r?.areas.find((x) => x.id === state.travel!.current_area);
+      if (a) hereNames.push(a.name, a.name_en);
+    }
+    const here = hereNames.filter(Boolean).map((s) => s.toLowerCase());
+    const isHere = (loc?: string) => {
+      if (!loc) return false;
+      const l = loc.toLowerCase();
+      return here.some((h) => l.includes(h) || h.includes(l));
+    };
+
+    const shown = [...state.npcs]
+      .sort(
+        (a, b) =>
+          (isHere(b.location) ? 1 : 0) - (isHere(a.location) ? 1 : 0) ||
+          Math.abs(b.relationship) - Math.abs(a.relationship) ||
+          b.last_seen_turn - a.last_seen_turn
+      )
+      .slice(0, 8)
+      .map((n, i) => {
+        const name = locale === "vi" ? n.name : n.name_en || n.name;
+        const rel = `${n.relationship >= 0 ? "+" : ""}${n.relationship}`;
+        const loc = n.location ? `, ${n.location}` : "";
+        const notes = i < 5 && n.notes ? `: ${n.notes}` : "";
+        const pin = isHere(n.location) ? "📍" : "";
+        return `${pin}${name} (${n.role}, ${rel}${loc})${notes}`;
+      });
+    ctx.push((locale === "vi" ? "Nhân vật quen: " : "Known NPCs: ") + shown.join(" | "));
   }
 
   // Sect membership — terse

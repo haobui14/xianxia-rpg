@@ -52,6 +52,33 @@ export function useAbilityHandlers({
     [runId, locale, setState, setError]
   );
 
+  const handleLevelAbility = useCallback(
+    async (abilityType: "technique" | "skill", abilityId: string) => {
+      try {
+        const response = await fetch("/api/level-ability", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ runId, abilityType, abilityId }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to level ability");
+        }
+
+        const result = await response.json();
+        setState(result.state);
+      } catch (err: any) {
+        console.error("Ability level-up error:", err);
+        setError(
+          err.message || (locale === "vi" ? "Lỗi thăng cấp năng lực" : "Error leveling ability")
+        );
+      }
+    },
+    [runId, locale, setState, setError]
+  );
+
   const handleToggleDualCultivation = useCallback(async () => {
     try {
       const response = await fetch("/api/dual-cultivation", {
@@ -107,6 +134,7 @@ export function useAbilityHandlers({
 
   return {
     handleAbilitySwap,
+    handleLevelAbility,
     handleToggleDualCultivation,
     handleSetExpSplit,
   };

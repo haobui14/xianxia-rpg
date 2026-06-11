@@ -8,6 +8,7 @@ import {
   getSeason,
   getSeasonName,
 } from "@/lib/game/time";
+import { t } from "@/lib/i18n/translations";
 
 interface ProgressionViewProps {
   gameState: GameState;
@@ -179,7 +180,7 @@ export default function ProgressionView({
               </span>
             ))}
             <span className="text-amber-300">
-              {locale === "vi" ? spirit_root.grade : spirit_root.grade}
+              {t(locale, spirit_root.grade)}
               {locale === "vi" ? " Linh căn" : " Spirit Root"}
             </span>
           </div>
@@ -424,7 +425,6 @@ export default function ProgressionView({
           </h3>
           <div className="space-y-2">
             {techniques
-              .filter((t) => t.type === "Main")
               .slice(0, 1)
               .map((tech) => (
                 <div
@@ -436,7 +436,7 @@ export default function ProgressionView({
                       {locale === "vi" ? tech.name : tech.name_en}
                     </span>
                     <span className="text-xs text-amber-400 px-2 py-0.5 bg-amber-900/30 rounded">
-                      {tech.grade}
+                      {t(locale, tech.grade)}
                     </span>
                   </div>
                   <div className="text-xs text-green-400 mt-1">

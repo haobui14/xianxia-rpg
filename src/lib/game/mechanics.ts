@@ -14,6 +14,8 @@ import {
   CharacterCondition,
   LifespanInfo,
   REALM_LIFESPAN_BONUS,
+  CultivationTechnique,
+  Skill,
 } from "@/types/game";
 // World system types imported but used via init functions
 import { DeterministicRNG } from "./rng";
@@ -531,47 +533,77 @@ export function getElementCompatibility(
   return matchCount > 0 ? compatibility / matchCount : 0;
 }
 
+export const TECHNIQUE_MAX_LEVEL = 10;
+
 /**
- * Get technique bonus considering element compatibility AND cultivation speed bonus
- * Techniques boost cultivation speed, not combat
+ * Effective base bonus (%) of a technique including mastery level.
+ * Each level past 1 adds +10% of the base bonus (lv10 ≈ 1.9× base).
+ */
+export function getTechniqueEffectiveBonus(technique: CultivationTechnique): number {
+  const level = Math.max(1, technique.level || 1);
+  return (technique.cultivation_speed_bonus || 0) * (1 + 0.1 * (level - 1));
+}
+
+/**
+ * Element multiplier for a technique vs the cultivator's spirit root.
+ * Compatibility SCALES the technique's own bonus (×1.3 perfect match,
+ * ×0.8 strong conflict, ×1.2 for element-less universal techniques) —
+ * it is no longer a flat additive bonus, so technique quality matters.
+ */
+export function getTechniqueElementMultiplier(
+  state: GameState,
+  technique: CultivationTechnique
+): number {
+  if (!technique.elements || technique.elements.length === 0) return 1.2;
+  return 1 + getElementCompatibility(state.spirit_root.elements, technique.elements);
+}
+
+// Diminishing weights: the strongest technique counts in full, the rest fall
+// off quickly — stacking five junk techniques no longer beats one good one.
+const TECHNIQUE_STACK_WEIGHTS = [1.0, 0.5, 0.3, 0.2, 0.1];
+
+/**
+ * Total cultivation-speed multiplier from all equipped techniques.
+ * Per technique: effective base (level-scaled) × element multiplier,
+ * then summed with diminishing weights by contribution rank.
  */
 export function getTechniqueBonus(state: GameState): number {
   if (!state.techniques || state.techniques.length === 0) return 1.0;
 
+  const contributions = state.techniques
+    .map(
+      (technique) =>
+        (getTechniqueEffectiveBonus(technique) / 100) *
+        getTechniqueElementMultiplier(state, technique)
+    )
+    .sort((a, b) => b - a);
+
   let totalBonus = 0;
-  let mainTechniqueBonus = 0;
-  let supportTechniqueBonus = 0;
-
-  for (const technique of state.techniques) {
-    // Base cultivation speed bonus from technique grade
-    const cultivationSpeedBonus = technique.cultivation_speed_bonus || 0;
-    const baseBonus = cultivationSpeedBonus / 100; // Convert percentage to multiplier
-
-    // Element compatibility bonus
-    let elementBonus = 0;
-    if (technique.elements && technique.elements.length > 0) {
-      elementBonus = getElementCompatibility(state.spirit_root.elements, technique.elements);
-    } else {
-      // Techniques with no element get a universal 20% bonus
-      elementBonus = 0.2;
-    }
-
-    const techBonus = baseBonus + elementBonus;
-
-    // Main techniques give full bonus, support techniques stack 50%
-    if (technique.type === "Main") {
-      mainTechniqueBonus = Math.max(mainTechniqueBonus, techBonus);
-    } else {
-      supportTechniqueBonus += techBonus * 0.5;
-    }
-  }
-
-  // Cap support bonus at 50% extra
-  supportTechniqueBonus = Math.min(supportTechniqueBonus, 0.5);
-
-  totalBonus = mainTechniqueBonus + supportTechniqueBonus;
+  contributions.forEach((c, i) => {
+    totalBonus += c * (TECHNIQUE_STACK_WEIGHTS[i] ?? 0.05);
+  });
 
   return 1.0 + totalBonus;
+}
+
+/**
+ * Level-up costs — shared by the level-ability route and the UI so the
+ * displayed price always matches what the server charges.
+ * Returns null when already at max level.
+ */
+export function getTechniqueLevelUpCost(
+  technique: CultivationTechnique
+): { spirit_stones: number } | null {
+  const level = Math.max(1, technique.level || 1);
+  const maxLevel = technique.max_level || TECHNIQUE_MAX_LEVEL;
+  if (level >= maxLevel) return null;
+  const gradeFactor = { Mortal: 5, Earth: 10, Heaven: 20 }[technique.grade] || 5;
+  return { spirit_stones: gradeFactor * level };
+}
+
+export function getSkillLevelUpCost(skill: Skill): { silver: number } | null {
+  if (skill.level >= skill.max_level) return null;
+  return { silver: 150 * skill.level };
 }
 
 /**
@@ -599,25 +631,34 @@ export const BODY_CULTIVATION_EXP_REQUIREMENTS: Record<string, number[]> = {
 };
 
 /**
- * Get required exp for next breakthrough
+ * Get required exp for next breakthrough.
+ *
+ * PhàmNhân has a single transition at stage 0 → requirements[0].
+ * All other realms run stages 1..9 with 9 transitions (stage 1→2, …, 9→next
+ * realm), so we index by `stage - 1`. The previous version indexed by `stage`,
+ * which skipped the first threshold and ran off the end at stage 9, returning
+ * Infinity and trapping the player permanently in the final stage of every
+ * realm.
  */
 export function getRequiredExp(realm: Realm, stage: number): number {
   const requirements = CULTIVATION_EXP_REQUIREMENTS[realm];
-  if (!requirements || stage >= requirements.length) {
-    return Infinity; // Max level reached
-  }
-  return requirements[stage];
+  if (!requirements) return Infinity;
+  const idx = realm === "PhàmNhân" ? stage : stage - 1;
+  if (idx < 0 || idx >= requirements.length) return Infinity;
+  return requirements[idx];
 }
 
 /**
- * Get required exp for next body cultivation breakthrough
+ * Get required exp for next body cultivation breakthrough. Same indexing
+ * convention as getRequiredExp — PhàmThể uses stage directly, every other
+ * body realm runs stages 1..9 and indexes by `stage - 1`.
  */
 export function getRequiredBodyExp(realm: string, stage: number): number {
   const requirements = BODY_CULTIVATION_EXP_REQUIREMENTS[realm];
-  if (!requirements || stage >= requirements.length) {
-    return Infinity; // Max level reached
-  }
-  return requirements[stage];
+  if (!requirements) return Infinity;
+  const idx = realm === "PhàmThể" ? stage : stage - 1;
+  if (idx < 0 || idx >= requirements.length) return Infinity;
+  return requirements[idx];
 }
 
 /**
@@ -796,6 +837,67 @@ export function performBreakthrough(state: GameState): boolean {
   }
 
   return false;
+}
+
+/**
+ * Auto-advance every breakthrough the player has earned (Qi and Body).
+ * Loops so that catching up on multiple stages in one shot (e.g., a pill that
+ * dumps a huge exp value) still levels through them all instead of getting
+ * stuck on the cap. Returns the list of breakthroughs that fired.
+ */
+export function autoBreakthrough(state: GameState): Array<{
+  kind: "qi" | "body";
+  realm: string;
+  stage: number;
+}> {
+  const fired: Array<{ kind: "qi" | "body"; realm: string; stage: number }> = [];
+  const SAFETY_CAP = 20;
+  let guard = 0;
+  while (canBreakthrough(state) && guard < SAFETY_CAP) {
+    if (!performBreakthrough(state)) break;
+    fired.push({
+      kind: "qi",
+      realm: state.progress.realm,
+      stage: state.progress.realm_stage,
+    });
+    guard++;
+  }
+  guard = 0;
+  while (canBodyBreakthrough(state) && guard < SAFETY_CAP) {
+    if (!performBodyBreakthrough(state)) break;
+    fired.push({
+      kind: "body",
+      realm: state.progress.body_realm || "",
+      stage: state.progress.body_stage || 0,
+    });
+    guard++;
+  }
+  if (fired.length > 0) refreshLifespanForRealm(state);
+  return fired;
+}
+
+/**
+ * Recompute lifespan from the current realm. performBreakthrough changes the
+ * realm but never touched lifespan, so realm breakthroughs silently failed to
+ * extend max lifespan — call this after any breakthrough batch.
+ */
+export function refreshLifespanForRealm(state: GameState): void {
+  if (!state.lifespan) return;
+  const realmBonus = REALM_LIFESPAN_BONUS[state.progress.realm] || 0;
+  state.lifespan.realm_bonus = realmBonus;
+  state.lifespan.max_lifespan =
+    state.lifespan.base_years +
+    realmBonus +
+    (state.lifespan.special_bonus || 0) -
+    (state.lifespan.penalty || 0);
+  state.lifespan.current_age = state.age;
+  state.lifespan.years_remaining = state.lifespan.max_lifespan - state.age;
+  state.lifespan.urgency_level =
+    state.lifespan.years_remaining <= 10
+      ? "critical"
+      : state.lifespan.years_remaining <= 20
+        ? "warning"
+        : "safe";
 }
 
 /**

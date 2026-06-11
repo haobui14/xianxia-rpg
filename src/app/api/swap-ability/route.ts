@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { runQueries } from "@/lib/database/queries";
-import { GameState, CultivationTechnique, Skill } from "@/types/game";
+import { GameState } from "@/types/game";
 
 // Limits for techniques and skills
 const MAX_TECHNIQUES = 5;
 const MAX_SKILLS = 6;
-const MAX_PER_TYPE_TECHNIQUE = 2;
 const MAX_PER_TYPE_SKILL = 2;
 
 export async function POST(request: Request) {
@@ -44,20 +43,10 @@ export async function POST(request: Request) {
         }
 
         const technique = state.technique_queue[queueIndex];
-        const countByType = state.techniques.filter((t) => t.type === technique.type).length;
 
-        // Check limits
         if (state.techniques.length >= MAX_TECHNIQUES) {
           return NextResponse.json(
             { error: "Active techniques full. Forget one first." },
-            { status: 400 }
-          );
-        }
-        if (countByType >= MAX_PER_TYPE_TECHNIQUE) {
-          return NextResponse.json(
-            {
-              error: `Already have ${MAX_PER_TYPE_TECHNIQUE} ${technique.type} techniques. Forget one first.`,
-            },
             { status: 400 }
           );
         }
@@ -76,21 +65,6 @@ export async function POST(request: Request) {
 
         const activeTech = state.techniques[activeIndex];
         const queueTech = state.technique_queue[queueIndex];
-
-        // Check if swap is valid (type limits)
-        if (activeTech.type !== queueTech.type) {
-          const countByNewType = state.techniques.filter(
-            (t) => t.type === queueTech.type && t.id !== activeId
-          ).length;
-          if (countByNewType >= MAX_PER_TYPE_TECHNIQUE) {
-            return NextResponse.json(
-              {
-                error: `Already have ${MAX_PER_TYPE_TECHNIQUE} ${queueTech.type} techniques.`,
-              },
-              { status: 400 }
-            );
-          }
-        }
 
         // Perform swap
         state.techniques[activeIndex] = queueTech;

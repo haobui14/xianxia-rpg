@@ -156,8 +156,12 @@ export function processCombatTurn(
           totalAttrs.luck,
           rng!
         );
-        // Apply skill multiplier (1.5x = 50% more damage than normal attack)
-        playerDamage = Math.floor(normalAttackDamage * skill.damage_multiplier);
+        // Apply skill multiplier — enforce a 1.5× floor so a skill that costs
+        // Linh Lực + a cooldown always hits harder than a free normal attack,
+        // even if the seed / AI-generated data uses damage_multiplier = 1.0.
+        const rawMultiplier = skill.damage_multiplier ?? 1.5;
+        const skillMultiplier = Math.max(1.5, rawMultiplier);
+        playerDamage = Math.floor(normalAttackDamage * skillMultiplier);
         enemy.hp -= playerDamage;
         narrative += `Bạn dùng ${skill.name}, gây ${playerDamage} sát thương! `;
 

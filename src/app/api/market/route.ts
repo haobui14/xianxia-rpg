@@ -473,7 +473,9 @@ export async function POST(request: NextRequest) {
 
       const item = state.inventory.items[itemIndex];
 
-      // Calculate sell price (50% of estimated value)
+      // Calculate sell price (50% of estimated value). Price is for ONE unit
+      // — only one unit is removed below, so multiplying by stack quantity
+      // overpaid on every sale from a stack.
       const rarityValue =
         {
           Common: 1,
@@ -483,7 +485,7 @@ export async function POST(request: NextRequest) {
           Legendary: 16,
         }[item.rarity] || 1;
 
-      const sellPrice = Math.floor(25 * rarityValue * item.quantity);
+      const sellPrice = Math.floor(25 * rarityValue);
       state.inventory.silver += sellPrice;
 
       // Remove item from inventory

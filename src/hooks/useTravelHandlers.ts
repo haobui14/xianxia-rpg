@@ -12,6 +12,7 @@ interface UseTravelHandlersProps {
   setState: React.Dispatch<React.SetStateAction<GameState | null>>;
   setError: (error: string) => void;
   setActiveCombat: React.Dispatch<React.SetStateAction<ActiveCombatState | null>>;
+  resetSkillCooldowns?: () => void;
 }
 
 export function useTravelHandlers({
@@ -19,6 +20,7 @@ export function useTravelHandlers({
   setState,
   setError,
   setActiveCombat,
+  resetSkillCooldowns,
 }: UseTravelHandlersProps) {
   const handleTravelArea = useCallback(
     async (areaId: string) => {
@@ -112,6 +114,7 @@ export function useTravelHandlers({
             }
 
             console.log("Triggering dungeon combat with enemy:", enemy);
+            resetSkillCooldowns?.();
             setActiveCombat({
               enemy,
               log: [],
@@ -126,7 +129,7 @@ export function useTravelHandlers({
         throw err;
       }
     },
-    [locale, setState, setError, setActiveCombat]
+    [locale, setState, setError, setActiveCombat, resetSkillCooldowns]
   );
 
   return {

@@ -259,7 +259,8 @@ export async function generateAITurn(
   sceneContext: string,
   choiceId: string | null,
   locale: Locale,
-  choiceText?: string | null
+  choiceText?: string | null,
+  extraDirective?: string
 ): Promise<AITurnResult> {
   const systemPrompt = buildSystemPrompt(locale);
   const gameContext = buildGameContext(state, recentNarratives, locale);
@@ -273,16 +274,32 @@ export async function generateAITurn(
     { role: "system", content: systemPrompt },
     {
       role: "user",
-      content: `${gameContext}\n\n${varietyHint}\n\n${userMessage}`,
+      content: [gameContext, varietyHint, extraDirective, userMessage]
+        .filter(Boolean)
+        .join("\n\n"),
     },
   ];
 
   const model = process.env.AI_MODEL || "gpt-5.1";
 
   // Retry loop for JSON validation failures
+  let lastValidationError = "";
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const responseText = await callOpenAI(messages, model, {
+      // On retry, tell the model what was wrong — resending the identical
+      // request tends to fail the identical way and just burns tokens.
+      const attemptMessages: OpenAIMessage[] =
+        attempt === 0
+          ? messages
+          : [
+              ...messages,
+              {
+                role: "user",
+                content: `Your previous reply was rejected: ${lastValidationError}. Respond again with VALID JSON only, exactly matching the required schema.`,
+              },
+            ];
+
+      const responseText = await callOpenAI(attemptMessages, model, {
         // Higher temperature for more variety after many turns
         temperature: Math.min(0.95, 0.75 + state.turn_count * 0.01),
       });
@@ -327,12 +344,11 @@ export async function generateAITurn(
 
       return validated;
     } catch (error) {
+      lastValidationError = error instanceof Error ? error.message : String(error);
       // Retry on first attempt, throw on second
       if (attempt === 1) {
         console.error("AI generation error (final attempt):", error);
-        throw new Error(
-          `Failed to generate AI response: ${error instanceof Error ? error.message : "Unknown error"}`
-        );
+        throw new Error(`Failed to generate AI response: ${lastValidationError}`);
       }
       console.warn("Retrying due to invalid AI output...", error);
     }

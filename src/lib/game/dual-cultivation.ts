@@ -6,6 +6,7 @@ import {
   CharacterStats,
   CharacterAttributes,
 } from "@/types/game";
+import { getRequiredBodyExp } from "./mechanics";
 
 /**
  * Dual Cultivation System
@@ -92,21 +93,17 @@ export function getNextBodyRealm(realm: BodyRealm): BodyRealm | null {
 }
 
 /**
- * Calculate exp needed for next body stage/realm
+ * Calculate exp needed for next body stage/realm.
+ *
+ * Delegates to the single source of truth in mechanics.ts. The previous
+ * implementation used a separate 5-stage threshold table that disagreed with
+ * the actual breakthrough check (9 stages), so the UI would show "ready" while
+ * the game refused to break through.
  */
 export function getBodyExpToNext(progress: CultivationProgress): number {
   const realm = progress.body_realm || "PhàmThể";
   const stage = progress.body_stage || 0;
-  const thresholds = BODY_EXP_THRESHOLDS[realm];
-
-  if (stage >= 5) {
-    // At max stage, need next realm threshold
-    const nextRealm = getNextBodyRealm(realm);
-    if (!nextRealm) return Infinity; // At max
-    return BODY_EXP_THRESHOLDS[nextRealm][0];
-  }
-
-  return thresholds[stage];
+  return getRequiredBodyExp(realm, stage);
 }
 
 /**

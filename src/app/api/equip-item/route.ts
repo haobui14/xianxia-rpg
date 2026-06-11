@@ -6,7 +6,7 @@ import { syncInventoryToTables } from "@/lib/database/syncHelper";
 
 export async function POST(request: NextRequest) {
   try {
-    const { itemId, action } = await request.json();
+    const { itemId, action, slot: requestedSlot } = await request.json();
 
     if (!itemId || !action) {
       return NextResponse.json({ error: "Missing itemId or action" }, { status: 400 });
@@ -119,11 +119,35 @@ export async function POST(request: NextRequest) {
         state.inventory.items.splice(itemIndex, 1);
       }
     } else if (action === "unequip") {
-      // Find equipped item
-      const slot = Object.keys(state.equipped_items).find((s) => {
-        const equipped = state.equipped_items[s as keyof typeof state.equipped_items];
-        return equipped && equipped.id === itemId;
-      });
+      // Prefer the explicit slot from the UI — that's the slot the player
+      // actually tapped. Two equipped items can share an id (e.g. two
+      // accessories from the same template) and finding "by id" would
+      // unequip the wrong one, losing the worn item the user wanted to keep.
+      let slot: string | undefined;
+      if (requestedSlot) {
+        const slotItem =
+          state.equipped_items[requestedSlot as keyof typeof state.equipped_items];
+        if (slotItem && slotItem.id === itemId) {
+          slot = requestedSlot;
+        } else {
+          // The UI thinks this slot holds this item but the server disagrees
+          // — refuse rather than silently unequipping the wrong row.
+          return NextResponse.json(
+            {
+              error: "Item is not equipped in the requested slot",
+            },
+            { status: 409 }
+          );
+        }
+      } else {
+        // Legacy callers (no slot) — fall back to id lookup. Safe as long as
+        // ids are unique across worn items, which is the common case.
+        slot = Object.keys(state.equipped_items).find((s) => {
+          const equipped =
+            state.equipped_items[s as keyof typeof state.equipped_items];
+          return equipped && equipped.id === itemId;
+        });
+      }
 
       if (!slot) {
         return NextResponse.json({ error: "Item not equipped" }, { status: 404 });

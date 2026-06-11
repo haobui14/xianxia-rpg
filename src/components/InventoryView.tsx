@@ -33,7 +33,11 @@ import {
 interface InventoryViewProps {
   state: GameState;
   locale: Locale;
-  onEquipItem?: (itemId: string, action: "equip" | "unequip") => Promise<void>;
+  onEquipItem?: (
+    itemId: string,
+    action: "equip" | "unequip",
+    slot?: string
+  ) => Promise<void>;
   onDiscardItem?: (itemId: string, quantity: number) => Promise<void>;
   onUseItem?: (itemId: string) => Promise<void>;
   onEnhanceItem?: (itemId: string) => Promise<EnhancementResult | null>;
@@ -185,7 +189,15 @@ export default function InventoryView({
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy] = useState<SortOption>("type");
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  // Item IDs are TYPE identifiers, not instance identifiers — a sword in the
+  // bag and the same sword worn share the same `id`. We track WHICH grid the
+  // player tapped AND, for worn items, the specific equipment slot, so the
+  // server can unequip that exact slot instead of searching by id.
+  const [selection, setSelection] = useState<
+    | { id: string; source: "inventory" }
+    | { id: string; source: "equipped"; slot: string }
+    | null
+  >(null);
 
   const inventoryUsage = getInventoryUsage(state.inventory);
 
@@ -217,18 +229,21 @@ export default function InventoryView({
   );
 
   const selectedItem = useMemo(() => {
-    if (!selectedItemId) return null;
-    return (
-      processedItems.find((i) => i.id === selectedItemId) ??
-      equippedList.find((i) => i.id === selectedItemId) ??
-      null
-    );
-  }, [processedItems, equippedList, selectedItemId]);
+    if (!selection) return null;
+    // Resolve from the SAME grid the click came from. For worn items, use the
+    // slot — that's the only unambiguous identifier (multiple slots can hold
+    // items of the same id when accessories/storage rings share ids).
+    if (selection.source === "equipped") {
+      return (
+        (state.equipped_items[
+          selection.slot as keyof typeof state.equipped_items
+        ] as InventoryItem | undefined) ?? null
+      );
+    }
+    return processedItems.find((i) => i.id === selection.id) ?? null;
+  }, [processedItems, state.equipped_items, selection]);
 
-  const selectedItemIsEquipped = useMemo(() => {
-    if (!selectedItem) return false;
-    return equippedList.some((eq) => eq.id === selectedItem.id);
-  }, [equippedList, selectedItem]);
+  const selectedItemIsEquipped = selection?.source === "equipped";
 
   const handleUseItem = async (item: InventoryItem) => {
     if (!onUseItem || loadingAction) return;
@@ -255,9 +270,17 @@ export default function InventoryView({
 
   const handleUnequip = async (item: InventoryItem) => {
     if (!onEquipItem || loadingAction) return;
+    // Pass the exact equipment slot from the selection so the server unequips
+    // the slot the player tapped — not whichever slot's item happens to share
+    // an id. Falls back to item.equipment_slot which the equip API already
+    // expects.
+    const slot =
+      selection?.source === "equipped"
+        ? selection.slot
+        : item.equipment_slot;
     setLoadingAction(`unequip-${item.id}`);
     try {
-      await onEquipItem(item.id, "unequip");
+      await onEquipItem(item.id, "unequip", slot);
     } finally {
       setLoadingAction(null);
     }
@@ -421,8 +444,12 @@ export default function InventoryView({
                         }
                       : null
                   }
-                  selected={!!item && item.id === selectedItemId}
-                  onClick={() => item && setSelectedItemId(item.id)}
+                  selected={
+                    !!item &&
+                    selection?.source === "inventory" &&
+                    selection.id === item.id
+                  }
+                  onClick={() => item && setSelection({ id: item.id, source: "inventory" })}
                 />
               ))}
             </div>
@@ -519,8 +546,18 @@ export default function InventoryView({
                           : null
                       }
                       emptyGlyph={SLOT_HAN[slot]}
+                      selected={
+                        !!equipped &&
+                        selection?.source === "equipped" &&
+                        selection.slot === slot
+                      }
                       onClick={() =>
-                        equipped && setSelectedItemId(equipped.id)
+                        equipped &&
+                        setSelection({
+                          id: equipped.id,
+                          source: "equipped",
+                          slot,
+                        })
                       }
                     />
                     <div

@@ -6,6 +6,7 @@ import { Choice, Enemy } from "@/types/game";
 import { t, Locale } from "@/lib/i18n/translations";
 import DebugInventory from "./DebugInventory";
 import BreakthroughModal from "./BreakthroughModal";
+import { useToast } from "./Toast";
 import CultivatorRail from "./CultivatorRail";
 import EventModal from "./EventModal";
 import { Card, Seal } from "@/components/ui";
@@ -26,6 +27,15 @@ const CharacterSheet = dynamic(() => import("./CharacterSheet"), {
 });
 
 const SectView = dynamic(() => import("./SectView"), {
+  ssr: false,
+  loading: () => (
+    <div className="ink-card" style={{ padding: 24 }}>
+      <span className="label">Loading…</span>
+    </div>
+  ),
+});
+
+const JournalView = dynamic(() => import("./JournalView"), {
   ssr: false,
   loading: () => (
     <div className="ink-card" style={{ padding: 24 }}>
@@ -84,18 +94,19 @@ interface GameScreenProps {
   locale: Locale;
 }
 
-type Tab = "game" | "character" | "sect" | "inventory" | "market" | "world";
+type Tab = "game" | "character" | "journal" | "sect" | "inventory" | "market" | "world";
 
 const TAB_META: Record<Tab, { han: string; key: string }> = {
   game: { han: "途", key: "tabGame" },
   character: { han: "身", key: "tabCharacter" },
+  journal: { han: "録", key: "tabJournal" },
   sect: { han: "派", key: "tabSect" },
   inventory: { han: "物", key: "tabInventory" },
   market: { han: "市", key: "tabMarket" },
   world: { han: "界", key: "tabWorld" },
 };
 
-const TAB_ORDER: Tab[] = ["game", "character", "sect", "inventory", "market", "world"];
+const TAB_ORDER: Tab[] = ["game", "character", "journal", "sect", "inventory", "market", "world"];
 
 const ORDINAL_HAN = ["一", "二", "三", "四", "五", "六", "七", "八"];
 
@@ -238,6 +249,7 @@ export default function GameScreen({ runId, locale }: GameScreenProps) {
   } = useGameState({ runId, locale });
 
   const [activeTab, setActiveTab] = useState<Tab>("game");
+  const { toast } = useToast();
   const [customAction, setCustomAction] = useState("");
   const [characterName, setCharacterName] = useState<string | null>(null);
   const marketInitializedRef = useRef(false);
@@ -265,6 +277,7 @@ export default function GameScreen({ runId, locale }: GameScreenProps) {
     setActiveCombat,
     handleActiveCombatAction,
     handleActiveCombatEnd,
+    resetSkillCooldowns,
   } = useCombat({ runId, locale, state, setState, setNarrative });
 
   const {
@@ -282,9 +295,10 @@ export default function GameScreen({ runId, locale }: GameScreenProps) {
     setState,
     setError,
     setActiveCombat,
+    resetSkillCooldowns,
   });
 
-  const { handleAbilitySwap, handleToggleDualCultivation, handleSetExpSplit } =
+  const { handleAbilitySwap, handleLevelAbility, handleToggleDualCultivation, handleSetExpSplit } =
     useAbilityHandlers({ runId, locale, setState, setError });
 
   const { handleEventChoice } = useEventHandlers({ locale, processTurn, setError });
@@ -297,10 +311,44 @@ export default function GameScreen({ runId, locale }: GameScreenProps) {
     if (combatEncounter?.data?.enemy) {
       const enemy = combatEncounter.data.enemy as Enemy;
       if (!enemy.hp_max) enemy.hp_max = enemy.hp;
+      resetSkillCooldowns();
       setActiveCombat({ enemy, log: [], playerTurn: true });
     }
+
+    // Journal feedback: surface arc progress + the peak-realm milestone
+    for (const e of lastTurnEvents as Array<{ type: string; data?: any }>) {
+      if (e.type !== "quest_update" || !e.data) continue;
+      const d = e.data;
+      const title = locale === "vi" ? d.title : d.title_en || d.title;
+      if (d.kind === "arc_started") {
+        toast.info(
+          locale === "vi" ? `📖 Tuyến truyện mới: ${title}` : `📖 New story arc: ${title}`,
+          4000
+        );
+      } else if (d.kind === "arc_advanced") {
+        toast.info(
+          locale === "vi"
+            ? `📖 ${title} — hồi ${d.stage}/${d.total_stages}`
+            : `📖 ${title} — act ${d.stage}/${d.total_stages}`,
+          4000
+        );
+      } else if (d.kind === "arc_completed") {
+        toast.success(
+          locale === "vi" ? `📖 Viên mãn: ${title}` : `📖 Arc complete: ${title}`,
+          5000
+        );
+      } else if (d.milestone === "peak_realm") {
+        toast.success(
+          locale === "vi"
+            ? "🏆 Nguyên Anh viên mãn — thiên kiếp phi thăng đang chờ!"
+            : "🏆 Peak Nascent Soul — the ascension tribulation awaits!",
+          6000
+        );
+      }
+    }
+
     setLastTurnEvents([]);
-  }, [lastTurnEvents, setLastTurnEvents, setActiveCombat]);
+  }, [lastTurnEvents, setLastTurnEvents, setActiveCombat, resetSkillCooldowns, locale, toast]);
 
   useEffect(() => {
     const initMarket = async () => {
@@ -801,9 +849,14 @@ export default function GameScreen({ runId, locale }: GameScreenProps) {
               locale={locale}
               previousExp={previousExp}
               onAbilitySwap={handleAbilitySwap}
+              onLevelAbility={handleLevelAbility}
               onToggleDualCultivation={handleToggleDualCultivation}
               onSetExpSplit={handleSetExpSplit}
             />
+          </div>
+        ) : activeTab === "journal" ? (
+          <div className="ink-fade-in">
+            <JournalView state={state} locale={locale} />
           </div>
         ) : activeTab === "sect" ? (
           <div className="ink-fade-in">

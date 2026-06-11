@@ -1,5 +1,19 @@
-import { GameState, Locale, ItemRarity, InventoryItem, EquipmentSlot } from "@/types/game";
+import {
+  GameState,
+  Locale,
+  ItemRarity,
+  InventoryItem,
+  EquipmentSlot,
+  CultivationTechnique,
+  Skill,
+} from "@/types/game";
 import { DeterministicRNG } from "../game/rng";
+
+// NOTE on item effects: only keys the use-item route actually processes are
+// allowed here — hp_restore, qi_restore, stamina_restore, cultivation_exp,
+// permanent_hp, permanent_qi, permanent_[str|agi|int|perception|luck],
+// storage_capacity (via equip), plus Book.teaches_technique/teaches_skill.
+// Anything else silently does nothing when the player uses the item.
 
 export interface LootEntry {
   id: string;
@@ -14,6 +28,8 @@ export interface LootEntry {
   equipment_slot?: EquipmentSlot;
   bonus_stats?: InventoryItem["bonus_stats"];
   level_requirement?: number;
+  teaches_technique?: CultivationTechnique;
+  teaches_skill?: Skill;
 }
 
 export interface LootTable {
@@ -135,6 +151,20 @@ export const ENHANCEMENT_MATERIALS: LootEntry[] = [
   },
 ];
 
+// Shared consumable: stamina food — stamina gates most actions, so low-tier
+// tables should keep the player supplied.
+const SPIRIT_RICE_CAKE: LootEntry = {
+  id: "spirit_rice_cake",
+  name: "Bánh Linh Mễ",
+  name_en: "Spirit Rice Cake",
+  description: "Bánh làm từ linh mễ, ăn vào hồi phục thể lực.",
+  description_en: "A cake of spirit rice that restores stamina when eaten.",
+  type: "Medicine",
+  rarity: "Common",
+  effects: { stamina_restore: 25 },
+  weight: 25,
+};
+
 // Define loot tables
 export const LOOT_TABLES: Record<string, LootTable> = {
   common_herbs: {
@@ -148,10 +178,11 @@ export const LOOT_TABLES: Record<string, LootTable> = {
         id: "lingzhi_grass",
         name: "Linh Chi Thảo",
         name_en: "Spirit Grass",
-        description: "Cỏ linh thảo thông thường, có thể dùng để luyện đan dược.",
-        description_en: "Common spirit grass, can be used for alchemy.",
+        description: "Cỏ linh thảo thông thường, nhai sống hồi chút linh lực.",
+        description_en: "Common spirit grass; chewed raw it restores a little Qi.",
         type: "Material",
         rarity: "Common",
+        effects: { qi_restore: 10 },
         weight: 50,
       },
       {
@@ -176,6 +207,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
         effects: { hp_restore: 30 },
         weight: 30,
       },
+      SPIRIT_RICE_CAKE,
     ],
   },
 
@@ -221,6 +253,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
         effects: { hp_restore: 50 },
         weight: 45,
       },
+      SPIRIT_RICE_CAKE,
       // Enhancement stones
       ENHANCEMENT_MATERIALS[0], // Common enhancement stone
     ],
@@ -234,24 +267,36 @@ export const LOOT_TABLES: Record<string, LootTable> = {
     spiritStoneRange: [5, 15],
     entries: [
       {
+        // Was a "Manual" with a dead `cultivation_speed` effect — now a Book
+        // that actually teaches a technique when used.
         id: "qi_condensation_manual",
         name: "Luyện Khí Tâm Pháp",
         name_en: "Qi Condensation Manual",
-        description: "Bí tịch luyện khí cơ bản, tăng tốc độ tu luyện.",
-        description_en: "Basic Qi cultivation manual, increases cultivation speed.",
-        type: "Manual",
+        description: "Bí tịch luyện khí cơ bản, đọc xong lĩnh ngộ tâm pháp thổ nạp.",
+        description_en: "Basic Qi cultivation manual; reading it teaches a breathing method.",
+        type: "Book",
         rarity: "Uncommon",
-        effects: { cultivation_speed: 1.2 },
         weight: 20,
+        teaches_technique: {
+          id: "luyen_khi_tam_phap",
+          name: "Luyện Khí Tâm Pháp",
+          name_en: "Qi Condensation Method",
+          description: "Tâm pháp thổ nạp cơ bản, tăng tốc độ hấp thu linh khí.",
+          description_en: "A basic breathing method that speeds up qi absorption.",
+          grade: "Mortal",
+          elements: [],
+          cultivation_speed_bonus: 12,
+        },
       },
       {
         id: "spirit_stone_fragment",
         name: "Mảnh Linh Thạch",
         name_en: "Spirit Stone Fragment",
-        description: "Mảnh vỡ của linh thạch, chứa linh khí tinh túy.",
-        description_en: "Fragment of spirit stone, contains pure spiritual energy.",
+        description: "Mảnh vỡ của linh thạch — hấp thụ để hồi phục linh lực.",
+        description_en: "Fragment of spirit stone — absorb it to restore Qi.",
         type: "Material",
         rarity: "Rare",
+        effects: { qi_restore: 50 },
         weight: 15,
       },
       {
@@ -270,11 +315,11 @@ export const LOOT_TABLES: Record<string, LootTable> = {
         id: "qi_gathering_pill",
         name: "Tụ Khí Đan",
         name_en: "Qi Gathering Pill",
-        description: "Đan dược giúp tăng Linh lực tối đa.",
-        description_en: "Pill that increases maximum Qi.",
+        description: "Đan dược giúp tăng Linh lực tối đa vĩnh viễn.",
+        description_en: "Pill that permanently increases maximum Qi.",
         type: "Medicine",
         rarity: "Uncommon",
-        effects: { qi_max_bonus: 20 },
+        effects: { permanent_qi: 20 },
         weight: 25,
       },
       // Enhancement stones - common and uncommon
@@ -388,6 +433,309 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       STORAGE_RING_ITEMS[4], // Legendary storage ring (very rare)
     ],
   },
+
+  // ====================================================
+  // Regional tables — one per world region, themed to its
+  // element and stocked with the region's unique resources.
+  // Area loot_table ids in regions.ts alias onto these.
+  // ====================================================
+  thanh_van_wilds: {
+    id: "thanh_van_wilds",
+    tier: 1,
+    silverRange: [20, 90],
+    spiritStoneChance: 0.3,
+    spiritStoneRange: [1, 5],
+    entries: [
+      {
+        id: "lingzhi_grass",
+        name: "Linh Chi Thảo",
+        name_en: "Spirit Grass",
+        description: "Cỏ linh thảo thông thường, nhai sống hồi chút linh lực.",
+        description_en: "Common spirit grass; chewed raw it restores a little Qi.",
+        type: "Material",
+        rarity: "Common",
+        effects: { qi_restore: 10 },
+        weight: 40,
+      },
+      {
+        id: "moc_tinh",
+        name: "Mộc Tinh",
+        name_en: "Wood Essence",
+        description: "Tinh hoa mộc linh khí ngưng tụ từ rừng già, hấp thụ hồi linh lực.",
+        description_en: "Wood essence condensed in the old forest; absorb to restore Qi.",
+        type: "Material",
+        rarity: "Uncommon",
+        effects: { qi_restore: 30 },
+        weight: 22,
+      },
+      {
+        id: "low_beast_core",
+        name: "Thú Đan Cấp Thấp",
+        name_en: "Low-grade Beast Core",
+        description: "Nội đan yêu thú cấp thấp — luyện hóa được chút tu vi.",
+        description_en: "A low-grade beast core — refine it for a little cultivation.",
+        type: "Material",
+        rarity: "Uncommon",
+        effects: { cultivation_exp: 30 },
+        weight: 18,
+      },
+      {
+        id: "healing_herb",
+        name: "Chỉ Huyết Thảo",
+        name_en: "Healing Herb",
+        description: "Thảo dược cầm máu và hồi phục sinh lực.",
+        description_en: "Herb that stops bleeding and restores vitality.",
+        type: "Medicine",
+        rarity: "Common",
+        effects: { hp_restore: 30 },
+        weight: 28,
+      },
+      SPIRIT_RICE_CAKE,
+      {
+        id: "azure_bamboo_sword",
+        name: "Thanh Trúc Kiếm",
+        name_en: "Azure Bamboo Sword",
+        description: "Kiếm trúc nhẹ bén, thấm mộc linh khí.",
+        description_en: "A light, keen bamboo sword steeped in wood qi.",
+        type: "Equipment",
+        rarity: "Uncommon",
+        equipment_slot: "Weapon",
+        bonus_stats: { str: 3, agi: 2 },
+        weight: 8,
+      },
+      ENHANCEMENT_MATERIALS[0],
+    ],
+  },
+
+  hoa_son_volcanic: {
+    id: "hoa_son_volcanic",
+    tier: 2,
+    silverRange: [60, 180],
+    spiritStoneChance: 0.45,
+    spiritStoneRange: [3, 10],
+    entries: [
+      {
+        id: "hoa_tinh",
+        name: "Hỏa Tinh",
+        name_en: "Fire Essence",
+        description: "Tinh hoa hỏa nguyên từ lòng núi lửa, hấp thụ hồi linh lực.",
+        description_en: "Fire essence from the volcano's heart; absorb to restore Qi.",
+        type: "Material",
+        rarity: "Uncommon",
+        effects: { qi_restore: 50 },
+        weight: 30,
+      },
+      {
+        id: "flame_pill",
+        name: "Hỏa Diễm Đan",
+        name_en: "Flame Pill",
+        description: "Đan dược hỏa tính, hồi phục sinh lực mạnh mẽ.",
+        description_en: "A fiery pill that strongly restores vitality.",
+        type: "Medicine",
+        rarity: "Uncommon",
+        effects: { hp_restore: 80 },
+        weight: 25,
+      },
+      {
+        id: "phoenix_down",
+        name: "Phượng Vũ",
+        name_en: "Phoenix Down",
+        description: "Lông tơ phượng hoàng — luyện hóa được hỏa nguyên tinh thuần.",
+        description_en: "Soft phoenix down — refine it for pure fire essence.",
+        type: "Material",
+        rarity: "Rare",
+        effects: { cultivation_exp: 80 },
+        weight: 12,
+      },
+      {
+        id: "crimson_flame_armor",
+        name: "Xích Hỏa Giáp",
+        name_en: "Crimson Flame Armor",
+        description: "Giáp rèn trong dung nham, chống chịu vững chắc.",
+        description_en: "Armor forged in lava, sturdy and warm to the touch.",
+        type: "Equipment",
+        rarity: "Rare",
+        equipment_slot: "Chest",
+        bonus_stats: { hp: 40, str: 2 },
+        weight: 8,
+      },
+      SPIRIT_RICE_CAKE,
+      ENHANCEMENT_MATERIALS[0],
+      ENHANCEMENT_MATERIALS[1],
+    ],
+  },
+
+  huyen_thuy_depths: {
+    id: "huyen_thuy_depths",
+    tier: 3,
+    silverRange: [120, 350],
+    spiritStoneChance: 0.6,
+    spiritStoneRange: [5, 18],
+    entries: [
+      {
+        id: "ocean_pearl",
+        name: "Hải Châu",
+        name_en: "Ocean Pearl",
+        description: "Trân châu biển sâu ngưng tụ thủy linh khí, hấp thụ hồi linh lực lớn.",
+        description_en: "A deep-sea pearl dense with water qi; absorb for a large Qi restore.",
+        type: "Material",
+        rarity: "Rare",
+        effects: { qi_restore: 80 },
+        weight: 22,
+      },
+      {
+        id: "thuy_tinh",
+        name: "Thủy Tinh",
+        name_en: "Water Essence",
+        description: "Tinh hoa thủy nguyên thu từ hải vực, hấp thụ hồi linh lực.",
+        description_en: "Water essence gathered from the sea; absorb to restore Qi.",
+        type: "Material",
+        rarity: "Uncommon",
+        effects: { qi_restore: 60 },
+        weight: 28,
+      },
+      {
+        id: "heart_guard_pill",
+        name: "Hộ Tâm Đan",
+        name_en: "Heart Guard Pill",
+        description: "Đan dược quý hồi phục sinh lực và an định tâm mạch.",
+        description_en: "A precious pill that restores vitality and steadies the heart.",
+        type: "Medicine",
+        rarity: "Rare",
+        effects: { hp_restore: 150 },
+        weight: 18,
+      },
+      {
+        id: "pearl_lotus_pendant",
+        name: "Trân Châu Liên",
+        name_en: "Pearl Lotus Pendant",
+        description: "Dây chuyền trân châu hình liên hoa, tăng trí tuệ và linh lực.",
+        description_en: "A pearl pendant shaped like a lotus, sharpening mind and qi.",
+        type: "Equipment",
+        rarity: "Rare",
+        equipment_slot: "Accessory",
+        bonus_stats: { int: 4, qi: 30 },
+        weight: 7,
+      },
+      ENHANCEMENT_MATERIALS[1],
+      ENHANCEMENT_MATERIALS[2],
+    ],
+  },
+
+  tram_loi_storm: {
+    id: "tram_loi_storm",
+    tier: 4,
+    silverRange: [250, 600],
+    spiritStoneChance: 0.75,
+    spiritStoneRange: [8, 25],
+    entries: [
+      {
+        id: "loi_tinh",
+        name: "Lôi Tinh",
+        name_en: "Thunder Essence",
+        description: "Tinh hoa lôi nguyên ngưng từ bão sấm — luyện hóa tăng tu vi.",
+        description_en: "Thunder essence condensed from storms — refine it for cultivation.",
+        type: "Material",
+        rarity: "Rare",
+        effects: { cultivation_exp: 100 },
+        weight: 26,
+      },
+      {
+        id: "kim_tinh",
+        name: "Kim Tinh",
+        name_en: "Metal Essence",
+        description: "Kim nguyên tinh thuần tôi luyện thân thể, tăng sức mạnh vĩnh viễn.",
+        description_en: "Pure metal essence that tempers the body, permanently raising strength.",
+        type: "Material",
+        rarity: "Epic",
+        effects: { permanent_str: 1 },
+        weight: 10,
+      },
+      {
+        id: "thunder_pill",
+        name: "Lôi Đan",
+        name_en: "Thunder Pill",
+        description: "Đan dược ngưng từ lôi khí, hồi linh lực lớn và tăng tu vi.",
+        description_en: "A pill condensed from thunder qi; restores Qi and grants cultivation.",
+        type: "Medicine",
+        rarity: "Epic",
+        effects: { qi_restore: 200, cultivation_exp: 100 },
+        weight: 14,
+      },
+      {
+        id: "thunder_rune_sword",
+        name: "Lôi Văn Kiếm",
+        name_en: "Thunder Rune Sword",
+        description: "Kiếm khắc lôi văn, mỗi nhát chém mang theo sấm sét.",
+        description_en: "A sword etched with thunder runes; every cut carries lightning.",
+        type: "Equipment",
+        rarity: "Epic",
+        equipment_slot: "Weapon",
+        bonus_stats: { str: 10, agi: 5 },
+        weight: 6,
+      },
+      ENHANCEMENT_MATERIALS[2],
+      ENHANCEMENT_MATERIALS[3],
+    ],
+  },
+
+  vong_linh_spirit: {
+    id: "vong_linh_spirit",
+    tier: 5,
+    silverRange: [400, 1000],
+    spiritStoneChance: 0.9,
+    spiritStoneRange: [15, 40],
+    entries: [
+      {
+        id: "soul_jade",
+        name: "Ngọc Hồn",
+        name_en: "Soul Jade",
+        description: "Ngọc ngưng tụ hồn lực thượng cổ — luyện hóa tăng tu vi lớn.",
+        description_en: "Jade dense with ancient soul force — refine it for major cultivation.",
+        type: "Material",
+        rarity: "Epic",
+        effects: { cultivation_exp: 300 },
+        weight: 20,
+      },
+      {
+        id: "am_tinh",
+        name: "Âm Tinh",
+        name_en: "Yin Essence",
+        description: "Tinh hoa âm khí nơi sông hồn, hấp thụ hồi linh lực lớn.",
+        description_en: "Yin essence from the soul river; absorb for a large Qi restore.",
+        type: "Material",
+        rarity: "Rare",
+        effects: { qi_restore: 100 },
+        weight: 26,
+      },
+      {
+        id: "purple_soul_pill",
+        name: "Tử Hồn Đan",
+        name_en: "Purple Soul Pill",
+        description: "Đan dược truyền thuyết tôi luyện thần hồn, tăng tu vi và trí tuệ.",
+        description_en: "A legendary pill that tempers the soul, granting cultivation and insight.",
+        type: "Medicine",
+        rarity: "Legendary",
+        effects: { cultivation_exp: 800, permanent_int: 1 },
+        weight: 6,
+      },
+      {
+        id: "soul_phantom_pendant",
+        name: "Hồn Phách Bội",
+        name_en: "Soul Phantom Pendant",
+        description: "Ngọc bội hộ hồn, khai mở linh giác và vận may.",
+        description_en: "A soul-warding pendant that opens perception and fortune.",
+        type: "Equipment",
+        rarity: "Epic",
+        equipment_slot: "Accessory",
+        bonus_stats: { perception: 6, luck: 2 },
+        weight: 8,
+      },
+      ENHANCEMENT_MATERIALS[2],
+      ENHANCEMENT_MATERIALS[3],
+      STORAGE_RING_ITEMS[3],
+    ],
+  },
 };
 
 // ====================================================
@@ -405,17 +753,17 @@ export const DUNGEON_REWARD_ITEMS: Record<string, Omit<InventoryItem, "quantity"
       "A rare pill from the spirit herb realm, strengthening the cultivator's spirit root.",
     type: "Medicine",
     rarity: "Rare",
-    effects: { cultivation_exp: 150, spirit_root_boost: 1 },
+    effects: { cultivation_exp: 150, permanent_perception: 1 },
   },
   rare_spirit_herb: {
     id: "rare_spirit_herb",
     name: "Linh Thảo Quý",
     name_en: "Rare Spirit Herb",
-    description: "Một loại thảo dược linh khí dồi dào, vật liệu luyện đan bậc cao.",
-    description_en: "A potent spirit herb brimming with energy, used in high-grade alchemy.",
+    description: "Một loại thảo dược linh khí dồi dào, dùng được để trị thương.",
+    description_en: "A potent spirit herb brimming with energy; usable to heal wounds.",
     type: "Material",
     rarity: "Uncommon",
-    effects: {},
+    effects: { hp_restore: 60 },
   },
 
   // ---- Tier 2: Phoenix Ancestor Tomb ----
@@ -423,21 +771,21 @@ export const DUNGEON_REWARD_ITEMS: Record<string, Omit<InventoryItem, "quantity"
     id: "phoenix_feather",
     name: "Lông Phượng Hoàng",
     name_en: "Phoenix Feather",
-    description: "Vũ mao phượng hoàng chứa đựng hỏa nguyên tinh thuần khiết.",
-    description_en: "A phoenix feather containing pure fire essence.",
+    description: "Vũ mao phượng hoàng chứa đựng hỏa nguyên tinh thuần khiết — luyện hóa tăng tu vi.",
+    description_en: "A phoenix feather of pure fire essence — refine it for cultivation.",
     type: "Material",
     rarity: "Rare",
-    effects: { fire_affinity: 1 },
+    effects: { cultivation_exp: 120 },
   },
   fire_essence: {
     id: "fire_essence",
     name: "Hỏa Tinh Hoa",
     name_en: "Fire Essence",
-    description: "Tinh hoa hỏa nguyên được chưng cất từ lòng núi lửa.",
-    description_en: "Concentrated fire essence distilled from deep within a volcano.",
+    description: "Tinh hoa hỏa nguyên được chưng cất từ lòng núi lửa, hấp thụ hồi linh lực.",
+    description_en: "Concentrated fire essence from the volcano's depths; absorb to restore Qi.",
     type: "Material",
     rarity: "Uncommon",
-    effects: {},
+    effects: { qi_restore: 60 },
   },
   phoenix_blood_pill: {
     id: "phoenix_blood_pill",
@@ -448,7 +796,7 @@ export const DUNGEON_REWARD_ITEMS: Record<string, Omit<InventoryItem, "quantity"
       "Supreme pill refined from phoenix blood, unlocking fire spirit root potential.",
     type: "Medicine",
     rarity: "Epic",
-    effects: { cultivation_exp: 500, permanent_fire_affinity: 1 },
+    effects: { cultivation_exp: 500, permanent_qi: 30 },
   },
 
   // ---- Tier 3: Dragon Palace ----
@@ -456,21 +804,21 @@ export const DUNGEON_REWARD_ITEMS: Record<string, Omit<InventoryItem, "quantity"
     id: "dragon_scale",
     name: "Vảy Rồng",
     name_en: "Dragon Scale",
-    description: "Vảy rồng chứa đựng thủy nguyên tinh thuần khiết và sức mạnh long tộc.",
-    description_en: "Dragon scale containing pure water essence and the power of the dragon clan.",
+    description: "Vảy rồng chứa sức mạnh long tộc — luyện hóa cường thân, tăng sinh lực tối đa.",
+    description_en: "A dragon scale of draconic power — refine it to toughen the body.",
     type: "Material",
     rarity: "Rare",
-    effects: { water_affinity: 1 },
+    effects: { permanent_hp: 20 },
   },
   water_essence: {
     id: "water_essence",
     name: "Thủy Tinh Hoa",
     name_en: "Water Essence",
-    description: "Tinh hoa thủy nguyên được thu thập từ đáy Long Cung.",
-    description_en: "Water essence collected from the depths of the Dragon Palace.",
+    description: "Tinh hoa thủy nguyên từ đáy Long Cung, hấp thụ hồi linh lực.",
+    description_en: "Water essence from the Dragon Palace depths; absorb to restore Qi.",
     type: "Material",
     rarity: "Uncommon",
-    effects: {},
+    effects: { qi_restore: 60 },
   },
   dragon_bloodline_pill: {
     id: "dragon_bloodline_pill",
@@ -491,22 +839,22 @@ export const DUNGEON_REWARD_ITEMS: Record<string, Omit<InventoryItem, "quantity"
     name: "Thiên Kiếp Tinh Thể",
     name_en: "Tribulation Crystal",
     description:
-      "Tinh thể thuần khiết ngưng tụ từ sấm sét thiên kiếp, chứa đựng sức mạnh phi thường.",
+      "Tinh thể ngưng tụ từ sấm sét thiên kiếp — luyện hóa khai sáng thần trí.",
     description_en:
-      "A crystal condensed from heavenly tribulation lightning, brimming with extraordinary power.",
+      "A crystal condensed from tribulation lightning — refine it to sharpen the mind.",
     type: "Material",
     rarity: "Epic",
-    effects: { lightning_affinity: 1 },
+    effects: { permanent_int: 2 },
   },
   lightning_essence: {
     id: "lightning_essence",
     name: "Lôi Tinh Hoa",
     name_en: "Lightning Essence",
-    description: "Tinh hoa lôi nguyên thu thập được từ đại trận thử thách.",
-    description_en: "Lightning essence gathered from the trial formation.",
+    description: "Tinh hoa lôi nguyên từ đại trận thử thách — luyện hóa tăng tu vi.",
+    description_en: "Lightning essence from the trial formation — refine it for cultivation.",
     type: "Material",
     rarity: "Rare",
-    effects: {},
+    effects: { cultivation_exp: 150 },
   },
   tribulation_resistance_pill: {
     id: "tribulation_resistance_pill",
@@ -518,7 +866,7 @@ export const DUNGEON_REWARD_ITEMS: Record<string, Omit<InventoryItem, "quantity"
       "A wondrous pill that helps the body resist heavenly tribulation, increasing success chance.",
     type: "Medicine",
     rarity: "Legendary",
-    effects: { cultivation_exp: 1000, tribulation_resistance: 1 },
+    effects: { cultivation_exp: 1000, permanent_hp: 40 },
   },
 
   // ---- Tier 5: Void Realm ----
@@ -526,21 +874,21 @@ export const DUNGEON_REWARD_ITEMS: Record<string, Omit<InventoryItem, "quantity"
     id: "void_crystal",
     name: "Hư Không Thạch",
     name_en: "Void Crystal",
-    description: "Tinh thể hư không, ngưng tụ sức mạnh của hư vô tuyệt đối.",
-    description_en: "A void crystal, condensing the power of absolute nothingness.",
+    description: "Tinh thể hư không — luyện hóa tăng tu vi lớn và khai mở vận may.",
+    description_en: "A void crystal — refine it for major cultivation and a touch of fortune.",
     type: "Material",
     rarity: "Legendary",
-    effects: { void_affinity: 1 },
+    effects: { cultivation_exp: 250, permanent_luck: 1 },
   },
   void_essence: {
     id: "void_essence",
     name: "Hư Không Tinh Hoa",
     name_en: "Void Essence",
-    description: "Tinh hoa hư không cực kỳ quý hiếm, chỉ tồn tại trong vùng hư không tuyệt đối.",
-    description_en: "Extremely rare void essence found only within absolute void zones.",
+    description: "Tinh hoa hư không cực hiếm — luyện hóa tăng tu vi.",
+    description_en: "Extremely rare void essence — refine it for cultivation.",
     type: "Material",
     rarity: "Epic",
-    effects: {},
+    effects: { cultivation_exp: 200 },
   },
   void_emperor_ring: {
     id: "void_emperor_ring",
@@ -571,10 +919,59 @@ export function getDungeonRewardItem(id: string): InventoryItem | null {
  * Map dungeon tier to an appropriate existing loot table id for chest drops.
  */
 export function getLootTableForDungeonTier(tier: number): string {
-  if (tier >= 4) return "ancient_treasure";
+  if (tier >= 5) return "vong_linh_spirit";
+  if (tier === 4) return "ancient_treasure";
   if (tier === 3) return "dungeon_boss";
   if (tier === 2) return "cave_treasure";
   return "common_herbs";
+}
+
+// Legacy/AI-invented loot table ids → real tables in LOOT_TABLES.
+// Includes every area `loot_table` id declared in regions.ts, mapped to the
+// region's themed table.
+export const LOOT_TABLE_ALIASES: Record<string, string> = {
+  common_loot: "common_herbs",
+  rare_loot: "cave_treasure",
+  boss_loot: "dungeon_boss",
+  dungeon_common_loot: "cave_treasure",
+  // Thanh Vân (tier 1)
+  village_common: "thanh_van_wilds",
+  forest_tier1: "thanh_van_wilds",
+  herb_garden_tier1: "common_herbs",
+  dungeon_tier1: "cave_treasure",
+  // Hỏa Sơn (tier 2)
+  city_fire: "hoa_son_volcanic",
+  lava_tier2: "hoa_son_volcanic",
+  phoenix_tier2: "hoa_son_volcanic",
+  ash_tier2: "hoa_son_volcanic",
+  // Huyền Thủy (tier 3)
+  harbor_tier3: "huyen_thuy_depths",
+  coral_tier3: "huyen_thuy_depths",
+  island_tier3: "huyen_thuy_depths",
+  abyssal_tier3: "huyen_thuy_depths",
+  // Trầm Lôi (tier 4)
+  citadel_tier4: "tram_loi_storm",
+  storm_tier4: "tram_loi_storm",
+  lightning_tier4: "tram_loi_storm",
+  observatory_tier4: "tram_loi_storm",
+  // Vọng Linh (tier 5)
+  spirit_city_tier5: "vong_linh_spirit",
+  tomb_tier5: "vong_linh_spirit",
+  soul_river_tier5: "vong_linh_spirit",
+  void_tier5: "vong_linh_spirit",
+};
+
+/**
+ * Resolve any loot-table reference (real id, legacy alias, or unknown junk)
+ * to a real table id, falling back to a tier-appropriate table. Unknown ids
+ * carrying a `tierN` suffix resolve by that tier.
+ */
+export function resolveLootTable(id: string | undefined, fallbackTier: number = 1): string {
+  if (id && LOOT_TABLES[id]) return id;
+  if (id && LOOT_TABLE_ALIASES[id]) return LOOT_TABLE_ALIASES[id];
+  const tierMatch = id?.match(/tier[_ ]?(\d)/i);
+  if (tierMatch) return getLootTableForDungeonTier(parseInt(tierMatch[1], 10));
+  return getLootTableForDungeonTier(fallbackTier);
 }
 
 /**
@@ -624,6 +1021,9 @@ export function generateLoot(
         ...(entry.equipment_slot && { equipment_slot: entry.equipment_slot }),
         ...(entry.bonus_stats && { bonus_stats: entry.bonus_stats }),
         ...(entry.level_requirement && { level_requirement: entry.level_requirement }),
+        // Preserve book teachings
+        ...(entry.teaches_technique && { teaches_technique: entry.teaches_technique }),
+        ...(entry.teaches_skill && { teaches_skill: entry.teaches_skill }),
       });
     }
   }

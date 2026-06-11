@@ -516,11 +516,12 @@ export function calculateActivityBonuses(type: ActivityType, state: GameState): 
 
   // Technique bonus (for cultivation activities)
   if (def.affected_by.includes("technique") && state.techniques.length > 0) {
-    // Find best matching technique
-    const activeTechnique = state.techniques.find((t) => t.type === "Main");
-    if (activeTechnique) {
-      bonuses.technique = activeTechnique.cultivation_speed_bonus || 0;
-    }
+    // Use the highest cultivation_speed_bonus among equipped techniques
+    const bestBonus = state.techniques.reduce(
+      (max, t) => Math.max(max, t.cultivation_speed_bonus || 0),
+      0
+    );
+    bonuses.technique = bestBonus;
   }
 
   // Season + time segment bonus

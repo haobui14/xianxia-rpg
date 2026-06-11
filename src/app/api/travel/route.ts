@@ -15,6 +15,7 @@ import {
   discoverArea,
 } from "@/lib/world/travel";
 import { getRegion, getArea } from "@/lib/world/regions";
+import { resolveSectMissions } from "@/lib/game/sect-missions";
 
 export async function POST(request: NextRequest) {
   try {
@@ -181,12 +182,16 @@ export async function POST(request: NextRequest) {
       const area = getArea(destination);
       const dangerWarning = getDangerWarning(state.travel!, state.progress.realm);
 
+      // Tick sect missions — visit_region objectives advance on arrival.
+      const missionEvents = resolveSectMissions(state, [], []);
+
       // Save to database
       await runQueries.update(run.id, state);
 
       return NextResponse.json({
         success: true,
         state,
+        mission_events: missionEvents,
         travel_result: {
           arrived_at: {
             name: area?.name,
@@ -262,12 +267,16 @@ export async function POST(request: NextRequest) {
       const area = getArea(newTravel.current_area);
       const dangerWarning = getDangerWarning(state.travel!, state.progress.realm);
 
+      // Tick sect missions — visit_region objectives advance on arrival.
+      const missionEvents = resolveSectMissions(state, [], []);
+
       // Save to database
       await runQueries.update(run.id, state);
 
       return NextResponse.json({
         success: true,
         state,
+        mission_events: missionEvents,
         travel_result: {
           arrived_at: {
             region_name: region?.name,

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/database/client";
 import { characterQueries, runQueries } from "@/lib/database/queries";
 import { GameState, Enemy } from "@/types/game";
-import { migrateGameState } from "@/lib/game/mechanics";
+import { migrateGameState, autoBreakthrough } from "@/lib/game/mechanics";
 import { getDungeonRewardItem, generateLoot, getLootTableForDungeonTier } from "@/lib/game/loot";
 import {
   canEnterDungeon,
@@ -370,6 +370,9 @@ export async function POST(request: NextRequest) {
         }
 
         state.dungeon = exitDungeon(state.dungeon!, wasComplete);
+
+        // Dungeon exp reward may have crossed a breakthrough threshold.
+        autoBreakthrough(state);
 
         // Save to database
         await runQueries.update(run.id, state);

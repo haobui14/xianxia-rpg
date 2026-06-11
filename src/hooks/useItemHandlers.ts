@@ -10,9 +10,15 @@ interface UseItemHandlersProps {
 
 export function useItemHandlers({ locale, setState, setError }: UseItemHandlersProps) {
   const handleEquipItem = useCallback(
-    async (itemId: string, action: "equip" | "unequip") => {
+    async (itemId: string, action: "equip" | "unequip", slot?: string) => {
       try {
-        const result = await apiCall("/api/equip-item", { itemId, action }, locale);
+        // Slot disambiguates which worn item to unequip when multiple slots
+        // could match by id (e.g. two accessories with the same item id).
+        const result = await apiCall(
+          "/api/equip-item",
+          { itemId, action, ...(slot ? { slot } : {}) },
+          locale
+        );
         setState(result.state);
       } catch (err) {
         if (process.env.NODE_ENV === "development") {

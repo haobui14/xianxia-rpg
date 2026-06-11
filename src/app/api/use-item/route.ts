@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/api/auth-middleware";
 import { characterQueries, runQueries } from "@/lib/database/queries";
 import { GameState } from "@/types/game";
 import { syncInventoryToTables } from "@/lib/database/syncHelper";
+import { autoBreakthrough } from "@/lib/game/mechanics";
 
 export async function POST(request: NextRequest) {
   try {
@@ -172,11 +173,23 @@ export async function POST(request: NextRequest) {
       state.inventory.items.splice(itemIndex, 1);
     }
 
+    // If the item bumped cultivation exp past a threshold, advance the
+    // breakthrough(s) now — otherwise the player would sit at "100%" until
+    // their next AI turn.
+    const fired = autoBreakthrough(state);
+    if (fired.length > 0) {
+      const summary = fired
+        .map((f) => `${f.kind === "qi" ? "Realm" : "Body"} → ${f.realm} ${f.stage}`)
+        .join(", ");
+      appliedEffects.push(`Breakthrough: ${summary}`);
+    }
+
     // Update the run with new state
     await runQueries.update(run.id, state);
 
-    // Sync to normalized tables
-    await syncInventoryToTables(run.id, state.inventory, state.equipped_items);
+    // Sync to normalized tables — fire-and-forget, same pattern as the turn
+    // route; the canonical state is already saved above.
+    syncInventoryToTables(run.id, state.inventory, state.equipped_items).catch(() => {});
 
     return NextResponse.json({
       success: true,

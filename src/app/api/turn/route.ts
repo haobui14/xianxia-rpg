@@ -9,13 +9,13 @@ import {
   SectMembership,
   SectRank,
   Skill,
+  KnownNPC,
+  StoryArc,
 } from "@/types/game";
 import {
   updateStamina,
   updateHP,
   updateQi,
-  applyCost,
-  canAffordCost,
   clampStat,
   performBreakthrough,
   canBreakthrough,
@@ -23,10 +23,11 @@ import {
   canBodyBreakthrough,
   calculateCultivationExpGain,
   advanceTime,
+  refreshLifespanForRealm,
 } from "@/lib/game/mechanics";
 import { createTurnRNG } from "@/lib/game/rng";
 import { getApplicableTemplates, selectRandomTemplate } from "@/lib/game/scenes";
-import { generateLoot, validateLoot } from "@/lib/game/loot";
+import { generateLoot, resolveLootTable } from "@/lib/game/loot";
 import {
   initialRelationsForSect,
   initialRelationsForSectByType,
@@ -35,6 +36,7 @@ import {
 import { mostHostileRival, resolveSectMissions } from "@/lib/game/sect-missions";
 import { abortWarOnSectLeave, tryResolveWar, tryStartWar } from "@/lib/game/sect-wars";
 import { calculateTotalAttributes } from "@/lib/game/equipment";
+import { REGIONS } from "@/lib/world/regions";
 import {
   recordCombatHistory,
   updatePlayerStats,
@@ -52,8 +54,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Run ID required" }, { status: 400 });
     }
 
-    // Load run with character data in single query
-    const run = await runQueries.getByIdWithCharacter(runId);
+    // Load run (with character) and recent turn logs in parallel — they only
+    // need runId, so there is no reason to serialize the two round trips.
+    const [run, recentLogs] = await Promise.all([
+      runQueries.getByIdWithCharacter(runId),
+      turnLogQueries.getLastTurns(runId, 3).catch(() => []),
+    ]);
     if (!run) {
       return NextResponse.json({ error: "Run not found" }, { status: 404 });
     }
@@ -128,7 +134,6 @@ export async function POST(request: Request) {
             description: item.description,
             description_en: item.description_en || item.description,
             grade,
-            type: item.type as "Main" | "Support",
             elements: [state.spirit_root.elements[0]], // Default to character's element
             cultivation_speed_bonus:
               item.rarity === "Legendary"
@@ -207,16 +212,94 @@ export async function POST(request: Request) {
     // Create RNG for this turn
     const rng = createTurnRNG(run.world_seed, turnNo);
 
-    // Get recent narratives for context. Only the most recent is sent verbatim
-    // in buildGameContext; the older ones are compacted to 140-char previews
-    // for anti-repetition signal without blowing up tokens.
-    const recentLogs = await turnLogQueries.getLastTurns(runId, 3);
+    // Recent narratives for context (fetched above in parallel). Only the most
+    // recent is sent verbatim in buildGameContext; the older ones are compacted
+    // to 140-char previews for anti-repetition signal without blowing up tokens.
     const recentNarratives = recentLogs.map((log) => log.narrative);
 
     // Track recent scene types to avoid repetition
     const recentSceneTypes = recentLogs
       .map((log) => (log.ai_json as any)?.sceneType)
       .filter(Boolean);
+
+    // Stagnation breaker: if the last 3 turns produced no movement, no combat
+    // encounter and no arc progress, force a fresh narrative beat this turn.
+    let beatDirective = "";
+    if (recentLogs.length >= 3) {
+      const stagnant = recentLogs.every((log) => {
+        const ai = log.ai_json as any;
+        const deltas: any[] = ai?.proposed_deltas || [];
+        const evts: any[] = ai?.events || [];
+        const moved = deltas.some(
+          (d) => d?.field === "location.place" || d?.field === "location.region"
+        );
+        const fought = evts.some((e) => e?.type === "combat_encounter");
+        const arcMoved = deltas.some(
+          (d) => typeof d?.field === "string" && d.field.startsWith("arc.")
+        );
+        return !moved && !fought && !arcMoved;
+      });
+      if (stagnant) {
+        const beats =
+          locale === "vi"
+            ? [
+                "một nhân vật (ưu tiên Nhân vật quen) xuất hiện với yêu cầu khẩn cấp",
+                "tin đồn về cơ duyên tại một khu vực THẬT từ 'Lối đi' — kèm lựa chọn đi ngay",
+                "kẻ thù hoặc đối thủ cũ xuất hiện gây sự (combat_encounter nếu giao chiến)",
+                "dị tượng thiên địa / biến cố môi trường buộc phải hành động ngay",
+                "thương đoàn, chợ phiên hoặc sự kiện đông người đặc biệt đang diễn ra",
+                "manh mối mới cho tuyến truyện đang mở (arc.advance) hoặc mở arc mới",
+              ]
+            : [
+                "a character (prefer a Known NPC) arrives with an urgent request",
+                "a rumor about an opportunity at a REAL area from 'Paths' — include a go-now choice",
+                "an old enemy or rival shows up to cause trouble (combat_encounter if it comes to blows)",
+                "a heavenly phenomenon / environmental event forces immediate action",
+                "a merchant caravan, fair, or unusual public gathering is underway",
+                "a fresh clue for an open story arc (arc.advance) or open a new arc",
+              ];
+        const beat = beats[rng.randomInt(0, beats.length - 1)];
+        beatDirective =
+          locale === "vi"
+            ? `🎬 CHỐNG TRÌ TRỆ: 3 lượt qua không có biến chuyển lớn. Lượt này BẮT BUỘC có: ${beat}.`
+            : `🎬 ANTI-STAGNATION: the last 3 turns had no major development. This turn MUST feature: ${beat}.`;
+        console.log("[Turn] Stagnation detected, injecting beat directive");
+      }
+    }
+
+    // Arc seeding: with no open arc the story drifts — direct the AI to open
+    // one themed to the player's current realm.
+    const activeArcCount = (state.story_arcs || []).filter((a) => a.status === "active").length;
+    if (activeArcCount === 0 && turnNo >= 3) {
+      const arcThemes: Record<string, { vi: string; en: string }> = {
+        PhàmNhân: {
+          vi: "bước chân vào con đường tu tiên (bái sư, công pháp đầu tiên, gia nhập tông môn)",
+          en: "first steps onto the cultivation path (find a master, a first technique, join a sect)",
+        },
+        LuyệnKhí: {
+          vi: "khẳng định bản thân (đối thủ đồng lứa, bí mật linh căn, thử thách tông môn)",
+          en: "proving oneself (a same-generation rival, a spirit-root secret, a sect trial)",
+        },
+        TrúcCơ: {
+          vi: "danh tiếng và hiểm họa khu vực (truy tìm công pháp địa giai, thế lực hắc ám trỗi dậy)",
+          en: "regional fame and threats (hunt an earth-grade technique, a dark force rising)",
+        },
+        KếtĐan: {
+          vi: "tranh đoạt thiên tài địa bảo, ân oán đại tông môn, bí cảnh thượng cổ",
+          en: "contesting heavenly treasures, great-sect feuds, an ancient secret realm",
+        },
+        NguyênAnh: {
+          vi: "chuẩn bị thiên kiếp phi thăng, di sản thượng giới, đại địch cuối cùng",
+          en: "ascension tribulation prep, a higher-world legacy, one final nemesis",
+        },
+      };
+      const theme = arcThemes[state.progress.realm] || arcThemes.PhàmNhân;
+      const seed =
+        locale === "vi"
+          ? `📖 KHÔNG có tuyến truyện đang mở — lượt này PHẢI mở arc mới (arc.start) theo chủ đề cảnh giới: ${theme.vi}.`
+          : `📖 NO story arc is open — this turn MUST open a new arc (arc.start) themed to the realm: ${theme.en}.`;
+      beatDirective = beatDirective ? `${beatDirective}\n${seed}` : seed;
+    }
 
     // Apply choice costs immediately (before AI generation)
     const events: GameEvent[] = [];
@@ -284,7 +367,8 @@ export async function POST(request: Request) {
         sceneContext,
         choiceId,
         locale,
-        choiceText
+        choiceText,
+        beatDirective
       );
     } catch (error) {
       console.error("AI generation failed, using fallback:", error);
@@ -353,38 +437,55 @@ export async function POST(request: Request) {
       }
     }
 
-    // Check for breakthrough
-    if (canBreakthrough(state)) {
-      const breakthroughSuccess = performBreakthrough(state);
-      if (breakthroughSuccess) {
-        events.push({
-          type: "breakthrough",
-          data: {
-            realm: state.progress.realm,
-            stage: state.progress.realm_stage,
-          },
-        });
-      }
+    // Auto-advance every breakthrough earned this turn (Qi + Body).
+    // Loops so a big exp spike that crosses multiple stages doesn't stall on
+    // the cap.
+    while (canBreakthrough(state)) {
+      if (!performBreakthrough(state)) break;
+      events.push({
+        type: "breakthrough",
+        data: {
+          realm: state.progress.realm,
+          stage: state.progress.realm_stage,
+        },
+      });
     }
 
-    // Check for body cultivation breakthrough
-    if (canBodyBreakthrough(state)) {
-      const bodyBreakthroughSuccess = performBodyBreakthrough(state);
-      if (bodyBreakthroughSuccess) {
-        events.push({
-          type: "body_breakthrough",
-          data: {
-            realm: state.progress.body_realm,
-            stage: state.progress.body_stage,
-          },
-        });
-      }
+    while (canBodyBreakthrough(state)) {
+      if (!performBodyBreakthrough(state)) break;
+      events.push({
+        type: "body_breakthrough",
+        data: {
+          realm: state.progress.body_realm,
+          stage: state.progress.body_stage,
+        },
+      });
     }
 
-    // Update story summary every 10 turns
-    if (turnNo % 10 === 0) {
-      updateStorySummary(state, aiResult.narrative, locale);
+    // Realm breakthroughs extend lifespan — keep the numbers in sync
+    if (events.some((e) => e.type === "breakthrough")) {
+      refreshLifespanForRealm(state);
     }
+
+    // Win condition: first arrival at peak Nguyên Anh (final realm, stage 9)
+    if (
+      state.progress.realm === "NguyênAnh" &&
+      state.progress.realm_stage >= 9 &&
+      !state.flags.peak_realm_reached
+    ) {
+      state.flags.peak_realm_reached = true;
+      events.push({
+        type: "quest_update",
+        data: {
+          milestone: "peak_realm",
+          realm: state.progress.realm,
+          stage: state.progress.realm_stage,
+        },
+      });
+    }
+
+    // Append any milestones earned this turn to the rolling story summary
+    updateStorySummary(state, events, aiResult.proposed_deltas, locale, turnNo);
 
     // Update turn count in state before saving
     state.turn_count = turnNo;
@@ -495,7 +596,21 @@ function applyDelta(state: GameState, delta: ProposedDelta, rng: any, events: Ga
 
   // Log skill/technique additions
   if (field.startsWith("skills.") || field.startsWith("techniques.")) {
-    console.log(`Applying delta: ${field} ${operation}`, value?.name || value?.id);
+    const shape: string[] = [];
+    if (value && typeof value === "object") {
+      if (value.grade) shape.push(`grade=${value.grade}`);
+      if (value.cultivation_speed_bonus !== undefined)
+        shape.push(`cult_speed=${value.cultivation_speed_bonus}`);
+      if (value.type) shape.push(`type=${value.type}`);
+      if (value.damage_multiplier !== undefined) shape.push(`dmg=${value.damage_multiplier}`);
+      if (value.qi_cost !== undefined) shape.push(`qi=${value.qi_cost}`);
+      if (value.cooldown !== undefined) shape.push(`cd=${value.cooldown}`);
+    }
+    console.log(
+      `Applying delta: ${field} ${operation}`,
+      value?.name || value?.id,
+      shape.length ? `[${shape.join(", ")}]` : ""
+    );
   }
 
   // Parse field path (e.g., "stats.hp", "inventory.silver")
@@ -509,6 +624,10 @@ function applyDelta(state: GameState, delta: ProposedDelta, rng: any, events: Ga
     applyProgressDelta(state, parts[1], operation, value as number);
   } else if (parts[0] === "inventory") {
     applyInventoryDelta(state, parts[1], operation, value, rng, events);
+  } else if (parts[0] === "add_item" || parts[0] === "loot") {
+    // The prompt's output examples use the bare forms ("add_item" / "loot");
+    // without this alias those deltas were silently dropped.
+    applyInventoryDelta(state, parts[0], operation, value, rng, events);
   } else if (parts[0] === "karma") {
     applyKarmaDelta(state, operation, value as number);
   } else if (parts[0] === "techniques") {
@@ -519,6 +638,155 @@ function applyDelta(state: GameState, delta: ProposedDelta, rng: any, events: Ga
     applySectDelta(state, parts[1], operation, value, events);
   } else if (parts[0] === "location") {
     applyLocationDelta(state, parts[1], operation, value);
+  } else if (parts[0] === "npc") {
+    applyNpcDelta(state, parts[1], value);
+  } else if (parts[0] === "arc") {
+    applyArcDelta(state, parts[1], value, events);
+  }
+}
+
+/**
+ * Persistent NPC registry — lets the narrative reuse characters across turns.
+ * Operation-agnostic: the field name decides the action.
+ */
+function applyNpcDelta(state: GameState, field: string, value: any): void {
+  if (!value || typeof value !== "object") return;
+  state.npcs ||= [];
+  const turn = state.turn_count + 1;
+  const clampRel = (n: number) => Math.max(-100, Math.min(100, Math.round(n)));
+
+  const findNpc = () =>
+    state.npcs!.find(
+      (n) =>
+        (value.id && n.id === value.id) ||
+        (value.name && n.name === value.name) ||
+        (value.name_en && n.name_en === value.name_en)
+    );
+
+  if (field === "add") {
+    if (!value.name && !value.name_en) return;
+    const existing = findNpc();
+    if (existing) {
+      // Re-introduced NPC: refresh instead of duplicating
+      existing.last_seen_turn = turn;
+      if (value.location) existing.location = value.location;
+      if (value.notes) existing.notes = String(value.notes).slice(0, 120);
+      if (typeof value.relationship === "number")
+        existing.relationship = clampRel(value.relationship);
+      return;
+    }
+    const npc: KnownNPC = {
+      id: value.id || `npc_${(value.name || value.name_en).toLowerCase().replace(/\s+/g, "_")}`,
+      name: value.name || value.name_en,
+      name_en: value.name_en || value.name,
+      role: value.role || "",
+      location: value.location,
+      relationship: clampRel(typeof value.relationship === "number" ? value.relationship : 0),
+      notes: value.notes ? String(value.notes).slice(0, 120) : undefined,
+      last_seen_turn: turn,
+    };
+    state.npcs.push(npc);
+    // Cap registry: evict the stalest low-stakes NPC first
+    const MAX_NPCS = 15;
+    if (state.npcs.length > MAX_NPCS) {
+      const evictable = [...state.npcs].sort(
+        (a, b) =>
+          Math.abs(a.relationship) - Math.abs(b.relationship) ||
+          a.last_seen_turn - b.last_seen_turn
+      );
+      const target = evictable[0];
+      state.npcs = state.npcs.filter((n) => n.id !== target.id);
+    }
+  } else if (field === "update") {
+    const npc = findNpc();
+    if (!npc) return;
+    npc.last_seen_turn = turn;
+    if (typeof value.relationship_delta === "number") {
+      npc.relationship = clampRel(npc.relationship + value.relationship_delta);
+    } else if (typeof value.relationship === "number") {
+      npc.relationship = clampRel(value.relationship);
+    }
+    if (value.notes) npc.notes = String(value.notes).slice(0, 120);
+    if (value.location) npc.location = value.location;
+    if (value.role) npc.role = value.role;
+  }
+}
+
+/**
+ * Story arcs — multi-turn goals that outlive the AI's 3-turn memory.
+ * Pushes quest_update events so the UI can toast journal changes.
+ */
+function applyArcDelta(state: GameState, field: string, value: any, events: GameEvent[]): void {
+  if (!value || typeof value !== "object") return;
+  state.story_arcs ||= [];
+  const turn = state.turn_count + 1;
+  const active = () => state.story_arcs!.filter((a) => a.status === "active");
+  const findArc = () =>
+    state.story_arcs!.find(
+      (a) => a.status === "active" && (a.id === value.id || a.title === value.title)
+    );
+  const arcEvent = (kind: string, arc: StoryArc) =>
+    events.push({
+      type: "quest_update",
+      data: {
+        kind,
+        title: arc.title,
+        title_en: arc.title_en,
+        stage: arc.stage,
+        total_stages: arc.total_stages,
+      },
+    });
+
+  if (field === "start") {
+    if (!value.title && !value.title_en) return;
+    if (findArc()) return; // already running
+    if (active().length >= 3) return; // keep focus: max 3 concurrent arcs
+    const totalStages = Math.max(2, Math.min(6, Number(value.total_stages) || 3));
+    const arc: StoryArc = {
+      id:
+        value.id || `arc_${(value.title || value.title_en).toLowerCase().replace(/\s+/g, "_")}`,
+      title: value.title || value.title_en,
+      title_en: value.title_en || value.title,
+      hook: String(value.hook || "").slice(0, 150),
+      stage: 1,
+      total_stages: totalStages,
+      status: "active",
+      started_turn: turn,
+      updated_turn: turn,
+    };
+    state.story_arcs.push(arc);
+    arcEvent("arc_started", arc);
+  } else if (field === "advance") {
+    const arc = findArc();
+    if (!arc) return;
+    arc.stage += 1;
+    arc.updated_turn = turn;
+    if (value.hook) arc.hook = String(value.hook).slice(0, 150);
+    if (arc.stage >= arc.total_stages) {
+      arc.status = "completed";
+      arcEvent("arc_completed", arc);
+    } else {
+      arcEvent("arc_advanced", arc);
+    }
+  } else if (field === "complete" || field === "abandon") {
+    const arc = findArc();
+    if (!arc) return;
+    arc.status = field === "complete" ? "completed" : "abandoned";
+    arc.updated_turn = turn;
+    if (value.resolution) arc.hook = String(value.resolution).slice(0, 150);
+    if (arc.status === "completed") arcEvent("arc_completed", arc);
+  }
+
+  // Prune finished arcs beyond the most recent 3 (kept for summary flavor)
+  const finished = state.story_arcs.filter((a) => a.status !== "active");
+  if (finished.length > 3) {
+    const keep = new Set(
+      finished
+        .sort((a, b) => b.updated_turn - a.updated_turn)
+        .slice(0, 3)
+        .map((a) => a.id)
+    );
+    state.story_arcs = state.story_arcs.filter((a) => a.status === "active" || keep.has(a.id));
   }
 }
 
@@ -632,8 +900,18 @@ function applyInventoryDelta(
         return;
       }
 
+      // Stack by id, or — for non-equipment — by name+rarity too: AI-minted
+      // items get fresh ids every turn, so identical pills/herbs would
+      // otherwise pile up as separate slots and bloat the context each turn.
+      const nameStackable = value.type !== "Equipment" && value.type !== "Accessory";
       const existingItem = state.inventory.items.find(
-        (item) => item.id === value.id && item.type === value.type
+        (item) =>
+          (item.id === value.id && item.type === value.type) ||
+          (nameStackable &&
+            item.type === value.type &&
+            item.rarity === value.rarity &&
+            ((!!value.name && item.name === value.name) ||
+              (!!value.name_en && item.name_en === value.name_en)))
       );
 
       if (existingItem) {
@@ -653,9 +931,12 @@ function applyInventoryDelta(
       });
     }
   } else if (field === "loot") {
-    // Generate loot from table
+    // Generate loot from table — resolve aliases/unknown ids to a real table
+    // appropriate to the player's current region tier.
     if (typeof value === "string") {
-      const loot = generateLoot(value, rng, state.progress.realm === "PhàmNhân" ? "vi" : "en");
+      const regionTier = state.travel ? REGIONS[state.travel.current_region]?.tier || 1 : 1;
+      const tableId = resolveLootTable(value, regionTier);
+      const loot = generateLoot(tableId, rng, "vi");
       state.inventory.silver += loot.silver;
       state.inventory.spirit_stones += loot.spiritStones;
 
@@ -695,14 +976,44 @@ function applyKarmaDelta(state: GameState, operation: string, value: number): vo
   }
 }
 
+function looksLikeSkill(value: any): boolean {
+  if (!value || typeof value !== "object") return false;
+  if (typeof value.damage_multiplier === "number") return true;
+  if (typeof value.qi_cost === "number") return true;
+  if (typeof value.cooldown === "number") return true;
+  const t = typeof value.type === "string" ? value.type.toLowerCase() : "";
+  if (["attack", "defense", "support", "movement"].includes(t)) return true;
+  return false;
+}
+
+function looksLikeTechnique(value: any): boolean {
+  if (!value || typeof value !== "object") return false;
+  if (typeof value.cultivation_speed_bonus === "number") return true;
+  if (typeof value.qi_recovery_bonus === "number") return true;
+  if (typeof value.breakthrough_bonus === "number") return true;
+  if (typeof value.grade === "string" && ["Mortal", "Earth", "Heaven"].includes(value.grade)) {
+    return true;
+  }
+  return false;
+}
+
 function applyTechniqueDelta(state: GameState, field: string, operation: string, value: any): void {
-  // Constants for technique limits
   const MAX_TECHNIQUES = 5;
-  const MAX_PER_TYPE = 2; // Max 2 Main, 2 Support (but 5 total max)
 
   if (field === "add" && operation === "add") {
+    // Misaddressed: AI sent a combat skill via techniques.add — reroute.
+    // Combat markers (damage_multiplier / qi_cost / cooldown / combat type) win
+    // even if a stray `grade` is also present.
+    if (looksLikeSkill(value)) {
+      console.warn(
+        `Rerouting techniques.add → skills.add for ${value?.name || value?.id} (combat markers present)`
+      );
+      applySkillDelta(state, "add", "add", value);
+      return;
+    }
+
     // Validate technique structure
-    if (value && value.id && value.name && value.name_en && value.grade && value.type) {
+    if (value && value.id && value.name && value.name_en && value.grade) {
       // Initialize arrays if they don't exist
       if (!state.techniques) {
         state.techniques = [];
@@ -727,22 +1038,19 @@ function applyTechniqueDelta(state: GameState, field: string, operation: string,
         const gradeBonus = { Mortal: 10, Earth: 20, Heaven: 40 };
         value.cultivation_speed_bonus = gradeBonus[value.grade as keyof typeof gradeBonus] || 10;
       }
+      // Mastery defaults (player levels techniques up with spirit stones)
+      if (typeof value.level !== "number" || value.level < 1) value.level = 1;
+      if (typeof value.max_level !== "number") value.max_level = 10;
 
-      // Count techniques by type
-      const techType = value.type as "Main" | "Support";
-      const countByType = state.techniques.filter((t) => t.type === techType).length;
-
-      // Check if we can add to active techniques
-      if (state.techniques.length < MAX_TECHNIQUES && countByType < MAX_PER_TYPE) {
+      if (state.techniques.length < MAX_TECHNIQUES) {
         state.techniques.push(value);
         console.log(
           `Added technique ${value.name} to active list (${state.techniques.length}/${MAX_TECHNIQUES})`
         );
       } else {
-        // Add to queue
         state.technique_queue.push(value);
         console.log(
-          `Added technique ${value.name} to queue (active full: ${state.techniques.length}/${MAX_TECHNIQUES}, type ${techType}: ${countByType}/${MAX_PER_TYPE})`
+          `Added technique ${value.name} to queue (active full: ${state.techniques.length}/${MAX_TECHNIQUES})`
         );
       }
     }
@@ -783,6 +1091,15 @@ function applySkillDelta(state: GameState, field: string, operation: string, val
       }
     }
   } else if (field === "add" && operation === "add") {
+    // Misaddressed: AI sent a cultivation technique via skills.add — reroute
+    if (looksLikeTechnique(value) && !looksLikeSkill(value)) {
+      console.warn(
+        `Rerouting skills.add → techniques.add for ${value?.name || value?.id} (looks like a technique)`
+      );
+      applyTechniqueDelta(state, "add", "add", value);
+      return;
+    }
+
     // Validate skill structure
     if (value && value.id && value.name && value.name_en && value.type) {
       // Initialize arrays if they don't exist
@@ -871,10 +1188,69 @@ function applyLocationDelta(state: GameState, field: string, operation: string, 
   if (operation === "set") {
     if (field === "place" && typeof value === "string") {
       state.location.place = value;
+      syncTravelWithLocation(state, "place", value);
       console.log(`Location changed to: ${value}`);
     } else if (field === "region" && typeof value === "string") {
       state.location.region = value;
+      syncTravelWithLocation(state, "region", value);
       console.log(`Region changed to: ${value}`);
+    }
+  }
+}
+
+/**
+ * Keep the travel/map state in step with AI-narrated movement. When the AI
+ * sets location.place/region to a REAL map name (the context feeds it those),
+ * update current_area/current_region and mark the area discovered so the
+ * WorldMap lights up from story play, not just the Travel UI.
+ */
+function syncTravelWithLocation(state: GameState, field: "place" | "region", value: string): void {
+  if (!state.travel) return;
+  const norm = (s: string) => s.toLowerCase().trim();
+  const target = norm(value);
+
+  const markDiscovered = (regionId: string, areaId: string) => {
+    state.travel!.discovered_areas ||= {} as any;
+    const list = (state.travel!.discovered_areas as Record<string, string[]>)[regionId] || [];
+    if (!list.includes(areaId)) list.push(areaId);
+    (state.travel!.discovered_areas as Record<string, string[]>)[regionId] = list;
+  };
+
+  if (field === "place") {
+    // Prefer an area in the current region, then fall back to any region
+    const regionsToSearch = [
+      REGIONS[state.travel.current_region],
+      ...Object.values(REGIONS).filter((r) => r.id !== state.travel!.current_region),
+    ].filter(Boolean);
+    for (const region of regionsToSearch) {
+      const area = region.areas.find(
+        (a) => norm(a.name) === target || norm(a.name_en) === target || a.id === value
+      );
+      if (area) {
+        state.travel.current_region = region.id;
+        state.travel.current_area = area.id;
+        markDiscovered(region.id, area.id);
+        state.travel.travel_history = [...(state.travel.travel_history || []), area.id].slice(-10);
+        console.log(`[Travel Sync] Area: ${area.id} (${region.id})`);
+        return;
+      }
+    }
+  } else {
+    const region = Object.values(REGIONS).find(
+      (r) => norm(r.name) === target || norm(r.name_en) === target || r.id === value
+    );
+    if (region && region.id !== state.travel.current_region) {
+      state.travel.current_region = region.id;
+      // Land at the region's safe hub (or first area)
+      const entryArea = region.areas.find((a) => a.is_safe) || region.areas[0];
+      if (entryArea) {
+        state.travel.current_area = entryArea.id;
+        markDiscovered(region.id, entryArea.id);
+        state.travel.travel_history = [...(state.travel.travel_history || []), entryArea.id].slice(
+          -10
+        );
+      }
+      console.log(`[Travel Sync] Region: ${region.id}`);
     }
   }
 }
@@ -1073,21 +1449,65 @@ function applySectDelta(
 }
 
 /**
- * Update story summary
+ * Update story summary — a rolling log of turn-stamped milestones instead of
+ * the old blind 150-char narrative tail-slices (which produced garbled prose
+ * the AI couldn't use). Only appends when something noteworthy happened, and
+ * keeps the last 8 entries so per-turn prompt tokens stay bounded.
  */
-function updateStorySummary(state: GameState, recentNarrative: string, locale: string): void {
-  // Simple summary update (in production, could use AI to summarize)
-  const prefix =
-    locale === "vi"
-      ? `${state.progress.realm} tầng ${state.progress.realm_stage}. `
-      : `${state.progress.realm} stage ${state.progress.realm_stage}. `;
+function updateStorySummary(
+  state: GameState,
+  events: GameEvent[],
+  deltas: ProposedDelta[],
+  locale: string,
+  turnNo: number
+): void {
+  const vi = locale === "vi";
+  const stamps: string[] = [];
 
-  const summary = state.story_summary + " " + recentNarrative.slice(0, 150);
-
-  // Keep summary tight (~300 chars) to reduce per-turn prompt tokens.
-  if (summary.length > 300) {
-    state.story_summary = prefix + summary.slice(-250);
-  } else {
-    state.story_summary = summary;
+  for (const e of events) {
+    const d = e.data as Record<string, any>;
+    switch (e.type as string) {
+      case "breakthrough":
+        stamps.push(vi ? `đột phá ${d.realm} tầng ${d.stage}` : `broke through ${d.realm} s${d.stage}`);
+        break;
+      case "body_breakthrough":
+        stamps.push(vi ? `luyện thể ${d.realm} tầng ${d.stage}` : `body realm ${d.realm} s${d.stage}`);
+        break;
+      case "sect_join":
+        stamps.push(vi ? `gia nhập ${d.sect?.name ?? "tông môn"}` : `joined ${d.sect?.name_en ?? d.sect?.name ?? "a sect"}`);
+        break;
+      case "sect_promotion":
+        stamps.push(vi ? `thăng ${d.newRank}` : `promoted to ${d.newRank}`);
+        break;
+      case "sect_expulsion":
+        stamps.push(vi ? `rời ${d.sect}` : `left ${d.sect}`);
+        break;
+      case "quest_update":
+        if (d.kind === "arc_completed") {
+          stamps.push(
+            vi ? `hoàn thành "${d.title}"` : `completed "${d.title_en ?? d.title}"`
+          );
+        } else if (d.milestone === "peak_realm") {
+          stamps.push(vi ? "đạt đỉnh Nguyên Anh viên mãn" : "reached peak Nascent Soul");
+        }
+        break;
+    }
   }
+
+  for (const delta of deltas) {
+    if (delta.operation === "set" && typeof delta.value === "string") {
+      if (delta.field === "location.region") {
+        stamps.push(vi ? `tới vùng ${delta.value}` : `reached region ${delta.value}`);
+      } else if (delta.field === "location.place") {
+        stamps.push(vi ? `tới ${delta.value}` : `arrived at ${delta.value}`);
+      }
+    }
+  }
+
+  if (stamps.length === 0) return;
+
+  const existing = state.story_summary ? state.story_summary.split(" | ") : [];
+  const tag = vi ? `[L${turnNo}]` : `[T${turnNo}]`;
+  const merged = [...existing, ...stamps.map((s) => `${tag} ${s}`)];
+  state.story_summary = merged.slice(-8).join(" | ");
 }

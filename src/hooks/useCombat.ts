@@ -2,6 +2,8 @@ import { useState, useCallback, useRef } from "react";
 import { GameState, Enemy, CombatLogEntry, GameEvent, ProposedDelta } from "@/types/game";
 import { resolveSectMissions } from "@/lib/game/sect-missions";
 import { creditWarScore, WAR_SCORE_PER_RIVAL_COMBAT } from "@/lib/game/sect-wars";
+import { generateLoot, resolveLootTable } from "@/lib/game/loot";
+import { DeterministicRNG } from "@/lib/game/rng";
 
 interface TestCombatState {
   enemy: Enemy;
@@ -62,6 +64,21 @@ export function useCombat({ runId, locale, state, setState, setNarrative }: UseC
     [runId]
   );
 
+  // Reset every skill's current_cooldown to 0. Called when a new combat starts
+  // so leftover cooldowns from a previous fight don't show up as "all skills on
+  // cooldown" the moment the player takes their first action.
+  const resetSkillCooldowns = useCallback(() => {
+    setState((prev) => {
+      if (!prev || !prev.skills) return prev;
+      const needsReset = prev.skills.some((s) => (s.current_cooldown || 0) > 0);
+      if (!needsReset) return prev;
+      return {
+        ...prev,
+        skills: prev.skills.map((s) => ({ ...s, current_cooldown: 0 })),
+      };
+    });
+  }, [setState]);
+
   // Test combat with dummy enemy
   const startTestCombat = useCallback(() => {
     if (!state) return;
@@ -76,13 +93,14 @@ export function useCombat({ runId, locale, state, setState, setNarrative }: UseC
       behavior: "Aggressive",
       loot_table_id: "common_herbs",
     };
+    resetSkillCooldowns();
     setTestCombat({
       enemy: dummyEnemy,
       log: [],
       playerTurn: true,
       playerHp: state.stats.hp,
     });
-  }, [state]);
+  }, [state, resetSkillCooldowns]);
 
   // Handle test combat action
   const handleTestCombatAction = useCallback(
@@ -164,11 +182,14 @@ export function useCombat({ runId, locale, state, setState, setNarrative }: UseC
               : prev
           );
 
+          // Match the active-combat path: nullish-coalesce + 1.5× floor + 2.5× crit
+          const rawMultiplier = skill.damage_multiplier ?? 1.5;
+          const skillMultiplier = Math.max(1.5, rawMultiplier);
           const baseDamage = state.attrs.str * 1.5;
-          const skillDamage = baseDamage * (skill.damage_multiplier || 1);
-          const playerMiss = Math.random() < 0.1;
+          const skillDamage = baseDamage * skillMultiplier;
+          const playerMiss = Math.random() < 0.08;
           const playerCrit = Math.random() < 0.15;
-          const rawDamage = Math.floor(skillDamage * (playerCrit ? 1.5 : 1));
+          const rawDamage = Math.floor(skillDamage * (playerCrit ? 2.5 : 1));
           const finalDamage = playerMiss ? 0 : Math.max(1, rawDamage - Math.floor(enemy.def / 2));
 
           const playerLogEntry: CombatLogEntry = {
@@ -415,12 +436,23 @@ export function useCombat({ runId, locale, state, setState, setNarrative }: UseC
             (skill.type === "defense" || skill.type === "support") && skill.effects?.heal_percent;
 
           if (isAttackSkill || !isHealSkill) {
-            // Attack skills or skills without specific heal effects
+            // Attack skills or skills without a specific heal effect.
+            //
+            // Bug fixes:
+            // - Use `??` instead of `||` so an explicit damage_multiplier of 0
+            //   (corrupted data) doesn't silently fall through to the default.
+            // - Enforce a 1.5× minimum: a skill costs Linh Lực + a cooldown,
+            //   so it must hit harder than a free normal attack. Defense /
+            //   support skills routed here as a fallback get the same floor.
+            // - Bump skill crit from 1.5× to 2.5× so a crit-on-crit doesn't
+            //   make a normal attack (2×) close on a skill (was only 1.5×).
+            const rawMultiplier = skill.damage_multiplier ?? 1.5;
+            const skillMultiplier = Math.max(1.5, rawMultiplier);
             const baseDamage = state.attrs.str * 1.5;
-            const skillDamage = baseDamage * (skill.damage_multiplier || 1.5);
-            playerMiss = Math.random() < 0.1;
+            const skillDamage = baseDamage * skillMultiplier;
+            playerMiss = Math.random() < 0.08; // skills slightly more reliable
             playerCrit = Math.random() < 0.15;
-            const rawDamage = Math.floor(skillDamage * (playerCrit ? 1.5 : 1));
+            const rawDamage = Math.floor(skillDamage * (playerCrit ? 2.5 : 1));
             finalDamage = playerMiss
               ? 0
               : Math.max(1, rawDamage - Math.floor(activeCombat.enemy.def / 2));
@@ -616,33 +648,6 @@ export function useCombat({ runId, locale, state, setState, setNarrative }: UseC
     [activeCombat, state, setState, syncSkillsAfterCombat]
   );
 
-  // Item translations for loot
-  const itemTranslations: Record<string, { vi: string; en: string }> = {
-    spirit_herb: { vi: "Linh Thảo", en: "Spirit Herb" },
-    beast_core: { vi: "Yêu Đan", en: "Beast Core" },
-    spirit_jade: { vi: "Linh Ngọc", en: "Spirit Jade" },
-    phoenix_feather: { vi: "Lông Phượng Hoàng", en: "Phoenix Feather" },
-    dragon_scale: { vi: "Vảy Rồng", en: "Dragon Scale" },
-    void_crystal: { vi: "Hư Không Thạch", en: "Void Crystal" },
-    fire_token: { vi: "Hỏa Bài", en: "Fire Token" },
-    water_pearl: { vi: "Thủy Ngọc", en: "Water Pearl" },
-    thunder_seal: { vi: "Lôi Ấn", en: "Thunder Seal" },
-  };
-
-  const getItemName = useCallback(
-    (itemId: string) => {
-      const translation = itemTranslations[itemId];
-      if (translation) {
-        return locale === "vi" ? translation.vi : translation.en;
-      }
-      return itemId
-        .split("_")
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(" ");
-    },
-    [locale]
-  );
-
   // Handle combat end - apply loot and continue game
   const handleActiveCombatEnd = useCallback(async () => {
     if (!activeCombat) return;
@@ -674,33 +679,23 @@ export function useCombat({ runId, locale, state, setState, setNarrative }: UseC
 
     if (victory) {
       // Check if we're in a dungeon for enhanced rewards
-      const isInDungeon = currentState.dungeon?.dungeon_id && currentState.dungeon?.current_floor;
+      const isInDungeon = Boolean(
+        currentState.dungeon?.dungeon_id && currentState.dungeon?.current_floor
+      );
 
-      // Calculate loot based on enemy and dungeon status
-      let lootSilver = Math.floor(Math.random() * 50) + 20;
-      let lootExp = Math.floor(Math.random() * 30) + 20;
-      let lootSpiritStones = 0;
-      const lootItems: string[] = [];
+      // Roll loot from the enemy's curated loot table (was: hardcoded
+      // Math.random() drops that ignored loot_table_id entirely).
+      const lootTableId = resolveLootTable(activeCombat.enemy.loot_table_id, isInDungeon ? 2 : 1);
+      const rng = new DeterministicRNG(
+        `combat-${runId}-${currentState.turn_count}-${activeCombat.enemy.id}`
+      );
+      const rolled = generateLoot(lootTableId, rng, locale);
 
-      if (isInDungeon) {
-        // Enhanced dungeon rewards
-        lootSilver = Math.floor(Math.random() * 100) + 50; // 50-150 silver
-        lootExp = Math.floor(Math.random() * 60) + 40; // 40-100 exp
-        lootSpiritStones = Math.floor(Math.random() * 3) + 1; // 1-3 spirit stones
-
-        // Chance for items based on enemy loot table
-        const itemChance = Math.random();
-        if (itemChance > 0.5) {
-          // Common herbs and materials
-          const commonDrops = ["spirit_herb", "beast_core", "spirit_jade"];
-          lootItems.push(commonDrops[Math.floor(Math.random() * commonDrops.length)]);
-        }
-        if (itemChance > 0.8) {
-          // Rare drops
-          const rareDrops = ["phoenix_feather", "dragon_scale", "void_crystal"];
-          lootItems.push(rareDrops[Math.floor(Math.random() * rareDrops.length)]);
-        }
-      }
+      const lootSilver = rolled.silver + (isInDungeon ? rng.randomInt(20, 50) : 0);
+      const lootExp = isInDungeon ? rng.randomInt(40, 100) : rng.randomInt(20, 50);
+      const lootSpiritStones = rolled.spiritStones;
+      // Outside dungeons keep drops lean: at most 1 item from the table
+      const lootItems = isInDungeon ? rolled.items : rolled.items.slice(0, 1);
 
       // Update state with loot
       updatedState = {
@@ -716,36 +711,20 @@ export function useCombat({ runId, locale, state, setState, setNarrative }: UseC
         },
       };
 
-      // Add items to inventory
-      if (lootItems.length > 0) {
-        for (const itemId of lootItems) {
-          const existingItem = updatedState.inventory.items.find((i) => i.id === itemId);
-          if (existingItem) {
-            existingItem.quantity = (existingItem.quantity || 1) + 1;
-          } else {
-            const viName =
-              itemTranslations[itemId]?.vi ||
-              itemId
-                .split("_")
-                .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                .join(" ");
-            const enName =
-              itemTranslations[itemId]?.en ||
-              itemId
-                .split("_")
-                .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                .join(" ");
-            updatedState.inventory.items.push({
-              id: itemId,
-              name: viName,
-              name_en: enName,
-              description: "Vật phẩm thu được từ bí cảnh",
-              description_en: "Item obtained from dungeon",
-              type: "Material",
-              quantity: 1,
-              rarity: Math.random() > 0.8 ? "Rare" : "Common",
-            });
-          }
+      // Add items to inventory — stack by id, or by name for non-equipment
+      for (const lootItem of lootItems) {
+        const existingItem = updatedState.inventory.items.find(
+          (i) =>
+            i.id === lootItem.id ||
+            (lootItem.type !== "Equipment" &&
+              lootItem.type !== "Accessory" &&
+              i.type === lootItem.type &&
+              i.name === lootItem.name)
+        );
+        if (existingItem) {
+          existingItem.quantity = (existingItem.quantity || 1) + lootItem.quantity;
+        } else {
+          updatedState.inventory.items.push(lootItem);
         }
       }
 
@@ -763,7 +742,9 @@ export function useCombat({ runId, locale, state, setState, setNarrative }: UseC
       }
 
       if (lootItems.length > 0) {
-        const itemNames = lootItems.map((id) => getItemName(id)).join(", ");
+        const itemNames = lootItems
+          .map((item) => (locale === "vi" ? item.name : item.name_en))
+          .join(", ");
         lootText += locale === "vi" ? ` Vật phẩm: ${itemNames}` : ` Items: ${itemNames}`;
       }
 
@@ -862,7 +843,7 @@ export function useCombat({ runId, locale, state, setState, setNarrative }: UseC
     // Clear combat + release re-entry guard.
     setActiveCombat(null);
     combatEndInFlightRef.current = false;
-  }, [activeCombat, state, locale, runId, setState, setNarrative, getItemName]);
+  }, [activeCombat, state, locale, runId, setState, setNarrative]);
 
   return {
     // Test combat
@@ -877,5 +858,6 @@ export function useCombat({ runId, locale, state, setState, setNarrative }: UseC
     handleActiveCombatEnd,
     // Utilities
     syncSkillsAfterCombat,
+    resetSkillCooldowns,
   };
 }

@@ -16,6 +16,10 @@ import {
   getElementCompatibility,
   getRequiredExp,
   getTechniqueBonus,
+  getTechniqueEffectiveBonus,
+  getTechniqueLevelUpCost,
+  getSkillLevelUpCost,
+  TECHNIQUE_MAX_LEVEL,
 } from "@/lib/game/mechanics";
 import CollapsibleSection from "./CollapsibleSection";
 import DualCultivationView from "./DualCultivationView";
@@ -45,6 +49,7 @@ interface CharacterSheetProps {
     queueId: string | null,
     action: "swap" | "forget" | "learn" | "discard"
   ) => Promise<void>;
+  onLevelAbility?: (abilityType: "technique" | "skill", abilityId: string) => Promise<void>;
   onToggleDualCultivation?: () => Promise<void>;
   onSetExpSplit?: (split: number) => Promise<void>;
 }
@@ -120,6 +125,7 @@ export default function CharacterSheet({
   locale,
   previousExp: _previousExp,
   onAbilitySwap,
+  onLevelAbility,
   onToggleDualCultivation,
   onSetExpSplit,
 }: CharacterSheetProps) {
@@ -134,8 +140,6 @@ export default function CharacterSheet({
   const techniqueQueue = state.technique_queue || [];
   const skillQueue = state.skill_queue || [];
 
-  const techCountByType = (type: string) =>
-    state.techniques?.filter((t) => t.type === type).length || 0;
   const skillCountByType = (type: string) =>
     state.skills?.filter((s) => s.type === type).length || 0;
 
@@ -156,6 +160,19 @@ export default function CharacterSheet({
         setSelectedSkill(null);
         setSelectedQueueSkill(null);
       }
+    } finally {
+      setSwapLoading(false);
+    }
+  };
+
+  const handleLevelAction = async (
+    abilityType: "technique" | "skill",
+    abilityId: string
+  ) => {
+    if (!onLevelAbility || swapLoading) return;
+    setSwapLoading(true);
+    try {
+      await onLevelAbility(abilityType, abilityId);
     } finally {
       setSwapLoading(false);
     }
@@ -521,7 +538,7 @@ export default function CharacterSheet({
           </p>
         ) : (
           <div className="grid-tech" style={{ gap: 12, marginTop: 10 }}>
-            {activeTechs.slice(0, 4).map((tech, idx) => (
+            {activeTechs.map((tech, idx) => (
               <TechCard
                 key={tech.id}
                 tech={tech}
@@ -536,6 +553,11 @@ export default function CharacterSheet({
                   onAbilitySwap
                     ? () =>
                         handleAbilityAction("technique", tech.id, null, "forget")
+                    : undefined
+                }
+                onLevelUp={
+                  onLevelAbility
+                    ? () => handleLevelAction("technique", tech.id)
                     : undefined
                 }
                 swapLoading={swapLoading}
@@ -577,8 +599,7 @@ export default function CharacterSheet({
             {techniqueQueue.map((tech) => {
               const isSelected = selectedQueueTech === tech.id;
               const canLearn =
-                (state.techniques?.length || 0) < MAX_TECHNIQUES &&
-                techCountByType(tech.type) < MAX_PER_TYPE;
+                (state.techniques?.length || 0) < MAX_TECHNIQUES;
               return (
                 <Card
                   key={tech.id}
@@ -607,8 +628,7 @@ export default function CharacterSheet({
                         {locale === "vi" ? tech.name : tech.name_en}
                       </span>
                       <div style={{ display: "flex", gap: 6 }}>
-                        <Pill>{tech.type}</Pill>
-                        <Pill variant="gold">{tech.grade}</Pill>
+                        <Pill variant="gold">{t(locale, tech.grade)}</Pill>
                         <Pill variant="jade">
                           +{tech.cultivation_speed_bonus ?? 0}%{" "}
                           {locale === "vi" ? "Tu Vi" : "Exp"}
@@ -730,7 +750,7 @@ export default function CharacterSheet({
                         {locale === "vi" ? skill.name : skill.name_en}
                       </span>
                       <div style={{ display: "flex", gap: 6 }}>
-                        <Pill>{skill.type}</Pill>
+                        <Pill>{t(locale, skill.type.charAt(0).toUpperCase() + skill.type.slice(1))}</Pill>
                         <Pill variant="jade">
                           Lv {skill.level}/{skill.max_level}
                         </Pill>
@@ -770,6 +790,40 @@ export default function CharacterSheet({
                     </div>
                     {isSelected && onAbilitySwap && (
                       <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                        {onLevelAbility &&
+                          (() => {
+                            const cost = getSkillLevelUpCost(skill);
+                            if (!cost) {
+                              return (
+                                <Pill variant="gold">
+                                  {locale === "vi" ? "Viên mãn" : "Mastered"}
+                                </Pill>
+                              );
+                            }
+                            const canAfford = state.inventory.silver >= cost.silver;
+                            return (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleLevelAction("skill", skill.id);
+                                }}
+                                disabled={swapLoading || !canAfford}
+                                className="ink-btn sm"
+                                title={
+                                  canAfford
+                                    ? undefined
+                                    : locale === "vi"
+                                      ? "Không đủ bạc"
+                                      : "Not enough silver"
+                                }
+                              >
+                                <span className="t-han">升</span>
+                                {locale === "vi"
+                                  ? `Thăng cấp (${cost.silver} bạc)`
+                                  : `Level up (${cost.silver} silver)`}
+                              </button>
+                            );
+                          })()}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -852,7 +906,7 @@ export default function CharacterSheet({
                         >
                           {locale === "vi" ? skill.name : skill.name_en}
                         </span>
-                        <Pill>{skill.type}</Pill>
+                        <Pill>{t(locale, skill.type.charAt(0).toUpperCase() + skill.type.slice(1))}</Pill>
                       </div>
                       {isSelected && onAbilitySwap && (
                         <div
@@ -934,6 +988,7 @@ function TechCard({
   selected,
   onSelect,
   onForget,
+  onLevelUp,
   swapLoading,
 }: {
   tech: CultivationTechnique;
@@ -943,8 +998,15 @@ function TechCard({
   selected: boolean;
   onSelect: () => void;
   onForget?: () => void;
+  onLevelUp?: () => void;
   swapLoading: boolean;
 }) {
+  const techLevel = Math.max(1, tech.level || 1);
+  const techMaxLevel = tech.max_level || TECHNIQUE_MAX_LEVEL;
+  const effectiveBonus = Math.round(getTechniqueEffectiveBonus(tech));
+  const levelCost = getTechniqueLevelUpCost(tech);
+  const canAffordLevel =
+    levelCost !== null && state.inventory.spirit_stones >= levelCost.spirit_stones;
   const compatibility =
     tech.elements && tech.elements.length > 0
       ? getElementCompatibility(state.spirit_root.elements, tech.elements)
@@ -1028,9 +1090,18 @@ function TechCard({
         </div>
         <div
           className="label"
-          style={{ marginTop: 2, color: "var(--ink-mute)" }}
+          style={{
+            marginTop: 2,
+            color: "var(--ink-mute)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
         >
-          {tech.type} · {tech.grade}
+          {t(locale, tech.grade)}
+          <Pill variant="gold">
+            Lv {techLevel}/{techMaxLevel}
+          </Pill>
         </div>
         <div className="hr-soft" style={{ margin: "10px 0 8px" }} />
         <div
@@ -1042,9 +1113,15 @@ function TechCard({
             color: "var(--ink-mute)",
           }}
         >
-          <span style={{ color: "var(--jade-deep)" }} title={locale === "vi" ? "Bonus tu vi" : "Cultivation exp bonus"}>
-            <span className="t-han">經</span>{" "}
-            +{tech.cultivation_speed_bonus ?? 0}%
+          <span
+            style={{ color: "var(--jade-deep)" }}
+            title={
+              locale === "vi"
+                ? `Bonus tu vi (gốc +${tech.cultivation_speed_bonus ?? 0}%, đã tính cấp)`
+                : `Cultivation exp bonus (base +${tech.cultivation_speed_bonus ?? 0}%, level-scaled)`
+            }
+          >
+            <span className="t-han">經</span> +{effectiveBonus}%
           </span>
           {tech.breakthrough_bonus ? (
             <span className="faint" title={locale === "vi" ? "Bonus đột phá" : "Breakthrough bonus"}>
@@ -1056,7 +1133,7 @@ function TechCard({
             </span>
           ) : (
             <span className="faint">
-              <span className="t-han">階</span> {tech.grade}
+              <span className="t-han">階</span> {t(locale, tech.grade)}
             </span>
           )}
         </div>
@@ -1070,19 +1147,51 @@ function TechCard({
             </Pill>
           </div>
         )}
-        {selected && onForget && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onForget();
-            }}
-            disabled={swapLoading}
-            className="ink-btn cinnabar sm"
-            style={{ width: "100%", marginTop: 10, justifyContent: "center" }}
-          >
-            <span className="t-han">忘</span>
-            {locale === "vi" ? "Quên Công Pháp" : "Forget"}
-          </button>
+        {selected && (onForget || onLevelUp) && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
+            {onLevelUp && levelCost && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onLevelUp();
+                }}
+                disabled={swapLoading || !canAffordLevel}
+                className="ink-btn sm"
+                style={{ width: "100%", justifyContent: "center" }}
+                title={
+                  canAffordLevel
+                    ? undefined
+                    : locale === "vi"
+                      ? "Không đủ linh thạch"
+                      : "Not enough spirit stones"
+                }
+              >
+                <span className="t-han">升</span>
+                {locale === "vi"
+                  ? `Thăng cấp — ${levelCost.spirit_stones} linh thạch`
+                  : `Level up — ${levelCost.spirit_stones} stones`}
+              </button>
+            )}
+            {onLevelUp && !levelCost && (
+              <div className="label" style={{ textAlign: "center", color: "var(--gold-deep)" }}>
+                {locale === "vi" ? "Đã viên mãn" : "Mastered"}
+              </div>
+            )}
+            {onForget && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onForget();
+                }}
+                disabled={swapLoading}
+                className="ink-btn cinnabar sm"
+                style={{ width: "100%", justifyContent: "center" }}
+              >
+                <span className="t-han">忘</span>
+                {locale === "vi" ? "Quên Công Pháp" : "Forget"}
+              </button>
+            )}
+          </div>
         )}
       </div>
     </Card>

@@ -601,12 +601,14 @@ export interface CultivationTechnique {
   description: string;
   description_en: string;
   grade: "Mortal" | "Earth" | "Heaven";
-  type: "Main" | "Support";
   elements: Element[]; // Elements of the technique (e.g., ['Hỏa', 'Kim'])
   // Cultivation bonuses
-  cultivation_speed_bonus: number; // Percentage bonus to cultivation exp (e.g., 10 = +10%)
+  cultivation_speed_bonus: number; // Base percentage bonus to cultivation exp (e.g., 10 = +10%)
   qi_recovery_bonus?: number; // Bonus qi recovery during rest
   breakthrough_bonus?: number; // Bonus success rate for breakthroughs
+  // Mastery — each level adds +10% of the base bonus (lv10 ≈ 1.9× base)
+  level?: number; // 1..max_level, default 1
+  max_level?: number; // default 10
 }
 
 // Inventory item
@@ -696,6 +698,33 @@ export interface AuctionState {
   bids: Record<string, { bidder: string; amount: number; is_ai: boolean }>;
 }
 
+// Persistent NPC the player has met — lets the AI reuse characters across
+// turns instead of inventing a new stranger every scene.
+export interface KnownNPC {
+  id: string;
+  name: string;
+  name_en: string;
+  role: string; // e.g. "thương nhân", "trưởng lão Thanh Vân Kiếm"
+  location?: string; // where they are usually found
+  relationship: number; // -100 (mortal enemy) .. 100 (sworn ally)
+  notes?: string; // one-line memory hook
+  last_seen_turn: number;
+}
+
+// Multi-turn story arc — a long-term goal that outlives the AI's short
+// narrative memory and gives turns direction.
+export interface StoryArc {
+  id: string;
+  title: string;
+  title_en: string;
+  hook: string; // current situation / next objective, one line
+  stage: number;
+  total_stages: number;
+  status: "active" | "completed" | "abandoned";
+  started_turn: number;
+  updated_turn: number;
+}
+
 // Game state (stored in runs.current_state)
 export interface GameState {
   stats: CharacterStats;
@@ -737,6 +766,10 @@ export interface GameState {
   travel?: TravelState; // Region/area travel state
   events?: EventState; // Random events state
   dungeon?: DungeonState; // Dungeon progress state
+
+  // Persistent narrative state (anti-repetition)
+  npcs?: KnownNPC[]; // Recurring NPCs the player has met
+  story_arcs?: StoryArc[]; // Multi-turn story arcs / long-term goals
 
   // =====================================================
   // CULTIVATION SIMULATOR ADDITIONS (Phase 1)
