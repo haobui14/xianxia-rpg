@@ -1,0 +1,329 @@
+{
+  "$source": "scripts/export-game-content.ts — generated, do not edit by hand",
+  "data": [
+    {
+      "id": "gather_herbs_easy",
+      "sect_types": [
+        "Đan",
+        "PhậtMôn",
+        "Tổng"
+      ],
+      "name": "Thu thập dược liệu",
+      "name_en": "Gather Spirit Herbs",
+      "description": "Tạp vụ đường thiếu linh thảo — hái đủ 3 loại dược liệu cấp thấp.",
+      "description_en": "The chore hall is short on herbs — gather any 3 low-grade medicinal items.",
+      "difficulty": "easy",
+      "objective": {
+        "kind": "gather_items",
+        "count": 3,
+        "item_type": "Medicine"
+      },
+      "reward": {
+        "contribution": 20,
+        "silver": 50
+      },
+      "deadline_turns": 15
+    },
+    {
+      "id": "gather_materials_medium",
+      "sect_types": [
+        "Kiếm",
+        "Trận",
+        "Tổng",
+        "ThươngHội"
+      ],
+      "name": "Thu thập vật liệu luyện khí",
+      "name_en": "Gather Forging Materials",
+      "description": "Phòng luyện khí thiếu vật liệu — thu đủ 4 vật liệu luyện khí hoặc khoáng thạch.",
+      "description_en": "The forge is short on materials — gather 4 forging materials or ores.",
+      "difficulty": "medium",
+      "objective": {
+        "kind": "gather_items",
+        "count": 4,
+        "item_type": "Material"
+      },
+      "reward": {
+        "contribution": 50,
+        "silver": 120
+      },
+      "deadline_turns": 20
+    },
+    {
+      "id": "gather_rare_herb_hard",
+      "sect_types": [
+        "Đan",
+        "PhậtMôn"
+      ],
+      "name": "Tầm linh dược hiếm",
+      "name_en": "Seek Rare Spirit Medicine",
+      "description": "Trưởng lão cần một vị linh dược Trung phẩm trở lên cho luyện đan.",
+      "description_en": "An elder requests an Uncommon-or-higher spirit medicine for pill refinement.",
+      "difficulty": "hard",
+      "objective": {
+        "kind": "gather_items",
+        "count": 1,
+        "item_type": "Medicine",
+        "min_rarity": "Uncommon"
+      },
+      "reward": {
+        "contribution": 100,
+        "silver": 200,
+        "spirit_stones": 5
+      },
+      "deadline_turns": 25
+    },
+    {
+      "id": "patrol_bandits_easy",
+      "sect_types": [
+        "Kiếm",
+        "Tổng",
+        "YêuThú"
+      ],
+      "name": "Tuần tra trừ phỉ",
+      "name_en": "Patrol and Clear Bandits",
+      "description": "Bạch đạo quan sát thấy phỉ xuất hiện — dẹp 2 trận chiến cho tông môn.",
+      "description_en": "Bandits stirring near the road — win 2 combat encounters for the sect.",
+      "difficulty": "easy",
+      "objective": {
+        "kind": "win_combats",
+        "count": 2
+      },
+      "reward": {
+        "contribution": 30,
+        "silver": 80
+      },
+      "deadline_turns": 15
+    },
+    {
+      "id": "subdue_beasts_medium",
+      "sect_types": [
+        "YêuThú",
+        "Kiếm",
+        "Tổng"
+      ],
+      "name": "Hàng phục yêu thú",
+      "name_en": "Subdue Spirit Beasts",
+      "description": "Yêu thú hoành hành trong rừng — đánh bại 3 mục tiêu.",
+      "description_en": "Spirit beasts are rampaging — defeat 3 targets.",
+      "difficulty": "medium",
+      "objective": {
+        "kind": "win_combats",
+        "count": 3
+      },
+      "reward": {
+        "contribution": 60,
+        "silver": 130
+      },
+      "deadline_turns": 20
+    },
+    {
+      "id": "hunt_demonic_hard",
+      "sect_types": [
+        "Kiếm",
+        "PhậtMôn"
+      ],
+      "name": "Truy sát ma tu",
+      "name_en": "Hunt Demonic Cultivators",
+      "description": "Ma tu quấy nhiễu phàm nhân — đánh bại 2 đệ tử của Ma Tông.",
+      "description_en": "Demonic cultivators harass mortals — defeat 2 disciples of the Demonic Sect.",
+      "difficulty": "hard",
+      "objective": {
+        "kind": "defeat_rival_member",
+        "count": 2,
+        "rival_sect_id": "huyet_sat_ma_tong"
+      },
+      "reward": {
+        "contribution": 130,
+        "silver": 280,
+        "spirit_stones": 8
+      },
+      "deadline_turns": 25
+    },
+    {
+      "id": "tame_rare_beast_hard",
+      "sect_types": [
+        "YêuThú",
+        "Tổng"
+      ],
+      "name": "Thuần phục yêu thú hiếm",
+      "name_en": "Subdue a Rare Spirit Beast",
+      "description": "Một yêu thú cổ đại xuất hiện trong núi sâu — đánh bại 4 yêu thú để chứng tỏ bản lĩnh.",
+      "description_en": "An ancient spirit beast stirs deep in the mountains — defeat 4 beasts to prove your mettle.",
+      "difficulty": "hard",
+      "objective": {
+        "kind": "win_combats",
+        "count": 4
+      },
+      "reward": {
+        "contribution": 120,
+        "silver": 260,
+        "spirit_stones": 6
+      },
+      "deadline_turns": 25
+    },
+    {
+      "id": "merchant_escort_hard",
+      "sect_types": [
+        "ThươngHội",
+        "Tổng"
+      ],
+      "name": "Hộ tống đoàn thương",
+      "name_en": "Escort the Merchant Caravan",
+      "description": "Thương hội nhờ hộ tống một đoàn hàng quý — thắng 3 trận chiến trên đường đi.",
+      "description_en": "The merchant guild needs a caravan escort — win 3 combat encounters on the road.",
+      "difficulty": "hard",
+      "objective": {
+        "kind": "win_combats",
+        "count": 3
+      },
+      "reward": {
+        "contribution": 110,
+        "silver": 400
+      },
+      "deadline_turns": 22
+    },
+    {
+      "id": "formation_trial_hard",
+      "sect_types": [
+        "Trận"
+      ],
+      "name": "Khảo nghiệm trận pháp",
+      "name_en": "Formation Trial",
+      "description": "Trưởng lão yêu cầu tích đủ 500 exp tu vi để chứng minh đạo tâm.",
+      "description_en": "An elder demands you accumulate 500 cultivation exp to prove your dao heart.",
+      "difficulty": "hard",
+      "objective": {
+        "kind": "cultivate_exp",
+        "amount": 500
+      },
+      "reward": {
+        "contribution": 120,
+        "silver": 250,
+        "spirit_stones": 5
+      },
+      "deadline_turns": 25
+    },
+    {
+      "id": "raid_righteous_medium",
+      "sect_types": [
+        "Ma"
+      ],
+      "name": "Cướp phá chính đạo",
+      "name_en": "Raid the Righteous",
+      "description": "Trưởng lão ra lệnh hạ 2 đệ tử chính đạo để thu linh khí.",
+      "description_en": "An elder orders you to bring down 2 righteous disciples for their essence.",
+      "difficulty": "medium",
+      "objective": {
+        "kind": "defeat_rival_member",
+        "count": 2,
+        "rival_sect_id": "thanh_van_kiem"
+      },
+      "reward": {
+        "contribution": 100,
+        "silver": 200,
+        "spirit_stones": 6
+      },
+      "deadline_turns": 20
+    },
+    {
+      "id": "cultivate_basic_easy",
+      "sect_types": [
+        "Kiếm",
+        "Đan",
+        "Trận",
+        "YêuThú",
+        "Ma",
+        "PhậtMôn",
+        "Tổng",
+        "ThươngHội"
+      ],
+      "name": "Khổ luyện tông môn",
+      "name_en": "Sect Cultivation Quota",
+      "description": "Hoàn thành hạn mức tu luyện — tích đủ 120 điểm kinh nghiệm tu vi.",
+      "description_en": "Meet the cultivation quota — accumulate 120 cultivation exp.",
+      "difficulty": "easy",
+      "objective": {
+        "kind": "cultivate_exp",
+        "amount": 120
+      },
+      "reward": {
+        "contribution": 25,
+        "silver": 40
+      },
+      "deadline_turns": 12
+    },
+    {
+      "id": "cultivate_advanced_medium",
+      "sect_types": [
+        "Kiếm",
+        "Đan",
+        "Trận",
+        "YêuThú",
+        "Ma",
+        "PhậtMôn",
+        "Tổng"
+      ],
+      "name": "Thử thách bế quan",
+      "name_en": "Seclusion Trial",
+      "description": "Chứng minh đạo tâm — tích đủ 300 điểm kinh nghiệm tu vi trong hạn.",
+      "description_en": "Prove your dao heart — accumulate 300 cultivation exp within the deadline.",
+      "difficulty": "medium",
+      "objective": {
+        "kind": "cultivate_exp",
+        "amount": 300
+      },
+      "reward": {
+        "contribution": 55,
+        "silver": 100,
+        "spirit_stones": 3
+      },
+      "deadline_turns": 18
+    },
+    {
+      "id": "scout_region_easy",
+      "sect_types": [
+        "Kiếm",
+        "YêuThú",
+        "Tổng",
+        "ThươngHội"
+      ],
+      "name": "Trinh sát Hỏa Sơn",
+      "name_en": "Scout Fire Mountain",
+      "description": "Đưa tin về tình hình Hỏa Sơn — tới được khu vực.",
+      "description_en": "Bring intel on Fire Mountain — travel there.",
+      "difficulty": "easy",
+      "objective": {
+        "kind": "visit_region",
+        "region_id": "hoa_son"
+      },
+      "reward": {
+        "contribution": 30,
+        "silver": 60
+      },
+      "deadline_turns": 18
+    },
+    {
+      "id": "scout_region_medium",
+      "sect_types": [
+        "Kiếm",
+        "Tổng",
+        "ThươngHội"
+      ],
+      "name": "Trinh sát Trầm Lôi",
+      "name_en": "Scout Silent Thunder",
+      "description": "Tuần tra vùng Trầm Lôi xem có dị thường.",
+      "description_en": "Patrol the Silent Thunder region for anomalies.",
+      "difficulty": "medium",
+      "objective": {
+        "kind": "visit_region",
+        "region_id": "tram_loi"
+      },
+      "reward": {
+        "contribution": 60,
+        "silver": 120,
+        "spirit_stones": 2
+      },
+      "deadline_turns": 22
+    }
+  ]
+}

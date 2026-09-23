@@ -1,0 +1,33 @@
+{
+  "$source": "hand-authored — items the Godot slice adds on top of the web game's loot tables.",
+  "data": [
+    {
+      "id": "wooden_sword", "name": "Mộc Kiếm", "name_en": "Wooden Sword", "type": "Equipment", "rarity": "Common",
+      "description": "Thanh kiếm gỗ luyện tập của người mới nhập đạo.", "description_en": "A practice sword for those new to the path.",
+      "equipment_slot": "Weapon", "bonus_stats": { "atk": 4 }
+    },
+    {
+      "id": "hoi_huyet_tan", "name": "Hồi Huyết Tán", "name_en": "Blood-Mending Powder", "type": "Medicine", "rarity": "Common",
+      "description": "Thuốc bột cầm máu, hồi phục chút khí huyết.", "description_en": "A styptic powder that restores some health.",
+      "effects": { "hp_restore": 40 }
+    },
+    {
+      "id": "manual_ho_the", "name": "Bí Kíp Hộ Thể Cương Khí", "name_en": "Manual: Body-Guarding Qi", "type": "Book", "rarity": "Uncommon",
+      "description": "Dạy linh kỹ phòng ngự Hộ Thể Cương Khí.", "description_en": "Teaches the defensive art Body-Guarding Qi.",
+      "teaches_skill_id": "ho_the_cuong_khi"
+    },
+    {
+      "id": "manual_hoi_xuan", "name": "Bí Kíp Hồi Xuân Quyết", "name_en": "Manual: Spring Revival Art", "type": "Book", "rarity": "Uncommon",
+      "description": "Dạy linh kỹ trị thương Hồi Xuân Quyết.", "description_en": "Teaches the healing art Spring Revival.",
+      "teaches_skill_id": "hoi_xuan_quyet"
+    },
+    {
+      "id": "wood_cultivation_manual", "name": "Thanh Mộc Trường Sinh Quyết", "name_en": "Evergreen Longevity Art", "type": "Book", "rarity": "Rare",
+      "description": "Công pháp Mộc hệ từ Linh Thảo Bí Cảnh.", "description_en": "A Wood technique from the Spirit Herb Secret Realm.",
+      "teaches_technique": {
+        "id": "thanh_moc_truong_sinh_quyet", "name": "Thanh Mộc Trường Sinh Quyết", "name_en": "Evergreen Longevity Art",
+        "grade": "Earth", "elements": ["Mộc"], "cultivation_speed_bonus": 20
+      }
+    }
+  ]
+}

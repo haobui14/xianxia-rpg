@@ -1,0 +1,27 @@
+{
+  "$source": "hand-authored — town facilities (design §7.10). Shop item ids come from loot.json and items.json.",
+  "data": [
+    {
+      "area_id": "thanh_van_village",
+      "rest_cost": 10,
+      "seclusion_cost_per_month": 15,
+      "shop": [
+        { "item_id": "hoi_huyet_tan", "price": 15 },
+        { "item_id": "healing_pill", "price": 28 },
+        { "item_id": "spirit_rice_cake", "price": 8 },
+        { "item_id": "iron_sword", "price": 120 },
+        { "item_id": "azure_bamboo_sword", "price": 260 },
+        { "item_id": "qi_condensation_manual", "price": 220 },
+        { "item_id": "manual_ho_the", "price": 180 },
+        { "item_id": "manual_hoi_xuan", "price": 200 },
+        { "item_id": "qi_gathering_pill", "price": 150 }
+      ],
+      "bounties": [
+        { "id": "bounty_wolves", "name": "Trừ sói hoang Thanh Lâm", "name_en": "Cull the Verdant Forest wolves", "enemy_id": "forest_wolf", "count": 3, "reward_silver": 60, "reward_karma": 5 },
+        { "id": "bounty_boars", "name": "Lợn rừng phá nương rẫy", "name_en": "Boars trampling the fields", "enemy_id": "wild_boar", "count": 2, "reward_silver": 70, "reward_karma": 3 },
+        { "id": "bounty_snakes", "name": "Độc xà ở Linh Thảo Viên", "name_en": "Snakes in the herb garden", "enemy_id": "venomous_snake", "count": 2, "reward_silver": 55, "reward_karma": 3 },
+        { "id": "bounty_vines", "name": "Diệt tà đằng", "name_en": "Burn out the corrupted vines", "enemy_id": "corrupted_vine", "count": 2, "reward_silver": 45, "reward_karma": 4 }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1181 @@
+{
+  "$source": "scripts/export-game-content.ts — generated, do not edit by hand",
+  "data": {
+    "tables": [
+      {
+        "id": "common_herbs",
+        "tier": 1,
+        "silverRange": [
+          20,
+          80
+        ],
+        "spiritStoneChance": 0.3,
+        "spiritStoneRange": [
+          1,
+          5
+        ],
+        "entries": [
+          {
+            "id": "lingzhi_grass",
+            "name": "Linh Chi Thảo",
+            "name_en": "Spirit Grass",
+            "description": "Cỏ linh thảo thông thường, nhai sống hồi chút linh lực.",
+            "description_en": "Common spirit grass; chewed raw it restores a little Qi.",
+            "type": "Material",
+            "rarity": "Common",
+            "effects": {
+              "qi_restore": 10
+            },
+            "weight": 50
+          },
+          {
+            "id": "moonlight_flower",
+            "name": "Nguyệt Quang Hoa",
+            "name_en": "Moonlight Flower",
+            "description": "Hoa nở dưới ánh trăng, hồi phục linh lực.",
+            "description_en": "Flower that blooms under moonlight, restores Qi.",
+            "type": "Material",
+            "rarity": "Uncommon",
+            "effects": {
+              "qi_restore": 20
+            },
+            "weight": 20
+          },
+          {
+            "id": "healing_herb",
+            "name": "Chỉ Huyết Thảo",
+            "name_en": "Healing Herb",
+            "description": "Thảo dược cầm máu và hồi phục sinh lực.",
+            "description_en": "Herb that stops bleeding and restores vitality.",
+            "type": "Medicine",
+            "rarity": "Common",
+            "effects": {
+              "hp_restore": 30
+            },
+            "weight": 30
+          },
+          {
+            "id": "spirit_rice_cake",
+            "name": "Bánh Linh Mễ",
+            "name_en": "Spirit Rice Cake",
+            "description": "Bánh làm từ linh mễ, ăn vào hồi phục thể lực.",
+            "description_en": "A cake of spirit rice that restores stamina when eaten.",
+            "type": "Medicine",
+            "rarity": "Common",
+            "effects": {
+              "stamina_restore": 25
+            },
+            "weight": 25
+          }
+        ]
+      },
+      {
+        "id": "bandit_loot",
+        "tier": 1,
+        "silverRange": [
+          50,
+          150
+        ],
+        "spiritStoneChance": 0.4,
+        "spiritStoneRange": [
+          2,
+          8
+        ],
+        "entries": [
+          {
+            "id": "iron_sword",
+            "name": "Kiếm Sắt",
+            "name_en": "Iron Sword",
+            "description": "Một thanh kiếm sắt thông thường.",
+            "description_en": "An ordinary iron sword.",
+            "type": "Equipment",
+            "rarity": "Common",
+            "equipment_slot": "Weapon",
+            "bonus_stats": {
+              "str": 2
+            },
+            "weight": 30
+          },
+          {
+            "id": "leather_armor",
+            "name": "Giáp Da",
+            "name_en": "Leather Armor",
+            "description": "Áo giáp da đơn giản, tăng phòng thủ.",
+            "description_en": "Simple leather armor, increases defense.",
+            "type": "Equipment",
+            "rarity": "Common",
+            "equipment_slot": "Chest",
+            "bonus_stats": {
+              "hp": 20
+            },
+            "weight": 25
+          },
+          {
+            "id": "healing_pill",
+            "name": "Hồi Huyết Đan",
+            "name_en": "Healing Pill",
+            "description": "Đan dược phổ thông, hồi phục 50 HP.",
+            "description_en": "Common pill, restores 50 HP.",
+            "type": "Medicine",
+            "rarity": "Common",
+            "effects": {
+              "hp_restore": 50
+            },
+            "weight": 45
+          },
+          {
+            "id": "spirit_rice_cake",
+            "name": "Bánh Linh Mễ",
+            "name_en": "Spirit Rice Cake",
+            "description": "Bánh làm từ linh mễ, ăn vào hồi phục thể lực.",
+            "description_en": "A cake of spirit rice that restores stamina when eaten.",
+            "type": "Medicine",
+            "rarity": "Common",
+            "effects": {
+              "stamina_restore": 25
+            },
+            "weight": 25
+          },
+          {
+            "id": "enhancement_stone_common",
+            "name": "Đá Cường Hóa (Thường)",
+            "name_en": "Enhancement Stone (Common)",
+            "description": "Đá cường hóa cơ bản, dùng để nâng cấp trang bị +1 đến +3.",
+            "description_en": "Basic enhancement stone, used to upgrade equipment from +1 to +3.",
+            "type": "Material",
+            "rarity": "Common",
+            "weight": 40
+          }
+        ]
+      },
+      {
+        "id": "cave_treasure",
+        "tier": 2,
+        "silverRange": [
+          100,
+          300
+        ],
+        "spiritStoneChance": 0.6,
+        "spiritStoneRange": [
+          5,
+          15
+        ],
+        "entries": [
+          {
+            "id": "qi_condensation_manual",
+            "name": "Luyện Khí Tâm Pháp",
+            "name_en": "Qi Condensation Manual",
+            "description": "Bí tịch luyện khí cơ bản, đọc xong lĩnh ngộ tâm pháp thổ nạp.",
+            "description_en": "Basic Qi cultivation manual; reading it teaches a breathing method.",
+            "type": "Book",
+            "rarity": "Uncommon",
+            "weight": 20,
+            "teaches_technique": {
+              "id": "luyen_khi_tam_phap",
+              "name": "Luyện Khí Tâm Pháp",
+              "name_en": "Qi Condensation Method",
+              "description": "Tâm pháp thổ nạp cơ bản, tăng tốc độ hấp thu linh khí.",
+              "description_en": "A basic breathing method that speeds up qi absorption.",
+              "grade": "Mortal",
+              "elements": [],
+              "cultivation_speed_bonus": 12
+            }
+          },
+          {
+            "id": "spirit_stone_fragment",
+            "name": "Mảnh Linh Thạch",
+            "name_en": "Spirit Stone Fragment",
+            "description": "Mảnh vỡ của linh thạch — hấp thụ để hồi phục linh lực.",
+            "description_en": "Fragment of spirit stone — absorb it to restore Qi.",
+            "type": "Material",
+            "rarity": "Rare",
+            "effects": {
+              "qi_restore": 50
+            },
+            "weight": 15
+          },
+          {
+            "id": "jade_pendant",
+            "name": "Ngọc Bội",
+            "name_en": "Jade Pendant",
+            "description": "Ngọc bội thần bí, tăng may mắn.",
+            "description_en": "Mysterious jade pendant, increases luck.",
+            "type": "Equipment",
+            "rarity": "Rare",
+            "equipment_slot": "Accessory",
+            "bonus_stats": {
+              "luck": 2
+            },
+            "weight": 10
+          },
+          {
+            "id": "qi_gathering_pill",
+            "name": "Tụ Khí Đan",
+            "name_en": "Qi Gathering Pill",
+            "description": "Đan dược giúp tăng Linh lực tối đa vĩnh viễn.",
+            "description_en": "Pill that permanently increases maximum Qi.",
+            "type": "Medicine",
+            "rarity": "Uncommon",
+            "effects": {
+              "permanent_qi": 20
+            },
+            "weight": 25
+          },
+          {
+            "id": "enhancement_stone_common",
+            "name": "Đá Cường Hóa (Thường)",
+            "name_en": "Enhancement Stone (Common)",
+            "description": "Đá cường hóa cơ bản, dùng để nâng cấp trang bị +1 đến +3.",
+            "description_en": "Basic enhancement stone, used to upgrade equipment from +1 to +3.",
+            "type": "Material",
+            "rarity": "Common",
+            "weight": 40
+          },
+          {
+            "id": "enhancement_stone_uncommon",
+            "name": "Đá Cường Hóa (Tốt)",
+            "name_en": "Enhancement Stone (Uncommon)",
+            "description": "Đá cường hóa chất lượng tốt, dùng để nâng cấp trang bị +4 đến +6.",
+            "description_en": "Good quality enhancement stone, used to upgrade equipment from +4 to +6.",
+            "type": "Material",
+            "rarity": "Uncommon",
+            "weight": 25
+          }
+        ]
+      },
+      {
+        "id": "dungeon_boss",
+        "tier": 3,
+        "silverRange": [
+          300,
+          800
+        ],
+        "spiritStoneChance": 0.8,
+        "spiritStoneRange": [
+          10,
+          30
+        ],
+        "entries": [
+          {
+            "id": "spirit_sword",
+            "name": "Linh Kiếm",
+            "name_en": "Spirit Sword",
+            "description": "Kiếm chứa linh khí, tăng sức mạnh đáng kể.",
+            "description_en": "Sword imbued with spiritual energy, significantly increases strength.",
+            "type": "Equipment",
+            "rarity": "Rare",
+            "equipment_slot": "Weapon",
+            "bonus_stats": {
+              "str": 8,
+              "agi": 3
+            },
+            "weight": 20
+          },
+          {
+            "id": "mystic_robe",
+            "name": "Huyền Bào",
+            "name_en": "Mystic Robe",
+            "description": "Áo bào huyền bí, tăng trí tuệ và khí.",
+            "description_en": "Mysterious robe, increases intelligence and Qi.",
+            "type": "Equipment",
+            "rarity": "Rare",
+            "equipment_slot": "Chest",
+            "bonus_stats": {
+              "int": 5,
+              "qi": 30
+            },
+            "weight": 20
+          },
+          {
+            "id": "foundation_pill",
+            "name": "Trúc Cơ Đan",
+            "name_en": "Foundation Pill",
+            "description": "Đan dược quý hiếm giúp đột phá cảnh giới.",
+            "description_en": "Rare pill that helps breakthrough cultivation realm.",
+            "type": "Medicine",
+            "rarity": "Epic",
+            "effects": {
+              "cultivation_exp": 500
+            },
+            "weight": 10
+          },
+          {
+            "id": "enhancement_stone_uncommon",
+            "name": "Đá Cường Hóa (Tốt)",
+            "name_en": "Enhancement Stone (Uncommon)",
+            "description": "Đá cường hóa chất lượng tốt, dùng để nâng cấp trang bị +4 đến +6.",
+            "description_en": "Good quality enhancement stone, used to upgrade equipment from +4 to +6.",
+            "type": "Material",
+            "rarity": "Uncommon",
+            "weight": 25
+          },
+          {
+            "id": "enhancement_stone_rare",
+            "name": "Đá Cường Hóa (Hiếm)",
+            "name_en": "Enhancement Stone (Rare)",
+            "description": "Đá cường hóa hiếm, dùng để nâng cấp trang bị +7 đến +9.",
+            "description_en": "Rare enhancement stone, used to upgrade equipment from +7 to +9.",
+            "type": "Material",
+            "rarity": "Rare",
+            "weight": 15
+          },
+          {
+            "id": "enhancement_stone_epic",
+            "name": "Đá Cường Hóa (Sử Thi)",
+            "name_en": "Enhancement Stone (Epic)",
+            "description": "Đá cường hóa cực phẩm, dùng để nâng cấp trang bị lên +10.",
+            "description_en": "Epic enhancement stone, used to upgrade equipment to +10.",
+            "type": "Material",
+            "rarity": "Epic",
+            "weight": 5
+          },
+          {
+            "id": "storage_ring_uncommon",
+            "name": "Trữ Vật Giới (Tốt)",
+            "name_en": "Uncommon Storage Ring",
+            "description": "Nhẫn trữ vật chất lượng tốt, có thể chứa thêm 20 vật phẩm.",
+            "description_en": "Good quality storage ring that can hold 20 additional items.",
+            "type": "Accessory",
+            "rarity": "Uncommon",
+            "equipment_slot": "Accessory",
+            "effects": {
+              "storage_capacity": 20
+            },
+            "weight": 10
+          },
+          {
+            "id": "storage_ring_rare",
+            "name": "Trữ Vật Giới (Hiếm)",
+            "name_en": "Rare Storage Ring",
+            "description": "Nhẫn trữ vật hiếm, có thể chứa thêm 35 vật phẩm.",
+            "description_en": "Rare storage ring that can hold 35 additional items.",
+            "type": "Accessory",
+            "rarity": "Rare",
+            "equipment_slot": "Accessory",
+            "effects": {
+              "storage_capacity": 35
+            },
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "id": "ancient_treasure",
+        "tier": 4,
+        "silverRange": [
+          500,
+          1500
+        ],
+        "spiritStoneChance": 1,
+        "spiritStoneRange": [
+          20,
+          50
+        ],
+        "entries": [
+          {
+            "id": "immortal_blade",
+            "name": "Tiên Đạo Kiếm",
+            "name_en": "Immortal Blade",
+            "description": "Kiếm của tiên nhân cổ đại, chứa đựng sức mạnh vô song.",
+            "description_en": "Blade of an ancient immortal, contains unparalleled power.",
+            "type": "Equipment",
+            "rarity": "Epic",
+            "equipment_slot": "Weapon",
+            "bonus_stats": {
+              "str": 15,
+              "agi": 8,
+              "int": 5
+            },
+            "weight": 10
+          },
+          {
+            "id": "dragon_scale_armor",
+            "name": "Long Lân Giáp",
+            "name_en": "Dragon Scale Armor",
+            "description": "Giáp làm từ vảy rồng, phòng thủ tuyệt đỉnh.",
+            "description_en": "Armor made from dragon scales, supreme defense.",
+            "type": "Equipment",
+            "rarity": "Epic",
+            "equipment_slot": "Chest",
+            "bonus_stats": {
+              "hp": 100,
+              "str": 5,
+              "qi": 50
+            },
+            "weight": 10
+          },
+          {
+            "id": "heaven_defying_pill",
+            "name": "Nghịch Thiên Đan",
+            "name_en": "Heaven Defying Pill",
+            "description": "Đan dược cực phẩm có thể thay đổi số phận tu luyện.",
+            "description_en": "Ultimate pill that can change cultivation destiny.",
+            "type": "Medicine",
+            "rarity": "Legendary",
+            "effects": {
+              "cultivation_exp": 2000,
+              "permanent_luck": 1
+            },
+            "weight": 3
+          },
+          {
+            "id": "enhancement_stone_rare",
+            "name": "Đá Cường Hóa (Hiếm)",
+            "name_en": "Enhancement Stone (Rare)",
+            "description": "Đá cường hóa hiếm, dùng để nâng cấp trang bị +7 đến +9.",
+            "description_en": "Rare enhancement stone, used to upgrade equipment from +7 to +9.",
+            "type": "Material",
+            "rarity": "Rare",
+            "weight": 15
+          },
+          {
+            "id": "enhancement_stone_epic",
+            "name": "Đá Cường Hóa (Sử Thi)",
+            "name_en": "Enhancement Stone (Epic)",
+            "description": "Đá cường hóa cực phẩm, dùng để nâng cấp trang bị lên +10.",
+            "description_en": "Epic enhancement stone, used to upgrade equipment to +10.",
+            "type": "Material",
+            "rarity": "Epic",
+            "weight": 5
+          },
+          {
+            "id": "storage_ring_rare",
+            "name": "Trữ Vật Giới (Hiếm)",
+            "name_en": "Rare Storage Ring",
+            "description": "Nhẫn trữ vật hiếm, có thể chứa thêm 35 vật phẩm.",
+            "description_en": "Rare storage ring that can hold 35 additional items.",
+            "type": "Accessory",
+            "rarity": "Rare",
+            "equipment_slot": "Accessory",
+            "effects": {
+              "storage_capacity": 35
+            },
+            "weight": 5
+          },
+          {
+            "id": "storage_ring_epic",
+            "name": "Trữ Vật Giới (Sử Thi)",
+            "name_en": "Epic Storage Ring",
+            "description": "Nhẫn trữ vật sử thi, có thể chứa thêm 50 vật phẩm.",
+            "description_en": "Epic storage ring that can hold 50 additional items.",
+            "type": "Accessory",
+            "rarity": "Epic",
+            "equipment_slot": "Accessory",
+            "effects": {
+              "storage_capacity": 50
+            },
+            "weight": 2
+          },
+          {
+            "id": "storage_ring_legendary",
+            "name": "Vô Tận Trữ Vật Giới",
+            "name_en": "Infinite Storage Ring",
+            "description": "Truyền thuyết nhẫn trữ vật với không gian gần như vô tận, có thể chứa thêm 100 vật phẩm.",
+            "description_en": "Legendary storage ring with near-infinite space, can hold 100 additional items.",
+            "type": "Accessory",
+            "rarity": "Legendary",
+            "equipment_slot": "Accessory",
+            "effects": {
+              "storage_capacity": 100
+            },
+            "weight": 1
+          }
+        ]
+      },
+      {
+        "id": "thanh_van_wilds",
+        "tier": 1,
+        "silverRange": [
+          20,
+          90
+        ],
+        "spiritStoneChance": 0.3,
+        "spiritStoneRange": [
+          1,
+          5
+        ],
+        "entries": [
+          {
+            "id": "lingzhi_grass",
+            "name": "Linh Chi Thảo",
+            "name_en": "Spirit Grass",
+            "description": "Cỏ linh thảo thông thường, nhai sống hồi chút linh lực.",
+            "description_en": "Common spirit grass; chewed raw it restores a little Qi.",
+            "type": "Material",
+            "rarity": "Common",
+            "effects": {
+              "qi_restore": 10
+            },
+            "weight": 40
+          },
+          {
+            "id": "moc_tinh",
+            "name": "Mộc Tinh",
+            "name_en": "Wood Essence",
+            "description": "Tinh hoa mộc linh khí ngưng tụ từ rừng già, hấp thụ hồi linh lực.",
+            "description_en": "Wood essence condensed in the old forest; absorb to restore Qi.",
+            "type": "Material",
+            "rarity": "Uncommon",
+            "effects": {
+              "qi_restore": 30
+            },
+            "weight": 22
+          },
+          {
+            "id": "low_beast_core",
+            "name": "Thú Đan Cấp Thấp",
+            "name_en": "Low-grade Beast Core",
+            "description": "Nội đan yêu thú cấp thấp — luyện hóa được chút tu vi.",
+            "description_en": "A low-grade beast core — refine it for a little cultivation.",
+            "type": "Material",
+            "rarity": "Uncommon",
+            "effects": {
+              "cultivation_exp": 30
+            },
+            "weight": 18
+          },
+          {
+            "id": "healing_herb",
+            "name": "Chỉ Huyết Thảo",
+            "name_en": "Healing Herb",
+            "description": "Thảo dược cầm máu và hồi phục sinh lực.",
+            "description_en": "Herb that stops bleeding and restores vitality.",
+            "type": "Medicine",
+            "rarity": "Common",
+            "effects": {
+              "hp_restore": 30
+            },
+            "weight": 28
+          },
+          {
+            "id": "spirit_rice_cake",
+            "name": "Bánh Linh Mễ",
+            "name_en": "Spirit Rice Cake",
+            "description": "Bánh làm từ linh mễ, ăn vào hồi phục thể lực.",
+            "description_en": "A cake of spirit rice that restores stamina when eaten.",
+            "type": "Medicine",
+            "rarity": "Common",
+            "effects": {
+              "stamina_restore": 25
+            },
+            "weight": 25
+          },
+          {
+            "id": "azure_bamboo_sword",
+            "name": "Thanh Trúc Kiếm",
+            "name_en": "Azure Bamboo Sword",
+            "description": "Kiếm trúc nhẹ bén, thấm mộc linh khí.",
+            "description_en": "A light, keen bamboo sword steeped in wood qi.",
+            "type": "Equipment",
+            "rarity": "Uncommon",
+            "equipment_slot": "Weapon",
+            "bonus_stats": {
+              "str": 3,
+              "agi": 2
+            },
+            "weight": 8
+          },
+          {
+            "id": "enhancement_stone_common",
+            "name": "Đá Cường Hóa (Thường)",
+            "name_en": "Enhancement Stone (Common)",
+            "description": "Đá cường hóa cơ bản, dùng để nâng cấp trang bị +1 đến +3.",
+            "description_en": "Basic enhancement stone, used to upgrade equipment from +1 to +3.",
+            "type": "Material",
+            "rarity": "Common",
+            "weight": 40
+          }
+        ]
+      },
+      {
+        "id": "hoa_son_volcanic",
+        "tier": 2,
+        "silverRange": [
+          60,
+          180
+        ],
+        "spiritStoneChance": 0.45,
+        "spiritStoneRange": [
+          3,
+          10
+        ],
+        "entries": [
+          {
+            "id": "hoa_tinh",
+            "name": "Hỏa Tinh",
+            "name_en": "Fire Essence",
+            "description": "Tinh hoa hỏa nguyên từ lòng núi lửa, hấp thụ hồi linh lực.",
+            "description_en": "Fire essence from the volcano's heart; absorb to restore Qi.",
+            "type": "Material",
+            "rarity": "Uncommon",
+            "effects": {
+              "qi_restore": 50
+            },
+            "weight": 30
+          },
+          {
+            "id": "flame_pill",
+            "name": "Hỏa Diễm Đan",
+            "name_en": "Flame Pill",
+            "description": "Đan dược hỏa tính, hồi phục sinh lực mạnh mẽ.",
+            "description_en": "A fiery pill that strongly restores vitality.",
+            "type": "Medicine",
+            "rarity": "Uncommon",
+            "effects": {
+              "hp_restore": 80
+            },
+            "weight": 25
+          },
+          {
+            "id": "phoenix_down",
+            "name": "Phượng Vũ",
+            "name_en": "Phoenix Down",
+            "description": "Lông tơ phượng hoàng — luyện hóa được hỏa nguyên tinh thuần.",
+            "description_en": "Soft phoenix down — refine it for pure fire essence.",
+            "type": "Material",
+            "rarity": "Rare",
+            "effects": {
+              "cultivation_exp": 80
+            },
+            "weight": 12
+          },
+          {
+            "id": "crimson_flame_armor",
+            "name": "Xích Hỏa Giáp",
+            "name_en": "Crimson Flame Armor",
+            "description": "Giáp rèn trong dung nham, chống chịu vững chắc.",
+            "description_en": "Armor forged in lava, sturdy and warm to the touch.",
+            "type": "Equipment",
+            "rarity": "Rare",
+            "equipment_slot": "Chest",
+            "bonus_stats": {
+              "hp": 40,
+              "str": 2
+            },
+            "weight": 8
+          },
+          {
+            "id": "spirit_rice_cake",
+            "name": "Bánh Linh Mễ",
+            "name_en": "Spirit Rice Cake",
+            "description": "Bánh làm từ linh mễ, ăn vào hồi phục thể lực.",
+            "description_en": "A cake of spirit rice that restores stamina when eaten.",
+            "type": "Medicine",
+            "rarity": "Common",
+            "effects": {
+              "stamina_restore": 25
+            },
+            "weight": 25
+          },
+          {
+            "id": "enhancement_stone_common",
+            "name": "Đá Cường Hóa (Thường)",
+            "name_en": "Enhancement Stone (Common)",
+            "description": "Đá cường hóa cơ bản, dùng để nâng cấp trang bị +1 đến +3.",
+            "description_en": "Basic enhancement stone, used to upgrade equipment from +1 to +3.",
+            "type": "Material",
+            "rarity": "Common",
+            "weight": 40
+          },
+          {
+            "id": "enhancement_stone_uncommon",
+            "name": "Đá Cường Hóa (Tốt)",
+            "name_en": "Enhancement Stone (Uncommon)",
+            "description": "Đá cường hóa chất lượng tốt, dùng để nâng cấp trang bị +4 đến +6.",
+            "description_en": "Good quality enhancement stone, used to upgrade equipment from +4 to +6.",
+            "type": "Material",
+            "rarity": "Uncommon",
+            "weight": 25
+          }
+        ]
+      },
+      {
+        "id": "huyen_thuy_depths",
+        "tier": 3,
+        "silverRange": [
+          120,
+          350
+        ],
+        "spiritStoneChance": 0.6,
+        "spiritStoneRange": [
+          5,
+          18
+        ],
+        "entries": [
+          {
+            "id": "ocean_pearl",
+            "name": "Hải Châu",
+            "name_en": "Ocean Pearl",
+            "description": "Trân châu biển sâu ngưng tụ thủy linh khí, hấp thụ hồi linh lực lớn.",
+            "description_en": "A deep-sea pearl dense with water qi; absorb for a large Qi restore.",
+            "type": "Material",
+            "rarity": "Rare",
+            "effects": {
+              "qi_restore": 80
+            },
+            "weight": 22
+          },
+          {
+            "id": "thuy_tinh",
+            "name": "Thủy Tinh",
+            "name_en": "Water Essence",
+            "description": "Tinh hoa thủy nguyên thu từ hải vực, hấp thụ hồi linh lực.",
+            "description_en": "Water essence gathered from the sea; absorb to restore Qi.",
+            "type": "Material",
+            "rarity": "Uncommon",
+            "effects": {
+              "qi_restore": 60
+            },
+            "weight": 28
+          },
+          {
+            "id": "heart_guard_pill",
+            "name": "Hộ Tâm Đan",
+            "name_en": "Heart Guard Pill",
+            "description": "Đan dược quý hồi phục sinh lực và an định tâm mạch.",
+            "description_en": "A precious pill that restores vitality and steadies the heart.",
+            "type": "Medicine",
+            "rarity": "Rare",
+            "effects": {
+              "hp_restore": 150
+            },
+            "weight": 18
+          },
+          {
+            "id": "pearl_lotus_pendant",
+            "name": "Trân Châu Liên",
+            "name_en": "Pearl Lotus Pendant",
+            "description": "Dây chuyền trân châu hình liên hoa, tăng trí tuệ và linh lực.",
+            "description_en": "A pearl pendant shaped like a lotus, sharpening mind and qi.",
+            "type": "Equipment",
+            "rarity": "Rare",
+            "equipment_slot": "Accessory",
+            "bonus_stats": {
+              "int": 4,
+              "qi": 30
+            },
+            "weight": 7
+          },
+          {
+            "id": "enhancement_stone_uncommon",
+            "name": "Đá Cường Hóa (Tốt)",
+            "name_en": "Enhancement Stone (Uncommon)",
+            "description": "Đá cường hóa chất lượng tốt, dùng để nâng cấp trang bị +4 đến +6.",
+            "description_en": "Good quality enhancement stone, used to upgrade equipment from +4 to +6.",
+            "type": "Material",
+            "rarity": "Uncommon",
+            "weight": 25
+          },
+          {
+            "id": "enhancement_stone_rare",
+            "name": "Đá Cường Hóa (Hiếm)",
+            "name_en": "Enhancement Stone (Rare)",
+            "description": "Đá cường hóa hiếm, dùng để nâng cấp trang bị +7 đến +9.",
+            "description_en": "Rare enhancement stone, used to upgrade equipment from +7 to +9.",
+            "type": "Material",
+            "rarity": "Rare",
+            "weight": 15
+          }
+        ]
+      },
+      {
+        "id": "tram_loi_storm",
+        "tier": 4,
+        "silverRange": [
+          250,
+          600
+        ],
+        "spiritStoneChance": 0.75,
+        "spiritStoneRange": [
+          8,
+          25
+        ],
+        "entries": [
+          {
+            "id": "loi_tinh",
+            "name": "Lôi Tinh",
+            "name_en": "Thunder Essence",
+            "description": "Tinh hoa lôi nguyên ngưng từ bão sấm — luyện hóa tăng tu vi.",
+            "description_en": "Thunder essence condensed from storms — refine it for cultivation.",
+            "type": "Material",
+            "rarity": "Rare",
+            "effects": {
+              "cultivation_exp": 100
+            },
+            "weight": 26
+          },
+          {
+            "id": "kim_tinh",
+            "name": "Kim Tinh",
+            "name_en": "Metal Essence",
+            "description": "Kim nguyên tinh thuần tôi luyện thân thể, tăng sức mạnh vĩnh viễn.",
+            "description_en": "Pure metal essence that tempers the body, permanently raising strength.",
+            "type": "Material",
+            "rarity": "Epic",
+            "effects": {
+              "permanent_str": 1
+            },
+            "weight": 10
+          },
+          {
+            "id": "thunder_pill",
+            "name": "Lôi Đan",
+            "name_en": "Thunder Pill",
+            "description": "Đan dược ngưng từ lôi khí, hồi linh lực lớn và tăng tu vi.",
+            "description_en": "A pill condensed from thunder qi; restores Qi and grants cultivation.",
+            "type": "Medicine",
+            "rarity": "Epic",
+            "effects": {
+              "qi_restore": 200,
+              "cultivation_exp": 100
+            },
+            "weight": 14
+          },
+          {
+            "id": "thunder_rune_sword",
+            "name": "Lôi Văn Kiếm",
+            "name_en": "Thunder Rune Sword",
+            "description": "Kiếm khắc lôi văn, mỗi nhát chém mang theo sấm sét.",
+            "description_en": "A sword etched with thunder runes; every cut carries lightning.",
+            "type": "Equipment",
+            "rarity": "Epic",
+            "equipment_slot": "Weapon",
+            "bonus_stats": {
+              "str": 10,
+              "agi": 5
+            },
+            "weight": 6
+          },
+          {
+            "id": "enhancement_stone_rare",
+            "name": "Đá Cường Hóa (Hiếm)",
+            "name_en": "Enhancement Stone (Rare)",
+            "description": "Đá cường hóa hiếm, dùng để nâng cấp trang bị +7 đến +9.",
+            "description_en": "Rare enhancement stone, used to upgrade equipment from +7 to +9.",
+            "type": "Material",
+            "rarity": "Rare",
+            "weight": 15
+          },
+          {
+            "id": "enhancement_stone_epic",
+            "name": "Đá Cường Hóa (Sử Thi)",
+            "name_en": "Enhancement Stone (Epic)",
+            "description": "Đá cường hóa cực phẩm, dùng để nâng cấp trang bị lên +10.",
+            "description_en": "Epic enhancement stone, used to upgrade equipment to +10.",
+            "type": "Material",
+            "rarity": "Epic",
+            "weight": 5
+          }
+        ]
+      },
+      {
+        "id": "vong_linh_spirit",
+        "tier": 5,
+        "silverRange": [
+          400,
+          1000
+        ],
+        "spiritStoneChance": 0.9,
+        "spiritStoneRange": [
+          15,
+          40
+        ],
+        "entries": [
+          {
+            "id": "soul_jade",
+            "name": "Ngọc Hồn",
+            "name_en": "Soul Jade",
+            "description": "Ngọc ngưng tụ hồn lực thượng cổ — luyện hóa tăng tu vi lớn.",
+            "description_en": "Jade dense with ancient soul force — refine it for major cultivation.",
+            "type": "Material",
+            "rarity": "Epic",
+            "effects": {
+              "cultivation_exp": 300
+            },
+            "weight": 20
+          },
+          {
+            "id": "am_tinh",
+            "name": "Âm Tinh",
+            "name_en": "Yin Essence",
+            "description": "Tinh hoa âm khí nơi sông hồn, hấp thụ hồi linh lực lớn.",
+            "description_en": "Yin essence from the soul river; absorb for a large Qi restore.",
+            "type": "Material",
+            "rarity": "Rare",
+            "effects": {
+              "qi_restore": 100
+            },
+            "weight": 26
+          },
+          {
+            "id": "purple_soul_pill",
+            "name": "Tử Hồn Đan",
+            "name_en": "Purple Soul Pill",
+            "description": "Đan dược truyền thuyết tôi luyện thần hồn, tăng tu vi và trí tuệ.",
+            "description_en": "A legendary pill that tempers the soul, granting cultivation and insight.",
+            "type": "Medicine",
+            "rarity": "Legendary",
+            "effects": {
+              "cultivation_exp": 800,
+              "permanent_int": 1
+            },
+            "weight": 6
+          },
+          {
+            "id": "soul_phantom_pendant",
+            "name": "Hồn Phách Bội",
+            "name_en": "Soul Phantom Pendant",
+            "description": "Ngọc bội hộ hồn, khai mở linh giác và vận may.",
+            "description_en": "A soul-warding pendant that opens perception and fortune.",
+            "type": "Equipment",
+            "rarity": "Epic",
+            "equipment_slot": "Accessory",
+            "bonus_stats": {
+              "perception": 6,
+              "luck": 2
+            },
+            "weight": 8
+          },
+          {
+            "id": "enhancement_stone_rare",
+            "name": "Đá Cường Hóa (Hiếm)",
+            "name_en": "Enhancement Stone (Rare)",
+            "description": "Đá cường hóa hiếm, dùng để nâng cấp trang bị +7 đến +9.",
+            "description_en": "Rare enhancement stone, used to upgrade equipment from +7 to +9.",
+            "type": "Material",
+            "rarity": "Rare",
+            "weight": 15
+          },
+          {
+            "id": "enhancement_stone_epic",
+            "name": "Đá Cường Hóa (Sử Thi)",
+            "name_en": "Enhancement Stone (Epic)",
+            "description": "Đá cường hóa cực phẩm, dùng để nâng cấp trang bị lên +10.",
+            "description_en": "Epic enhancement stone, used to upgrade equipment to +10.",
+            "type": "Material",
+            "rarity": "Epic",
+            "weight": 5
+          },
+          {
+            "id": "storage_ring_epic",
+            "name": "Trữ Vật Giới (Sử Thi)",
+            "name_en": "Epic Storage Ring",
+            "description": "Nhẫn trữ vật sử thi, có thể chứa thêm 50 vật phẩm.",
+            "description_en": "Epic storage ring that can hold 50 additional items.",
+            "type": "Accessory",
+            "rarity": "Epic",
+            "equipment_slot": "Accessory",
+            "effects": {
+              "storage_capacity": 50
+            },
+            "weight": 2
+          }
+        ]
+      }
+    ],
+    "reward_items": {
+      "spirit_root_pill": {
+        "id": "spirit_root_pill",
+        "name": "Linh Căn Đan",
+        "name_en": "Spirit Root Pill",
+        "description": "Đan dược quý từ bí cảnh linh thảo, củng cố linh căn tu luyện.",
+        "description_en": "A rare pill from the spirit herb realm, strengthening the cultivator's spirit root.",
+        "type": "Medicine",
+        "rarity": "Rare",
+        "effects": {
+          "cultivation_exp": 150,
+          "permanent_perception": 1
+        }
+      },
+      "rare_spirit_herb": {
+        "id": "rare_spirit_herb",
+        "name": "Linh Thảo Quý",
+        "name_en": "Rare Spirit Herb",
+        "description": "Một loại thảo dược linh khí dồi dào, dùng được để trị thương.",
+        "description_en": "A potent spirit herb brimming with energy; usable to heal wounds.",
+        "type": "Material",
+        "rarity": "Uncommon",
+        "effects": {
+          "hp_restore": 60
+        }
+      },
+      "phoenix_feather": {
+        "id": "phoenix_feather",
+        "name": "Lông Phượng Hoàng",
+        "name_en": "Phoenix Feather",
+        "description": "Vũ mao phượng hoàng chứa đựng hỏa nguyên tinh thuần khiết — luyện hóa tăng tu vi.",
+        "description_en": "A phoenix feather of pure fire essence — refine it for cultivation.",
+        "type": "Material",
+        "rarity": "Rare",
+        "effects": {
+          "cultivation_exp": 120
+        }
+      },
+      "fire_essence": {
+        "id": "fire_essence",
+        "name": "Hỏa Tinh Hoa",
+        "name_en": "Fire Essence",
+        "description": "Tinh hoa hỏa nguyên được chưng cất từ lòng núi lửa, hấp thụ hồi linh lực.",
+        "description_en": "Concentrated fire essence from the volcano's depths; absorb to restore Qi.",
+        "type": "Material",
+        "rarity": "Uncommon",
+        "effects": {
+          "qi_restore": 60
+        }
+      },
+      "phoenix_blood_pill": {
+        "id": "phoenix_blood_pill",
+        "name": "Phượng Huyết Đan",
+        "name_en": "Phoenix Blood Pill",
+        "description": "Đan dược tối thượng luyện từ huyết phượng hoàng, khai mở tiềm năng hỏa linh căn.",
+        "description_en": "Supreme pill refined from phoenix blood, unlocking fire spirit root potential.",
+        "type": "Medicine",
+        "rarity": "Epic",
+        "effects": {
+          "cultivation_exp": 500,
+          "permanent_qi": 30
+        }
+      },
+      "dragon_scale": {
+        "id": "dragon_scale",
+        "name": "Vảy Rồng",
+        "name_en": "Dragon Scale",
+        "description": "Vảy rồng chứa sức mạnh long tộc — luyện hóa cường thân, tăng sinh lực tối đa.",
+        "description_en": "A dragon scale of draconic power — refine it to toughen the body.",
+        "type": "Material",
+        "rarity": "Rare",
+        "effects": {
+          "permanent_hp": 20
+        }
+      },
+      "water_essence": {
+        "id": "water_essence",
+        "name": "Thủy Tinh Hoa",
+        "name_en": "Water Essence",
+        "description": "Tinh hoa thủy nguyên từ đáy Long Cung, hấp thụ hồi linh lực.",
+        "description_en": "Water essence from the Dragon Palace depths; absorb to restore Qi.",
+        "type": "Material",
+        "rarity": "Uncommon",
+        "effects": {
+          "qi_restore": 60
+        }
+      },
+      "dragon_bloodline_pill": {
+        "id": "dragon_bloodline_pill",
+        "name": "Long Huyết Thống Đan",
+        "name_en": "Dragon Bloodline Pill",
+        "description": "Đan dược hiếm có dùng huyết long làm chủ liệu, thức tỉnh long huyết trong cơ thể.",
+        "description_en": "A rare pill using dragon blood as primary material, awakening dragon blood within the body.",
+        "type": "Medicine",
+        "rarity": "Epic",
+        "effects": {
+          "cultivation_exp": 600,
+          "permanent_str": 3
+        }
+      },
+      "tribulation_crystal": {
+        "id": "tribulation_crystal",
+        "name": "Thiên Kiếp Tinh Thể",
+        "name_en": "Tribulation Crystal",
+        "description": "Tinh thể ngưng tụ từ sấm sét thiên kiếp — luyện hóa khai sáng thần trí.",
+        "description_en": "A crystal condensed from tribulation lightning — refine it to sharpen the mind.",
+        "type": "Material",
+        "rarity": "Epic",
+        "effects": {
+          "permanent_int": 2
+        }
+      },
+      "lightning_essence": {
+        "id": "lightning_essence",
+        "name": "Lôi Tinh Hoa",
+        "name_en": "Lightning Essence",
+        "description": "Tinh hoa lôi nguyên từ đại trận thử thách — luyện hóa tăng tu vi.",
+        "description_en": "Lightning essence from the trial formation — refine it for cultivation.",
+        "type": "Material",
+        "rarity": "Rare",
+        "effects": {
+          "cultivation_exp": 150
+        }
+      },
+      "tribulation_resistance_pill": {
+        "id": "tribulation_resistance_pill",
+        "name": "Thiên Kiếp Kháng Đan",
+        "name_en": "Tribulation Resistance Pill",
+        "description": "Đan dược kỳ diệu giúp thân thể kháng lôi kiếp, tăng cơ hội vượt thiên kiếp thành công.",
+        "description_en": "A wondrous pill that helps the body resist heavenly tribulation, increasing success chance.",
+        "type": "Medicine",
+        "rarity": "Legendary",
+        "effects": {
+          "cultivation_exp": 1000,
+          "permanent_hp": 40
+        }
+      },
+      "void_crystal": {
+        "id": "void_crystal",
+        "name": "Hư Không Thạch",
+        "name_en": "Void Crystal",
+        "description": "Tinh thể hư không — luyện hóa tăng tu vi lớn và khai mở vận may.",
+        "description_en": "A void crystal — refine it for major cultivation and a touch of fortune.",
+        "type": "Material",
+        "rarity": "Legendary",
+        "effects": {
+          "cultivation_exp": 250,
+          "permanent_luck": 1
+        }
+      },
+      "void_essence": {
+        "id": "void_essence",
+        "name": "Hư Không Tinh Hoa",
+        "name_en": "Void Essence",
+        "description": "Tinh hoa hư không cực hiếm — luyện hóa tăng tu vi.",
+        "description_en": "Extremely rare void essence — refine it for cultivation.",
+        "type": "Material",
+        "rarity": "Epic",
+        "effects": {
+          "cultivation_exp": 200
+        }
+      },
+      "void_emperor_ring": {
+        "id": "void_emperor_ring",
+        "name": "Hư Không Hoàng Giới",
+        "name_en": "Void Emperor Ring",
+        "description": "Chiếc nhẫn truyền thuyết của Hoàng Đế Hư Không, chứa đựng sức mạnh kiểm soát không gian.",
+        "description_en": "The legendary ring of the Void Emperor, containing the power to control space.",
+        "type": "Accessory",
+        "rarity": "Legendary",
+        "equipment_slot": "Accessory",
+        "bonus_stats": {
+          "int": 20,
+          "qi": 100,
+          "luck": 5
+        }
+      }
+    },
+    "aliases": {
+      "common_loot": "common_herbs",
+      "rare_loot": "cave_treasure",
+      "boss_loot": "dungeon_boss",
+      "dungeon_common_loot": "cave_treasure",
+      "village_common": "thanh_van_wilds",
+      "forest_tier1": "thanh_van_wilds",
+      "herb_garden_tier1": "common_herbs",
+      "dungeon_tier1": "cave_treasure",
+      "city_fire": "hoa_son_volcanic",
+      "lava_tier2": "hoa_son_volcanic",
+      "phoenix_tier2": "hoa_son_volcanic",
+      "ash_tier2": "hoa_son_volcanic",
+      "harbor_tier3": "huyen_thuy_depths",
+      "coral_tier3": "huyen_thuy_depths",
+      "island_tier3": "huyen_thuy_depths",
+      "abyssal_tier3": "huyen_thuy_depths",
+      "citadel_tier4": "tram_loi_storm",
+      "storm_tier4": "tram_loi_storm",
+      "lightning_tier4": "tram_loi_storm",
+      "observatory_tier4": "tram_loi_storm",
+      "spirit_city_tier5": "vong_linh_spirit",
+      "tomb_tier5": "vong_linh_spirit",
+      "soul_river_tier5": "vong_linh_spirit",
+      "void_tier5": "vong_linh_spirit"
+    }
+  }
+}

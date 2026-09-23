@@ -1,0 +1,36 @@
+{
+  "$source": "hand-authored — NPC name pools and personality traits (design §7.8).",
+  "data": {
+    "surnames": [
+      "Lý", "Trần", "Lâm", "Tô", "Vương", "Bạch", "Diệp", "Chu", "Hoàng", "Liễu", "Thẩm", "Tạ", "Đường", "Phương",
+      "Mạc", "Tần", "Hạ", "Mộ Dung", "Âu Dương", "Thượng Quan", "Công Tôn", "Lục", "Ninh", "Cố", "Giang", "Tiết"
+    ],
+    "given_male": [
+      "Thanh Phong", "Mộ Bạch", "Thiên Hành", "Minh Triết", "Lạc Trần", "Kinh Hồng", "Vân Khởi", "Trường Không", "Tử Khâm",
+      "Hạo Nhiên", "Bác Văn", "Cảnh Thần", "Dật Phàm", "Hoài Viễn", "Trúc Quân", "Tùng Hạc", "Ngọc Đường", "Vô Trần",
+      "Thừa Vũ", "Diệu Thiên", "Khải Nguyên", "Tĩnh Xuyên", "Mặc Uyên", "Phong Lăng"
+    ],
+    "given_female": [
+      "Tử Yên", "Nguyệt Như", "Tiểu Uyển", "Vân Hi", "Khinh Vũ", "Hàm Chi", "Bích Lạc", "Thanh Y", "Tuyết Vân", "Mộng Điệp",
+      "Nhược Lan", "Linh Lung", "Thải Vi", "Du Nhiên", "Ngưng Sương", "Hồng Tụ", "Tịch Nhan", "Vũ Lạc", "Thu Thủy",
+      "Hiểu Nguyệt", "Uyển Ninh", "Tố Tâm", "Doanh Doanh", "Ly Âm"
+    ],
+    "denylist": [
+      "Hàn Lập", "Tiêu Viêm", "Lâm Động", "Diệp Phàm", "Mạnh Hạo", "Bạch Tiểu Thuần", "Vương Lâm", "Tần Vũ", "Đường Tam",
+      "Thạch Hạo", "Tô Minh", "Phương Nguyên", "Lâm Phong", "Trương Tiểu Phàm", "Lục Tuyết Kỳ", "Bích Dao", "Diệp Thần",
+      "Lâm Minh", "Vương Lâm", "Lý Mộ Bạch", "Tô Tiểu Uyển", "Mộ Dung Phục"
+    ],
+    "traits": [
+      { "id": "proud", "name": "Kiêu ngạo", "name_en": "Proud", "aggression": 0.25, "sociability": -0.1 },
+      { "id": "chivalrous", "name": "Trượng nghĩa", "name_en": "Chivalrous", "aggression": 0.05, "sociability": 0.25 },
+      { "id": "greedy", "name": "Tham lam", "name_en": "Greedy", "aggression": 0.15, "greed": 0.4 },
+      { "id": "timid", "name": "Nhát gan", "name_en": "Timid", "aggression": -0.2, "sociability": 0.05 },
+      { "id": "belligerent", "name": "Hiếu chiến", "name_en": "Belligerent", "aggression": 0.4, "sociability": -0.05 },
+      { "id": "loner", "name": "Cô độc", "name_en": "Loner", "sociability": -0.25 },
+      { "id": "loyal", "name": "Trung thành", "name_en": "Loyal", "sociability": 0.2 },
+      { "id": "scheming", "name": "Âm hiểm", "name_en": "Scheming", "aggression": 0.2, "sociability": 0.05 },
+      { "id": "kind", "name": "Nhân hậu", "name_en": "Kind", "aggression": -0.15, "sociability": 0.3 },
+      { "id": "chatty", "name": "Hay chuyện", "name_en": "Chatty", "sociability": 0.3 }
+    ]
+  }
+}

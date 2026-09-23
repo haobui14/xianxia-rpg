@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Engine-free game rules. No Godot references: this library must build on its own,
+    run under xUnit, and stay portable to Unity 6 (netstandard2.1, C# 9).
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>TuTien.Core</RootNamespace>
+    <AssemblyName>TuTien.Core</AssemblyName>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+</Project>

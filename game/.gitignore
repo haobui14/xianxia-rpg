@@ -1,0 +1,14 @@
+# .NET build output
+bin/
+obj/
+*.user
+
+# Godot editor cache and imports (regenerated on open)
+godot/.godot/
+godot/export/
+*.translation
+
+# OS / IDE
+.DS_Store
+.vs/
+.idea/

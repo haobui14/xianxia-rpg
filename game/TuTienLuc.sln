@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "core", "core", "{3BB0F1BB-CF4C-465F-B75B-240714C828DB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TuTien.Core", "core\TuTien.Core\TuTien.Core.csproj", "{50401D48-2BBA-4D0C-96C8-84D2F580F347}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TuTien.Core.Tests", "core\TuTien.Core.Tests\TuTien.Core.Tests.csproj", "{AE3DE551-5278-4B4C-BA85-EDC9FF294C96}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{50401D48-2BBA-4D0C-96C8-84D2F580F347}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{50401D48-2BBA-4D0C-96C8-84D2F580F347}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{50401D48-2BBA-4D0C-96C8-84D2F580F347}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{50401D48-2BBA-4D0C-96C8-84D2F580F347}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE3DE551-5278-4B4C-BA85-EDC9FF294C96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE3DE551-5278-4B4C-BA85-EDC9FF294C96}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE3DE551-5278-4B4C-BA85-EDC9FF294C96}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE3DE551-5278-4B4C-BA85-EDC9FF294C96}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{50401D48-2BBA-4D0C-96C8-84D2F580F347} = {3BB0F1BB-CF4C-465F-B75B-240714C828DB}
+		{AE3DE551-5278-4B4C-BA85-EDC9FF294C96} = {3BB0F1BB-CF4C-465F-B75B-240714C828DB}
+	EndGlobalSection
+EndGlobal
