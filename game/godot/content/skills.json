@@ -32,7 +32,7 @@
       "id": "hoa_cau_thuat", "name": "Hỏa Cầu Thuật", "name_en": "Fireball", "glyph": "火", "element": "Hỏa",
       "description": "Cầu lửa nổ tung khi trúng đích.", "description_en": "A ball of fire that bursts on impact.",
       "type": "attack", "damage": "spirit", "damage_multiplier": 1.8, "qi_cost": 14, "cooldown": 1.6,
-      "cast": { "shape": "projectile", "range": 440, "radius": 12, "speed": 470, "duration": 60, "windup": 0.12 },
+      "cast": { "shape": "projectile", "range": 440, "radius": 12, "speed": 470, "burst": 60, "windup": 0.12 },
       "unlock_realm": "LuyệnKhí", "unlock_stage": 1
     },
     {

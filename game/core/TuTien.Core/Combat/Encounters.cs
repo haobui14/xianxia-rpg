@@ -47,6 +47,8 @@ namespace TuTien.Core.Combat
         public int QiLeft { get; set; }
         public List<string> Defeated { get; set; } = new List<string>();
         public Dictionary<string, int> SkillUses { get; set; } = new Dictionary<string, int>();
+        /// <summary>Pills eaten mid-fight (item id → count); removed from the bag when the fight resolves.</summary>
+        public Dictionary<string, int> ItemsUsed { get; set; } = new Dictionary<string, int>();
         public double Seconds { get; set; }
     }
 

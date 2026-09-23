@@ -259,6 +259,10 @@ namespace TuTien.Core
 
         private int VeinBonusHere() => PoiHere() is { Kind: "spirit_vein" } vein ? vein.QiBonus : 0;
 
+        /// <summary>What one month would yield here, without changing anything (for the seclusion screen).</summary>
+        public CultivationBreakdown PreviewMonth(bool seclusion, int extraQiDensity = 0) =>
+            Cultivation.MonthlyGain(State, Content, (ZoneHere?.CultivationBonus ?? 0) + extraQiDensity + VeinBonusHere(), seclusion);
+
         public MonthReport EndMonth()
         {
             var report = WorldTick.EndMonth(State, Content, Map, seclusion: false, VeinBonusHere());
@@ -376,6 +380,11 @@ namespace TuTien.Core
             Player.Hp = Math.Max(0, Math.Min(Player.HpMax, outcome.HpLeft));
             Player.Qi = Math.Max(0, Math.Min(Player.QiMax, outcome.QiLeft));
             Player.Stamina = Player.StaminaMax;
+            foreach (var used in outcome.ItemsUsed)
+            {
+                var n = Math.Min(used.Value, Inventory.Count(Player, used.Key));
+                if (n > 0) Inventory.Remove(Player, used.Key, n);
+            }
             foreach (var use in outcome.SkillUses)
                 result.Events.AddRange(Skills.GrantUseExp(State, Content, use.Key, use.Value, rng));
 
@@ -480,6 +489,7 @@ namespace TuTien.Core
                 Player.X = town.X;
                 Player.Y = town.Y;
             }
+            if (enc.Source == "dungeon") State.World.Run = null; // carried out of the secret realm
             result.MonthsLost = months;
             result.Events.Add(GameEvent.Warn("defeated",
                 $"Ngươi gục ngã, mất {lost} bạc. Người qua đường đưa ngươi về thôn; {months} tháng sau mới tỉnh lại.",
@@ -569,6 +579,26 @@ namespace TuTien.Core
         }
 
         public List<GameEvent> UseItem(string itemId) => Inventory.Use(State, Content, itemId);
+
+        /// <summary>Put a known art into one of the four spirit-art slots (empty string clears it).</summary>
+        public bool SetSkillSlot(int slot, string skillId)
+        {
+            while (Player.SkillSlots.Count < 4) Player.SkillSlots.Add("");
+            if (slot < 0 || slot >= Player.SkillSlots.Count) return false;
+            if (skillId.Length > 0 && !Skills.Knows(Player, skillId)) return false;
+            if (skillId.Length > 0)
+            {
+                var other = Player.SkillSlots.IndexOf(skillId);
+                if (other >= 0) Player.SkillSlots[other] = Player.SkillSlots[slot]; // swap
+            }
+            Player.SkillSlots[slot] = skillId;
+            return true;
+        }
+
+        /// <summary>Kiêm tu: how much of each month's exp goes to Qi (the rest tempers the body).</summary>
+        public void SetQiShare(int percent) => Player.QiShare = Math.Max(0, Math.Min(100, percent));
+
+        public SectDef? SectFor(PoiDef poi) => poi.Ref != null && Content.Sects.TryGetValue(poi.Ref, out var s) ? s : null;
 
         public List<GameEvent> Equip(string itemId)
         {

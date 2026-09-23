@@ -230,6 +230,18 @@ public class EngineTests
     }
 
     [Fact]
+    public void Losing_inside_a_secret_realm_ends_the_run()
+    {
+        var e = TestContent.NewEngine();
+        e.Player.Silver = 200;
+        e.EnterRealm("spirit_herb_realm");
+        var enc = e.StartFloorFight()!;
+        e.ResolveCombat(new CombatOutcome { EncounterId = enc.Id, Victory = false, HpLeft = 0 });
+        Assert.Null(e.State.World.Run);
+        Assert.NotEmpty(e.Player.Injuries);
+    }
+
+    [Fact]
     public void First_breakthrough_unlocks_the_spirit_roots_art()
     {
         var e = GameEngine.NewGame(C, 3, "Hỏa Nhi", 17, TestContent.Root(RootGrade.Kha, Element.Hoa));
@@ -289,6 +301,45 @@ public class EngineTests
         Assert.Contains("Lâm Vân", json);
         var loaded = GameEngine.Load(C, json);
         Assert.Equal(json, loaded.Save());
+    }
+
+    [Fact]
+    public void Pills_eaten_in_a_fight_leave_the_bag_when_it_resolves()
+    {
+        var e = TestContent.NewEngine();
+        var enc = e.StartAdventureFight("forest_wolf", "verdant_forest")!;
+        var outcome = Win(e, enc);
+        outcome.ItemsUsed["hoi_huyet_tan"] = 5; // more than we carry: clamps to what exists
+        e.ResolveCombat(outcome);
+        Assert.Equal(0, Inventory.Count(e.Player, "hoi_huyet_tan"));
+    }
+
+    [Fact]
+    public void Skill_slots_only_take_known_arts_and_swap()
+    {
+        var e = GameEngine.NewGame(C, 3, "Hỏa Nhi", 17, TestContent.Root(RootGrade.Kha, Element.Hoa));
+        Assert.False(e.SetSkillSlot(1, "kim_kiem_khi"));
+        Skills.Learn(e.State, C, "hoa_cau_thuat");
+        Skills.Learn(e.State, C, "ho_the_cuong_khi");
+        Assert.Equal(new[] { "hoa_cau_thuat", "ho_the_cuong_khi", "", "" }, e.Player.SkillSlots);
+        Assert.True(e.SetSkillSlot(1, "hoa_cau_thuat"));
+        Assert.Equal(new[] { "ho_the_cuong_khi", "hoa_cau_thuat", "", "" }, e.Player.SkillSlots);
+        Assert.True(e.SetSkillSlot(0, ""));
+        Assert.Equal("", e.Player.SkillSlots[0]);
+    }
+
+    [Fact]
+    public void Seclusion_preview_matches_the_month_it_predicts()
+    {
+        var e = TestContent.NewEngine(path: CultivationPath.Kiem);
+        e.SetQiShare(140);
+        Assert.Equal(100, e.Player.QiShare);
+        e.SetQiShare(60);
+        var preview = e.PreviewMonth(seclusion: true, extraQiDensity: 10);
+        var report = e.Seclude(1, 10);
+        Assert.Equal(preview.Total, report.TotalExp);
+        Assert.Equal(preview.Total * 60 / 100, preview.ToQi);
+        Assert.True(preview.ActivityMultiplier > 1);
     }
 
     [Fact]

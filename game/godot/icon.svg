@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect width="128" height="128" rx="10" fill="#efe5cd"/>
+  <rect x="24" y="24" width="80" height="80" rx="4" fill="#9b2a26"/>
+  <rect x="30" y="30" width="68" height="68" rx="2" fill="none" stroke="#fbe9b8" stroke-width="2"/>
+  <text x="64" y="84" text-anchor="middle" font-family="serif" font-size="52" font-weight="600" fill="#fbe9b8">仙</text>
+</svg>

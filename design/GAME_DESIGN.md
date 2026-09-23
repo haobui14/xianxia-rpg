@@ -506,7 +506,7 @@ xianxia-rpg/
 - **Systems:** Calendar, Cultivation, Breakthrough, Elements, Karma, CombatRules, Loot, Map (terrain costs, A*, footwork, sense radius), WorldTick (§7.1 order), NpcSim, SectSim, Events (port of `event-engine.ts`), Market.
 - **Commands in, domain events out:**
   - Every player intent is a command: `MoveTo`, `Interact`, `EndMonth`, `StartSeclusion`, `ChooseEventOption`, `ResolveCombat`, `Buy/Sell`, `AttemptBreakthrough`, …
-  - `Engine.Apply(cmd)` returns `DomainEvent[]`.
+  - `Engine.Apply(cmd)` returns `DomainEvent[]`. (M0 exposes these as `GameEngine` methods that return `GameEvent` lists; a serializable command log comes with replays.)
   - The UI animates those events, the storyteller summarizes them, telemetry counts them, and tests assert on them.
 - **Real-time combat** runs in Godot. The core supplies `CombatRules` (damage, elements, reactions, suppression) and `EncounterFactory` (rosters from the catalog, scaling, loot), and receives the outcome through `ResolveCombat`. It's a single-player PC game, so we don't need server authority over fights.
 
@@ -520,6 +520,7 @@ xianxia-rpg/
   - `WorldMap`: `TileMapLayer`s for terrain, zones and fog, POI nodes, the player token, a path preview, and a camera.
   - `Arena`: `CharacterBody2D` actors, `Area2D` hit/hurt boxes, pooled projectiles, telegraph shapes, damage numbers.
   - UI panels: Town, Sect, Event, Month Summary, Character, Inventory, Journal, Relations.
+- **Greybox (now):** the map and the arena draw immediate-mode (`_Draw`) straight from core state, and arena actors are plain C# objects. The `TileMapLayer`/`CharacterBody2D` scenes above arrive with real art.
 - **Rendering:** the Compatibility or Forward+ renderer. Ink effects are `CanvasItem` shaders: paper grain, ink-bleed edges, brush-stroke slashes.
 - **Text:** `RichTextLabel` for prose. Fonts are bundled, with a Noto Serif SC fallback for Han glyphs.
 
@@ -574,8 +575,8 @@ Port each rule module **with tests that pin the TypeScript behavior** (golden va
 
 | Milestone | Scope | Exit criteria |
 |---|---|---|
-| **M0 — Foundations** *(started in this branch)* | Monorepo scaffold; core library (RNG, content, calendar, cultivation, elements, karma, map & footwork, month tick, NPC sim v0, combat rules, loot, events); content export; a playable greybox slice | `dotnet test` green; Godot headless smoke passes |
-| **M1 — Vertical slice: Thanh Vân** (4–6 wks) | Hand-built Thanh Vân map with 4 zones; village + Thanh Vân Kiếm Phái gate + Linh Thảo Bí Cảnh (3 floors); 6 enemies across 4 archetypes; full kit (martial art, 3 spirit arts, dash, ultimate); element marks and reactions; month tick with ~30 NPCs + rumors; Bế quan; *Dẫn khí nhập thể* breakthrough; saves; settings | A 60-minute playtest is fun without the AI; 60 fps on an integrated GPU |
+| **M0 — Foundations** *(done in this branch)* | Monorepo scaffold; core library (RNG, content, calendar, cultivation, elements, karma, map & footwork, month tick, NPC sim v0, combat rules, loot, events); content export; a playable greybox slice | `dotnet test` green; Godot headless smoke passes |
+| **M1 — Vertical slice: Thanh Vân** (4–6 wks; *greybox playable in this branch, see `game/README.md`*) | Hand-built Thanh Vân map with 4 zones; village + Thanh Vân Kiếm Phái gate + Linh Thảo Bí Cảnh (3 floors); 6 enemies across 4 archetypes; full kit (martial art, 3 spirit arts, dash, ultimate); element marks and reactions; month tick with ~30 NPCs + rumors; Bế quan; *Dẫn khí nhập thể* breakthrough; saves; settings | A 60-minute playtest is fun without the AI; 60 fps on an integrated GPU |
 | **M2 — Living world & storyteller** (4–6 wks) | NPC interactions, relations and karma ledger; `/api/story` dialogue + chronicle + rumors; sect joining and missions on the map; bounty board; auction | NPC stories emerge unprompted in a 3-hour run |
 | **M3 — Cultivation depth** (4 wks) | Trúc Cơ set piece, body path trials and body arts, Tâm pháp passives, alchemy v1 | Qi, body and kiêm tu builds feel distinct |
 | **M4 — World breadth** (8–10 wks) | Regions 2–5, 71-enemy catalog, 5 secret realms, events for all pools, sect war territory, Kết Đan tribulation, Nguyên Anh heart demon, ascension ending | Mortal → ascension is completable |

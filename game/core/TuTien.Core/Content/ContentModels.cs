@@ -375,7 +375,10 @@ namespace TuTien.Core.Content
         public double Windup { get; set; } = 0.1;
         public int Count { get; set; } = 1;
         public double Spread { get; set; }
+        /// <summary>Seconds a buff lasts (self_buff).</summary>
         public double Duration { get; set; }
+        /// <summary>Radius of the explosion when a projectile lands (0 = single target).</summary>
+        public double Burst { get; set; }
     }
 
     public sealed class SkillEffectsDef
