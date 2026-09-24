@@ -66,7 +66,7 @@ public partial class EventPanel : InkPanel
         }
         Body.AddChild(UiKit.Spacer(8));
         if (E.ActiveEncounter is { } fight)
-            Buttons(UiKit.Danger(T("Nghênh chiến!", "Fight!"), () => Main.Instance.ShowArena(fight)));
+            Buttons(UiKit.Danger(T("Nghênh chiến!", "Fight!"), () => FightHere(fight)));
         else
             Buttons(UiKit.Button(T("Tiếp tục", "Continue"), Close, primary: true));
     }

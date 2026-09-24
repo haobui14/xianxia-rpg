@@ -1,0 +1,339 @@
+using Godot;
+using TuTien.Core.Content;
+using TuTien.Core.Rules;
+using TuTienLuc.Art;
+using TuTienLuc.Ui;
+
+namespace TuTienLuc.Field;
+
+/// <summary>
+/// Archetype brains (design §7.3), now on open ground with trees and walls. Every attack is announced by
+/// a telegraph the player can read and dodge: chargers line up a rush, swarms nip and circle, ranged
+/// foes keep their distance and aim, tanks slam around themselves, casters kite and cast, bosses mix all
+/// of it and enrage at half health.
+/// </summary>
+public static class EnemyAi
+{
+    private static string T(string vi, string en) => Game.Instance.T(vi, en);
+
+    /// <summary>For ranged foes without an authored art.</summary>
+    private static readonly SkillDef Bolt = new()
+    {
+        Id = "yeu_khi", Name = "Yêu Khí", NameEn = "Demonic Qi", Glyph = "妖", Damage = "spirit", DamageMultiplier = 1.0, Cooldown = 2.2,
+        Cast = new CastDef { Shape = "projectile", Range = 420, Radius = 10, Speed = 380, Windup = 0.45 },
+    };
+
+    public static void Update(Battle b, Fighter f, float dt)
+    {
+        if (!f.Alive) return;
+        b.TickStatus(f, dt);
+        if (!f.Active) return;
+
+        f.AttackCd -= dt;
+        f.SkillCd -= dt;
+        f.MeleeCd -= dt;
+        f.StateTime += dt;
+        if (f.Stun > 0)
+        {
+            if (f.State != "approach")
+            {
+                f.State = "recover";
+                f.StateTime = 0;
+            }
+            return;
+        }
+
+        var p = b.Player;
+        var to = p.Pos - f.Pos;
+        var dist = to.Length();
+        var dir = dist > 0.01f ? to / dist : Vector2.Left;
+        if (f.State is "approach" or "recover") f.Face(dir);
+
+        if (f.Archetype == "boss" && !f.Enraged && f.Hp < f.HpMax * 0.5f)
+        {
+            f.Enraged = true;
+            b.F.Fx.Say(f.Pos + new Vector2(0, -Figures.HeightOf(f.Kind) * f.Scale - 36), T("Cuồng nộ!", "Enraged!"), Ink.Cinnabar, 26, 1.4f);
+            b.F.Fx.Burst(f.Pos + new Vector2(0, -40), Ink.Cinnabar, 20, 240, ParticleKind.Ember, 3);
+            b.F.Shake(8);
+        }
+
+        if (f.State == "recover")
+        {
+            if (f.StateTime > 0.45f) f.State = "approach";
+        }
+        else
+        {
+            switch (f.Archetype)
+            {
+                case "swarm":
+                    Swarm(b, f, dir, dist, dt);
+                    break;
+                case "ranged":
+                    Ranged(b, f, dir, dist, dt);
+                    break;
+                case "tank":
+                    Tank(b, f, dir, dist, dt);
+                    break;
+                case "caster":
+                    Caster(b, f, dir, dist, dt);
+                    break;
+                case "boss":
+                    Boss(b, f, dir, dist, dt);
+                    break;
+                default:
+                    Charger(b, f, dir, dist, dt);
+                    break;
+            }
+        }
+        Separate(b, f);
+    }
+
+    private static float Reach(Battle b, Fighter f, float extra) => f.Radius + b.Player.Radius + extra;
+
+    private static void Move(Battle b, Fighter f, Vector2 dir, float factor, float dt)
+    {
+        if (f.Speed <= 0) return;
+        f.Pos = b.F.Walls.Move(f.Pos, f.Radius, dir * f.Speed * f.SpeedFactor * factor * dt);
+    }
+
+    private static Vector2 Tangent(Vector2 dir, float side) => new Vector2(-dir.Y, dir.X) * side;
+
+    // ---------------------------------------------------------------- archetypes
+
+    private static void Charger(Battle b, Fighter f, Vector2 dir, float dist, float dt)
+    {
+        switch (f.State)
+        {
+            case "approach":
+                Move(b, f, dir, 1, dt);
+                if (dist < Reach(b, f, 12) && f.MeleeCd <= 0)
+                {
+                    Melee(b, f, dir, 0.3f, 1.0f, 100, 24);
+                }
+                else if (dist is > 110 and < 270 && f.AttackCd <= 0)
+                {
+                    f.State = "windup";
+                    f.StateTime = 0;
+                    f.Dir = dir;
+                    f.Face(dir);
+                    b.AddTelegraph(new Telegraph
+                    {
+                        Shape = Telegraph.Shapes.Line, Pos = f.Pos, Dir = dir, Length = 300, Width = f.Radius * 2 + 8,
+                        Duration = f.Speed < 140 ? 0.7f : 0.55f, Owner = f,
+                        Fire = () =>
+                        {
+                            f.State = "charge";
+                            f.StateTime = 0;
+                        },
+                    });
+                }
+                break;
+            case "charge":
+            {
+                var before = f.Pos;
+                Move(b, f, f.Dir, 3.3f, dt);
+                if (GD.Randf() < 0.5f) b.F.Fx.Dust(f.Pos, 1);
+                var hitWall = f.Pos.DistanceTo(before) < f.Speed * 3.3f * dt * 0.5f;
+                if (f.Pos.DistanceTo(b.Player.Pos) < f.Radius + b.Player.Radius + 2)
+                {
+                    f.AttackAnim = 1;
+                    f.AttackDir = f.Dir;
+                    b.HitPlayer(f, 1.35f, DamageKind.Physical, null, null);
+                    Recover(f, 1.8f);
+                }
+                else if (f.StateTime > 0.42f || hitWall)
+                {
+                    if (hitWall) b.F.Shake(3);
+                    Recover(f, 1.8f);
+                }
+                break;
+            }
+        }
+    }
+
+    private static void Swarm(Battle b, Fighter f, Vector2 dir, float dist, float dt)
+    {
+        if (f.State != "approach") return;
+        Vector2 want;
+        if (dist > 130) want = dir + Tangent(dir, f.Strafe) * 0.35f;
+        else if (dist < 60) want = -dir * 0.6f + Tangent(dir, f.Strafe);
+        else want = Tangent(dir, f.Strafe) + dir * (f.MeleeCd <= 0 ? 1.1f : -0.2f);
+        Move(b, f, want.Normalized(), 1, dt);
+        if (b.Rng.Chance(dt * 0.6)) f.Strafe *= -1;
+        if (dist < Reach(b, f, 14) && f.MeleeCd <= 0) Melee(b, f, dir, 0.24f, 1.0f, 90, 20);
+    }
+
+    private static void Ranged(Battle b, Fighter f, Vector2 dir, float dist, float dt)
+    {
+        if (f.State != "approach") return;
+        var skill = f.Skill ?? Bolt;
+        if (f.Speed > 0)
+        {
+            var want = dist < 230 ? -dir : dist > 420 ? dir : Tangent(dir, f.Strafe) * 0.6f;
+            Move(b, f, want, 1, dt);
+            if (b.Rng.Chance(dt * 0.4)) f.Strafe *= -1;
+            if (dist < Reach(b, f, 10) && f.MeleeCd <= 0)
+            {
+                Melee(b, f, dir, 0.3f, 0.9f, 100, 20);
+                return;
+            }
+        }
+        if (f.SkillCd <= 0 && dist < skill.Cast.Range + 80) Cast(b, f, skill, dir);
+    }
+
+    private static void Tank(Battle b, Fighter f, Vector2 dir, float dist, float dt)
+    {
+        if (f.State != "approach") return;
+        if (dist > Reach(b, f, 4)) Move(b, f, dir, 1, dt);
+        if (dist < 135 && f.AttackCd <= 0) Slam(b, f, 118, 0.85f, 1.45f, 2.8f);
+        else if (dist < Reach(b, f, 14) && f.MeleeCd <= 0) Melee(b, f, dir, 0.4f, 1.1f, 110, 26);
+    }
+
+    private static void Caster(Battle b, Fighter f, Vector2 dir, float dist, float dt)
+    {
+        if (f.State != "approach") return;
+        var want = dist < 190 ? -dir + Tangent(dir, f.Strafe) * 0.5f : dist > 340 ? dir : Tangent(dir, f.Strafe);
+        Move(b, f, want.Normalized(), 1, dt);
+        if (b.Rng.Chance(dt * 0.5)) f.Strafe *= -1;
+        if (dist < Reach(b, f, 16) && f.MeleeCd <= 0) Melee(b, f, dir, 0.3f, 1.1f, 110, 30);
+        else if (f.SkillCd <= 0 && dist < 560) Cast(b, f, f.Skill ?? Bolt, dir);
+    }
+
+    private static void Boss(Battle b, Fighter f, Vector2 dir, float dist, float dt)
+    {
+        if (f.State != "approach") return;
+        var pace = f.Enraged ? 1.25f : 1f;
+        if (dist > Reach(b, f, 6)) Move(b, f, dir, pace, dt);
+        if (dist < 160 && f.AttackCd <= 0) Slam(b, f, 150, f.Enraged ? 0.7f : 0.9f, 1.5f, f.Enraged ? 2.2f : 3f);
+        else if (f.SkillCd <= 0 && f.Skill != null) Cast(b, f, f.Skill, dir);
+        else if (dist < Reach(b, f, 18) && f.MeleeCd <= 0) Melee(b, f, dir, 0.35f, 1.2f, 120, 34);
+    }
+
+    // ---------------------------------------------------------------- attacks
+
+    private static void Recover(Fighter f, float attackCd)
+    {
+        f.State = "recover";
+        f.StateTime = 0;
+        f.AttackCd = attackCd;
+    }
+
+    /// <summary>A telegraphed swipe in front of the enemy.</summary>
+    private static void Melee(Battle b, Fighter f, Vector2 dir, float windup, float mult, float arc, float extra)
+    {
+        f.State = "melee";
+        f.StateTime = 0;
+        f.MeleeCd = windup + (f.Enraged ? 0.6f : 0.9f);
+        var origin = f.Pos;
+        var reach = f.Radius + extra;
+        b.AddTelegraph(new Telegraph
+        {
+            Shape = Telegraph.Shapes.Arc, Pos = origin, Dir = dir, Radius = reach + b.Player.Radius, Arc = arc, Duration = windup, Owner = f,
+            Fire = () =>
+            {
+                f.AttackAnim = 1;
+                f.AttackDir = dir;
+                b.F.Fx.Slash(origin + new Vector2(0, -12), dir, arc, reach + b.Player.Radius, Ink.CinnabarDeep);
+                if (FieldMath.InArc(origin, dir, arc, reach, b.Player.Pos, b.Player.Radius))
+                    b.HitPlayer(f, mult, DamageKind.Physical, null, null);
+                f.State = "approach";
+            },
+        });
+    }
+
+    /// <summary>A ground slam around the enemy itself.</summary>
+    private static void Slam(Battle b, Fighter f, float radius, float windup, float mult, float cooldown)
+    {
+        f.State = "slam";
+        f.StateTime = 0;
+        f.CastAnim = 1;
+        f.CastColor = Ink.Ochre;
+        var origin = f.Pos;
+        b.AddTelegraph(new Telegraph
+        {
+            Shape = Telegraph.Shapes.Circle, Pos = origin, Radius = radius, Duration = windup, Owner = f,
+            Fire = () =>
+            {
+                f.AttackAnim = 1;
+                b.F.Fx.Ring(origin, radius, Ink.Ochre);
+                b.F.Fx.Dust(origin, 10);
+                b.F.Shake(7);
+                if (b.Player.Pos.DistanceTo(origin) <= radius + b.Player.Radius * 0.5f)
+                    b.HitPlayer(f, mult, DamageKind.Physical, null, null);
+                Recover(f, cooldown);
+            },
+        });
+    }
+
+    /// <summary>Cast an art: projectiles along an announced line, or circles on the ground.</summary>
+    private static void Cast(Battle b, Fighter f, SkillDef skill, Vector2 dir)
+    {
+        var c = skill.Cast;
+        f.SkillCd = (float)skill.Cooldown * (f.Enraged ? 0.7f : 1f) + (float)b.Rng.NextDouble() * 0.5f;
+        var windup = (float)System.Math.Max(0.25, c.Windup);
+        var color = skill.Element != null ? Ink.Element(skill.Element.Value) : Ink.Cinnabar;
+        f.CastAnim = 1;
+        f.CastColor = color;
+
+        if (c.Shape == "aoe_circle")
+        {
+            var count = System.Math.Max(1, c.Count) + (f.Enraged ? 2 : 0);
+            var radius = (float)c.Radius;
+            for (var i = 0; i < count; i++)
+            {
+                var pos = i == 0
+                    ? b.Player.Pos
+                    : b.Player.Pos + Vector2.Right.Rotated((float)b.Rng.NextDouble() * Mathf.Tau) * (70 + (float)b.Rng.NextDouble() * 110);
+                b.AddTelegraph(new Telegraph
+                {
+                    Shape = Telegraph.Shapes.Circle, Pos = pos, Radius = radius, Duration = windup + i * 0.12f, Owner = f,
+                    Fire = () =>
+                    {
+                        b.F.Fx.Ring(pos, radius, color);
+                        b.F.Fx.Leaves(pos, new Color("#5f9356"), 5);
+                        if (b.Player.Pos.DistanceTo(pos) > radius + b.Player.Radius * 0.4f) return;
+                        b.HitPlayer(f, (float)skill.DamageMultiplier, DamageKind.Spirit, skill.Element, skill);
+                        if (b.Player.Invuln <= 0) b.Status(b.Player, ref b.Player.Rooted, 0.8f, "縛");
+                    },
+                });
+            }
+            return;
+        }
+
+        f.State = "cast";
+        f.StateTime = 0;
+        f.Face(dir);
+        var origin = f.Pos;
+        b.AddTelegraph(new Telegraph
+        {
+            Shape = Telegraph.Shapes.Line, Pos = origin, Dir = dir, Length = Mathf.Min((float)c.Range, 520), Width = (float)c.Radius * 2 + 6,
+            Duration = windup, Owner = f,
+            Fire = () =>
+            {
+                var n = System.Math.Max(1, c.Count);
+                for (var i = 0; i < n; i++)
+                    b.EnemyShoot(f, skill, dir.Rotated(Mathf.DegToRad((float)c.Spread * (i - (n - 1) / 2f))));
+                f.State = "approach";
+            },
+        });
+    }
+
+    /// <summary>Bodies don't overlap each other or the player, and never end up inside a wall.</summary>
+    private static void Separate(Battle b, Fighter f)
+    {
+        foreach (var o in b.Enemies)
+        {
+            if (o == f || !o.Active || !o.InBattle) continue;
+            var d = f.Pos - o.Pos;
+            var min = f.Radius + o.Radius;
+            var len = d.Length();
+            if (len >= min || len < 0.01f) continue;
+            f.Pos += d / len * (min - len) * 0.5f;
+        }
+        var toPlayer = f.Pos - b.Player.Pos;
+        var reach = f.Radius + b.Player.Radius;
+        var l = toPlayer.Length();
+        if (l < reach && l > 0.01f && f.State != "charge") f.Pos += toPlayer / l * (reach - l);
+        f.Pos = b.F.Walls.Resolve(f.Pos, f.Radius);
+    }
+}

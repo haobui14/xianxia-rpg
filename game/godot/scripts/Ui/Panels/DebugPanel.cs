@@ -49,7 +49,7 @@ public partial class DebugPanel : InkPanel
             Add(T(vi, en), () =>
             {
                 var enc = E.StartAdventureFight(enemy, "verdant_forest");
-                if (enc != null) Main.Instance.ShowArena(enc);
+                if (enc != null) FightHere(enc);
             });
         }
     }

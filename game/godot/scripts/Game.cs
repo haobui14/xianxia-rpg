@@ -162,11 +162,6 @@ public partial class Game : Node
             if (!InputMap.HasAction(action)) InputMap.AddAction(action);
             foreach (var k in keys) InputMap.ActionAddEvent(action, new InputEventKey { PhysicalKeycode = k });
         }
-        void Mouse(string action, MouseButton button)
-        {
-            if (!InputMap.HasAction(action)) InputMap.AddAction(action);
-            InputMap.ActionAddEvent(action, new InputEventMouseButton { ButtonIndex = button });
-        }
         void Pad(string action, JoyButton button)
         {
             if (!InputMap.HasAction(action)) InputMap.AddAction(action);
@@ -191,12 +186,16 @@ public partial class Game : Node
         Pad("move_left", JoyButton.DpadLeft);
         Pad("move_right", JoyButton.DpadRight);
 
+        // Exploring and fighting share one field, so one button may mean different things in and out
+        // of a fight (Y talks to people, or looses the ultimate).
         Keys("interact", Key.E);
-        Pad("interact", JoyButton.A);
+        Pad("interact", JoyButton.Y);
         Keys("end_month", Key.N);
-        Pad("end_month", JoyButton.Y);
+        Pad("end_month", JoyButton.LeftStick);
         Keys("pulse", Key.Tab);
-        Pad("pulse", JoyButton.X);
+        Pad("pulse", JoyButton.RightStick);
+        Keys("open_map", Key.M);
+        Pad("open_map", JoyButton.Back);
         Keys("seclude", Key.B);
         Keys("open_character", Key.C);
         Keys("open_inventory", Key.I);
@@ -205,9 +204,9 @@ public partial class Game : Node
         Pad("pause", JoyButton.Start);
         Keys("debug", Key.F9);
 
-        Mouse("attack", MouseButton.Left);
+        // The mouse buttons are read from unhandled input by the field (so HUD clicks never swing),
+        // which is why "attack" and "skill_1" have only pad bindings here.
         Axis("attack", JoyAxis.TriggerRight, 1);
-        Mouse("skill_1", MouseButton.Right);
         Pad("skill_1", JoyButton.RightShoulder);
         Keys("skill_2", Key.Key1);
         Pad("skill_2", JoyButton.LeftShoulder);

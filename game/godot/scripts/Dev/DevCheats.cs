@@ -36,6 +36,17 @@ public static class DevCheats
         p.Footwork = p.FootworkMax;
     }
 
+    /// <summary>Stand on a tile without walking there (no footwork, no month). Reveals around it.</summary>
+    public static void Place(GameEngine e, int x, int y)
+    {
+        if (!e.Map.InBounds(x, y)) return;
+        e.Player.X = x;
+        e.Player.Y = y;
+        var fog = e.Fog();
+        fog.RevealCircle(x, y, e.SenseRadius);
+        fog.SaveTo(e.Player, e.Map);
+    }
+
     public static void RevealMap(GameEngine e)
     {
         var fog = e.Fog();

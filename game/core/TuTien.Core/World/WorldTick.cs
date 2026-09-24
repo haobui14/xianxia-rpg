@@ -29,7 +29,11 @@ namespace TuTien.Core.World
     /// </summary>
     public static class WorldTick
     {
-        public static int FootworkMax(PlayerState p) => 12 + p.Attrs.Agi / 3 + 2 * (int)p.Realm;
+        /// <summary>
+        /// Cước lực per month, roughly "days of travel": a plains tile costs 1, rough ground 2–3. Tuned for
+        /// the real-time map, where walking spends it and the month turns when it runs out.
+        /// </summary>
+        public static int FootworkMax(PlayerState p) => 24 + p.Attrs.Agi / 2 + 3 * (int)p.Realm;
 
         public static MonthReport EndMonth(GameState state, ContentDb content, MapGrid map, bool seclusion, int extraQiDensity)
         {

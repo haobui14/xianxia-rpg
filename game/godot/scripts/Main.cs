@@ -1,25 +1,27 @@
 using System;
 using System.Linq;
 using Godot;
-using TuTien.Core.State;
-using TuTienLuc.Arena;
+using TuTien.Core.Content;
 using TuTienLuc.Dev;
+using TuTienLuc.Field;
 using TuTienLuc.Ui;
-using TuTienLuc.World;
 
 namespace TuTienLuc;
 
 /// <summary>
-/// Screen manager: Title → World map ⇄ Arena. Command-line args (after "--"):
-/// <c>--smoke</c> runs the automated smoke test, <c>--shots DIR</c> saves screenshots during it.
+/// Screen manager: Title → the world (a top-down field) ⇄ a secret realm floor / the breakthrough
+/// trial. Fights have no screen of their own: they happen on whatever field you are standing on.
+/// Command-line args (after "--"): <c>--smoke</c> runs the automated smoke test, <c>--shots DIR</c> saves
+/// screenshots during it.
 /// </summary>
 public partial class Main : Node
 {
     public static Main Instance { get; private set; } = null!;
 
     private Node? _screen;
+    /// <summary>The field on screen (the world, a realm floor, the trial), if any.</summary>
+    public FieldScreen? Field => _screen as FieldScreen;
     public WorldScreen? World => _screen as WorldScreen;
-    public ArenaScreen? Arena => _screen as ArenaScreen;
 
     public override void _Ready()
     {
@@ -49,52 +51,45 @@ public partial class Main : Node
         {
             _screen.ProcessMode = ProcessModeEnum.Disabled;
             if (_screen is CanvasItem item) item.Visible = false;
+            HideLayers(_screen);
             _screen.QueueFree();
         }
         _screen = next;
         AddChild(next);
     }
 
+    /// <summary>CanvasLayers don't inherit visibility; hide the outgoing screen's HUD and panels at once.</summary>
+    private static void HideLayers(Node node)
+    {
+        foreach (var child in node.GetChildren())
+        {
+            if (child is CanvasLayer layer) layer.Visible = false;
+        }
+    }
+
     public void ShowTitle() => Swap(new TitleScreen());
 
-    public WorldScreen ShowWorld()
+    /// <summary>The region, with the player at their tile (or at <paramref name="spawn"/>, e.g. a cave mouth).</summary>
+    public WorldScreen ShowWorld(Vector2? spawn = null)
     {
-        var world = new WorldScreen();
+        var world = new WorldScreen(spawn);
         Swap(world);
         return world;
     }
 
-    /// <summary>
-    /// Play a fight, then hand the resolution back to a fresh world screen. <paramref name="thenOpen"/>
-    /// builds the panel to show after the result (e.g. the secret realm, to go on to the next floor).
-    /// </summary>
-    public ArenaScreen ShowArena(Encounter encounter, Func<InkPanel>? thenOpen = null)
+    /// <summary>The current floor of the secret realm run at <paramref name="poi"/>.</summary>
+    public RealmScreen ShowRealm(PoiDef poi)
     {
-        var arena = new ArenaScreen(encounter, ArenaMode.Battle);
-        arena.Finished += outcome =>
-        {
-            var resolution = Game.Instance.Engine!.ResolveCombat(outcome);
-            Game.Instance.SaveGame();
-            var world = ShowWorld();
-            world.AfterCombat(resolution, outcome, thenOpen);
-        };
-        Swap(arena);
-        return arena;
+        var realm = new RealmScreen(poi);
+        Swap(realm);
+        return realm;
     }
 
-    /// <summary>The breakthrough set piece (design §7.5), played in the arena layer.</summary>
-    public ArenaScreen ShowBreakthroughTrial()
+    /// <summary>The breakthrough set piece (design §7.5).</summary>
+    public TrialScreen ShowBreakthroughTrial()
     {
-        var arena = new ArenaScreen(null, ArenaMode.QiTrial);
-        arena.TrialFinished += performance =>
-        {
-            var events = Game.Instance.Engine!.CompleteBreakthrough(performance);
-            Game.Instance.SaveGame();
-            var world = ShowWorld();
-            Game.Instance.Notify(events);
-            world.ShowBreakthroughResult(events, performance);
-        };
-        Swap(arena);
-        return arena;
+        var trial = new TrialScreen();
+        Swap(trial);
+        return trial;
     }
 }

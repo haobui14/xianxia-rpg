@@ -92,17 +92,28 @@ public abstract partial class InkPanel : PanelContainer
 
     protected static string T(string vi, string en) => Game.Instance.T(vi, en);
     protected static TuTien.Core.GameEngine E => Game.Instance.Engine!;
-    protected static TuTienLuc.World.WorldScreen? World => Main.Instance.World;
+    /// <summary>The field this panel was opened over (the world, a realm floor).</summary>
+    protected static TuTienLuc.Field.FieldScreen? Field => Main.Instance.Field;
 
     /// <summary>Close this panel and open another in its place.</summary>
-    protected static void Open(InkPanel next) => World?.OpenPanel(next);
+    protected static void Open(InkPanel next) => Field?.OpenPanel(next);
+
+    /// <summary>Close this panel and fight <paramref name="encounter"/> right where the player stands.</summary>
+    protected void FightHere(TuTien.Core.State.Encounter encounter,
+        Action<TuTien.Core.Combat.CombatResolution, TuTien.Core.Combat.CombatOutcome>? after = null)
+    {
+        var field = Field;
+        Close();
+        if (field != null) field.Fight(encounter, after);
+        else E.AbandonEncounter();
+    }
 
     /// <summary>Show a command's events as toasts; they also refresh every open view.</summary>
     protected static void Say(System.Collections.Generic.IEnumerable<TuTien.Core.GameEvent> events) => Game.Instance.Notify(events);
 
     // ------------------------------------------------------------------ builders for Build()
 
-    protected int Tab { get; private set; }
+    protected int Tab { get; set; }
 
     /// <summary>A row of tab buttons; switching rebuilds the body.</summary>
     protected void Tabs(params string[] names)

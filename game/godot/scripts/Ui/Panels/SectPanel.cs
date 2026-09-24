@@ -62,7 +62,8 @@ public partial class SectPanel : InkPanel
             UiKit.Button(T("Tham gia khảo hạch", "Take the trial"), () =>
             {
                 var enc = E.StartSectTrial(sect.Id);
-                if (enc != null) Main.Instance.ShowArena(enc, () => new SectPanel(_poi));
+                var poi = _poi;
+                if (enc != null) FightHere(enc, (_, _) => Main.Instance.Field?.OpenPanel(new SectPanel(poi)));
             }, primary: true, enabled: allowed),
             UiKit.Button(T("Để sau", "Later"), Close));
     }

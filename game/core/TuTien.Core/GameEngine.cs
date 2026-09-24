@@ -38,6 +38,17 @@ namespace TuTien.Core
         public bool Ready { get; set; } = true;
     }
 
+    /// <summary>What crossing into a tile cost (real-time hosts, see <see cref="GameEngine.Travel"/>).</summary>
+    public sealed class TravelResult
+    {
+        public bool Moved { get; set; }
+        public int Cost { get; set; }
+        /// <summary>Set when the month's footwork ran out and the month turned before this step.</summary>
+        public MonthReport? Month { get; set; }
+        public string? Blocked { get; set; }
+        public string? BlockedEn { get; set; }
+    }
+
     public sealed class StepResult
     {
         public bool Moved { get; set; }
@@ -62,6 +73,9 @@ namespace TuTien.Core
 
         public PlayerState Player => State.Player;
         public Locale Locale => State.Locale;
+
+        /// <summary>Raised whenever a month ends through <see cref="EndMonth"/> (by the player or by travel).</summary>
+        public event Action<MonthReport>? MonthEnded;
 
         public GameEngine(ContentDb content, GameState state)
         {
@@ -243,6 +257,54 @@ namespace TuTien.Core
             return r;
         }
 
+        /// <summary>
+        /// Real-time movement (design §7.1–7.2, "time flows as you travel"): the host moves the body
+        /// freely and calls this each time it crosses into a neighbouring tile. The tile's terrain cost
+        /// is paid in footwork; when the month's footwork is spent, the month ends first and the walk
+        /// goes on. Beasts and people don't block here (the host handles bodies), and nothing costs
+        /// time during a fight.
+        /// </summary>
+        public TravelResult Travel(int x, int y)
+        {
+            var result = new TravelResult();
+            if (Player.Dead)
+                return Block(result, "Đạo đồ đã tận.", "Your path has ended.");
+            if (Math.Abs(x - Player.X) + Math.Abs(y - Player.Y) != 1)
+                return Block(result, "Chỉ có thể đi từng bước.", "You can only move one tile at a time.");
+            var cost = Map.StepCost(x, y, Player);
+            if (cost < 0)
+                return Block(result, "Địa hình không thể vượt qua.", "That terrain can't be crossed.");
+
+            if (ActiveEncounter == null)
+            {
+                if (Player.Footwork < cost) result.Month = EndMonth();
+                if (Player.Dead) return Block(result, "Đạo đồ đã tận.", "Your path has ended.");
+                Player.Footwork = Math.Max(0, Player.Footwork - cost);
+                result.Cost = cost;
+            }
+            Player.X = x;
+            Player.Y = y;
+            result.Moved = true;
+            var fog = Fog();
+            fog.RevealCircle(x, y, SenseRadius);
+            fog.SaveTo(Player, Map);
+            return result;
+        }
+
+        private static TravelResult Block(TravelResult r, string vi, string en)
+        {
+            r.Blocked = vi;
+            r.BlockedEn = en;
+            return r;
+        }
+
+        /// <summary>Spend footwork on an action; if the month has none left, the month turns first.</summary>
+        private void SpendFootwork(int cost)
+        {
+            if (Player.Footwork < cost) EndMonth();
+            Player.Footwork = Math.Max(0, Player.Footwork - cost);
+        }
+
         /// <summary>Thần thức pulse: spend 10 Qi to widen the sense radius for the rest of the month.</summary>
         public bool Pulse()
         {
@@ -265,7 +327,10 @@ namespace TuTien.Core
 
         public MonthReport EndMonth()
         {
+            // Fights happen outside the strategic clock; the host never ends a month mid-fight.
+            if (ActiveEncounter != null) return new MonthReport();
             var report = WorldTick.EndMonth(State, Content, Map, seclusion: false, VeinBonusHere());
+            MonthEnded?.Invoke(report);
             return report;
         }
 
@@ -319,6 +384,19 @@ namespace TuTien.Core
             ActiveEncounter = e;
             Player.Counters.Fights += 1;
             return e;
+        }
+
+        /// <summary>Seamless combat: the host saw the player meet this pack (or strike it), so the fight starts where they stand.</summary>
+        public Encounter? Engage(string packId)
+        {
+            if (Player.Dead || ActiveEncounter != null) return null;
+            var pack = State.World.Beasts.FirstOrDefault(b => b.Id == packId);
+            if (pack == null) return null;
+            return BeginEncounter(new Encounter
+            {
+                Id = State.NewId("enc"), Source = "beast", SourceId = pack.Id, EnemyIds = pack.EnemyIds.ToList(),
+                Zone = pack.Zone, Danger = Content.Area(pack.Zone)?.DangerLevel ?? 1,
+            });
         }
 
         public Encounter? TakeAmbush()
@@ -556,18 +634,13 @@ namespace TuTien.Core
         {
             var events = new List<GameEvent>();
             var poi = Poi(poiId);
-            if (poi == null || poi.Kind != "herb" || poi.X != Player.X || poi.Y != Player.Y) return events;
+            if (poi == null || poi.Kind != "herb" || Math.Abs(poi.X - Player.X) + Math.Abs(poi.Y - Player.Y) > 1) return events;
             if (!Spawns.NodeReady(State, poiId))
             {
                 events.Add(GameEvent.Info("herb_empty", "Dược điền đã bị hái trụi, chờ mọc lại.", "Already picked clean — wait for it to regrow."));
                 return events;
             }
-            if (Player.Footwork < 1)
-            {
-                events.Add(GameEvent.Info("no_footwork", "Cước lực đã cạn.", "No footwork left."));
-                return events;
-            }
-            Player.Footwork -= 1;
+            SpendFootwork(1);
             var roll = Loot.Roll(Content, poi.LootTable ?? ZoneHere?.LootTable, 1, Rng("gather:" + poiId), maxItems: 2);
             roll.Silver = 0;
             Inventory.Apply(State, Content, roll);
@@ -617,13 +690,13 @@ namespace TuTien.Core
         public List<GameEvent> Rest(TownDef town)
         {
             var events = new List<GameEvent>();
-            if (Player.Silver < town.RestCost || Player.Footwork < 1)
+            if (Player.Silver < town.RestCost)
             {
-                events.Add(GameEvent.Info("rest_denied", "Không đủ bạc hoặc cước lực.", "Not enough silver or footwork."));
+                events.Add(GameEvent.Info("rest_denied", "Không đủ bạc.", "Not enough silver."));
                 return events;
             }
             Player.Silver -= town.RestCost;
-            Player.Footwork -= 1;
+            SpendFootwork(1);
             Player.Hp = Player.HpMax;
             Player.Qi = Player.QiMax;
             events.Add(GameEvent.Info("rested", "Một đêm yên giấc, khí huyết sung mãn.", "A night's rest — fully recovered."));
@@ -805,13 +878,13 @@ namespace TuTien.Core
             var events = new List<GameEvent>();
             if (!Content.Dungeons.TryGetValue(dungeonId, out var d) || State.World.Run != null) return events;
             var silver = d.EntryCost?.Silver ?? 0;
-            if (Player.Silver < silver || Player.Footwork < 2)
+            if (Player.Silver < silver)
             {
-                events.Add(GameEvent.Info("realm_denied", $"Cần {silver} bạc và 2 cước lực.", $"Requires {silver} silver and 2 footwork."));
+                events.Add(GameEvent.Info("realm_denied", $"Cần {silver} bạc.", $"Requires {silver} silver."));
                 return events;
             }
             Player.Silver -= silver;
-            Player.Footwork -= 2;
+            SpendFootwork(2);
             State.World.Run = new SecretRealmRun { DungeonId = dungeonId, Floor = 1 };
             events.Add(GameEvent.Major("realm_enter", $"Tiến vào {d.Name}.", $"You enter the {d.NameEn}."));
             return events;

@@ -303,6 +303,91 @@ public class EngineTests
         Assert.Equal(json, loaded.Save());
     }
 
+    private static Cell PassableNeighbor(GameEngine e) =>
+        e.Map.Neighbors(new Cell(e.Player.X, e.Player.Y)).First(c => e.Map.StepCost(c.X, c.Y, e.Player) > 0);
+
+    [Fact]
+    public void Travel_pays_the_terrain_cost_and_reveals_fog()
+    {
+        var e = TestContent.NewEngine();
+        var next = PassableNeighbor(e);
+        var before = e.Player.Footwork;
+        var r = e.Travel(next.X, next.Y);
+        Assert.True(r.Moved);
+        Assert.Null(r.Month);
+        Assert.Equal(e.Map.StepCost(next.X, next.Y, e.Player), r.Cost);
+        Assert.Equal(before - r.Cost, e.Player.Footwork);
+        Assert.True(e.Fog().Get(next.X, next.Y));
+    }
+
+    [Fact]
+    public void Travel_turns_the_month_when_footwork_runs_out_and_keeps_walking()
+    {
+        var e = TestContent.NewEngine();
+        MonthReport? announced = null;
+        e.MonthEnded += report => announced = report;
+        e.Player.Footwork = 0;
+        var next = PassableNeighbor(e);
+        var r = e.Travel(next.X, next.Y);
+        Assert.True(r.Moved);
+        Assert.NotNull(r.Month);
+        Assert.Same(r.Month, announced);
+        Assert.Equal(1, e.State.Calendar.MonthIndex);
+        Assert.Equal(e.Player.FootworkMax - r.Cost, e.Player.Footwork);
+    }
+
+    [Fact]
+    public void Travel_is_free_during_a_fight_and_the_month_cannot_end_mid_fight()
+    {
+        var e = TestContent.NewEngine();
+        e.StartAdventureFight("forest_wolf", "verdant_forest");
+        e.Player.Footwork = 0;
+        var next = PassableNeighbor(e);
+        var r = e.Travel(next.X, next.Y);
+        Assert.True(r.Moved);
+        Assert.Equal(0, r.Cost);
+        Assert.Null(r.Month);
+        e.EndMonth();
+        Assert.Equal(0, e.State.Calendar.MonthIndex);
+    }
+
+    [Fact]
+    public void Travel_refuses_water_and_jumps()
+    {
+        var e = TestContent.NewEngine();
+        Assert.NotNull(e.Travel(e.Player.X + 2, e.Player.Y).Blocked);
+        var water = Enumerable.Range(0, e.Map.Height).SelectMany(y => Enumerable.Range(0, e.Map.Width).Select(x => new Cell(x, y)))
+            .First(c => e.Map.At(c.X, c.Y) == Terrain.Water);
+        var land = e.Map.Neighbors(water).First(c => e.Map.StepCost(c.X, c.Y, e.Player) > 0);
+        e.Player.X = land.X;
+        e.Player.Y = land.Y;
+        Assert.NotNull(e.Travel(water.X, water.Y).Blocked);
+    }
+
+    [Fact]
+    public void Engaging_a_pack_starts_its_fight_where_you_stand()
+    {
+        var e = TestContent.NewEngine();
+        var pack = e.State.World.Beasts.First();
+        var enc = e.Engage(pack.Id);
+        Assert.NotNull(enc);
+        Assert.Equal(pack.EnemyIds, enc!.EnemyIds);
+        Assert.Null(e.Engage(pack.Id)); // one fight at a time
+        e.ResolveCombat(Win(e, enc));
+        Assert.DoesNotContain(e.State.World.Beasts, b => b.Id == pack.Id);
+    }
+
+    [Fact]
+    public void Actions_with_no_footwork_left_turn_the_month_first()
+    {
+        var e = TestContent.NewEngine();
+        var village = e.Map.Def.Pois.First(p => p.Kind == "town");
+        e.Player.Footwork = 0;
+        e.Rest(e.TownFor(village)!);
+        Assert.Equal(1, e.State.Calendar.MonthIndex);
+        Assert.Equal(e.Player.FootworkMax - 1, e.Player.Footwork);
+    }
+
     [Fact]
     public void Pills_eaten_in_a_fight_leave_the_bag_when_it_resolves()
     {

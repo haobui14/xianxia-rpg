@@ -125,6 +125,6 @@ public partial class NpcPanel : InkPanel
     private void Fight(bool lethal)
     {
         var enc = E.ChallengeNpc(_npcId, lethal);
-        if (enc != null) Main.Instance.ShowArena(enc);
+        if (enc != null) FightHere(enc);
     }
 }

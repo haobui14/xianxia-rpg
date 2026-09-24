@@ -10,7 +10,11 @@ public partial class TownPanel : InkPanel
 {
     private readonly PoiDef _poi;
 
-    public TownPanel(PoiDef poi) => _poi = poi;
+    public TownPanel(PoiDef poi, int tab = 0)
+    {
+        _poi = poi;
+        Tab = tab;
+    }
 
     protected override string Glyph => _poi.Glyph;
     protected override string TitleText => T(_poi.Name, _poi.NameEn);

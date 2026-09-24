@@ -43,8 +43,16 @@ public partial class RealmPanel : InkPanel
             if (cleared > 0) Para(T($"Đã chinh phục {cleared} lần.", $"Conquered {cleared} time(s)."), 14, Ink.JadeDeep);
             Para(T($"Lệ phí: {cost} bạc và 2 cước lực. Thua trận trong bí cảnh là trọng thương.",
                 $"Entry: {cost} silver and 2 footwork. Losing a fight inside means grievous wounds."), 15, Ink.CinnabarDeep);
+            Para(T("Mỗi tầng là một khu vườn có lính canh: tới gần hoặc ra tay trước là giao chiến. Dọn sạch tầng để mở rương và cổng xuống tầng kế.",
+                "Each floor is a walled garden with guardians: come close or strike first to fight. Clear it to open the chests and the gate below."), 14, Ink.InkMute);
             Buttons(
-                UiKit.Button(T("Tiến vào", "Enter"), () => Say(E.EnterRealm(d.Id)), primary: true, enabled: p.Silver >= cost && p.Footwork >= 2),
+                UiKit.Button(T("Tiến vào", "Enter"), () =>
+                {
+                    var events = E.EnterRealm(d.Id);
+                    Game.Instance.Remember(events);
+                    if (E.State.World.Run != null) Main.Instance.ShowRealm(_poi);
+                    else Say(events);
+                }, primary: true, enabled: p.Silver >= cost),
                 UiKit.Button(T("Để sau", "Later"), Close));
             return;
         }
@@ -56,51 +64,16 @@ public partial class RealmPanel : InkPanel
             RequestRefresh();
             return;
         }
-        Para(T($"Tầng {floor.FloorNumber}/{d.Floors.Count}: {floor.Name}", $"Floor {floor.FloorNumber}/{d.Floors.Count}: {floor.NameEn}"), 22, Ink.InkColor);
-        Para(T(floor.Description, floor.DescriptionEn), 16, Ink.InkMute);
-        Para(T($"Khí huyết {p.Hp}/{p.HpMax} · linh lực {p.Qi}/{p.QiMax}", $"Health {p.Hp}/{p.HpMax} · Qi {p.Qi}/{p.QiMax}"), 15, Ink.InkSoft);
-
-        if (!run.FloorCleared)
-        {
-            var foes = floor.EnemyWaves.SelectMany(w => w.Enemies)
-                .Concat(new[] { floor.MiniBoss, floor.FloorBoss }.Where(x => x != null).Select(x => x!))
-                .Distinct()
-                .Select(id => E.Content.Enemy(id) is { } def ? T(def.Name, def.NameEn) : id);
-            Para(T("Canh giữ: ", "Guarded by: ") + string.Join(", ", foes), 15, Ink.CinnabarDeep);
-            Buttons(
-                UiKit.Danger(T($"Khiêu chiến tầng {floor.FloorNumber}", $"Fight floor {floor.FloorNumber}"), () =>
-                {
-                    var enc = E.StartFloorFight();
-                    if (enc != null) Main.Instance.ShowArena(enc, () => new RealmPanel(_poi));
-                }),
-                UiKit.Button(T("Rời bí cảnh", "Leave the realm"), () =>
-                {
-                    E.LeaveRealm();
-                    Game.Instance.Changed();
-                    Close();
-                }));
-            return;
-        }
-
-        Para(T("Tầng này đã được dọn sạch.", "This floor is cleared."), 16, Ink.JadeDeep);
-        var left = floor.ChestCount - run.ChestsOpened;
-        var last = floor.FloorNumber >= d.Floors.Count;
+        Para(T($"Ngươi đang thám hiểm tầng {floor.FloorNumber}/{d.Floors.Count}: {floor.Name}.", $"You are exploring floor {floor.FloorNumber}/{d.Floors.Count}: {floor.NameEn}."), 18, Ink.InkColor);
         Buttons(
-            UiKit.Button(T($"Mở rương ({left})", $"Open a chest ({left})"), OpenChest, enabled: left > 0),
-            UiKit.Button(last ? T("Nhận thưởng & rời đi", "Claim rewards & leave") : T("Xuống tầng kế", "Descend"), () =>
+            UiKit.Button(T("Tiếp tục thám hiểm", "Continue the run"), () => Main.Instance.ShowRealm(_poi), primary: true),
+            UiKit.Button(T("Bỏ dở, rời bí cảnh", "Abandon the run"), () =>
             {
-                Say(E.AdvanceRealm());
+                E.LeaveRealm();
                 Game.Instance.SaveGame();
-                if (E.State.World.Run == null) Close();
-            }, primary: true));
-    }
-
-    private void OpenChest()
-    {
-        var roll = E.OpenFloorChest();
-        if (roll == null) return;
-        Game.Instance.Toast(Loot(roll, Locale.Vi), Loot(roll, Locale.En), EventLevel.Major);
-        Game.Instance.Changed();
+                Game.Instance.Changed();
+                Close();
+            }));
     }
 
     public static string Loot(LootRoll roll, Locale locale)

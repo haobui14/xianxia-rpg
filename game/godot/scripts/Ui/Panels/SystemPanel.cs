@@ -38,9 +38,11 @@ public partial class SystemPanel : InkPanel
             Body.AddChild(b);
         }
         Section(T("Phím tắt", "Keys"));
-        Para(T("Bản đồ: WASD đi · nhấp chuột đi theo đường · E tương tác · N qua tháng · B bế quan · Tab thần thức · C/I/J · F9 gian lận (thử nghiệm)",
-            "Map: WASD step · click to walk · E interact · N end month · B seclusion · Tab sense pulse · C/I/J · F9 dev cheats"), 14, Ink.InkSoft);
-        Para(T("Chiến đấu: WASD · chuột trái võ kỹ · chuột phải/1/2/3 linh kỹ · Space lướt · R tuyệt kỹ · Q đan dược · Esc tạm dừng",
-            "Combat: WASD · left click martial art · right click/1/2/3 spirit arts · Space dash · R ultimate · Q pill · Esc pause"), 14, Ink.InkSoft);
+        Para(T("Thế giới: WASD đi · E tương tác · M bản đồ (nhấp để lên đường) · N qua tháng sớm · B bế quan · Tab thần thức · C/I/J · cuộn chuột phóng to · F9 gian lận (thử nghiệm)",
+            "World: WASD walk · E interact · M map (click to travel) · N end the month early · B seclusion · Tab sense pulse · C/I/J · wheel zooms · F9 dev cheats"), 14, Ink.InkSoft);
+        Para(T("Thời gian trôi khi ngươi đi: mỗi ô đất tốn cước lực; hết cước lực thì tháng tự qua.",
+            "Time flows as you travel: every tile costs footwork; when it runs out the month turns by itself."), 14, Ink.InkSoft);
+        Para(T("Chiến đấu ngay tại chỗ: chém yêu thú để giao chiến · chuột trái võ kỹ · chuột phải/1/2/3 linh kỹ · Space lướt · R tuyệt kỹ · Q đan dược · chạy thật xa để thoát · Esc tạm dừng",
+            "Fights happen where you meet: strike a beast to engage · left click martial art · right click/1/2/3 spirit arts · Space dash · R ultimate · Q pill · run far away to escape · Esc pause"), 14, Ink.InkSoft);
     }
 }

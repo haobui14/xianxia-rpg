@@ -1,8 +1,10 @@
-# Tu Tiên Lục — Game Design Document (v0.1)
+# Tu Tiên Lục — Game Design Document (v0.2)
 
-> **Status:** draft for review · **Date:** 2026-09-23
-> **Locked decisions:** Godot 4.7 + C# · PC / Steam first · Tale of Immortal–style sandbox
+> **Status:** draft for review · **Date:** 2026-09-24
+> **Locked decisions:** Godot 4.7 + C# · PC / Steam first · Tale of Immortal–style sandbox · **a real 2D top-down (¾ view) world**
 > **Our pillars on top of ToI:** AI storyteller (Linh Thức) · Qi + Body cultivation · Ngũ Hành elemental combat · Karma & sect wars
+>
+> **v0.2 changes:** the world is no longer a token on a tile map. You walk your cultivator through a painted top-down world with WASD. **Fights happen where you meet** (no separate arena screen), and **time flows as you travel**: crossing ground spends footwork, and when the month's footwork runs out the month turns by itself while you keep walking. See §7.1–7.3 and §9.3.
 
 ---
 
@@ -12,8 +14,8 @@ Today *Tu Tiên Lục* is an AI-narrated choose-your-path story. Every action is
 
 The redesign turns it into a **sandbox you control directly**, using *Tale of Immortal* (鬼谷八荒) as the structural reference:
 
-1. **World map.** You walk your cultivator across hand-built region maps. Each month you get a movement budget (*Cước lực*). Ending the month advances the whole world.
-2. **Real-time arena combat.** Top-down action with WASD + mouse: martial arts, spirit arts, dash and ultimate, plus five-element reactions and realm suppression.
+1. **A world you walk.** You steer your cultivator with WASD through hand-built regions drawn top-down (¾ view): forests, rivers, villages, sect halls. Each month has a travel budget (*Cước lực*). Crossing ground spends it, and when it runs out the month turns and the whole world advances.
+2. **Real-time combat where you meet.** Beasts roam, people stroll, and a fight starts right there when a pack reaches you or you strike first. It's top-down action with WASD + mouse: martial arts, spirit arts, dash and ultimate, plus five-element reactions and realm suppression. Trees and walls block movement and projectiles, and you can run away.
 3. **A living world.** NPC cultivators, sects and wars move forward every month whether you act or not. You hear about it as rumors, and your deeds ripple outward through a karma ledger.
 4. **Our storyteller.** The AI stops being the game engine and becomes *Linh Thức*. It writes dialogue, adventures, rumors, chronicles and heart-demon trials. Deterministic rules decide every outcome.
 
@@ -29,8 +31,10 @@ The good news: **most of ToI's systems already exist in this repo** as data and 
 | Rules code | **Engine-free C# library** (`TuTien.Core`, netstandard2.1, C# 9) | Unit-testable without the engine, and it drops into Unity 6 unchanged if we ever switch. |
 | First platform | **PC / Steam** (Windows first, Linux/Steam Deck next) | Matches ToI: keyboard + mouse action and dense menus. Godot's C# projects can't be exported to the web, which is fine for PC-first. |
 | Backend | **Keep Next.js + Supabase** as the service layer | Accounts, cloud saves and the AI gateway (API keys must never ship in the client). The game is fully playable offline. |
-| Combat | **Real-time, top-down arenas** (ToI-style) | "Control the character" is the goal. Turn-based menus are what we're replacing. |
-| Art direction | **Ink wash & jade** (existing design system) with Han-glyph iconography first | Already designed (`design/README.md`); glyph-first greybox costs zero art to start. |
+| View | **2D top-down, ¾ perspective**, one continuous field per region (128 px per map tile) | You see and steer your character in the world itself, like an action RPG, instead of moving a token on a board. |
+| Combat | **Real-time, seamless**: fights happen on the field where you meet (ToI-style kit) | "Control the character" is the goal. Turn-based menus are what we're replacing, and a separate arena screen breaks the feeling of one world. |
+| Time | **Time flows as you travel** | Crossing a tile spends its footwork; an empty budget turns the month automatically. The strategic clock stays monthly and deterministic. |
+| Art direction | **Ink wash & jade** (existing design system), drawn procedurally in-engine for now | Brush-outlined figures, trees and buildings plus painted-ground shaders cost no asset pipeline and keep one style; commissioned sprites can replace them piece by piece. |
 
 ---
 
@@ -110,18 +114,18 @@ A condensed audit of what the redesign changes, with file references.
 
 ```mermaid
 flowchart LR
-  subgraph Moment["Seconds — Arena"]
+  subgraph Moment["Seconds — a fight where you stand"]
     A1[Move / dodge] --> A2[Mark with an element]
     A2 --> A3[Trigger a reaction]
     A3 --> A4[Spend Qi / Stamina]
     A4 --> A1
   end
   subgraph Month["Minutes — One month"]
-    M1[Read rumors & board] --> M2[Spend Cước lực on the map]
-    M2 --> M3{Interact}
-    M3 -->|beast / NPC| Moment
+    M1[Read rumors & board] --> M2[Walk the world: every tile spends Cước lực]
+    M2 --> M3{Meet something}
+    M3 -->|a pack reaches you / you strike first / a spar| Moment
     M3 -->|town / sect / adventure / secret realm| M2
-    M2 --> M4[Qua tháng — end month]
+    M2 --> M4[Footwork runs out → Qua tháng, or N to end it early]
     M4 --> M5[World tick: cultivation, NPCs, sects, spawns, lifespan]
     M5 --> M1
   end
@@ -147,8 +151,8 @@ A full run from mortal to peak Nguyên Anh targets **~360 in-game months (~30 ye
 ### 7.1 Time and the month turn
 
 - **The strategic tick is one month.** The calendar shows year and month. The day of the month is shown as a ratio of *Cước lực* spent (day = 1 + ⌊29 × spent / max⌋), so day-based flavor still works: day 15 is the full moon, day 21 of months 6 and 12 is a solstice.
-- **Cước lực (footwork):** `12 + ⌊AGI/3⌋ + realm bonus (+2 per major realm) + mount`. Moving costs terrain points (§7.2). Gathering costs 1, a fight costs 1, a secret realm floor costs 2, and talking or trading is free.
-- **Qua tháng (end month)** is available at any time, and the game prompts you when footwork hits 0.
+- **Cước lực (footwork)** is the month's days of travel: `24 + ⌊AGI/2⌋ + 3 × realm index` (+ mount, later). Crossing into a tile costs that terrain's points (§7.2). Gathering and resting cost 1, entering a secret realm costs 2, and talking or trading is free. Fights don't cost time: the clock stops while you fight.
+- **Time flows as you travel.** When the footwork left is less than the next tile costs, the month turns first (cultivation, world tick, autosave) and the walk goes on with a fresh budget. A card in the HUD sums up the month without stopping play. **Qua tháng** (N) ends the month early, for example to wait out a season in town.
 - **Time bonuses** (existing `time.ts`) become a planning layer:
   - Season × element (e.g. Mộc +20% in spring) applies to that month's cultivation.
   - A full month of seclusion includes the full-moon night, so it gets the +25% moon bonus.
@@ -171,9 +175,15 @@ A full run from mortal to peak Nguyên Anh targets **~360 in-game months (~30 ye
 9. Queue storyteller jobs: chronicle and rumor prose (async, §7.13)
 10. Autosave
 
-### 7.2 World map (*Đại Địa Đồ*)
+### 7.2 The world (*Đại Địa*): a top-down field
 
-- **One hand-built map per region** (5 regions, about 64×40 tiles each), authored in Godot `TileMapLayer`s: terrain, zones and decoration. Regions connect through **mountain passes** along the existing adjacency ring: Thanh Vân ↔ Hỏa Sơn ↔ Trầm Lôi ↔ Vọng Linh ↔ Huyền Thủy ↔ Thanh Vân.
+- **One hand-built map per region** (5 regions, about 48×30 to 64×40 tiles each). The rules still see a grid of tiles (terrain, zone, footwork cost, fog), but **on screen each tile is 128 px of painted ground** in ¾ view, and you walk it freely with WASD:
+  - The ground is one shader over the whole map: terrain blends with brushed, noise-warped edges; rivers get banks, foam and moving glints; roads and bridges are traced between connected tiles; seasons recolour grass, trees and snow.
+  - Scenery comes from the tiles, placed by a hash so it never changes: two or three trees per forest tile (never a solid wall of trunks), rocks and pines on hills and mountains, reeds on the banks, cliffs along the region's rim and on snow peaks. Villages, sect grounds, caves and spirit veins are laid out by hand.
+  - Trees, walls and cliffs are solid. Water blocks walking but not qi projectiles. Trees and roofs in front of you turn see-through so you never lose your character.
+  - Ground speed follows terrain: roads are quicker, swamps and dense forest slower.
+  - **Each tile you cross is charged to the rules** (`GameEngine.Travel`), so footwork, fog and the month clock stay exact and deterministic whatever the frame rate.
+- Regions connect through **mountain passes** along the existing adjacency ring: Thanh Vân ↔ Hỏa Sơn ↔ Trầm Lôi ↔ Vọng Linh ↔ Huyền Thủy ↔ Thanh Vân.
 - **Zones = the existing areas** (4 per region, 20 total), painted as tile regions. Each zone carries its `danger_level`, `is_safe`, `enemy_pool`, `event_pool`, `loot_table` and `cultivation_bonus` (qi density). `connected_areas` becomes real walking adjacency.
 - **Terrain costs** (Cước lực per step):
 
@@ -187,32 +197,33 @@ A full run from mortal to peak Nguyên Anh targets **~360 in-game months (~30 ye
 | Mountain | 3 | Mortals can't cross peaks |
 | River / sea | — | Bridges and ferries only, until **Ngự kiếm phi hành** (sword flight) at Trúc Cơ: every walkable tile costs 1 and water becomes crossable |
 
-- **Points of interest** use Han-glyph markers first and art later:
+- **Points of interest** are places you walk up to and press **E** at (the prompt floats over them):
 
-| POI | Glyph | Source data | Interaction |
+| POI | On the field | Source data | Interaction |
 |---|---|---|---|
-| Town (*Thành/Trấn*) | 城 / 村 | `type: "city"` areas | Facilities menu (§7.10) |
-| Sect gate (*Tông môn*) | 宗 | `NAMED_SECTS.home_region` | Join, missions, treasury (§7.9) |
-| Secret realm (*Bí cảnh*) | 秘 | `DUNGEONS[].area` | Room-graph floors (§7.11) |
-| Adventure (*Kỳ ngộ*) | 奇 | zone `event_pool` + authored events | Event scene (§7.12) |
-| Spirit vein (*Linh mạch*) | 脈 | new, per zone | Seclusion spot with high qi density |
-| Herb / ore node | 草 / 礦 | zone `loot_table` | Gather: 1 Cước lực, regrows in N months |
-| Beast pack (*Yêu thú*) | 狼 蜂 蛇 … | zone `enemy_pool` | Touch → arena |
-| Wandering cultivator | 人 | NPC sim | Talk, trade, spar, … (§7.8) |
-| Mountain pass (*Cửa ải*) | 關 | region adjacency | Travel to a neighboring region |
+| Town (*Thành/Trấn*) | Houses, an inn (客棧), a market stall, a bounty board (榜), a well | `type: "city"` areas | Each building opens its part of the town (§7.10) |
+| Sect gate (*Tông môn*) | A painted gate between cliffs, the main hall, a pagoda, training dummies | `NAMED_SECTS.home_region` | The hall: join, missions, treasury (§7.9) |
+| Secret realm (*Bí cảnh*) | A cave mouth glowing violet (秘) | `DUNGEONS[].area` | Enter the floors (§7.11) |
+| Adventure (*Kỳ ngộ*) | A pillar of gold light (奇) | zone `event_pool` + authored events | Event scene (§7.12) |
+| Spirit vein (*Linh mạch*) | Jade crystals (脈) or a spirit spring | new, per zone | Seclusion spot with high qi density |
+| Herb / ore node | A herb patch with red berries when ripe | zone `loot_table` | Gather: 1 Cước lực, regrows in N months |
+| Beast pack (*Yêu thú*) | The creatures themselves, prowling their patch | zone `enemy_pool` | Aggressive packs that see you give chase; contact or your first strike starts the fight |
+| Wandering cultivator | The person, strolling (name shown when near) | NPC sim | Talk, gift, spar, fight (§7.8) |
+| Mountain pass (*Cửa ải*) | A stone stele (關) where the road leaves the map | region adjacency | Travel to a neighboring region |
 
 - **Fog of war and Thần thức (spiritual sense):**
   - Your sense radius is `3 + ⌊PER/4⌋ + realm index`. It permanently reveals terrain and shows live tokens (beasts, NPCs, adventures) within range.
   - Hidden POIs (hidden caves, secret chests) need a higher radius or a **Thần thức pulse** (spend Qi to scan a wider area once).
+- **Clouds (*mây mù*)** cover what you haven't explored; they drift and part as your sense radius reveals tiles. The minimap and the **M** map show only what you have seen. Clicking a seen place on the M map plans the cheapest way there and your character walks it.
 - **Encounters:**
-  - Stepping onto a hostile token starts the arena.
-  - At month end, aggressive beasts within 3 tiles may move onto you (an ambush), with a chance to dodge based on PER.
+  - Aggressive packs (chargers and swarms) notice you within about 3 tiles (more in dangerous zones), show a "!" and run at you; the first one to reach you starts the fight. They lose interest if you outrun them. Passive creatures only fight if you strike first. Nothing hunts you in a safe zone.
+  - At month end, aggressive beasts within 3 tiles may move onto you (an ambush), with a chance to dodge based on PER. The ambushers step out of the trees around you and the fight starts at once.
   - Zones above your realm are shown in cinnabar, using the existing `getDangerWarning` logic.
 - **Realm gating is soft, like ToI:** you *can* walk into Trầm Lôi as a Luyện Khí disciple, and you will probably die there.
 
 ### 7.3 Combat (*Chiến Đấu*)
 
-A top-down arena, about 1600×900 px of world space, themed by the zone: obstacles, ground tint and element. The camera follows you with a small lookahead toward the aim.
+**Fights happen where you meet.** There is no arena screen: the creatures, trees, rivers and walls around you are the battlefield. Trees and walls block movement and most projectiles (qi flies over water). When a fight starts, the bodies already on the field (the pack that caught you, the person you challenged) become the combatants, and anyone the encounter adds steps out of the mist nearby. The month clock stops until it ends, and a banner and a non-blocking result card report the outcome.
 
 **The kit (slot-based, ToI-style, fed by existing data):**
 
@@ -260,7 +271,7 @@ A top-down arena, about 1600×900 px of world space, themed by the zone: obstacl
 - **Outcomes:**
   - **Victory** gives a loot roll (core library, seeded), cultivation exp, experience for each skill used (the existing leveling rules), and karma if the target was a person.
   - **Defeat** means *Trọng thương* (severe injury): you wake in the nearest town 1–3 months later, carry an `Injury`, and lose some silver. The run only ends if an NPC with killing intent defeats you and you have no life-saving talisman (a hardcore option; the default is no permadeath).
-- **Fleeing (*Độn thuật*):** channel for 1.5 s at the arena edge (costs Qi). You can't flee bosses or tribulations.
+- **Fleeing (*Độn thuật*):** run. Stay more than about 5 tiles from every foe for 1.4 s and you have escaped (costs 1 footwork; the pack stays and won't chase again for a while). The pause menu also offers an instant flee. Later, bosses and tribulations will pin you in place.
 - **Crushing (*Nghiền ép*):** if you out-realm an enemy by a full major realm, you can skip the fight with an instant resolve.
 
 ### 7.4 Ngũ Hành: elemental combat (our pillar)
@@ -410,7 +421,8 @@ The existing `cultivation_path: "qi" | "body" | "dual"`, the body realms (Phàm 
 
 ### 7.11 Secret realms (*Bí cảnh*)
 
-- **The existing 5 dungeons** (3/5/5/7/9 floors) become **room graphs** generated from the dungeon seed. Each floor has a start room, combat rooms (the floor's `enemy_waves`), treasure rooms (`chest_count` × `chest_loot_table`), hidden rooms (`hidden_chest_count`, revealed by Thần thức), an event room (`floor_events`), a mini-boss room and a boss room or stairs.
+- **In the slice, each floor is one walled room** on its own field: you come in through a gate at the bottom, and the floor's guardians (rolled from its `enemy_waves`, mini-boss and boss) wait at the far end. Walk up or strike first to fight. Clearing the floor raises its chests and a gold gate onward; the last gate claims the realm's rewards. Losing inside means being carried out, injured.
+- **Later**, the existing 5 dungeons (3/5/5/7/9 floors) become **room graphs** generated from the dungeon seed. Each floor has a start room, combat rooms (the floor's `enemy_waves`), treasure rooms (`chest_count` × `chest_loot_table`), hidden rooms (`hidden_chest_count`, revealed by Thần thức), an event room (`floor_events`), a mini-boss room and a boss room or stairs.
 - **The time budget becomes *khí tức*** (breath) spent per room. Running out ejects you, the existing forced exit.
 - `shortcut_requirements` unlock deeper starting floors, which is already in the data.
 - **Living-world tie-in:** some realms open only every few years, and NPCs enter them too. You may meet a rival inside, or find their corpse and their loot.
@@ -468,11 +480,11 @@ The existing `cultivation_path: "qi" | "body" | "dual"`, the body realms (Phàm 
 
 | Context | Keyboard + mouse | Gamepad / Steam Deck |
 |---|---|---|
-| Map | WASD / arrows: step · LMB: path to tile (shows Cước lực cost) · RMB: inspect · **E**: interact · **Enter/N**: end month · **Tab**: Thần thức pulse · M: world map | Stick: step · A: interact · Y: end month · X: pulse |
-| Arena | WASD: move · mouse: aim · LMB: martial art · RMB/1–3: spirit arts · **Space**: dash · R: ultimate · F: artifact · Q: pill · Esc: pause | Left stick: move · right stick: aim (soft lock-on) · RT/RB/LB/LT/X · A: dash · Y: ultimate |
+| Exploring | WASD / arrows: walk · **E**: interact with what's in front of you · LMB: strike (starts a fight with a beast) · **M**: map, click to travel · **N**: end the month early · **Tab**: Thần thức pulse · B: seclusion · wheel: zoom | Left stick: walk · Y: interact · RT: strike · Back: map · L3: end month · R3: pulse |
+| Fighting (same field) | WASD: move · mouse: aim · LMB: martial art · RMB/1–3: spirit arts · **Space**: dash · R: ultimate · F: artifact · Q: pill · run far away: flee · Esc: pause | Left stick: move · right stick: aim (soft lock-on) · RT/RB/LB/LT/X · A: dash · Y: ultimate |
 | Menus | C character · I inventory · J journal (chronicle + arcs) · K arts · O sect · L relations · Esc system | Start/Select + shoulder tabs |
 
-- **Main screen:** the world map fills the screen, with a thin HUD: realm orb, HP/Qi/Stamina, Cước lực, calendar and season, and a rumor ticker. Panels slide in over the map. The old narrative card lives on as the **Journal** (the Linh Thức chronicle).
+- **Main screen:** the world fills the screen, with a thin HUD: the cultivator card (realm, HP, Qi, cultivation; stamina and killing intent appear in a fight), the date card with the footwork bar ("day N of the month"), a minimap with icon buttons, the skill bar, and a log with the latest rumor. Month turns and fight results appear as cards that fade by themselves, so walking never stops. Panels open over the paused world. The old narrative card lives on as the **Journal** (the Linh Thức chronicle).
 - **Keys are fully remappable** (Godot `InputMap`). There's pause everywhere, and text size and colorblind-safe telegraph options.
 - **Theme:** Godot `Theme` resources built from the existing tokens (`--paper`, `--ink`, `--jade`, `--cinnabar`, `--gold`, rarity and realm colors). All the fonts are SIL OFL (Cormorant Garamond, Spectral, Inter, Noto Serif SC), so we can bundle them.
 - **Steam Deck Verified** is an explicit PC-first goal: 1280×800 layouts and full controller support.
@@ -516,12 +528,15 @@ xianxia-rpg/
   - `Game` holds the Engine and state and re-emits domain events as signals.
   - `ContentDb`, `SaveService` (`user://saves`, autosave each month, cloud sync) and `Storyteller` (HTTP client with offline fallback).
   - `Settings` / `InputRemap` and `Audio`.
-- **Scenes:**
-  - `WorldMap`: `TileMapLayer`s for terrain, zones and fog, POI nodes, the player token, a path preview, and a camera.
-  - `Arena`: `CharacterBody2D` actors, `Area2D` hit/hurt boxes, pooled projectiles, telegraph shapes, damage numbers.
-  - UI panels: Town, Sect, Event, Month Summary, Character, Inventory, Journal, Relations.
-- **Greybox (now):** the map and the arena draw immediate-mode (`_Draw`) straight from core state, and arena actors are plain C# objects. The `TileMapLayer`/`CharacterBody2D` scenes above arrive with real art.
-- **Rendering:** the Compatibility or Forward+ renderer. Ink effects are `CanvasItem` shaders: paper grain, ink-bleed edges, brush-stroke slashes.
+- **Fields** (`scripts/Field`): every place you walk is a `FieldScreen`: the region (`WorldScreen`), a secret-realm floor (`RealmScreen`), and the breakthrough platform (`TrialScreen`). A field holds:
+  - the ground (`terrain.gdshader` on one quad, fed a texture of terrain ids and water depth) and the clouds of unexplored land (`fog.gdshader`)
+  - a Y-sorted layer of props (scenery drawn once and cached; trees sway in `sway.gdshader`) and actors (people and creatures)
+  - `CollisionWorld`: circle bodies against solid tiles, circles and boxes, with sliding. It's deterministic and headless-safe, so no physics engine is involved.
+  - `PlayerController` (the kit), `Wander` (life between fights), and `Battle` + `EnemyAi` (fights on the same bodies). Every hit goes through `CombatRules.Compute`, and the result goes back through `GameEngine.ResolveCombat`.
+  - effect layers (telegraphs on the ground; projectiles, brush slashes and particles in the air; names, bars and prompts on top), the camera with shake and hitstop, and the HUD.
+- **Procedural ink art** (`scripts/Art`): people are chibi puppets with four facings and walk, attack, cast, meditate and yield poses, dressed by sect and role (`Look`). Creatures have their own drawings (wolf, boar, snake, bee, imp, vine, herb guardians, tree spirits, golem, tree bosses). Buildings, trees, cliffs and places of power are drawn the same way. Commissioned sprites can replace any of them behind the same calls.
+- UI panels: Town (opened at the inn, stall or board), Sect, Event, Month report (seclusion), Character, Inventory, Journal, Map.
+- **Rendering:** the Compatibility renderer. Ink effects are `CanvasItem` shaders: painted ground, paper grain, drifting clouds, brush-stroke slashes.
 - **Text:** `RichTextLabel` for prose. Fonts are bundled, with a Noto Serif SC fallback for Han glyphs.
 
 ### 9.4 Backend (existing Next.js + Supabase)
@@ -576,7 +591,7 @@ Port each rule module **with tests that pin the TypeScript behavior** (golden va
 | Milestone | Scope | Exit criteria |
 |---|---|---|
 | **M0 — Foundations** *(done in this branch)* | Monorepo scaffold; core library (RNG, content, calendar, cultivation, elements, karma, map & footwork, month tick, NPC sim v0, combat rules, loot, events); content export; a playable greybox slice | `dotnet test` green; Godot headless smoke passes |
-| **M1 — Vertical slice: Thanh Vân** (4–6 wks; *greybox playable in this branch, see `game/README.md`*) | Hand-built Thanh Vân map with 4 zones; village + Thanh Vân Kiếm Phái gate + Linh Thảo Bí Cảnh (3 floors); 6 enemies across 4 archetypes; full kit (martial art, 3 spirit arts, dash, ultimate); element marks and reactions; month tick with ~30 NPCs + rumors; Bế quan; *Dẫn khí nhập thể* breakthrough; saves; settings | A 60-minute playtest is fun without the AI; 60 fps on an integrated GPU |
+| **M1 — Vertical slice: Thanh Vân** (4–6 wks; *playable top-down in this branch, see `game/README.md`*) | Hand-built Thanh Vân map with 4 zones; village + Thanh Vân Kiếm Phái gate + Linh Thảo Bí Cảnh (3 floors); 6 enemies across 4 archetypes; full kit (martial art, 3 spirit arts, dash, ultimate); element marks and reactions; month tick with ~30 NPCs + rumors; Bế quan; *Dẫn khí nhập thể* breakthrough; saves; settings | A 60-minute playtest is fun without the AI; 60 fps on an integrated GPU |
 | **M2 — Living world & storyteller** (4–6 wks) | NPC interactions, relations and karma ledger; `/api/story` dialogue + chronicle + rumors; sect joining and missions on the map; bounty board; auction | NPC stories emerge unprompted in a 3-hour run |
 | **M3 — Cultivation depth** (4 wks) | Trúc Cơ set piece, body path trials and body arts, Tâm pháp passives, alchemy v1 | Qi, body and kiêm tu builds feel distinct |
 | **M4 — World breadth** (8–10 wks) | Regions 2–5, 71-enemy catalog, 5 secret realms, events for all pools, sect war territory, Kết Đan tribulation, Nguyên Anh heart demon, ascension ending | Mortal → ascension is completable |
@@ -631,7 +646,7 @@ Realm index: Phàm Nhân 0 · Luyện Khí 1 · Trúc Cơ 2 · Kết Đan 3 · N
 | Term | Hán | Meaning in this game |
 |---|---|---|
 | Cước lực | 腳力 | Monthly movement budget |
-| Qua tháng | 過月 | End the month; the world advances |
+| Qua tháng | 過月 | The month turns (by itself when footwork runs out, or early with N); the world advances |
 | Thần thức | 神識 | Spiritual sense: fog-of-war radius and pulse scan |
 | Linh Thức | 靈識 | The AI storyteller |
 | Bế quan | 閉關 | Closed-door cultivation for 1–12 months |
