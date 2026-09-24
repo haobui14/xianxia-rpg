@@ -257,10 +257,9 @@ public abstract partial class FieldScreen : Node2D
     {
         if (TouchUi.Active)
         {
-            var strike = Player.Basic.Glyph;
             return Battle != null
-                ? T($"Cần gạt trái để đi · giữ {strike} để chém, tự nhắm kẻ gần nhất · chạm kẻ địch để chém về phía nó · linh kỹ quanh nút {strike} · 遁 lướt · chạy thật xa để thoát",
-                    $"Left stick moves · hold {strike} to strike (it aims at the nearest foe) · tap a foe to strike at it · arts around {strike} · 遁 dashes · run far away to escape")
+                ? T("Cần gạt trái để đi · giữ nút kiếm để chém, tự nhắm kẻ gần nhất · chạm kẻ địch để chém về phía nó · linh kỹ quanh nút kiếm · nút lướt để né · chạy thật xa để thoát",
+                    "Left stick moves · hold the sword button to strike (it aims at the nearest foe) · tap a foe to strike at it · arts around the sword button · the dash button dodges · run far away to escape")
                 : T("Cần gạt trái để đi · chạm mặt đất để đi tới · chạm người hay vật để tới dùng · chạm yêu thú để giao chiến · chụm hai ngón để phóng to",
                     "Left stick walks · tap the ground to walk there · tap a person or thing to go and use it · tap a beast to fight · pinch to zoom");
         }

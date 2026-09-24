@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using TuTienLuc.Art;
 
 namespace TuTienLuc.Ui;
 
@@ -26,13 +27,6 @@ public static class UiKit
     {
         var l = Label(text.ToUpperInvariant(), 12, color ?? Ink.InkMute);
         l.AddThemeFontOverride("font", Ink.UiFont);
-        return l;
-    }
-
-    public static Label Han(string glyph, int size, Color color)
-    {
-        var l = Label(glyph, size, color);
-        l.AddThemeFontOverride("font", Ink.Han);
         return l;
     }
 
@@ -139,16 +133,13 @@ public static class UiKit
         return box;
     }
 
-    /// <summary>A square cinnabar seal with a Han glyph, like the web UI's &lt;Seal&gt;.</summary>
-    public static PanelContainer Seal(string glyph, int size = 40, Color? color = null)
+    /// <summary>A square cinnabar seal with an icon in it, like the web UI's &lt;Seal&gt;.</summary>
+    public static PanelContainer Seal(IconKind icon, int size = 40, Color? color = null)
     {
         var c = color ?? Ink.Cinnabar;
         var p = new PanelContainer { CustomMinimumSize = new Vector2(size, size) };
         p.AddThemeStyleboxOverride("panel", Ink.Box(c, c.Darkened(0.2f), 2, 3, 0));
-        var l = Han(glyph, (int)(size * 0.58f), Ink.Card);
-        l.HorizontalAlignment = HorizontalAlignment.Center;
-        l.VerticalAlignment = VerticalAlignment.Center;
-        p.AddChild(l);
+        p.AddChild(new IconView(icon, Ink.Card, 0.66f));
         return p;
     }
 

@@ -2,13 +2,14 @@ using System;
 using Godot;
 using TuTien.Core;
 using TuTienLuc.Audio;
+using TuTienLuc.Art;
 
 namespace TuTienLuc.Ui.Panels;
 
 /// <summary>Sound, display, keys and language. Changes apply at once and are saved to user://settings.json.</summary>
 public partial class SettingsPanel : InkPanel
 {
-    protected override string Glyph => "設";
+    protected override IconKind Emblem => IconKind.Gear;
     protected override string TitleText => T("Cài đặt", "Settings");
     protected override Vector2 PanelSize => new(620, 640);
 

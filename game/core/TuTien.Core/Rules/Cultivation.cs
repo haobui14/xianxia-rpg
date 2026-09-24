@@ -189,8 +189,8 @@ namespace TuTien.Core.Rules
                 var carry = need == long.MaxValue ? 0 : Math.Max(0, p.Exp - need);
                 Progression.StepQi(p);
                 events.Add(GameEvent.Major("realm_up",
-                    $"Đột phá thành công! Bước vào {Names.Display(p.Realm, Locale.Vi)} ({Names.Han(p.Realm)}).",
-                    $"Breakthrough! You enter {Names.Display(p.Realm, Locale.En)} ({Names.Han(p.Realm)})."));
+                    $"Đột phá thành công! Bước vào {Names.Display(p.Realm, Locale.Vi)}.",
+                    $"Breakthrough! You enter {Names.Display(p.Realm, Locale.En)}."));
                 if (from == Realm.PhamNhan)
                 {
                     events.Add(GameEvent.Info("qi_awakened",

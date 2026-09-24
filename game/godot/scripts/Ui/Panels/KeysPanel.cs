@@ -1,6 +1,7 @@
 using System.Linq;
 using Godot;
 using TuTienLuc.Audio;
+using TuTienLuc.Art;
 
 namespace TuTienLuc.Ui.Panels;
 
@@ -13,7 +14,7 @@ public partial class KeysPanel : InkPanel
     private string? _waiting;
     private string _note = "";
 
-    protected override string Glyph => "鍵";
+    protected override IconKind Emblem => IconKind.Key;
     protected override string TitleText => T("Phím", "Keys");
     protected override Vector2 PanelSize => new(640, 700);
 

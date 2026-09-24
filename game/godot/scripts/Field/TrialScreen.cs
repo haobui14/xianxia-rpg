@@ -58,8 +58,8 @@ public partial class TrialScreen : TrialBase
     public override string PlaceName => T($"Đột phá: {Names.Display(E.Player.Realm + 1, Locale.Vi)}", $"Breakthrough: {Names.Display(E.Player.Realm + 1, Locale.En)}");
     public override string PlaceSub => T("Thu linh khí, tránh tâm ma", "Gather qi, avoid heart demons");
     public override string HintText() => TouchUi.Active
-        ? T($"Cần gạt để đi · 遁 lướt xuyên tâm ma · giữ {Player.Basic.Glyph} để chém, tự nhắm tâm ma gần nhất",
-            $"Stick moves · 遁 dashes through demons · hold {Player.Basic.Glyph} to cut (it aims at the nearest demon)")
+        ? T("Cần gạt để đi · nút lướt để lướt xuyên tâm ma · giữ nút kiếm để chém, tự nhắm tâm ma gần nhất",
+            "Stick moves · the dash button dashes through demons · hold the sword button to cut (it aims at the nearest demon)")
         : T($"{KeyMap.MoveKeys} di chuyển · {KeyName("dash")} lướt xuyên tâm ma · chuột trái chém · Esc tạm dừng",
             $"{KeyMap.MoveKeys} move · {KeyName("dash")} dash through demons · left click cuts · Esc pause");
 
@@ -383,7 +383,7 @@ public partial class TrialLayer : Node2D
             DrawCircle(at, (root ? 12 : 9) * fade, new Color(color, 0.9f * fade));
             DrawCircle(at, 4.5f * fade, new Color(1, 1, 1, 0.9f * fade));
             if (root) DrawArc(at, 19, m.Age * 3, m.Age * 3 + 4, 16, new Color(Ink.Gold, 0.85f * fade), 2, true);
-            if (fade > 0.6f) Paint.Glyph(this, FieldMath.Han[m.Element], at + new Vector2(0, -26), 14, new Color(color.Darkened(0.3f), fade));
+            if (fade > 0.6f) Icons.Draw(this, Icons.ForElement(m.Element), at + new Vector2(0, -28), 15, new Color(color.Darkened(0.3f), fade));
         }
         foreach (var d in _t.Demons)
         {
@@ -400,7 +400,9 @@ public partial class TrialLayer : Node2D
             DrawCircle(at + new Vector2(6, -4), 3.2f, new Color("#ffd27a"));
             DrawCircle(at + new Vector2(-6, -4), 1.3f, new Color(0.1f, 0, 0));
             DrawCircle(at + new Vector2(6, -4), 1.3f, new Color(0.1f, 0, 0));
-            Paint.Glyph(this, "魔", at + new Vector2(0, 7), 11, new Color(1, 0.8f, 0.7f, 0.7f));
+            // A jagged grin under the eyes.
+            DrawPolyline(new[] { at + new Vector2(-6, 6), at + new Vector2(-3, 9), at + new Vector2(0, 6), at + new Vector2(3, 9), at + new Vector2(6, 6) },
+                new Color(1, 0.8f, 0.7f, 0.75f), 1.6f, true);
         }
     }
 }

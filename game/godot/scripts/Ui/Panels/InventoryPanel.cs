@@ -1,13 +1,14 @@
 using System.Linq;
 using Godot;
 using TuTien.Core.Rules;
+using TuTienLuc.Art;
 
 namespace TuTienLuc.Ui.Panels;
 
 /// <summary>Hành trang: use pills and manuals, equip weapons.</summary>
 public partial class InventoryPanel : InkPanel
 {
-    protected override string Glyph => "囊";
+    protected override IconKind Emblem => IconKind.Bag;
     protected override string TitleText => T("Hành trang", "Inventory");
 
     protected override void Build()
@@ -15,8 +16,8 @@ public partial class InventoryPanel : InkPanel
         var p = E.Player;
         var content = E.Content;
         var weapon = content.Item(p.WeaponId);
-        Para(T($"銀 {p.Silver} bạc · 石 {p.SpiritStones} linh thạch · binh khí: {(weapon != null ? Text.Name(weapon) : "tay không")}",
-            $"銀 {p.Silver} silver · 石 {p.SpiritStones} spirit stones · weapon: {(weapon != null ? Text.Name(weapon) : "bare hands")}"), 16, Ink.InkColor);
+        Para(T($"{p.Silver} bạc · {p.SpiritStones} linh thạch · binh khí: {(weapon != null ? Text.Name(weapon) : "tay không")}",
+            $"{p.Silver} silver · {p.SpiritStones} spirit stones · weapon: {(weapon != null ? Text.Name(weapon) : "bare hands")}"), 16, Ink.InkColor);
         if (p.Items.Count == 0)
         {
             Para(T("Hành trang trống rỗng.", "Your bag is empty."));

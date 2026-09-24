@@ -125,6 +125,17 @@ public partial class SmokeTest : Node
     {
         CheckAudio();
 
+        // ---------------------------------------------------------------- the icons (no written glyphs anywhere)
+        if (Rendering)
+        {
+            var sheetLayer = new CanvasLayer { Layer = 100 };
+            AddChild(sheetLayer);
+            sheetLayer.AddChild(new IconSheet());
+            await Frames(3);
+            await Shot("icons");
+            sheetLayer.QueueFree();
+        }
+
         // ---------------------------------------------------------------- title and creation
         Main.Instance.ShowTitle();
         await Frames(30);
@@ -601,7 +612,7 @@ public partial class SmokeTest : Node
     /// <summary>
     /// A phone's way of playing, through touch events pushed into the viewport: the interface drawn bigger,
     /// the stick walks, the Interact button opens the bounty board, a tap on open ground walks there and two
-    /// fingers pinch the zoom; in a fight an art button casts, 停 pauses, and holding the martial art aims
+    /// fingers pinch the zoom; in a fight an art button casts, the pause button pauses, and holding the martial art aims
     /// itself at the foe until the fight is won. Panels still fit the smaller screen.
     /// </summary>
     private async Task<WorldScreen> TouchByHand(WorldScreen world)
@@ -677,7 +688,7 @@ public partial class SmokeTest : Node
         Check(world.ZoomTarget > zoom * 1.3f, $"two fingers apart zoom in ({zoom:0.00} → {world.ZoomTarget:0.00})");
         world.Zoom(1 / world.ZoomTarget);
 
-        // A fight: the arts and pause appear; an art button casts, 停 pauses, and holding the martial art wins it.
+        // A fight: the arts and pause appear; an art button casts, the pause button pauses, and holding the martial art wins it.
         // (Fresh cooldowns: the last fight may have ended just after this art was cast.)
         DevCheats.Restore(E);
         world.Player.SyncFromEngine();
@@ -691,7 +702,7 @@ public partial class SmokeTest : Node
         Check(world.Battle?.SkillUses.ContainsKey(art) == true,
             $"the art button casts {art} (cooldown {world.Player.CooldownLeft(art):0.0}, stun {world.PlayerBody.Stun:0.0}, dash {world.Player.DashTime:0.0}, frozen {world.Frozen})");
         await TapScreen(1, pad.CentreOf("pause")!.Value);
-        Check(world.Frozen && !pad.Visible, "停 pauses the fight (the controls step aside)");
+        Check(world.Frozen && !pad.Visible, "the pause button pauses the fight (the controls step aside)");
         world.SetPaused(false);
         await Frames(2);
         var basic = world.Player.Basic.Id;

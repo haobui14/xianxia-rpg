@@ -250,7 +250,7 @@ public partial class TouchControls : Control
 
     private void DrawPad(Pad pad)
     {
-        var (glyph, caption, color, cooldown, usable) = Look(pad);
+        var (icon, caption, color, cooldown, usable) = Look(pad);
         var held = pad.Finger >= 0;
         var r = pad.Radius * (held ? 0.93f : 1f);
         var c = pad.Centre;
@@ -259,12 +259,7 @@ public partial class TouchControls : Control
         if (cooldown > 0.01f) DrawColoredPolygon(Sector(c, r, Mathf.Min(cooldown, 0.995f)), new Color(Ink.InkColor, 0.38f));
         if (held) DrawCircle(c, r, new Color(color, 0.18f));
         DrawArc(c, r, 0, Mathf.Tau, 48, usable ? color : new Color(Ink.LineStrong, 0.9f), usable ? 3 : 1.5f, true);
-        if (glyph.Length > 0)
-        {
-            var size = (int)(r * 0.8f);
-            var gs = Ink.Han.GetStringSize(glyph, HorizontalAlignment.Left, -1, size);
-            DrawString(Ink.Han, c + new Vector2(-gs.X / 2, size * 0.36f), glyph, HorizontalAlignment.Left, -1, size, usable ? color : Ink.InkFaint);
-        }
+        Icons.Draw(this, icon, c, r * 1.02f, usable ? color : Ink.InkFaint);
         if (caption.Length == 0) return;
         if (caption.Length > 24) caption = caption[..23] + "…";
         var cs = Ink.UiFont.GetStringSize(caption, HorizontalAlignment.Left, -1, 14);
@@ -275,39 +270,39 @@ public partial class TouchControls : Control
         DrawString(Ink.UiFont, at, caption, HorizontalAlignment.Left, -1, 14, Ink.InkColor);
     }
 
-    /// <summary>A button's face: its glyph, a caption under it, its colour, how much cooldown is left (0–1), and whether it can be used.</summary>
-    private (string Glyph, string Caption, Color Color, float Cooldown, bool Usable) Look(Pad pad)
+    /// <summary>A button's face: its icon, a caption under it, its colour, how much cooldown is left (0–1), and whether it can be used.</summary>
+    private (IconKind Icon, string Caption, Color Color, float Cooldown, bool Usable) Look(Pad pad)
     {
         var pc = _f.Player;
         switch (pad.Action)
         {
             case "attack":
-                return (pc.Basic.Glyph, "", Ink.InkColor, Fraction(pc.CooldownLeft(pc.Basic.Id), pc.Basic.Cooldown), true);
+                return (IconKind.Sword, "", Ink.InkColor, Fraction(pc.CooldownLeft(pc.Basic.Id), pc.Basic.Cooldown), true);
             case "skill_1" or "skill_2" or "skill_3" or "skill_4":
             {
                 var skill = pc.SlotSkill(pad.Action[^1] - '1');
-                if (skill == null) return ("", "", Ink.InkFaint, 0, false);
+                if (skill == null) return (IconKind.None, "", Ink.InkFaint, 0, false);
                 var color = skill.Element is { } element ? Ink.Element(element) : Ink.InkColor;
-                return (skill.Glyph, "", color, Fraction(pc.CooldownLeft(skill.Id), skill.Cooldown), pc.QiCost(skill) <= pc.Qi);
+                return (Icons.ForSkill(skill), "", color, Fraction(pc.CooldownLeft(skill.Id), skill.Cooldown), pc.QiCost(skill) <= pc.Qi);
             }
             case "ultimate":
-                return (pc.Ultimate.Glyph, "", Ink.Violet, 1 - Mathf.Clamp(pc.Intent / 100f, 0, 1), pc.Intent >= 100);
+                return (IconKind.Ultimate, "", Ink.Violet, 1 - Mathf.Clamp(pc.Intent / 100f, 0, 1), pc.Intent >= 100);
             case "pill":
             {
                 var (_, count) = pc.Pill();
-                return ("丹", count > 0 ? $"×{count}" : "", Ink.Jade, Mathf.Clamp(pc.PillCd / 5f, 0, 1), count > 0 && pc.PillCd <= 0);
+                return (IconKind.Pill, count > 0 ? $"×{count}" : "", Ink.Jade, Mathf.Clamp(pc.PillCd / 5f, 0, 1), count > 0 && pc.PillCd <= 0);
             }
             case "dash":
-                return ("遁", "", Ink.GoldDeep, 0, pc.Stamina >= PlayerController.DashCost);
+                return (IconKind.Dash, "", Ink.GoldDeep, 0, pc.Stamina >= PlayerController.DashCost);
             case "interact":
-                return ("互", _f.Target?.Label() ?? "", Ink.JadeDeep, 0, true);
+                return (IconKind.Hand, _f.Target?.Label() ?? "", Ink.JadeDeep, 0, true);
             case "fly":
-                // 飛 takes to the sword, 降 comes down.
-                return (_f.PlayerBody.Flying ? "降" : "飛", "", Ink.WaterBlue, 0, true);
+                // The flying sword takes off; once aloft the button lands.
+                return (_f.PlayerBody.Flying ? IconKind.Land : IconKind.FlyingSword, "", Ink.WaterBlue, 0, true);
             case "pause":
-                return ("停", "", Ink.InkSoft, 0, true);
+                return (IconKind.Pause, "", Ink.InkSoft, 0, true);
         }
-        return ("", "", Ink.InkColor, 0, true);
+        return (IconKind.None, "", Ink.InkColor, 0, true);
     }
 
     private static float Fraction(float left, double total) => total > 0 ? Mathf.Clamp(left / (float)total, 0, 1) : 0;

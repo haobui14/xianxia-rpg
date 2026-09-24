@@ -275,9 +275,8 @@ public static class FxArt
     public static void Floater(CanvasItem c, Floater f)
     {
         var alpha = Mathf.Clamp(f.Life / f.MaxLife * 1.6f, 0, 1);
-        var han = f.Text.Length <= 3 && f.Text.Length > 0 && f.Text[0] > 0x2E80;
         Paint.Alpha = alpha;
-        Paint.Label(c, f.Text, f.Pos, f.Size, f.Color, han ? Ui.Ink.Han : Ui.Ink.Serif, 5);
+        Paint.Label(c, f.Text, f.Pos, f.Size, f.Color, Ui.Ink.Serif, 5);
         Paint.Alpha = 1;
     }
 }

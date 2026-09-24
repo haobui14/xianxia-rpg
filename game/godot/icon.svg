@@ -2,5 +2,13 @@
   <rect width="128" height="128" rx="10" fill="#efe5cd"/>
   <rect x="24" y="24" width="80" height="80" rx="4" fill="#9b2a26"/>
   <rect x="30" y="30" width="68" height="68" rx="2" fill="none" stroke="#fbe9b8" stroke-width="2"/>
-  <text x="64" y="84" text-anchor="middle" font-family="serif" font-size="52" font-weight="600" fill="#fbe9b8">仙</text>
+  <!-- A lotus, the seal on the title screen. -->
+  <g fill="#fbe9b8">
+    <ellipse cx="46.6" cy="70" rx="4.5" ry="12" transform="rotate(-62 46.6 70)"/>
+    <ellipse cx="81.4" cy="70" rx="4.5" ry="12" transform="rotate(62 81.4 70)"/>
+    <ellipse cx="55" cy="61.6" rx="5.4" ry="15" transform="rotate(-32 55 61.6)"/>
+    <ellipse cx="73" cy="61.6" rx="5.4" ry="15" transform="rotate(32 73 61.6)"/>
+    <ellipse cx="64" cy="57.4" rx="6" ry="17.4"/>
+  </g>
+  <line x1="42.4" y1="82.6" x2="85.6" y2="82.6" stroke="#fbe9b8" stroke-width="3" stroke-linecap="round"/>
 </svg>

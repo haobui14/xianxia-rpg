@@ -66,7 +66,7 @@ public partial class WorldScreen : FieldScreen
             var z = E.ZoneHere;
             if (z == null) return T(E.Map.Def.Name, E.Map.Def.NameEn);
             var tag = z.IsSafe ? T("an toàn", "safe") : T($"hiểm {z.DangerLevel}", $"danger {z.DangerLevel}");
-            if (z.CultivationBonus > 0) tag += $" · 氣 +{z.CultivationBonus}%";
+            if (z.CultivationBonus > 0) tag += T($" · linh khí +{z.CultivationBonus}%", $" · qi +{z.CultivationBonus}%");
             return tag;
         }
     }
@@ -403,9 +403,9 @@ public partial class WorldScreen : FieldScreen
     {
         if (Battle != null) return base.HintText();
         var fly = TouchUi.Prompt("fly");
-        if (PlayerBody.Flying) return T($"Đang ngự kiếm — bay qua sông núi · {fly} hạ xuống", $"Riding the sword — cross rivers and cliffs · {fly} to land");
+        if (PlayerBody.Flying) return T($"Đang ngự kiếm — bay qua sông núi · {fly} để hạ xuống", $"Riding the sword — cross rivers and cliffs · {fly} to land");
         if (TouchUi.Active)
-            return base.HintText() + T(" · 圖 bản đồ", " · 圖 map") + (Player.CanFly ? T($" · {fly} ngự kiếm", $" · {fly} sword flight") : "");
+            return base.HintText() + T(" · bản đồ ở góc trên phải", " · the map is in the top-right corner") + (Player.CanFly ? T($" · {fly} để ngự kiếm", $" · {fly} for sword flight") : "");
         var move = KeyMap.MoveKeys;
         return T($"{move} đi · {KeyName("interact")} tương tác · chém yêu thú để giao chiến · {KeyName("open_map")} bản đồ · {KeyName("end_month")} qua tháng sớm · cuộn chuột phóng to",
                 $"{move} walk · {KeyName("interact")} interact · strike a beast to fight · {KeyName("open_map")} map · {KeyName("end_month")} end month early · wheel zooms")

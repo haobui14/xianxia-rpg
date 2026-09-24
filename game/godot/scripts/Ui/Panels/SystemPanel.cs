@@ -1,11 +1,12 @@
 using Godot;
 using TuTien.Core;
+using TuTienLuc.Art;
 
 namespace TuTienLuc.Ui.Panels;
 
 public partial class SystemPanel : InkPanel
 {
-    protected override string Glyph => "系";
+    protected override IconKind Emblem => IconKind.Menu;
     protected override string TitleText => T("Hệ thống", "System");
     protected override Vector2 PanelSize => new(560, 580);
 

@@ -70,7 +70,6 @@ public static class Ink
     // ------------------------------------------------------------------ fonts
 
     private static Font? _serif;
-    private static Font? _han;
     private static Font? _ui;
 
     /// <summary>Body/display serif with Vietnamese coverage; system fallback fills anything missing.</summary>
@@ -79,13 +78,6 @@ public static class Ink
         FontNames = new[] { "Cormorant Garamond", "Spectral", "Noto Serif", "Cambria", "Georgia", "DejaVu Serif", "serif" },
         AllowSystemFallback = true,
         Antialiasing = TextServer.FontAntialiasing.Gray,
-    };
-
-    /// <summary>Han glyphs (seals, POI markers, watermarks).</summary>
-    public static Font Han => _han ??= new SystemFont
-    {
-        FontNames = new[] { "Noto Serif CJK SC", "Noto Serif SC", "Source Han Serif SC", "SimSun", "Songti SC", "Microsoft YaHei", "serif" },
-        AllowSystemFallback = true,
     };
 
     public static Font UiFont => _ui ??= new SystemFont

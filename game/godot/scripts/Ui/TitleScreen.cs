@@ -1,5 +1,6 @@
 using System.Linq;
 using Godot;
+using TuTienLuc.Art;
 using TuTien.Core;
 using TuTien.Core.State;
 using TuTien.Core.World;
@@ -126,11 +127,11 @@ public partial class TitleScreen : Control
 
     private void BuildMenu()
     {
-        var seal = UiKit.Seal("修", 72);
+        var seal = UiKit.Seal(IconKind.Lotus, 72);
         seal.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         _left.AddChild(seal);
         _left.AddChild(UiKit.Label("Tu Tiên Lục", 64, Ink.InkColor));
-        _left.AddChild(UiKit.Han("修 仙 錄", 26, Ink.CinnabarDeep));
+        _left.AddChild(new IconView(IconKind.Divider, Ink.CinnabarDeep, 1) { CustomMinimumSize = new Vector2(240, 16), SizeFlagsHorizontal = SizeFlags.ShrinkBegin });
         _left.AddChild(UiKit.Label(T("Một đời tu tiên giữa thế giới sống động — vùng Thanh Vân.",
             "A cultivation life in a living world — the Thanh Vân region."), 18, Ink.InkSoft, wrap: true));
         _left.AddChild(UiKit.Spacer(10));
@@ -218,7 +219,7 @@ public partial class TitleScreen : Control
         card.AddChild(UiKit.Caption(T("Linh căn", "Spirit root")));
         var rootRow = new HBoxContainer();
         rootRow.AddThemeConstantOverride("separation", 10);
-        foreach (var e in _root.Elements) rootRow.AddChild(UiKit.Seal(Names.Han(e), 44, Ink.Element(e)));
+        foreach (var e in _root.Elements) rootRow.AddChild(UiKit.Seal(Icons.ForElement(e), 44, Ink.Element(e)));
         var rootText = UiKit.Column(0);
         rootText.AddChild(UiKit.Label(string.Join(" · ", _root.Elements.Select(e => Names.Display(e, Game.Instance.Locale))), 20, Ink.InkColor));
         var grade = _root.Grade;

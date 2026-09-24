@@ -20,7 +20,7 @@ public static class EnemyAi
     /// <summary>For ranged foes without an authored art.</summary>
     private static readonly SkillDef Bolt = new()
     {
-        Id = "yeu_khi", Name = "Yêu Khí", NameEn = "Demonic Qi", Glyph = "妖", Damage = "spirit", DamageMultiplier = 1.0, Cooldown = 2.2,
+        Id = "yeu_khi", Name = "Yêu Khí", NameEn = "Demonic Qi", Damage = "spirit", DamageMultiplier = 1.0, Cooldown = 2.2,
         Cast = new CastDef { Shape = "projectile", Range = 420, Radius = 10, Speed = 380, Windup = 0.45 },
     };
 
@@ -253,7 +253,7 @@ public static class EnemyAi
                     b.F.Fx.Dust(origin + aim * 70, 14);
                     b.F.Fx.Slash(origin + new Vector2(0, -16), aim, 150, 160, Ink.Ochre, 0.3f, 1.8f);
                     if (FieldMath.InArc(origin, aim, 150, 160, b.Player.Pos, b.Player.Radius) && b.HitPlayer(f, 1.7f, DamageKind.Physical, null, null) > 0)
-                        b.Status(b.Player, ref b.Player.Stun, 0.45f, "暈");
+                        b.Status(b.Player, ref b.Player.Stun, 0.45f, Game.Instance.T("Choáng!", "Stunned!"));
                     Recover(f, 3.2f);
                 },
             });

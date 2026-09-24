@@ -13,9 +13,9 @@ namespace TuTienLuc.Audio;
 public static class Composer
 {
     // Modes as semitones above D.
-    private static readonly int[] Gong = { 0, 2, 4, 7, 9 };   // 宮 D E F# A B — open, bright
-    private static readonly int[] Shang = { 0, 2, 5, 7, 10 }; // 商 D E G A C — suspended, searching
-    private static readonly int[] Yu = { 0, 3, 5, 7, 10 };    // 羽 D F G A C — minor, tense
+    private static readonly int[] Gong = { 0, 2, 4, 7, 9 };   // cung: D E F# A B — open, bright
+    private static readonly int[] Shang = { 0, 2, 5, 7, 10 }; // thương: D E G A C — suspended, searching
+    private static readonly int[] Yu = { 0, 3, 5, 7, 10 };    // vũ: D F G A C — minor, tense
 
     private const int D = 62; // D4
 
@@ -102,7 +102,7 @@ public static class Composer
             var pool = density > 0.5f ? Rhythms : Rhythms.Where(r => r.Length <= 6).ToArray();
             var rhythm = pool[rng.Next(pool.Length)];
             var t = phrase * 8 * beat;
-            // A sweep up the strings (刮奏) opens each section.
+            // A sweep up the strings (quát tấu) opens each section.
             if (phrase % 4 == 0)
             {
                 var target = notes[Math.Clamp(index, 0, notes.Count - 1)];
@@ -135,11 +135,11 @@ public static class Composer
                 var note = notes[index];
                 var amp = 0.3f + (float)rng.NextDouble() * 0.08f + (Math.Abs(t / beat % 4) < 0.01f ? 0.05f : 0);
                 var start = Synth.Samples(t);
-                // Grace note from the string above (倚音).
+                // Grace note from the string above (ỷ âm).
                 if (len >= 1 && rng.NextDouble() < 0.25 && index + 1 < notes.Count)
                     Synth.Pluck(buf, start - Synth.Samples(0.07f), Synth.Midi(notes[index + 1]), amp * 0.45f, 0.6f, 0.7f, 0.3f, voice++);
                 Synth.Pluck(buf, start, Synth.Midi(note), amp, Math.Min(len * beat + 1.6f, 4.5f), 0.72f, 0.55f, voice++);
-                // Tremolo (搖指) on a long note.
+                // Tremolo (dao chỉ) on a long note.
                 if (len >= 2 && rng.NextDouble() < 0.3)
                 {
                     var step8 = beat / 4;

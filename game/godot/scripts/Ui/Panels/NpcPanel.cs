@@ -5,6 +5,7 @@ using TuTien.Core;
 using TuTien.Core.State;
 using TuTien.Core.Story;
 using TuTien.Core.World;
+using TuTienLuc.Art;
 
 namespace TuTienLuc.Ui.Panels;
 
@@ -23,7 +24,7 @@ public partial class NpcPanel : InkPanel
 
     private NpcState? Npc => E.Npc(_npcId);
 
-    protected override string Glyph => Npc is { } n ? GameEngine.NpcGlyph(n) : "人";
+    protected override IconKind Emblem => IconKind.Person;
     protected override string TitleText => Npc?.Name ?? T("Người lạ", "Stranger");
     protected override Vector2 PanelSize => new(780, 660);
 
@@ -65,7 +66,7 @@ public partial class NpcPanel : InkPanel
 
         Section(T("Lời nói", "Words"));
         foreach (var line in _lines)
-            Para("「" + line.Get(locale) + "」", 18, Ink.InkColor);
+            Para("“" + line.Get(locale) + "”", 18, Ink.InkColor);
         Para(T("(Lời thoại ngoại tuyến. Khi trực tuyến, Linh Thức sẽ viết lời thoại từ chính những dữ kiện trên.)",
             "(Offline lines. When online, the Linh Thức storyteller writes dialogue from these same facts.)"), 13, Ink.InkFaint);
 

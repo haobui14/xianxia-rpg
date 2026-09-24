@@ -197,15 +197,15 @@ public sealed class Battle
         }
 
         var fx = skill?.Effects;
-        if (fx?.StunChance is { } stun && Rng.Chance(stun)) Status(target, ref target.Stun, 0.8f, "暈");
+        if (fx?.StunChance is { } stun && Rng.Chance(stun)) Status(target, ref target.Stun, 0.8f, T("Choáng!", "Stunned!"));
         if (fx?.BleedDamage is { } bleed)
         {
             target.BleedDps = Mathf.Max(target.BleedDps, (float)bleed * 1.5f);
             target.BleedTime = 3;
         }
         if (fx?.DefenseBreak != null) target.DefBreak = 4;
-        if (fx?.Slow is { } slow && target.Active) Status(target, ref target.Slow, (float)slow, "緩");
-        if (fx?.Root is { } root && target.Active) Status(target, ref target.Rooted, (float)root, "縛");
+        if (fx?.Slow is { } slow && target.Active) Status(target, ref target.Slow, (float)slow, T("Chậm lại", "Slowed"));
+        if (fx?.Root is { } root && target.Active) Status(target, ref target.Rooted, (float)root, T("Trói chân", "Rooted"));
         if (fx?.Knockback is { } knock && target.Active && target.Speed > 0)
         {
             // A wave throws them back (the heavy ones only stagger).
@@ -253,9 +253,9 @@ public sealed class Battle
             p.BleedDps = Mathf.Max(p.BleedDps, (float)bleed);
             p.BleedTime = 3;
         }
-        if (fx?.StunChance is { } stun && Rng.Chance(stun)) Status(p, ref p.Stun, 0.5f, "暈");
-        if (fx?.Slow is { } slow) Status(p, ref p.Slow, (float)slow, "緩");
-        if (fx?.Root is { } root) Status(p, ref p.Rooted, (float)root, "縛");
+        if (fx?.StunChance is { } stun && Rng.Chance(stun)) Status(p, ref p.Stun, 0.5f, T("Choáng!", "Stunned!"));
+        if (fx?.Slow is { } slow) Status(p, ref p.Slow, (float)slow, T("Chậm lại", "Slowed"));
+        if (fx?.Root is { } root) Status(p, ref p.Rooted, (float)root, T("Trói chân", "Rooted"));
         return amount;
     }
 
@@ -370,9 +370,10 @@ public sealed class Battle
     }
 
     /// <summary>Apply a status and show its glyph once.</summary>
-    public void Status(Fighter f, ref float timer, float seconds, string glyph)
+    /// <summary>Put a condition on a fighter; a word floats up the first time it takes hold.</summary>
+    public void Status(Fighter f, ref float timer, float seconds, string word)
     {
-        if (timer <= 0) Fx.Say(f.Pos + new Vector2(0, -Figures.HeightOf(f.Kind) * f.Scale - 20), glyph, Ink.GoldDeep, 18);
+        if (timer <= 0) Fx.Say(f.Pos + new Vector2(0, -Figures.HeightOf(f.Kind) * f.Scale - 20), word, Ink.GoldDeep, 17);
         timer = Mathf.Max(timer, seconds);
     }
 

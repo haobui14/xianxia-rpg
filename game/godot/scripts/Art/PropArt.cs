@@ -334,8 +334,8 @@ public static class PropArt
         Window(c, 28, -114, 24, 18);
         Roof(c, -72, 72, -118, -170, new Color("#4a5566"));
         // Signboard and lanterns.
-        Paint.Poly(c, new[] { V(-26, -76), V(26, -76), V(26, -60), V(-26, -60) }, new Color("#2c2a33"), 0.9f, 1.3f);
-        Paint.Glyph(c, "客棧", V(0, -68), 13, new Color("#e0c070"));
+        Paint.Poly(c, new[] { V(-38, -77), V(38, -77), V(38, -59), V(-38, -59) }, new Color("#2c2a33"), 0.9f, 1.3f);
+        Paint.Caption(c, "Khách điếm", V(0, -68), 12, new Color("#e0c070"));
         foreach (var x in new[] { -34f, 34 })
         {
             Paint.Line2(c, V(x, -56), V(x, -50), Paint.Ink, 1);
@@ -344,7 +344,8 @@ public static class PropArt
         }
         Paint.Stroke(c, V(w / 2 + 14, 0), V(w / 2 + 14, -110), new Color("#6b4a32"), 3, 0.7f);
         Paint.Poly(c, new[] { V(w / 2 + 15, -108), V(w / 2 + 40, -104), V(w / 2 + 38, -70), V(w / 2 + 15, -74) }, new Color("#e9dcc0"), 0.8f, 1.2f);
-        Paint.Glyph(c, "酒", V(w / 2 + 27, -89), 16, new Color("#9b2a26"));
+        // A wine gourd on the tavern's flag.
+        Icons.Draw(c, IconKind.Gourd, V(w / 2 + 27, -89), 24, new Color("#9b2a26"));
     }
 
     public static void Stall(CanvasItem c, int seed)
@@ -381,8 +382,8 @@ public static class PropArt
             for (var i = 0; i < 4; i++) Paint.Line2(c, n + V(3, 5 + i * 5), n + V(12, 5 + i * 5), new Color(Paint.Ink, 0.45f), 0.8f);
         }
         Roof(c, -34, 34, -68, -84, new Color("#4a5566"), 5);
-        Paint.Poly(c, new[] { V(-9, -96), V(9, -96), V(9, -84), V(-9, -84) }, new Color("#2c2a33"), 0.8f, 1);
-        Paint.Glyph(c, "榜", V(0, -90), 11, new Color("#e0c070"));
+        Paint.Poly(c, new[] { V(-21, -97), V(21, -97), V(21, -83), V(-21, -83) }, new Color("#2c2a33"), 0.8f, 1);
+        Paint.Caption(c, "Cáo thị", V(0, -90), 10, new Color("#e0c070"));
     }
 
     public static void Well(CanvasItem c)
@@ -459,9 +460,9 @@ public static class PropArt
         Roof(c, -112, -40, -112, -134, new Color("#2f3b4c"), 8);
         Roof(c, 40, 112, -112, -134, new Color("#2f3b4c"), 8);
         Roof(c, -54, 54, -150, -184, new Color("#2f3b4c"), 12);
-        Paint.Poly(c, new[] { V(-30, -127), V(30, -127), V(30, -108), V(-30, -108) }, new Color("#1f3550"), 0.9f, 1.4f);
-        Paint.Poly(c, new[] { V(-27, -124), V(27, -124), V(27, -111), V(-27, -111) }, new Color("#c9a54a") with { A = 0.25f }, 0);
-        Paint.Glyph(c, "青雲", V(0, -118), 14, new Color("#e0c070"));
+        Paint.Poly(c, new[] { V(-42, -128), V(42, -128), V(42, -107), V(-42, -107) }, new Color("#1f3550"), 0.9f, 1.4f);
+        Paint.Poly(c, new[] { V(-39, -125), V(39, -125), V(39, -110), V(-39, -110) }, new Color("#c9a54a") with { A = 0.25f }, 0);
+        Paint.Caption(c, "Thanh Vân", V(0, -118), 13, new Color("#e0c070"));
     }
 
     public static void Hall(CanvasItem c)
@@ -478,8 +479,8 @@ public static class PropArt
         Roof(c, -w / 2, w / 2, -84, -122, new Color("#2f3b4c"), 10);
         Paint.Poly(c, new[] { V(-w / 2 + 40, -122), V(w / 2 - 40, -122), V(w / 2 - 40, -140), V(-w / 2 + 40, -140) }, new Color("#efe5cc"));
         Roof(c, -w / 2 + 40, w / 2 - 40, -138, -186, new Color("#2f3b4c"), 12);
-        Paint.Poly(c, new[] { V(-34, -118), V(34, -118), V(34, -100), V(-34, -100) }, new Color("#1f3550"), 0.9f, 1.3f);
-        Paint.Glyph(c, "青雲殿", V(0, -109), 12, new Color("#e0c070"));
+        Paint.Poly(c, new[] { V(-50, -119), V(50, -119), V(50, -99), V(-50, -99) }, new Color("#1f3550"), 0.9f, 1.3f);
+        Paint.Caption(c, "Thanh Vân Điện", V(0, -109), 12, new Color("#e0c070"));
     }
 
     public static void Pagoda(CanvasItem c)
@@ -547,7 +548,7 @@ public static class PropArt
             var x = -30 + i * 15;
             Paint.Line2(c, V(x, -52 + (i % 2) * 4), V(x + 2, -30 - (i % 3) * 6), new Color("#4f7a45"), 2);
         }
-        Paint.Glyph(c, "秘", V(0, -128 + Mathf.Sin(time * 1.5f) * 4), 22, new Color(0.75f, 0.6f, 0.95f, 0.8f));
+        Icons.Draw(c, IconKind.Portal, V(0, -128 + Mathf.Sin(time * 1.5f) * 4), 28, new Color(0.75f, 0.6f, 0.95f, 0.85f));
     }
 
     public static void Crystals(CanvasItem c, float time)
@@ -570,7 +571,7 @@ public static class PropArt
             Paint.Poly(c, pts, new Color("#7fd0a8"), 0.85f, 1.5f);
             c.DrawColoredPolygon(new[] { baseL, V(x, 0), V(x + lean * h * 0.45f, -h * 0.9f), V(x - 7 + lean * h * 0.4f, -h * 0.78f) }, Paint.A(new Color("#c8f5dc") with { A = 0.6f }));
         }
-        Paint.Glyph(c, "脈", V(0, -96 + Mathf.Sin(time * 1.3f) * 3), 18, new Color(0.4f, 0.75f, 0.55f, 0.75f));
+        Icons.Draw(c, IconKind.Core, V(0, -100 + Mathf.Sin(time * 1.3f) * 3), 24, new Color(0.4f, 0.75f, 0.55f, 0.8f));
     }
 
     public static void Spring(CanvasItem c, float time)
@@ -639,7 +640,6 @@ public static class PropArt
         Paint.Poly(c, new[] { V(w * 0.15f, 0), V(w, 0), V(w * 0.82f, -h), V(w * 0.2f, -h - 6 * k) }, new Color("#7f705a"), 0);
         Paint.Line2(c, V(-w * 0.4f, -h * 0.3f), V(-w * 0.1f, -h * 0.55f), new Color(Paint.Ink, 0.4f), 1.2f);
         Paint.Line2(c, V(w * 0.3f, -h * 0.65f), V(w * 0.55f, -h * 0.85f), new Color(Paint.Ink, 0.35f), 1.1f);
-        Paint.Glyph(c, "土", V(-w * 0.15f, -h * 0.5f), 13, new Color(0.3f, 0.24f, 0.18f, 0.6f * k));
     }
 
     public static void Stele(CanvasItem c)
@@ -648,7 +648,7 @@ public static class PropArt
         Paint.Poly(c, new[] { V(-20, 0), V(20, 0), V(16, -10), V(-16, -10) }, new Color("#8c8474"));
         Paint.Poly(c, new[] { V(-13, -10), V(13, -10), V(12, -74), V(-12, -74) }, new Color("#a8a294"));
         Paint.Poly(c, new[] { V(-16, -74), V(16, -74), V(0, -88) }, new Color("#6f685c"));
-        Paint.Glyph(c, "關", V(0, -44), 18, new Color("#3a3a44"));
+        Paint.Caption(c, "Ải", V(0, -44), 18, new Color("#3a3a44"));
     }
 
     public static void QiPillar(CanvasItem c, float time)
@@ -661,7 +661,7 @@ public static class PropArt
             var w = 12 - i * 1.6f;
             c.DrawColoredPolygon(new[] { V(-w, -4), V(w, -4), V(w * 0.6f, -140), V(-w * 0.6f, -140) }, Paint.A(new Color(1f, 0.86f, 0.5f, 0.07f)));
         }
-        Paint.Glyph(c, "奇", V(0, -96 + Mathf.Sin(time * 2) * 5), 24, new Color(0.63f, 0.48f, 0.18f, 0.95f));
+        Icons.Draw(c, IconKind.Star, V(0, -98 + Mathf.Sin(time * 2) * 5), 32, new Color(0.63f, 0.48f, 0.18f, 0.95f));
     }
 
     public static void Chest(CanvasItem c, bool open, float time)

@@ -3,6 +3,7 @@ using System.Linq;
 using Godot;
 using TuTien.Core;
 using TuTien.Core.Rules;
+using TuTienLuc.Art;
 
 namespace TuTienLuc.Ui.Panels;
 
@@ -19,7 +20,7 @@ public partial class BreakthroughResultPanel : InkPanel
         _success = events.Any(e => e.Kind == "realm_up");
     }
 
-    protected override string Glyph => _success ? "成" : "敗";
+    protected override IconKind Emblem => _success ? IconKind.Ascend : IconKind.Crack;
     protected override string TitleText => _success ? T("Đột phá thành công", "Breakthrough!") : T("Đột phá thất bại", "The breakthrough failed");
     protected override Vector2 PanelSize => new(700, 520);
 
@@ -29,7 +30,7 @@ public partial class BreakthroughResultPanel : InkPanel
         Para(T($"Thành tích thử thách: {_performance * 100:0}%", $"Trial performance: {_performance * 100:0}%"), 18, Ink.InkColor);
         if (_success)
         {
-            Para(Text.Realm(p.Realm, p.Stage) + $"  {Names.Han(p.Realm)}", 26, Ink.Realm(p.Realm).Darkened(0.2f));
+            Para(Text.Realm(p.Realm, p.Stage), 26, Ink.Realm(p.Realm).Darkened(0.2f));
             if (_events.Any(e => e.Kind == "foundation"))
                 Para(T($"Nền móng {Foundation.Name(p.Foundation, Locale.Vi)} — lợi ích đột phá ×{Foundation.GainMultiplier(p.Foundation):0.##}, uy lực +{(Foundation.PowerMultiplier(p.Foundation) - 1) * 100:0}% vĩnh viễn",
                     $"A {Foundation.Name(p.Foundation, Locale.En)} foundation — breakthrough gains ×{Foundation.GainMultiplier(p.Foundation):0.##}, +{(Foundation.PowerMultiplier(p.Foundation) - 1) * 100:0}% power for good"),

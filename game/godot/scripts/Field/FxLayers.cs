@@ -114,13 +114,17 @@ public partial class OverlayLayer : Node2D
         if (_f.Target is { } target && _f.Battle == null)
         {
             var at = target.At() + new Vector2(0, -target.Height - 18);
-            var text = $"[{Ui.TouchUi.Prompt("interact")}] " + target.Label();
+            // With touch controls a hand stands for the Interact button; with keys the key is named.
+            var touch = Ui.TouchUi.Active;
+            var text = touch ? target.Label() : $"[{Ui.KeyMap.Label("interact")}] " + target.Label();
             var font = Ui.Ink.UiFont;
             var size = font.GetStringSize(text, HorizontalAlignment.Left, -1, 15);
-            var box = new Rect2(at - new Vector2(size.X / 2 + 10, 14), new Vector2(size.X + 20, 26));
+            var lead = touch ? 22f : 0f;
+            var box = new Rect2(at - new Vector2((size.X + lead) / 2 + 10, 14), new Vector2(size.X + lead + 20, 26));
             DrawRect(box, new Color(0.11f, 0.13f, 0.19f, 0.86f));
             DrawRect(box, new Color(0.63f, 0.48f, 0.18f, 0.9f), false, 1.5f);
-            DrawString(font, new Vector2(box.Position.X + 10, box.Position.Y + 18), text, HorizontalAlignment.Left, -1, 15, new Color("#f1e9d2"));
+            if (touch) Icons.Draw(this, IconKind.Hand, box.Position + new Vector2(19, 13), 17, new Color("#e0c070"));
+            DrawString(font, new Vector2(box.Position.X + 10 + lead, box.Position.Y + 18), text, HorizontalAlignment.Left, -1, 15, new Color("#f1e9d2"));
         }
 
         foreach (var f in _f.Fx.Floaters) FxArt.Floater(this, f);
@@ -146,17 +150,21 @@ public partial class OverlayLayer : Node2D
             var mp = pos + new Vector2(w + 12, 3);
             DrawCircle(mp, 10, new Color("#f7eed5"));
             DrawArc(mp, 10, 0, Mathf.Tau, 20, Ui.Ink.Element(mark), 2, true);
-            Paint.Glyph(this, FieldMath.Han[mark], mp, 13, Ui.Ink.Element(mark));
+            Icons.Draw(this, Icons.ForElement(mark), mp, 13, Ui.Ink.Element(mark));
         }
-        var icons = new (bool on, string glyph, Color color)[]
+        var marks = new (bool on, IconKind icon, Color color)[]
         {
-            (b.Stun > 0, "暈", new Color("#7a5b1c")), (b.Rooted > 0, "縛", new Color("#3a6280")), (b.Slow > 0, "緩", new Color("#3a6280")),
-            (b.BleedTime > 0, "血", new Color("#751c18")), (b.BurnTime > 0, "焚", new Color("#9b2a26")), (b.DefBreak > 0, "破", new Color("#8a6a3a")),
-            (b.ResBreak > 0, "融", new Color("#a07a2e")), (b.Blind > 0, "盲", new Color("#3f4757")),
+            (b.Stun > 0, IconKind.Stun, new Color("#7a5b1c")), (b.Rooted > 0, IconKind.Chain, new Color("#3a6280")), (b.Slow > 0, IconKind.Slow, new Color("#3a6280")),
+            (b.BleedTime > 0, IconKind.Blood, new Color("#751c18")), (b.BurnTime > 0, IconKind.Fire, new Color("#9b2a26")), (b.DefBreak > 0, IconKind.ArmorBreak, new Color("#8a6a3a")),
+            (b.ResBreak > 0, IconKind.Crack, new Color("#a07a2e")), (b.Blind > 0, IconKind.Blind, new Color("#3f4757")),
         };
-        var shown = icons.Where(i => i.on).ToList();
+        var shown = marks.Where(m => m.on).ToList();
         for (var i = 0; i < shown.Count; i++)
-            Paint.Label(this, shown[i].glyph, top + new Vector2((i - (shown.Count - 1) / 2f) * 17, -12), 14, shown[i].color, Ui.Ink.Han, 3);
+        {
+            var at = top + new Vector2((i - (shown.Count - 1) / 2f) * 19, -12);
+            DrawCircle(at, 9, new Color(0.97f, 0.94f, 0.85f, 0.85f));
+            Icons.Draw(this, shown[i].icon, at, 13, shown[i].color);
+        }
         if (b.Enraged) Paint.Label(this, T("Cuồng nộ", "Enraged"), top + new Vector2(0, -28), 13, new Color("#9b2a26"), Ui.Ink.UiFont, 3);
     }
 }

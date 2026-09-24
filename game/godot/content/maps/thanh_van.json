@@ -84,7 +84,7 @@
     "x": 6,
     "y": 22,
     "ref": "thanh_van_village",
-    "glyph": "村",
+    "icon": "town",
     "name": "Thanh Vân Thôn",
     "name_en": "Azure Cloud Village"
    },
@@ -94,7 +94,7 @@
     "x": 8,
     "y": 4,
     "ref": "thanh_van_kiem",
-    "glyph": "劍",
+    "icon": "sect",
     "name": "Thanh Vân Kiếm Phái",
     "name_en": "Azure Cloud Sword Sect"
    },
@@ -104,7 +104,7 @@
     "x": 41,
     "y": 25,
     "ref": "spirit_herb_realm",
-    "glyph": "秘",
+    "icon": "realm",
     "name": "Linh Thảo Bí Cảnh",
     "name_en": "Spirit Herb Secret Realm"
    },
@@ -113,7 +113,7 @@
     "kind": "spirit_vein",
     "x": 41,
     "y": 5,
-    "glyph": "脈",
+    "icon": "vein",
     "name": "Cổ Thụ Linh Mạch",
     "name_en": "Ancient Tree Spirit Vein",
     "qi_bonus": 25
@@ -123,7 +123,7 @@
     "kind": "spirit_vein",
     "x": 21,
     "y": 17,
-    "glyph": "泉",
+    "icon": "spring",
     "name": "Thanh Lâm Linh Tuyền",
     "name_en": "Verdant Spirit Spring",
     "qi_bonus": 12
@@ -133,7 +133,7 @@
     "kind": "herb",
     "x": 23,
     "y": 19,
-    "glyph": "草",
+    "icon": "herb",
     "name": "Dược điền",
     "name_en": "Herb patch",
     "loot_table": "thanh_van_wilds"
@@ -143,7 +143,7 @@
     "kind": "herb",
     "x": 26,
     "y": 26,
-    "glyph": "草",
+    "icon": "herb",
     "name": "Dược điền",
     "name_en": "Herb patch",
     "loot_table": "thanh_van_wilds"
@@ -153,7 +153,7 @@
     "kind": "herb",
     "x": 35,
     "y": 20,
-    "glyph": "草",
+    "icon": "herb",
     "name": "Linh thảo",
     "name_en": "Spirit herbs",
     "loot_table": "common_herbs"
@@ -163,7 +163,7 @@
     "kind": "herb",
     "x": 44,
     "y": 23,
-    "glyph": "草",
+    "icon": "herb",
     "name": "Linh thảo",
     "name_en": "Spirit herbs",
     "loot_table": "common_herbs"
@@ -173,7 +173,7 @@
     "kind": "herb",
     "x": 37,
     "y": 27,
-    "glyph": "草",
+    "icon": "herb",
     "name": "Linh thảo",
     "name_en": "Spirit herbs",
     "loot_table": "common_herbs"
@@ -183,7 +183,7 @@
     "kind": "herb",
     "x": 20,
     "y": 12,
-    "glyph": "草",
+    "icon": "herb",
     "name": "Dược điền",
     "name_en": "Herb patch",
     "loot_table": "thanh_van_wilds"
@@ -194,7 +194,7 @@
     "x": 43,
     "y": 0,
     "ref": "hoa_son",
-    "glyph": "關",
+    "icon": "pass",
     "name": "Bắc Quan — tới Hỏa Sơn",
     "name_en": "North Pass — to Fire Mountain"
    },
@@ -204,7 +204,7 @@
     "x": 47,
     "y": 15,
     "ref": "huyen_thuy",
-    "glyph": "關",
+    "icon": "pass",
     "name": "Đông Quan — tới Huyền Thủy",
     "name_en": "East Pass — to Mystic Waters"
    }

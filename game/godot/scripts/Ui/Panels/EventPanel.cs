@@ -2,6 +2,7 @@ using Godot;
 using TuTien.Core;
 using TuTien.Core.Content;
 using TuTien.Core.Events;
+using TuTienLuc.Art;
 
 namespace TuTienLuc.Ui.Panels;
 
@@ -23,7 +24,7 @@ public partial class EventPanel : InkPanel
             : eventId != null && E.Content.Events.TryGetValue(eventId, out var ev) ? ev : null;
     }
 
-    protected override string Glyph => "奇";
+    protected override IconKind Emblem => IconKind.Star;
     protected override string TitleText => _event != null ? T(_event.Name, _event.NameEn) : T("Kỳ ngộ", "Encounter");
     protected override Vector2 PanelSize => new(760, 600);
     protected override bool Closable => _result == null;

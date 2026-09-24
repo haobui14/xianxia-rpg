@@ -1,13 +1,14 @@
 using System.Linq;
 using Godot;
 using TuTien.Core;
+using TuTienLuc.Art;
 
 namespace TuTienLuc.Ui.Panels;
 
 /// <summary>The end of a run — what this life amounted to (design §7.15: death is permanent).</summary>
 public partial class DeathPanel : InkPanel
 {
-    protected override string Glyph => "終";
+    protected override IconKind Emblem => IconKind.Grave;
     protected override string TitleText => T("Đạo đồ đã tận", "Your path has ended");
     protected override bool Closable => false;
     protected override Vector2 PanelSize => new(720, 580);

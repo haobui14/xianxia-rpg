@@ -9,7 +9,7 @@ public enum TouchMode
     Off,
 }
 
-/// <summary>Whether the on-screen touch controls are in use, and what their buttons are called in prompts.</summary>
+/// <summary>Whether the on-screen touch controls are in use, and how prompts name their buttons.</summary>
 public static class TouchUi
 {
     /// <summary>On when the player chose it, and by default on a phone or tablet.</summary>
@@ -20,19 +20,20 @@ public static class TouchUi
         _ => OS.HasFeature("mobile"),
     };
 
-    /// <summary>The glyph on the touch button (or HUD icon) that does <paramref name="action"/>.</summary>
-    public static string Glyph(string action) => action switch
+    /// <summary>What the touch button (or HUD icon) for <paramref name="action"/> is called.</summary>
+    public static string ButtonName(string action) => action switch
     {
-        "interact" => "互",
-        "dash" => "遁",
-        "pill" => "丹",
-        "fly" => "飛",
-        "pause" => "停",
-        "open_character" => "人",
-        "open_map" => "圖",
+        "interact" => Game.Instance.T("nút Tương tác", "the Interact button"),
+        "dash" => Game.Instance.T("nút Lướt", "the Dash button"),
+        "pill" => Game.Instance.T("nút Đan dược", "the Pill button"),
+        "fly" => Game.Instance.T("nút Ngự kiếm", "the Fly button"),
+        "pause" => Game.Instance.T("nút Tạm dừng", "the Pause button"),
+        "attack" => Game.Instance.T("nút Kiếm", "the Sword button"),
+        "open_character" => Game.Instance.T("biểu tượng Nhân vật", "the Character icon"),
+        "open_map" => Game.Instance.T("biểu tượng Bản đồ", "the Map icon"),
         _ => "",
     };
 
-    /// <summary>How a prompt names an action: its button's glyph with touch controls, else its key.</summary>
-    public static string Prompt(string action) => Active && Glyph(action) is { Length: > 0 } glyph ? glyph : KeyMap.Label(action);
+    /// <summary>How a prompt names an action: its touch button with touch controls, else its key.</summary>
+    public static string Prompt(string action) => Active && ButtonName(action) is { Length: > 0 } name ? name : KeyMap.Label(action);
 }

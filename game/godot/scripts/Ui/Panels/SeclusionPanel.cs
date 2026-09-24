@@ -2,6 +2,7 @@ using Godot;
 using TuTien.Core;
 using TuTien.Core.Content;
 using TuTien.Core.Rules;
+using TuTienLuc.Art;
 
 namespace TuTienLuc.Ui.Panels;
 
@@ -19,7 +20,7 @@ public partial class SeclusionPanel : InkPanel
 
     public SeclusionPanel(TownDef? inn = null) => _inn = inn;
 
-    protected override string Glyph => "閉";
+    protected override IconKind Emblem => IconKind.Lotus;
     protected override string TitleText => T("Bế quan tu luyện", "Secluded cultivation");
     protected override Vector2 PanelSize => new(760, 640);
 

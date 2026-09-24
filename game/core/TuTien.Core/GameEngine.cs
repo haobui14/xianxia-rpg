@@ -31,7 +31,8 @@ namespace TuTien.Core
         public string Id { get; set; } = "";
         public string Name { get; set; } = "";
         public string NameEn { get; set; } = "";
-        public string Glyph { get; set; } = "";
+        /// <summary>The picture that marks it on the map (a place's icon, "beast", "adventure", or a person's role).</summary>
+        public string Icon { get; set; } = "";
         public int X { get; set; }
         public int Y { get; set; }
         public bool Hostile { get; set; }
@@ -152,7 +153,7 @@ namespace TuTien.Core
             };
             return new Interactable
             {
-                Kind = kind, Id = poi.Id, Name = poi.Name, NameEn = poi.NameEn, Glyph = poi.Glyph, X = poi.X, Y = poi.Y,
+                Kind = kind, Id = poi.Id, Name = poi.Name, NameEn = poi.NameEn, Icon = poi.Icon, X = poi.X, Y = poi.Y,
                 Ready = kind != InteractKind.Herb || Spawns.NodeReady(State, poi.Id),
             };
         }
@@ -164,23 +165,24 @@ namespace TuTien.Core
             return new Interactable
             {
                 Kind = InteractKind.Beast, Id = pack.Id, Name = lead.Name + count, NameEn = lead.NameEn + count,
-                Glyph = lead.Glyph, X = pack.X, Y = pack.Y, Hostile = true,
+                Icon = "beast", X = pack.X, Y = pack.Y, Hostile = true,
             };
         }
 
         private Interactable FromNpc(NpcState npc) => new Interactable
         {
             Kind = InteractKind.Npc, Id = npc.Id, Name = npc.Name, NameEn = npc.Name,
-            Glyph = NpcGlyph(npc), X = npc.X, Y = npc.Y,
+            Icon = NpcRole(npc), X = npc.X, Y = npc.Y,
             Hostile = npc.RelationTo(NpcSim.PlayerKey) <= -40,
         };
 
-        public static string NpcGlyph(NpcState npc) => npc.Id switch
+        /// <summary>What a person is to the player: elder | deacon | rival | demonic | disciple | person.</summary>
+        public static string NpcRole(NpcState npc) => npc.Id switch
         {
-            "npc_elder" => "老",
-            "npc_deacon" => "執",
-            "npc_rival" => "敵",
-            _ => npc.SectId == "huyet_sat_ma_tong" ? "魔" : npc.SectId != null ? "劍" : "人",
+            "npc_elder" => "elder",
+            "npc_deacon" => "deacon",
+            "npc_rival" => "rival",
+            _ => npc.SectId == "huyet_sat_ma_tong" ? "demonic" : npc.SectId != null ? "disciple" : "person",
         };
 
         private Interactable FromAdventure(AdventureSpot adv)
@@ -189,7 +191,7 @@ namespace TuTien.Core
             return new Interactable
             {
                 Kind = InteractKind.Adventure, Id = adv.Id, Name = ev?.Name ?? "Kỳ ngộ", NameEn = ev?.NameEn ?? "Encounter",
-                Glyph = "奇", X = adv.X, Y = adv.Y,
+                Icon = "adventure", X = adv.X, Y = adv.Y,
             };
         }
 

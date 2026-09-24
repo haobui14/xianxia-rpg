@@ -326,7 +326,6 @@ namespace TuTien.Core.Content
         public string Id { get; set; } = "";
         public string Name { get; set; } = "";
         public string NameEn { get; set; } = "";
-        public string Glyph { get; set; } = "妖";
         public string Archetype { get; set; } = "charger";
         public Element? Element { get; set; }
         public Realm Realm { get; set; }
@@ -356,7 +355,6 @@ namespace TuTien.Core.Content
         public string NameEn { get; set; } = "";
         public string Description { get; set; } = "";
         public string DescriptionEn { get; set; } = "";
-        public string Glyph { get; set; } = "技";
         public string Type { get; set; } = "attack"; // attack | defense | support
         public string Damage { get; set; } = "spirit"; // spirit | physical
         public Element? Element { get; set; }
@@ -431,7 +429,8 @@ namespace TuTien.Core.Content
         public int X { get; set; }
         public int Y { get; set; }
         public string? Ref { get; set; }
-        public string Glyph { get; set; } = "?";
+        /// <summary>The picture that marks it: town | sect | realm | vein | spring | herb | pass.</summary>
+        public string Icon { get; set; } = "";
         public string Name { get; set; } = "";
         public string NameEn { get; set; } = "";
         public int QiBonus { get; set; }

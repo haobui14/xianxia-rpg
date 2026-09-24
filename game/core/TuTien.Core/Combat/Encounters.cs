@@ -68,7 +68,7 @@ namespace TuTien.Core.Combat
         public static EnemyDef Fallback(string id)
         {
             var name = string.Join(" ", id.Split('_').Select(w => w.Length == 0 ? w : char.ToUpperInvariant(w[0]) + w.Substring(1)));
-            return new EnemyDef { Id = id, Name = name, NameEn = name, Glyph = "妖", Archetype = "charger", Hp = 60, Atk = 12, Def = 8, Res = 8, Speed = 130, Exp = 12 };
+            return new EnemyDef { Id = id, Name = name, NameEn = name, Archetype = "charger", Hp = 60, Atk = 12, Def = 8, Res = 8, Speed = 130, Exp = 12 };
         }
 
         public static List<EnemyInstance> Build(ContentDb content, Encounter encounter)

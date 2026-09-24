@@ -15,7 +15,6 @@ namespace TuTien.Core
         {
             "Mortal", "Qi Condensation", "Foundation Establishment", "Core Formation", "Nascent Soul",
         };
-        private static readonly string[] RealmHan = { "凡人", "練氣", "築基", "結丹", "元嬰" };
 
         private static readonly string[] BodyIds = { "PhàmThể", "LuyệnCốt", "ĐồngCân", "KimCương", "TháiCổ" };
         private static readonly string[] BodyVi = { "Phàm Thể", "Luyện Cốt", "Đồng Cân", "Kim Cương", "Thái Cổ" };
@@ -26,7 +25,6 @@ namespace TuTien.Core
 
         private static readonly string[] ElementIds = { "Kim", "Mộc", "Thủy", "Hỏa", "Thổ" };
         private static readonly string[] ElementEn = { "Metal", "Wood", "Water", "Fire", "Earth" };
-        private static readonly string[] ElementHan = { "金", "木", "水", "火", "土" };
 
         private static readonly string[] GradeIds = { "PhổThông", "Khá", "Hiếm", "ThiênPhẩm" };
         private static readonly string[] GradeVi = { "Phổ Thông", "Khá", "Hiếm", "Thiên Phẩm" };
@@ -38,7 +36,6 @@ namespace TuTien.Core
         public static string Id(Realm realm) => RealmIds[(int)realm];
         public static string Display(Realm realm, Locale locale) =>
             locale == Locale.En ? RealmEn[(int)realm] : RealmVi[(int)realm];
-        public static string Han(Realm realm) => RealmHan[(int)realm];
 
         public static string Id(BodyRealm realm) => BodyIds[(int)realm];
         public static string Display(BodyRealm realm, Locale locale) =>
@@ -47,7 +44,6 @@ namespace TuTien.Core
         public static string Id(Element element) => ElementIds[(int)element];
         public static string Display(Element element, Locale locale) =>
             locale == Locale.En ? ElementEn[(int)element] : ElementIds[(int)element];
-        public static string Han(Element element) => ElementHan[(int)element];
 
         public static string Id(RootGrade grade) => GradeIds[(int)grade];
         public static string Display(RootGrade grade, Locale locale) =>

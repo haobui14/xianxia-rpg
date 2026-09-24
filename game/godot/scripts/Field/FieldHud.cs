@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using TuTienLuc.Art;
 using TuTien.Core;
 using TuTien.Core.Combat;
 using TuTien.Core.Content;
@@ -21,7 +22,7 @@ public partial class FieldHud : Control
 {
     private sealed class Card
     {
-        public string Glyph = "";
+        public IconKind Icon;
         public string Title = "";
         public Color Color = Ink.InkColor;
         public readonly List<(string Text, Color Color)> Lines = new();
@@ -109,20 +110,20 @@ public partial class FieldHud : Control
         right.AddChild(_icons);
         if (_f is WorldScreen w)
         {
-            Icon("人", T("Nhân vật [C]", "Character [C]"), () => _f.OpenPanel(new CharacterPanel()));
-            Icon("囊", T("Hành trang [I]", "Inventory [I]"), () => _f.OpenPanel(new InventoryPanel()));
-            Icon("錄", T("Sổ tay [J]", "Journal [J]"), () => _f.OpenPanel(new JournalPanel()));
-            Icon("圖", T("Bản đồ [M]", "Map [M]"), () => _f.OpenPanel(new MapPanel(w)));
-            Icon("閉", T("Bế quan [B]", "Seclusion [B]"), () => _f.OpenPanel(new SeclusionPanel()));
-            Icon("識", T("Thần thức [Tab] — 10 linh lực", "Sense pulse [Tab] — 10 Qi"), w.Pulse);
-            Icon("月", T("Qua tháng sớm [N]", "End the month early [N]"), w.EndMonth);
-            Icon("系", T("Hệ thống [Esc]", "System [Esc]"), () => _f.OpenPanel(new SystemPanel()));
+            Icon(IconKind.Person, T("Nhân vật [C]", "Character [C]"), () => _f.OpenPanel(new CharacterPanel()));
+            Icon(IconKind.Bag, T("Hành trang [I]", "Inventory [I]"), () => _f.OpenPanel(new InventoryPanel()));
+            Icon(IconKind.Book, T("Sổ tay [J]", "Journal [J]"), () => _f.OpenPanel(new JournalPanel()));
+            Icon(IconKind.Map, T("Bản đồ [M]", "Map [M]"), () => _f.OpenPanel(new MapPanel(w)));
+            Icon(IconKind.Lotus, T("Bế quan [B]", "Seclusion [B]"), () => _f.OpenPanel(new SeclusionPanel()));
+            Icon(IconKind.Eye, T("Thần thức [Tab] — 10 linh lực", "Sense pulse [Tab] — 10 Qi"), w.Pulse);
+            Icon(IconKind.Moon, T("Qua tháng sớm [N]", "End the month early [N]"), w.EndMonth);
+            Icon(IconKind.Menu, T("Hệ thống [Esc]", "System [Esc]"), () => _f.OpenPanel(new SystemPanel()));
         }
         else
         {
-            Icon("人", T("Nhân vật", "Character"), () => _f.OpenPanel(new CharacterPanel()));
-            Icon("囊", T("Hành trang", "Inventory"), () => _f.OpenPanel(new InventoryPanel()));
-            Icon("系", T("Hệ thống [Esc]", "System [Esc]"), () => _f.OpenPanel(new SystemPanel()));
+            Icon(IconKind.Person, T("Nhân vật", "Character"), () => _f.OpenPanel(new CharacterPanel()));
+            Icon(IconKind.Bag, T("Hành trang", "Inventory"), () => _f.OpenPanel(new InventoryPanel()));
+            Icon(IconKind.Menu, T("Hệ thống [Esc]", "System [Esc]"), () => _f.OpenPanel(new SystemPanel()));
         }
         _breakthrough = UiKit.Button(T("✦ Đột phá cảnh giới", "✦ Break through"), () => _f.OpenPanel(new BreakthroughPanel()), primary: true);
         _breakthrough.AddThemeStyleboxOverride("normal", Ink.Box(Ink.Cinnabar, Ink.CinnabarDeep, 1, 2, 10));
@@ -136,17 +137,17 @@ public partial class FieldHud : Control
         OnStateChanged();
     }
 
-    private void Icon(string glyph, string tip, Action act)
+    private void Icon(IconKind icon, string tip, Action act)
     {
         // Finger-sized with touch controls.
         var touch = TouchUi.Active;
-        var b = new Button { Text = glyph, TooltipText = tip, FocusMode = FocusModeEnum.None, CustomMinimumSize = touch ? new Vector2(46, 50) : new Vector2(30, 34) };
-        b.AddThemeFontOverride("font", Ink.Han);
-        b.AddThemeFontSizeOverride("font_size", touch ? 26 : 18);
+        var b = new Button { TooltipText = tip, FocusMode = FocusModeEnum.None, CustomMinimumSize = touch ? new Vector2(46, 50) : new Vector2(30, 34) };
         b.AddThemeStyleboxOverride("normal", Ink.Box(new Color(Ink.Card, 0.92f), Ink.LineStrong, 1, 3, 4));
         b.AddThemeStyleboxOverride("hover", Ink.Box(Ink.PaperDeep, Ink.InkColor, 1, 3, 4));
-        b.AddThemeStyleboxOverride("pressed", Ink.Box(Ink.InkColor, Ink.InkColor, 1, 3, 4));
-        b.AddThemeColorOverride("font_color", Ink.InkColor);
+        b.AddThemeStyleboxOverride("pressed", Ink.Box(Ink.PaperDarker, Ink.InkColor, 1, 3, 4));
+        var picture = new IconView(icon, Ink.InkColor, 0.66f);
+        picture.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        b.AddChild(picture);
         b.Pressed += () =>
         {
             if (_f.Battle != null || _f.Frozen) return;
@@ -171,7 +172,7 @@ public partial class FieldHud : Control
     {
         var card = new Card
         {
-            Glyph = outcome.Fled ? "遁" : outcome.Victory ? "勝" : "敗",
+            Icon = outcome.Fled ? IconKind.Dash : outcome.Victory ? IconKind.Flag : IconKind.BrokenSword,
             Title = outcome.Fled ? T("Thoát thân", "Escaped") : outcome.Victory ? T("Thắng trận", "Victory") : T("Bại trận", "Defeat"),
             Color = outcome.Victory ? Ink.JadeDeep : outcome.Fled ? Ink.InkSoft : Ink.CinnabarDeep,
             Time = 7, Max = 7,
@@ -191,13 +192,13 @@ public partial class FieldHud : Control
     {
         var card = new Card
         {
-            Glyph = "月", Title = Ui.Text.Date(E.State.Calendar), Color = Ink.InkColor, Time = 6.5f, Max = 6.5f,
+            Icon = IconKind.Moon, Title = Ui.Text.Date(E.State.Calendar), Color = Ink.InkColor, Time = 6.5f, Max = 6.5f,
         };
         card.Lines.Add((T($"Tu vi +{report.TotalExp}", $"Cultivation +{report.TotalExp}"), Ink.JadeDeep));
         foreach (var e in report.Events.Where(e => e.Level != EventLevel.Info).Take(3))
             card.Lines.Add((e.Localized(Game.Instance.Locale), e.Level == EventLevel.Warning ? Ink.CinnabarDeep : Ink.JadeDeep));
         var rumor = report.Rumors.FirstOrDefault();
-        if (rumor != null) card.Lines.Add(("「" + T(rumor.Text, rumor.TextEn) + "」", Ink.Violet));
+        if (rumor != null) card.Lines.Add(("“" + T(rumor.Text, rumor.TextEn) + "”", Ink.Violet));
         _month = card;
     }
 
@@ -300,13 +301,10 @@ public partial class FieldHud : Control
         var seal = new Rect2(at + new Vector2(2, 2), new Vector2(42, 42));
         DrawRect(seal, Ink.Cinnabar);
         DrawRect(seal.Grow(-3), new Color(Ink.Card, 0.8f), false, 1.2f);
-        var gs = Ink.Han.GetStringSize("吾", HorizontalAlignment.Left, -1, 24);
-        DrawString(Ink.Han, seal.GetCenter() + new Vector2(-gs.X / 2, 9), "吾", HorizontalAlignment.Left, -1, 24, Ink.Card);
+        Icons.Draw(this, IconKind.Person, seal.GetCenter(), 28, Ink.Card);
 
         Text(p.Name, at + new Vector2(54, 20), 20, Ink.InkColor);
         Text(Ui.Text.Realm(p.Realm, p.Stage), at + new Vector2(54, 42), 15, Ink.Realm(p.Realm).Darkened(0.25f));
-        var han = Names.Han(p.Realm);
-        DrawString(Ink.Han, at + new Vector2(330 - Width(han, 16, Ink.Han), 20), han, HorizontalAlignment.Left, -1, 16, Ink.InkFaint);
 
         var y = at.Y + 52;
         Bar(new Vector2(at.X, y), 330, 15, body.Hp, body.HpMax, Ink.Cinnabar, T($"Khí huyết {Mathf.Ceil(body.Hp)}/{body.HpMax}", $"Health {Mathf.Ceil(body.Hp)}/{body.HpMax}"));
@@ -356,7 +354,7 @@ public partial class FieldHud : Control
             // Footwork is the month's days of travel; when it runs out the month turns by itself.
             var low = p.Footwork <= 3;
             Bar(new Vector2(r.Position.X + 14, r.Position.Y + 52), w - 28, 12, p.Footwork, p.FootworkMax, low ? Ink.Cinnabar : Ink.GoldDeep,
-                T($"足 Cước lực {p.Footwork}/{p.FootworkMax} — ngày {Calendar.DisplayDay(p)} của tháng", $"足 Footwork {p.Footwork}/{p.FootworkMax} — day {Calendar.DisplayDay(p)} of the month"));
+                T($"Cước lực {p.Footwork}/{p.FootworkMax} — ngày {Calendar.DisplayDay(p)} của tháng", $"Footwork {p.Footwork}/{p.FootworkMax} — day {Calendar.DisplayDay(p)} of the month"));
         }
         else if (special.bonus > 0)
         {
@@ -390,16 +388,16 @@ public partial class FieldHud : Control
     {
         var pc = _f.Player;
         const float box = 56, gap = 8;
-        var slots = new (string Key, SkillDef? Skill, string Fallback)[]
+        var slots = new (string Key, SkillDef? Skill)[]
         {
-            (T("Trái", "LMB"), pc.Basic, ""),
-            (T("Phải", "RMB"), pc.SlotSkill(0), ""),
-            (KeyMap.Label("skill_2"), pc.SlotSkill(1), ""),
-            (KeyMap.Label("skill_3"), pc.SlotSkill(2), ""),
-            (KeyMap.Label("skill_4"), pc.SlotSkill(3), ""),
-            (KeyMap.Label("ultimate"), pc.Ultimate, ""),
-            (KeyMap.Label("pill"), null, "丹"),
-            (KeyMap.Label("dash"), null, "遁"),
+            (T("Trái", "LMB"), pc.Basic),
+            (T("Phải", "RMB"), pc.SlotSkill(0)),
+            (KeyMap.Label("skill_2"), pc.SlotSkill(1)),
+            (KeyMap.Label("skill_3"), pc.SlotSkill(2)),
+            (KeyMap.Label("skill_4"), pc.SlotSkill(3)),
+            (KeyMap.Label("ultimate"), pc.Ultimate),
+            (KeyMap.Label("pill"), null),
+            (KeyMap.Label("dash"), null),
         };
         var total = slots.Length * box + (slots.Length - 1) * gap;
         var x0 = size.X / 2 - total / 2;
@@ -407,16 +405,17 @@ public partial class FieldHud : Control
         Panel(new Rect2(x0 - 10, y - 8, total + 20, box + 30), 0.86f);
         for (var i = 0; i < slots.Length; i++)
         {
-            var (key, skill, fallback) = slots[i];
+            var (key, skill) = slots[i];
             var r = new Rect2(x0 + i * (box + gap), y, box, box);
             var usable = true;
             float cdFrac = 0;
-            string glyph, name, cost = "";
+            IconKind icon;
+            string name, cost = "";
             var color = Ink.InkColor;
             if (i == 6)
             {
                 var (_, count) = pc.Pill();
-                glyph = fallback;
+                icon = IconKind.Pill;
                 name = count > 0 ? $"×{count}" : "—";
                 usable = count > 0 && pc.PillCd <= 0;
                 cdFrac = Mathf.Clamp(pc.PillCd / 5f, 0, 1);
@@ -424,7 +423,7 @@ public partial class FieldHud : Control
             }
             else if (i == 7)
             {
-                glyph = fallback;
+                icon = IconKind.Dash;
                 name = T("Lướt", "Dash");
                 usable = pc.Stamina >= PlayerController.DashCost;
                 cost = $"{PlayerController.DashCost:0}";
@@ -432,13 +431,13 @@ public partial class FieldHud : Control
             }
             else if (skill == null)
             {
-                glyph = "";
+                icon = IconKind.None;
                 name = T("trống", "empty");
                 usable = false;
             }
             else
             {
-                glyph = skill.Glyph;
+                icon = i == 0 ? IconKind.Sword : i == 5 ? IconKind.Ultimate : Icons.ForSkill(skill);
                 name = T(skill.Name, skill.NameEn);
                 var left = pc.CooldownLeft(skill.Id);
                 cdFrac = skill.Cooldown > 0 ? Mathf.Clamp(left / (float)skill.Cooldown, 0, 1) : 0;
@@ -459,11 +458,7 @@ public partial class FieldHud : Control
 
             DrawRect(r, usable ? Ink.Card : Ink.PaperDeep);
             DrawRect(r, usable ? color : Ink.LineStrong, false, usable ? 2 : 1);
-            if (glyph.Length > 0)
-            {
-                var gs = Ink.Han.GetStringSize(glyph, HorizontalAlignment.Left, -1, 27);
-                DrawString(Ink.Han, r.GetCenter() + new Vector2(-gs.X / 2, 10), glyph, HorizontalAlignment.Left, -1, 27, usable ? color : Ink.InkFaint);
-            }
+            Icons.Draw(this, icon, r.GetCenter() + new Vector2(0, 2), box * 0.58f, usable ? color : Ink.InkFaint);
             if (cdFrac > 0) DrawRect(new Rect2(r.Position, new Vector2(box, box * cdFrac)), new Color(Ink.InkColor, 0.45f));
             DrawString(Ink.UiFont, r.Position + new Vector2(4, 12), key, HorizontalAlignment.Left, -1, 10, Ink.InkMute);
             if (cost.Length > 0) DrawString(Ink.UiFont, r.Position + new Vector2(box - 20, box - 4), cost, HorizontalAlignment.Left, -1, 10, Ink.WaterBlue);
@@ -493,7 +488,7 @@ public partial class FieldHud : Control
             Text(Clip("· " + text, 14, w - 18), new Vector2(pos.X + 9, y), 14, color);
             y += 19;
         }
-        if (rumor != null) Text(Clip("「" + T(rumor.Text, rumor.TextEn) + "」", 14, w - 18), new Vector2(pos.X + 9, y), 14, Ink.Violet);
+        if (rumor != null) Text(Clip("“" + T(rumor.Text, rumor.TextEn) + "”", 14, w - 18), new Vector2(pos.X + 9, y), 14, Ink.Violet);
     }
 
     private string Clip(string text, int size, float max)
@@ -566,8 +561,7 @@ public partial class FieldHud : Control
         DrawRect(r, new Color(card.Color, alpha), false, 2);
         var seal = new Rect2(pos + new Vector2(12, 12), new Vector2(34, 34));
         DrawRect(seal, new Color(card.Color, alpha));
-        var gs = Ink.Han.GetStringSize(card.Glyph, HorizontalAlignment.Left, -1, 20);
-        DrawString(Ink.Han, seal.GetCenter() + new Vector2(-gs.X / 2, 7), card.Glyph, HorizontalAlignment.Left, -1, 20, new Color(Ink.Card, alpha));
+        Icons.Draw(this, card.Icon, seal.GetCenter(), 24, new Color(Ink.Card, alpha));
         Text(card.Title, pos + new Vector2(58, 34), 21, new Color(card.Color, alpha));
         var y = pos.Y + 66;
         foreach (var (text, color) in lines)

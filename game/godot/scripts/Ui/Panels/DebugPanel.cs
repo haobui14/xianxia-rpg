@@ -1,12 +1,13 @@
 using Godot;
 using TuTienLuc.Dev;
+using TuTienLuc.Art;
 
 namespace TuTienLuc.Ui.Panels;
 
 /// <summary>F9: shortcuts for testing the slice (see <see cref="DevCheats"/>).</summary>
 public partial class DebugPanel : InkPanel
 {
-    protected override string Glyph => "試";
+    protected override IconKind Emblem => IconKind.Wrench;
     protected override string TitleText => T("Thử nghiệm (F9)", "Dev cheats (F9)");
     protected override Vector2 PanelSize => new(600, 600);
 

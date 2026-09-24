@@ -322,7 +322,7 @@ public static class WorldScenery
     private static void Vein(WorldScreen w, PoiDef poi)
     {
         var c0 = Center(poi);
-        var spring = poi.Glyph == "泉";
+        var spring = poi.Icon == "spring";
         var at = c0 + V(0, spring ? 4 : -18);
         if (spring)
         {

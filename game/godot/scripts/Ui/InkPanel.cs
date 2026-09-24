@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using TuTienLuc.Art;
 
 namespace TuTienLuc.Ui;
 
@@ -12,7 +13,8 @@ public abstract partial class InkPanel : PanelContainer
     protected VBoxContainer Body { get; private set; } = null!;
     public event Action? Closed;
 
-    protected abstract string Glyph { get; }
+    /// <summary>The picture on the panel's seal.</summary>
+    protected abstract IconKind Emblem { get; }
     protected abstract string TitleText { get; }
     protected virtual Vector2 PanelSize => new(760, 620);
     protected virtual bool Closable => true;
@@ -33,7 +35,7 @@ public abstract partial class InkPanel : PanelContainer
 
         var header = new HBoxContainer();
         header.AddThemeConstantOverride("separation", 12);
-        header.AddChild(UiKit.Seal(Glyph, 38));
+        header.AddChild(UiKit.Seal(Emblem, 38));
         _title = UiKit.Label(TitleText, 26, Ink.InkColor);
         _title.VerticalAlignment = VerticalAlignment.Center;
         header.AddChild(_title);

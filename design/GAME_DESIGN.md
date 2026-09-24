@@ -14,7 +14,7 @@
 
 Today *Tu Tiên Lục* is an AI-narrated choose-your-path story. Every action is a menu pick followed by a 5–30 s LLM call (`/api/turn`). The world (regions, secret realms, sects, events) is mostly data the AI is *told about*, not a place you move through.
 
-The redesign turns it into a **sandbox you control directly**, using *Tale of Immortal* (鬼谷八荒) as the structural reference:
+The redesign turns it into a **sandbox you control directly**, using *Tale of Immortal* (Guigu Bahuang) as the structural reference:
 
 1. **A world you walk.** You steer your cultivator with WASD through hand-built regions drawn top-down (¾ view): forests, rivers, villages, sect halls. Each month has a travel budget (*Cước lực*). Crossing ground spends it, and when it runs out the month turns and the whole world advances.
 2. **Real-time combat where you meet.** Beasts roam, people stroll, and a fight starts right there when a pack reaches you or you strike first. It's top-down action with WASD + mouse: martial arts, spirit arts, dash and ultimate, plus five-element reactions and realm suppression. Trees and walls block movement and projectiles, and you can run away.
@@ -29,7 +29,7 @@ The good news: **most of ToI's systems already exist in this repo** as data and 
 
 | Decision | Choice | Why |
 |---|---|---|
-| Engine | **Godot 4.7 (.NET build) + C#** | 2D-first engine; strong UI and text shaping (Vietnamese diacritics + Han glyphs); MIT license with no fees; runtime content packs make mods easy; C# is a near-mechanical port of the existing TypeScript rules; it runs headless in CI (and in our cloud sessions). |
+| Engine | **Godot 4.7 (.NET build) + C#** | 2D-first engine; strong UI and text shaping (Vietnamese diacritics); MIT license with no fees; runtime content packs make mods easy; C# is a near-mechanical port of the existing TypeScript rules; it runs headless in CI (and in our cloud sessions). |
 | Rules code | **Engine-free C# library** (`TuTien.Core`, netstandard2.1, C# 9) | Unit-testable without the engine, and it drops into Unity 6 unchanged if we ever switch. |
 | First platform | **PC / Steam** (Windows first, Linux/Steam Deck next) | Matches ToI: keyboard + mouse action and dense menus. Godot's C# projects can't be exported to the web, which is fine for PC-first. |
 | Backend | **Keep Next.js + Supabase** as the service layer | Accounts, cloud saves and the AI gateway (API keys must never ship in the client). The game is fully playable offline. |
@@ -64,7 +64,7 @@ A condensed audit of what the redesign changes, with file references.
 **Other friction**
 
 - Stamina regenerates in **real time** (20 per minute), which acts as a mobile-style energy gate on AI spend. That no longer makes sense once actions stop costing an LLM call.
-- The qi + body path is called "Song Tu" in the UI. In Vietnamese xianxia, *song tu* (雙修) usually means paired cultivation with a Dao partner. See the naming note in §7.6.
+- The qi + body path is called "Song Tu" in the UI. In Vietnamese xianxia, *song tu* usually means paired cultivation with a Dao partner. See the naming note in §7.6.
 
 **What carries over:** all content data, most rules (realm tables, exp curves, spirit-root and technique multipliers, time and season bonuses, loot tables, sect missions and wars, dual-cultivation math, enhancement), the prompt engineering (context builder, arcs, NPC registry, anti-repetition), the design system, and Supabase auth and DB. See §10.
 
@@ -72,7 +72,7 @@ A condensed audit of what the redesign changes, with file references.
 
 ## 3. Tale of Immortal, deconstructed
 
-*Tale of Immortal* (鬼谷八荒, Guigu Studio, 2021, built in Unity) is the structural reference. At the level we borrow from, it has:
+*Tale of Immortal* (Guigu Bahuang, Guigu Studio, 2021, built in Unity) is the structural reference. At the level we borrow from, it has:
 
 | ToI system | How it plays |
 |---|---|
@@ -82,7 +82,7 @@ A condensed audit of what the redesign changes, with file references.
 | **Living NPCs** | Hundreds of named cultivators with personalities who cultivate, break through, form friendships, sworn bonds, master–disciple ties, Dao partnerships and feuds, then die. A rumor feed reports it. |
 | **Set-piece breakthroughs** | Major realms are special events (forming a foundation or core, heart-demon trials, tribulations). The quality of the outcome matters. |
 | **Sects, towns, secret realms, adventures** | Sects have ranks, missions and contribution. Towns have shops and auctions. Periodic secret realms. Fortuitous encounters on the map. |
-| **Destinies (氣運)** | Innate traits rolled at creation, plus acquired traits from events. |
+| **Destinies (khí vận)** | Innate traits rolled at creation, plus acquired traits from events. |
 | **Life skills** | Alchemy, refining, feng shui, talismans, herbology, mining. |
 | **Modding** | Steam Workshop support is a large part of the game's longevity. |
 
@@ -99,7 +99,7 @@ A condensed audit of what the redesign changes, with file references.
 | Cultivation | Months of seclusion, set-piece breakthroughs | **Qi + Body kiêm tu** builds; karma-scaled tribulations; AI-written heart demon | `mechanics.ts` tables, `dual-cultivation.ts`, breakthrough types |
 | World | NPC sim, rumors | **Karma ledger** (ân/oán debts that NPCs repay or avenge); **sect war territory** on the map | `KnownNPC`, `sects.ts`, `sect-wars.ts`, `WorldSimulationState` |
 | Story | Authored events | **Linh Thức**: AI writes dialogue, adventures, chronicle, heart-demon trials — validated by rules | `prompts.ts` context builder, `events.ts` schema |
-| Identity | Anime-painted look | **Ink wash, seals, Hán-Việt terminology**, Vietnamese-first | `design/` system, i18n |
+| Identity | Anime-painted look | **Ink wash, seals with drawn icons, Hán-Việt terms written in Vietnamese** (no Chinese characters on screen), Vietnamese-first | `design/` system, i18n |
 
 ---
 
@@ -206,15 +206,15 @@ A full run from mortal to peak Nguyên Anh targets **~360 in-game months (~30 ye
 
 | POI | On the field | Source data | Interaction |
 |---|---|---|---|
-| Town (*Thành/Trấn*) | Houses, an inn (客棧), a market stall, a bounty board (榜), a well | `type: "city"` areas | Each building opens its part of the town (§7.10) |
+| Town (*Thành/Trấn*) | Houses, an inn with a "Khách điếm" signboard, a market stall, a bounty board ("Cáo thị"), a well | `type: "city"` areas | Each building opens its part of the town (§7.10) |
 | Sect gate (*Tông môn*) | A painted gate between cliffs, the main hall, a pagoda, training dummies | `NAMED_SECTS.home_region` | The hall: join, missions, treasury (§7.9) |
-| Secret realm (*Bí cảnh*) | A cave mouth glowing violet (秘) | `DUNGEONS[].area` | Enter the floors (§7.11) |
-| Adventure (*Kỳ ngộ*) | A pillar of gold light (奇) | zone `event_pool` + authored events | Event scene (§7.12) |
-| Spirit vein (*Linh mạch*) | Jade crystals (脈) or a spirit spring | new, per zone | Seclusion spot with high qi density |
+| Secret realm (*Bí cảnh*) | A cave mouth glowing violet under a turning spiral | `DUNGEONS[].area` | Enter the floors (§7.11) |
+| Adventure (*Kỳ ngộ*) | A pillar of gold light under a star | zone `event_pool` + authored events | Event scene (§7.12) |
+| Spirit vein (*Linh mạch*) | Jade crystals under a swirl of qi, or a spirit spring | new, per zone | Seclusion spot with high qi density |
 | Herb / ore node | A herb patch with red berries when ripe | zone `loot_table` | Gather: 1 Cước lực, regrows in N months |
 | Beast pack (*Yêu thú*) | The creatures themselves, prowling their patch | zone `enemy_pool` | Aggressive packs that see you give chase; contact or your first strike starts the fight |
 | Wandering cultivator | The person, strolling (name shown when near) | NPC sim | Talk, gift, spar, fight (§7.8) |
-| Mountain pass (*Cửa ải*) | A stone stele (關) where the road leaves the map | region adjacency | Travel to a neighboring region |
+| Mountain pass (*Cửa ải*) | A stone stele marked "Ải" where the road leaves the map | region adjacency | Travel to a neighboring region |
 
 - **Fog of war and Thần thức (spiritual sense):**
   - Your sense radius is `3 + ⌊PER/4⌋ + realm index`. It permanently reveals terrain and shows live tokens (beasts, NPCs, adventures) within range.
@@ -245,7 +245,7 @@ A full run from mortal to peak Nguyên Anh targets **~360 in-game months (~30 ye
 
 **Skill cast shapes.** We add one field to existing `Skill` data: `cast: { shape, range, radius, speed, windup, recovery }`. Each shape is `melee_arc`, `projectile`, `aoe_circle`, `dash_strike`, `beam`, `self_buff` or `summon`. The slice adds four more for the second-tier arts: `orbit` (blades that circle you), `wave` (a cone that rolls outward), `field` (burning ground that lasts) and `wall` (pillars that block bodies and shots). Skills the AI generated in old saves get a default shape from `type × element`:
 
-| | Kim 金 | Mộc 木 | Thủy 水 | Hỏa 火 | Thổ 土 |
+| | Kim (Metal) | Mộc (Wood) | Thủy (Water) | Hỏa (Fire) | Thổ (Earth) |
 |---|---|---|---|---|---|
 | attack | sword-qi arc | seed needles (projectile) | water blade (beam) | fireball (projectile + splash) | stone spikes (aoe) |
 | defense | metal skin (self buff) | vine barrier | water shield | flame aura | earth wall (summon) |
@@ -269,7 +269,7 @@ A full run from mortal to peak Nguyên Anh targets **~360 in-game months (~30 ye
 - **One damage formula** replaces the three current ones (Appendix A):
   - Mitigation is **percentage-based**, `100 / (100 + DEF)`, instead of the current subtractive `atk − def`, which creates hard walls where you deal 1 damage.
   - Stacked on top are element multipliers, the spirit-root affinity bonus, **realm suppression** (*cảnh giới áp chế*), crit and ±10% variance.
-- **Enemy archetypes** turn 71 bare IDs into a catalog. Each enemy definition is `{ archetype, element, tier, stat multipliers, skills, loot_table, glyph }`:
+- **Enemy archetypes** turn 71 bare IDs into a catalog. Each enemy definition is `{ archetype, element, tier, stat multipliers, skills, loot_table }`:
 
 | Archetype | Behavior | Examples (existing IDs) |
 |---|---|---|
@@ -375,7 +375,7 @@ The existing `cultivation_path: "qi" | "body" | "dual"`, the body realms (Phàm 
 
 - **Body breakthroughs are endurance trials:** hold a guarded stance against waves while timing blocks. Tougher trials earn a better body grade.
 - **Stamina** stops being the real-time energy gate and becomes the body cultivator's core resource.
-- **Naming note:** rename the qi + body path from "Song Tu" to **"Kiêm Tu"** (兼修, "cultivating both at once"). Reserve *song tu* for a future Dao-partner system (*Đạo lữ*), which ToI players will expect.
+- **Naming note:** rename the qi + body path from "Song Tu" to **"Kiêm Tu"** ("cultivating both at once"). Reserve *song tu* for a future Dao-partner system (*Đạo lữ*), which ToI players will expect.
 
 ### 7.7 Karma and the ledger of cause and effect (our pillar)
 
@@ -534,7 +534,7 @@ The existing `cultivation_path: "qi" | "body" | "dual"`, the body realms (Phàm 
   - **Interface size:** the 1600×900 layout would put 1 mm text on a phone, so the interface is drawn at 135% on a phone and 120% on a small tablet (the player can pick 100–145%). Panels shrink to fit and scroll.
 - **Sound, all made in code:**
   - About 40 effects, each built from a recipe: blade swishes, hits and crits, a dash, element casts, a shield, pills, coins, herbs, a portal, and the month gong. Sounds in the world are positional, so a fight to the left is heard on the left.
-  - Music is generated at start-up in the Chinese pentatonic modes (宮 Gong, 商 Shang, 羽 Yu), in five moods that crossfade as the situation changes:
+  - Music is generated at start-up in the Chinese pentatonic modes (cung, thương and vũ; gong, shang and yu), in five moods that crossfade as the situation changes:
     - **title** and **explore**: plucked zither (*đàn tranh*) phrases with the instrument's ornaments (glissando sweeps, grace notes, tremolo), a bamboo flute, bells and a drone
     - **battle**: taiko drums and a driving ostinato
     - **trial**: gong, heartbeat and breath for the breakthrough
@@ -542,7 +542,8 @@ The existing `cultivation_path: "qi" | "body" | "dual"`, the body realms (Phàm 
   - Short stingers mark victory, defeat, escape and breakthroughs.
 - **The seasons in the air:** petals in spring, seed fluff and butterflies in summer, falling leaves in autumn, and snow in winter, with footsteps that raise road dust, swamp ripples, forest leaves or puffs of snow.
 - **Title screen:** a living painted landscape (peaks, a river and bridge, a pagoda, blossom trees, lanterns) with mist and petals drifting past, and a cultivator on the road looking out over it.
-- **Theme:** Godot `Theme` resources built from the existing tokens (`--paper`, `--ink`, `--jade`, `--cinnabar`, `--gold`, rarity and realm colors). All the fonts are SIL OFL (Cormorant Garamond, Spectral, Inter, Noto Serif SC), so we can bundle them.
+- **Theme:** Godot `Theme` resources built from the existing tokens (`--paper`, `--ink`, `--jade`, `--cinnabar`, `--gold`, rarity and realm colors). All the fonts are SIL OFL (Cormorant Garamond, Spectral, Inter), so we can bundle them.
+- **No Chinese characters on screen:** every sign, name and label is Vietnamese (or English). Every badge is an ink icon drawn in code (`scripts/Art/Icons.cs`): panel seals, HUD and touch buttons, spirit arts (drawn by how they are cast, coloured by element), element and status marks, and map markers.
 - **Steam Deck Verified** is an explicit PC-first goal: 1280×800 layouts and full controller support.
 
 ---
@@ -599,7 +600,7 @@ xianxia-rpg/
 - **Procedural ink art** (`scripts/Art`): people are chibi puppets with four facings and walk, attack, cast, meditate and yield poses, dressed by sect and role (`Look`). Creatures have their own drawings (wolf, boar, snake, bee, imp, vine, herb guardians, tree spirits, golem, tree bosses). Buildings, trees, cliffs and places of power are drawn the same way. Commissioned sprites can replace any of them behind the same calls.
 - UI panels: Town (opened at the inn, stall or board), Sect, Event, Month report (seclusion), Character, Inventory, Journal, Map.
 - **Rendering:** the Compatibility renderer. Ink effects are `CanvasItem` shaders: painted ground, paper grain, drifting clouds, brush-stroke slashes.
-- **Text:** `RichTextLabel` for prose. Fonts are bundled, with a Noto Serif SC fallback for Han glyphs.
+- **Text:** `RichTextLabel` for prose. Fonts are bundled (Latin with full Vietnamese coverage); no Chinese characters are drawn.
 
 ### 9.4 Backend (existing Next.js + Supabase)
 
@@ -615,7 +616,7 @@ xianxia-rpg/
 
 - **Saves:** JSON (gzip) with a schema version and step-by-step migrations in the core library (the same idea as `migrateGameState`). Autosave each month, 3 manual slots, and cloud sync that asks you when it finds a conflict.
 - **Mods:** `user://mods/<id>/mod.json` plus JSON content and PNGs, merged by ID with priorities, and `.pck` resource packs through `ProjectSettings.LoadResourcePack`. **No code mods at first.** Steam Workshop support comes in M5.
-- **Localization:** `vi` is the default and `en` is secondary. Content keeps the existing `name`/`name_en` pairs, and UI strings go through Godot `TranslationServer` (CSV/PO). Han glyphs are decorative and are never translated.
+- **Localization:** `vi` is the default and `en` is secondary. Content keeps the existing `name`/`name_en` pairs, and UI strings go through Godot `TranslationServer` (CSV/PO). There are no Chinese characters: signs are written in Vietnamese or English, and badges are icons.
 - **Steam:** Steamworks through a C#-friendly binding, evaluated in M5. We'll use achievements and Deck support, plus Steam Cloud or our own cloud saves.
 
 ### 9.6 Quality
@@ -671,7 +672,7 @@ Port each rule module **with tests that pin the TypeScript behavior** (golden va
 | Risk | Mitigation |
 |---|---|
 | **Scope.** ToI was built by a studio over years. | Slice first; indie scale (5 regions, about 200 NPCs); data-driven content; AI-drafted content reviewed by humans. |
-| **Art cost.** | Han-glyph greybox → ink-silhouette sprites (fewer animation frames) → commission key art and portraits. |
+| **Art cost.** | Procedural ink art and icons → ink-silhouette sprites (fewer animation frames) → commission key art and portraits. |
 | **AI cost, latency and quality.** | Offline-first fallbacks, schema validation, per-user quotas, caching, cheaper models for bulk prose. |
 | **Paying for AI in a premium PC game.** | Decide the model early (§13): an included quota, a paid storyteller tier, or bring-your-own-key. |
 | **Godot C# gaps.** | No web export (accepted: PC first). Android works but Godot calls C# there experimental, and 4.7's template needs .NET 9. The slice exports with touch controls; it still needs testing on real devices (performance of the procedural drawing and the music synthesis on low-end phones). iOS isn't tried. |
@@ -710,20 +711,20 @@ Realm index: Phàm Nhân 0 · Luyện Khí 1 · Trúc Cơ 2 · Kết Đan 3 · N
 
 ## Appendix B — Glossary
 
-| Term | Hán | Meaning in this game |
-|---|---|---|
-| Cước lực | 腳力 | Monthly movement budget |
-| Qua tháng | 過月 | The month turns (by itself when footwork runs out, or early with N); the world advances |
-| Thần thức | 神識 | Spiritual sense: fog-of-war radius and pulse scan |
-| Linh Thức | 靈識 | The AI storyteller |
-| Bế quan | 閉關 | Closed-door cultivation for 1–12 months |
-| Kỳ ngộ | 奇遇 | Fortuitous encounter (map event) |
-| Bí cảnh | 秘境 | Secret realm (dungeon) |
-| Võ kỹ / Linh kỹ / Tuyệt kỹ / Thân pháp / Tâm pháp / Thần thông | 武技 / 靈技 / 絕技 / 身法 / 心法 / 神通 | Martial art / spirit art / ultimate / step art / heart method / divine power |
-| Pháp bảo | 法寶 | Artifact |
-| Cảnh giới áp chế | 境界壓制 | Realm suppression |
-| Tương sinh / Tương khắc | 相生 / 相剋 | Generation / overcoming cycle |
-| Nhân quả, ân / oán | 因果, 恩 / 怨 | Karma; debt of gratitude / grudge |
-| Kiêm tu | 兼修 | Cultivating qi and body together |
-| Tâm ma, Lôi kiếp | 心魔, 雷劫 | Heart demon, lightning tribulation |
-| Ngự kiếm phi hành | 御劍飛行 | Sword flight (unlocked at Trúc Cơ) |
+| Term | Meaning in this game |
+|---|---|
+| Cước lực | Monthly movement budget |
+| Qua tháng | The month turns (by itself when footwork runs out, or early with N); the world advances |
+| Thần thức | Spiritual sense: fog-of-war radius and pulse scan |
+| Linh Thức | The AI storyteller |
+| Bế quan | Closed-door cultivation for 1–12 months |
+| Kỳ ngộ | Fortuitous encounter (map event) |
+| Bí cảnh | Secret realm (dungeon) |
+| Võ kỹ / Linh kỹ / Tuyệt kỹ / Thân pháp / Tâm pháp / Thần thông | Martial art / spirit art / ultimate / step art / heart method / divine power |
+| Pháp bảo | Artifact |
+| Cảnh giới áp chế | Realm suppression |
+| Tương sinh / Tương khắc | Generation / overcoming cycle |
+| Nhân quả, ân / oán | Karma; debt of gratitude / grudge |
+| Kiêm tu | Cultivating qi and body together |
+| Tâm ma, Lôi kiếp | Heart demon, lightning tribulation |
+| Ngự kiếm phi hành | Sword flight (unlocked at Trúc Cơ) |

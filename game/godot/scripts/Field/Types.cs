@@ -311,15 +311,6 @@ public static class FieldMath
         return p.DistanceTo(a + ab * t);
     }
 
-    public static readonly IReadOnlyDictionary<Element, string> Han = new Dictionary<Element, string>
-    {
-        [Element.Kim] = "金",
-        [Element.Moc] = "木",
-        [Element.Thuy] = "水",
-        [Element.Hoa] = "火",
-        [Element.Tho] = "土",
-    };
-
     /// <summary>Deterministic 0..1 hash for scenery placement (never used for gameplay rolls).</summary>
     public static float Hash01(int a, int b, int salt = 0)
     {

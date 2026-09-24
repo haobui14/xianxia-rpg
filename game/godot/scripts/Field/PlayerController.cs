@@ -115,7 +115,7 @@ public sealed class PlayerController
         var p = E.Player;
         Basic = content.Skill("vo_ky_kiem") ?? new SkillDef
         {
-            Id = "vo_ky_kiem", Name = "Quyền cước", NameEn = "Fists", Glyph = "武", Damage = "physical", DamageMultiplier = 1, Cooldown = 0.45,
+            Id = "vo_ky_kiem", Name = "Quyền cước", NameEn = "Fists", Damage = "physical", DamageMultiplier = 1, Cooldown = 0.45,
             Cast = new CastDef { Shape = "melee_arc", Range = 70, Arc = 110 },
         };
         Ultimate = p.Realm > Realm.LuyenKhi || (p.Realm == Realm.LuyenKhi && p.Stage >= 5)
@@ -126,7 +126,7 @@ public sealed class PlayerController
     /// <summary>Before Luyện Khí 5 the ultimate is a plain 360° cleave fuelled by killing intent.</summary>
     private static SkillDef Cleave() => new()
     {
-        Id = "sat_y_tram", Name = "Sát Ý Trảm", NameEn = "Killing-Intent Cleave", Glyph = "殺",
+        Id = "sat_y_tram", Name = "Sát Ý Trảm", NameEn = "Killing-Intent Cleave",
         Type = "attack", Damage = "physical", DamageMultiplier = 2.6, Cooldown = 1,
         Cast = new CastDef { Shape = "melee_arc", Range = 150, Arc = 360 },
     };

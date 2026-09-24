@@ -1,13 +1,14 @@
 using Godot;
 using TuTien.Core;
 using TuTien.Core.Rules;
+using TuTienLuc.Art;
 
 namespace TuTienLuc.Ui.Panels;
 
 /// <summary>Before a major breakthrough (design §7.5): what it takes, what failure costs, then the trial.</summary>
 public partial class BreakthroughPanel : InkPanel
 {
-    protected override string Glyph => "破";
+    protected override IconKind Emblem => IconKind.Ascend;
     protected override string TitleText => T("Đột phá cảnh giới", "Breakthrough");
     protected override Vector2 PanelSize => new(760, 660);
 
@@ -21,8 +22,8 @@ public partial class BreakthroughPanel : InkPanel
             return;
         }
         var target = p.Realm + 1;
-        Para(T($"{Text.Realm(p.Realm, p.Stage)} → {Names.Display(target, Locale.Vi)} ({Names.Han(target)})",
-            $"{Text.Realm(p.Realm, p.Stage)} → {Names.Display(target, Locale.En)} ({Names.Han(target)})"), 24, Ink.InkColor);
+        Para(T($"{Text.Realm(p.Realm, p.Stage)} → {Names.Display(target, Locale.Vi)}",
+            $"{Text.Realm(p.Realm, p.Stage)} → {Names.Display(target, Locale.En)}"), 24, Ink.InkColor);
 
         var threshold = Cultivation.MajorBreakthroughThreshold(p);
         Section(T("Độ khó", "Difficulty"));

@@ -121,9 +121,10 @@ public static class Paint
         }
     }
 
-    public static void Glyph(CanvasItem ci, string text, Vector2 center, int size, Color color, Font? font = null)
+    /// <summary>A word centred on a point (painted signboards, stones).</summary>
+    public static void Caption(CanvasItem ci, string text, Vector2 center, int size, Color color, Font? font = null)
     {
-        font ??= Ui.Ink.Han;
+        font ??= Ui.Ink.Serif;
         var s = font.GetStringSize(text, HorizontalAlignment.Left, -1, size);
         ci.DrawString(font, center + new Vector2(-s.X / 2, size * 0.36f), text, HorizontalAlignment.Left, -1, size, A(color));
     }

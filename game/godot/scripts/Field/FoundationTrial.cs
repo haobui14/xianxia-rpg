@@ -72,7 +72,7 @@ public partial class FoundationTrial : TrialBase
     private const int W = 16, H = 12;
 
     /// <summary>The eight extraordinary meridians (kỳ kinh bát mạch), clockwise from the north.</summary>
-    public static readonly string[] Meridians = { "督", "陽", "帶", "維", "任", "陰", "衝", "蹻" };
+    public static readonly string[] Meridians = { "Đốc", "Dương", "Đới", "Duy", "Nhâm", "Âm", "Xung", "Kiều" };
 
     public readonly List<QiDrop> Drops = new();
     public readonly List<Surge> Surges = new();
@@ -112,8 +112,8 @@ public partial class FoundationTrial : TrialBase
     };
 
     public override string HintText() => TouchUi.Active
-        ? T($"Cần gạt để đi · đứng trên kinh mạch để đón linh khí · giữ {Player.Basic.Glyph} để chém trọc khí gần nhất · 遁 lướt qua sóng xung kích",
-            $"Stick moves · stand on a meridian to catch qi · hold {Player.Basic.Glyph} to cut the nearest turbid qi · 遁 dashes through shockwaves")
+        ? T("Cần gạt để đi · đứng trên kinh mạch để đón linh khí · giữ nút kiếm để chém trọc khí gần nhất · nút lướt để vượt sóng xung kích",
+            "Stick moves · stand on a meridian to catch qi · hold the sword button to cut the nearest turbid qi · the dash button gets through shockwaves")
         : T($"{KeyMap.MoveKeys} di chuyển · đứng trên kinh mạch để đón linh khí · chuột trái chém trọc khí · {KeyName("dash")} lướt qua sóng xung kích · Esc tạm dừng",
             $"{KeyMap.MoveKeys} move · stand on a meridian to catch qi · left click cuts turbid qi · {KeyName("dash")} dashes through shockwaves · Esc pause");
 
@@ -433,17 +433,18 @@ public partial class FoundationTrial : TrialBase
         // The threshold (red) and the grade lines (Trung, Thượng, Thiên).
         var tx = pos.X + w * Threshold;
         hud.DrawLine(new Vector2(tx, pos.Y - 4), new Vector2(tx, pos.Y + 22), Ink.CinnabarDeep, 3);
-        foreach (var (at, name) in new[] { (Foundation.Trung, "中"), (Foundation.Thuong, "上"), (Foundation.Thien, "天") })
+        foreach (var (at, name) in new[] { (Foundation.Trung, T("Trung", "Middle")), (Foundation.Thuong, T("Thượng", "Upper")), (Foundation.Thien, T("Thiên", "Heaven")) })
         {
             var gx = pos.X + w * (float)at;
             hud.DrawLine(new Vector2(gx, pos.Y), new Vector2(gx, pos.Y + 18), new Color(Ink.GoldDeep, 0.9f), 2);
-            hud.DrawString(Ink.Han, new Vector2(gx - 6, pos.Y + 36), name, HorizontalAlignment.Left, -1, 13, Ink.GoldDeep);
+            var nw = Ink.UiFont.GetStringSize(name, HorizontalAlignment.Left, -1, 12).X;
+            hud.DrawString(Ink.UiFont, new Vector2(gx - nw / 2, pos.Y + 36), name, HorizontalAlignment.Left, -1, 12, Ink.GoldDeep);
         }
         hud.DrawString(Ink.UiFont, new Vector2(tx - 30, pos.Y + 36), T($"cần {Threshold * 100:0}%", $"need {Threshold * 100:0}%"), HorizontalAlignment.Left, -1, 12, Ink.CinnabarDeep);
         var phase = Phase switch { 0 => T("Khai mạch", "Opening"), 1 => T("Tụ khí", "Gathering"), _ => T("Trúc cơ", "Foundation") };
         hud.DrawString(Ink.UiFont, pos + new Vector2(0, 56),
-            T($"{phase} · linh khí +1 · tinh hoa {FieldMath.Han[_essence]} +4 · trảm trọc khí +1 · trúng đòn −4…−6 ({Hits} lần)",
-                $"{phase} · qi +1 · {FieldMath.Han[_essence]} essence +4 · cut turbid +1 · hits −4…−6 ({Hits} so far)"),
+            T($"{phase} · linh khí +1 · tinh hoa {Names.Display(_essence, Locale.Vi)} +4 · trảm trọc khí +1 · trúng đòn −4…−6 ({Hits} lần)",
+                $"{phase} · qi +1 · {Names.Display(_essence, Locale.En)} essence +4 · cut turbid +1 · hits −4…−6 ({Hits} so far)"),
             HorizontalAlignment.Left, -1, 12, Ink.InkMute);
     }
 }
@@ -451,6 +452,14 @@ public partial class FoundationTrial : TrialBase
 /// <summary>The platform inside: jade over the sea of qi, the eight meridians, the dantian and its stones.</summary>
 public partial class FoundationFloor : Node2D
 {
+    /// <summary>The jade tag a meridian's name sits on at the rim.</summary>
+    private readonly StyleBoxFlat _tag = new()
+    {
+        BgColor = new Color(0.84f, 0.9f, 0.86f, 0.95f),
+        BorderWidthLeft = 2, BorderWidthTop = 2, BorderWidthRight = 2, BorderWidthBottom = 2,
+        CornerRadiusTopLeft = 16, CornerRadiusTopRight = 16, CornerRadiusBottomLeft = 16, CornerRadiusBottomRight = 16,
+        AntiAliasing = true,
+    };
     private readonly FoundationTrial _t;
     private float _time;
 
@@ -489,10 +498,14 @@ public partial class FoundationFloor : Node2D
             DrawLine(a, b, new Color(0.93f, 0.98f, 0.95f, 0.9f), 12, true);
             DrawLine(a, b, new Color(0.45f, 0.78f, 0.66f, 0.35f + 0.25f * flow), 5, true);
             for (var d = sink + 50; d < rim; d += 64) DrawCircle(c + dir * d, 5, new Color(ink, 0.35f));
+            // Its name on a jade tag at the rim.
             var seal = c + dir * (rim + 58);
-            DrawCircle(seal, 20, new Color(0.84f, 0.9f, 0.86f, 0.95f));
-            DrawArc(seal, 20, 0, Mathf.Tau, 32, new Color(ink, 0.6f), 2, true);
-            Paint.Glyph(this, FoundationTrial.Meridians[i], seal + new Vector2(0, 7), 20, new Color(ink, 0.85f));
+            var name = FoundationTrial.Meridians[i];
+            var ns = Ink.UiFont.GetStringSize(name, HorizontalAlignment.Left, -1, 17);
+            var tag = new Rect2(seal - new Vector2(ns.X / 2 + 11, 16), new Vector2(ns.X + 22, 32));
+            _tag.BorderColor = new Color(ink, 0.6f);
+            DrawStyleBox(_tag, tag);
+            DrawString(Ink.UiFont, seal + new Vector2(-ns.X / 2, 6), name, HorizontalAlignment.Left, -1, 17, new Color(ink, 0.9f));
         }
 
         // The dantian: a pool that brightens as the foundation rises.
@@ -505,7 +518,7 @@ public partial class FoundationFloor : Node2D
         DrawCircle(c, core + 6, new Color(0.96f, 0.8f, 0.42f).Lerp(new Color(0.16f, 0.34f, 0.32f), 0.55f));
         DrawCircle(c, core, new Color(0.98f, 0.84f, 0.46f).Lerp(new Color(1f, 0.95f, 0.8f), 0.3f * pulse));
         DrawArc(c, sink, 0, Mathf.Tau, 72, new Color(ink, 0.8f), 4, true);
-        Paint.Glyph(this, "丹", c + new Vector2(0, 11), 34, new Color(0.3f, 0.18f, 0.08f, 0.45f + 0.4f * fill));
+        Icons.Draw(this, IconKind.Core, c, 50, new Color(0.3f, 0.18f, 0.08f, 0.45f + 0.4f * fill));
 
         // Eight foundation stones around it, laid one per eighth of the goal.
         for (var i = 0; i < 8; i++)
@@ -594,7 +607,7 @@ public partial class FoundationLayer : Node2D
                 DrawCircle(at, 20, new Color(0.25f, 0.12f, 0.25f, 0.25f * fade));
                 DrawColoredPolygon(body, new Color(0.3f, 0.18f, 0.3f, 0.85f * fade));
                 DrawPolyline(Paint.Closed(body), new Color(0.12f, 0.05f, 0.1f, 0.9f * fade), 2, true);
-                Paint.Glyph(this, "濁", at + new Vector2(0, 5), 12, new Color(0.9f, 0.75f, 0.85f, 0.8f * fade));
+                Icons.Draw(this, IconKind.Turbid, at, 13, new Color(0.9f, 0.75f, 0.85f, 0.8f * fade));
                 continue;
             }
             var color = d.Essence ? Ink.Element(d.Element).Lightened(0.15f) : new Color(0.85f, 1f, 0.93f);
@@ -606,7 +619,7 @@ public partial class FoundationLayer : Node2D
             if (d.Essence)
             {
                 DrawArc(at, 16, d.Age * 4, d.Age * 4 + 4, 16, new Color(Ink.Gold, 0.9f * fade), 2, true);
-                Paint.Glyph(this, FieldMath.Han[d.Element], at + new Vector2(0, -22), 13, new Color(color.Darkened(0.35f), fade));
+                Icons.Draw(this, Icons.ForElement(d.Element), at + new Vector2(0, -24), 14, new Color(color.Darkened(0.35f), fade));
             }
         }
     }

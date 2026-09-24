@@ -2,6 +2,7 @@ using System.Linq;
 using Godot;
 using TuTien.Core;
 using TuTien.Core.Content;
+using TuTienLuc.Art;
 
 namespace TuTienLuc.Ui.Panels;
 
@@ -16,7 +17,7 @@ public partial class TownPanel : InkPanel
         Tab = tab;
     }
 
-    protected override string Glyph => _poi.Glyph;
+    protected override IconKind Emblem => Icons.Named(_poi.Icon);
     protected override string TitleText => T(_poi.Name, _poi.NameEn);
     protected override Vector2 PanelSize => new(840, 660);
 
@@ -63,8 +64,8 @@ public partial class TownPanel : InkPanel
         Section(T("Chưởng quầy kể", "The innkeeper says"));
         var rumor = E.State.World.Rumors.LastOrDefault();
         Para(rumor != null
-            ? "「" + T(rumor.Text, rumor.TextEn) + "」"
-            : T("「Dạo này yên ắng lắm, khách quan.」", "「Quiet times, traveler.」"), 16, Ink.Violet);
+            ? "“" + T(rumor.Text, rumor.TextEn) + "”"
+            : T("“Dạo này yên ắng lắm, khách quan.”", "“Quiet times, traveler.”"), 16, Ink.Violet);
     }
 
     private void Market(TownDef town)
@@ -80,7 +81,7 @@ public partial class TownPanel : InkPanel
             var fx = Text.Effects(def);
             info.AddChild(UiKit.Label(fx.Length > 0 ? fx : Text.Desc(def), 13, Ink.InkMute, wrap: true));
             var itemId = entry.ItemId;
-            Row(info, UiKit.Label($"{entry.Price} 銀", 16, Ink.GoldDeep),
+            Row(info, UiKit.Label(T($"{entry.Price} bạc", $"{entry.Price} silver"), 16, Ink.GoldDeep),
                 UiKit.Button(T("Mua", "Buy"), () => Say(E.Buy(town, itemId)), enabled: p.Silver >= entry.Price));
         }
 
@@ -92,7 +93,7 @@ public partial class TownPanel : InkPanel
             var id = stack.Id;
             var price = GameEngine.SellPrice(stack.Rarity);
             Row(UiKit.Label($"{Text.Name(stack)} ×{stack.Qty}", 16, Ink.Rarity(stack.Rarity).Darkened(0.15f)),
-                UiKit.Label($"+{price} 銀", 15, Ink.GoldDeep),
+                UiKit.Label(T($"+{price} bạc", $"+{price} silver"), 15, Ink.GoldDeep),
                 UiKit.Button(T("Bán", "Sell"), () => Say(E.Sell(id))));
         }
     }

@@ -3,6 +3,7 @@ using Godot;
 using TuTien.Core;
 using TuTien.Core.World;
 using TuTienLuc.Ui;
+using TuTienLuc.Art;
 
 namespace TuTienLuc.Field;
 
@@ -19,7 +20,7 @@ public partial class MapPanel : InkPanel
 
     public MapPanel(WorldScreen world) => _w = world;
 
-    protected override string Glyph => "圖";
+    protected override IconKind Emblem => IconKind.Map;
     protected override string TitleText => T($"Bản đồ {E.Map.Def.Name}", $"Map of {E.Map.Def.NameEn}");
     protected override Vector2 PanelSize => new(900, 700);
 
@@ -33,9 +34,9 @@ public partial class MapPanel : InkPanel
             var days = path.Cost;
             var turns = path.Cost > p.Footwork;
             Para(turns
-                ? T($"Đường đi {days} 足 — còn {p.Footwork} trong tháng này, tháng sẽ trôi qua trên đường.",
-                    $"{days} 足 of travel — {p.Footwork} left this month, so the month will turn on the road.")
-                : T($"Đường đi {days} 足 (còn {p.Footwork} trong tháng này).", $"{days} 足 of travel ({p.Footwork} left this month)."), 15,
+                ? T($"Đường đi tốn {days} cước lực — còn {p.Footwork} trong tháng này, tháng sẽ trôi qua trên đường.",
+                    $"{days} footwork of travel — {p.Footwork} left this month, so the month will turn on the road.")
+                : T($"Đường đi tốn {days} cước lực (còn {p.Footwork} trong tháng này).", $"{days} footwork of travel ({p.Footwork} left this month)."), 15,
                 turns ? Ink.GoldDeep : Ink.JadeDeep);
             Buttons(UiKit.Button(T("Lên đường", "Set off"), SetOff, primary: true), UiKit.Button(T("Đóng", "Close"), Close));
         }
@@ -135,7 +136,7 @@ public partial class MapPanel : InkPanel
                     prev = next;
                 }
                 DrawCircle(prev, 5, Ink.Cinnabar);
-                DrawString(Ink.UiFont, prev + new Vector2(8, -8), $"足 {path.Cost}", HorizontalAlignment.Left, -1, 14, Ink.InkColor);
+                DrawString(Ink.UiFont, prev + new Vector2(8, -8), Game.Instance.T($"{path.Cost} cước lực", $"{path.Cost} footwork"), HorizontalAlignment.Left, -1, 14, Ink.InkColor);
             }
 
             foreach (var poi in map.Def.Pois)
@@ -149,8 +150,7 @@ public partial class MapPanel : InkPanel
                 }
                 var r = new Rect2(p - new Vector2(10, 10), new Vector2(20, 20));
                 DrawRect(r, MapImage.PoiColor(poi.Kind));
-                var gs = Ink.Han.GetStringSize(poi.Glyph, HorizontalAlignment.Left, -1, 13);
-                DrawString(Ink.Han, p + new Vector2(-gs.X / 2, 5), poi.Glyph, HorizontalAlignment.Left, -1, 13, Ink.Card);
+                Icons.Draw(this, Icons.Named(poi.Icon), p, 15, Ink.Card);
                 var name = Game.Instance.T(poi.Name, poi.NameEn);
                 var ns = Ink.Serif.GetStringSize(name, HorizontalAlignment.Left, -1, 13);
                 var label = new Rect2(p + new Vector2(-ns.X / 2 - 4, 12), new Vector2(ns.X + 8, 17));
@@ -160,8 +160,7 @@ public partial class MapPanel : InkPanel
 
             var me = At(_panel._w.PlayerBody.Pos.X / WorldScreen.Cell, _panel._w.PlayerBody.Pos.Y / WorldScreen.Cell);
             DrawRect(new Rect2(me - new Vector2(8, 8), new Vector2(16, 16)), Ink.Cinnabar);
-            var mg = Ink.Han.GetStringSize("吾", HorizontalAlignment.Left, -1, 11);
-            DrawString(Ink.Han, me + new Vector2(-mg.X / 2, 4), "吾", HorizontalAlignment.Left, -1, 11, Ink.Card);
+            Icons.Draw(this, IconKind.Person, me, 13, Ink.Card);
 
             if (_hover is { } h && map.InBounds(h.X, h.Y))
             {
@@ -171,7 +170,7 @@ public partial class MapPanel : InkPanel
                     var text = Text.Terrain(map.At(h.X, h.Y));
                     if (e.ZoneAt(h.X, h.Y) is { } zone) text += " · " + Text.Zone(zone);
                     var cost = map.StepCost(h.X, h.Y, e.Player);
-                    text += cost < 0 ? Game.Instance.T(" · không thể đi", " · impassable") : $" · {cost} 足";
+                    text += cost < 0 ? Game.Instance.T(" · không thể đi", " · impassable") : Game.Instance.T($" · {cost} cước lực", $" · {cost} footwork");
                     var ts = Ink.UiFont.GetStringSize(text, HorizontalAlignment.Left, -1, 13);
                     var at = At(h.X + 1, h.Y) + new Vector2(6, 0);
                     if (at.X + ts.X + 12 > Size.X) at.X = At(h.X, h.Y).X - ts.X - 18;

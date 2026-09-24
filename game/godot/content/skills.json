@@ -2,103 +2,103 @@
   "$source": "hand-authored — arts in the web game's Skill shape (damage_multiplier, qi_cost, cooldown, effects) plus real-time cast data (design §7.3). Cooldowns are seconds.",
   "data": [
     {
-      "id": "vo_ky_kiem", "name": "Kiếm Pháp Cơ Bản", "name_en": "Basic Swordplay", "glyph": "武",
+      "id": "vo_ky_kiem", "name": "Kiếm Pháp Cơ Bản", "name_en": "Basic Swordplay",
       "description": "Võ kỹ nhập môn: chém quét một vòng cung trước mặt.", "description_en": "Entry martial art: a sweeping arc in front of you.",
       "type": "attack", "damage": "physical", "damage_multiplier": 1.0, "qi_cost": 0, "cooldown": 0.42,
       "cast": { "shape": "melee_arc", "range": 82, "arc": 115, "windup": 0.06 }
     },
     {
-      "id": "kim_kiem_khi", "name": "Kim Kiếm Khí", "name_en": "Golden Sword Qi", "glyph": "金", "element": "Kim",
+      "id": "kim_kiem_khi", "name": "Kim Kiếm Khí", "name_en": "Golden Sword Qi", "element": "Kim",
       "description": "Ngưng kim khí thành kiếm, phóng thẳng xuyên địch.", "description_en": "Condenses metal qi into a flying blade.",
       "type": "attack", "damage": "spirit", "damage_multiplier": 1.6, "qi_cost": 12, "cooldown": 1.4,
       "cast": { "shape": "projectile", "range": 480, "radius": 10, "speed": 640, "windup": 0.08 },
       "effects": { "bleed_damage": 3 }, "unlock_realm": "LuyệnKhí", "unlock_stage": 1
     },
     {
-      "id": "thanh_moc_cham", "name": "Thanh Mộc Châm", "name_en": "Azure Wood Needles", "glyph": "木", "element": "Mộc",
+      "id": "thanh_moc_cham", "name": "Thanh Mộc Châm", "name_en": "Azure Wood Needles", "element": "Mộc",
       "description": "Ba mũi mộc châm tỏa hình quạt.", "description_en": "Three wooden needles in a fan.",
       "type": "attack", "damage": "spirit", "damage_multiplier": 0.75, "qi_cost": 10, "cooldown": 1.2,
       "cast": { "shape": "projectile", "range": 430, "radius": 8, "speed": 580, "count": 3, "spread": 18, "windup": 0.06 },
       "unlock_realm": "LuyệnKhí", "unlock_stage": 1
     },
     {
-      "id": "thuy_nhan", "name": "Thủy Nhận", "name_en": "Water Blade", "glyph": "水", "element": "Thủy",
+      "id": "thuy_nhan", "name": "Thủy Nhận", "name_en": "Water Blade", "element": "Thủy",
       "description": "Lưỡi nước rộng quét ngang, đẩy lùi kẻ địch.", "description_en": "A wide sweep of water that pushes foes back.",
       "type": "attack", "damage": "spirit", "damage_multiplier": 1.5, "qi_cost": 12, "cooldown": 1.3,
       "cast": { "shape": "melee_arc", "range": 150, "arc": 150, "windup": 0.1 },
       "unlock_realm": "LuyệnKhí", "unlock_stage": 1
     },
     {
-      "id": "hoa_cau_thuat", "name": "Hỏa Cầu Thuật", "name_en": "Fireball", "glyph": "火", "element": "Hỏa",
+      "id": "hoa_cau_thuat", "name": "Hỏa Cầu Thuật", "name_en": "Fireball", "element": "Hỏa",
       "description": "Cầu lửa nổ tung khi trúng đích.", "description_en": "A ball of fire that bursts on impact.",
       "type": "attack", "damage": "spirit", "damage_multiplier": 1.8, "qi_cost": 14, "cooldown": 1.6,
       "cast": { "shape": "projectile", "range": 440, "radius": 12, "speed": 470, "burst": 60, "windup": 0.12 },
       "unlock_realm": "LuyệnKhí", "unlock_stage": 1
     },
     {
-      "id": "tho_thu", "name": "Thổ Thứ", "name_en": "Earth Spikes", "glyph": "土", "element": "Thổ",
+      "id": "tho_thu", "name": "Thổ Thứ", "name_en": "Earth Spikes", "element": "Thổ",
       "description": "Gai đất trồi lên tại chỗ chỉ định.", "description_en": "Spikes of stone erupt where you aim.",
       "type": "attack", "damage": "spirit", "damage_multiplier": 1.7, "qi_cost": 14, "cooldown": 1.8,
       "cast": { "shape": "aoe_circle", "range": 380, "radius": 72, "windup": 0.35 },
       "effects": { "stun_chance": 0.35 }, "unlock_realm": "LuyệnKhí", "unlock_stage": 1
     },
     {
-      "id": "thanh_van_kiem_quyet", "name": "Thanh Vân Kiếm Quyết", "name_en": "Azure Cloud Sword Art", "glyph": "雲",
+      "id": "thanh_van_kiem_quyet", "name": "Thanh Vân Kiếm Quyết", "name_en": "Azure Cloud Sword Art",
       "description": "Kiếm pháp nhập môn của Thanh Vân Kiếm Phái: lướt kiếm xuyên qua hàng địch.", "description_en": "The sect's entry art: dash through enemies with your sword.",
       "type": "attack", "damage": "physical", "damage_multiplier": 2.2, "qi_cost": 15, "cooldown": 3.0,
       "cast": { "shape": "dash_strike", "range": 230, "radius": 34, "windup": 0.05 }
     },
     {
-      "id": "ho_the_cuong_khi", "name": "Hộ Thể Cương Khí", "name_en": "Body-Guarding Qi", "glyph": "護",
+      "id": "ho_the_cuong_khi", "name": "Hộ Thể Cương Khí", "name_en": "Body-Guarding Qi",
       "description": "Cương khí hộ thể, hấp thụ sát thương trong chốc lát.", "description_en": "A shell of qi that absorbs damage for a moment.",
       "type": "defense", "damage": "spirit", "damage_multiplier": 0, "qi_cost": 15, "cooldown": 9,
       "cast": { "shape": "self_buff", "duration": 4 }, "effects": { "shield": 40 },
       "unlock_realm": "LuyệnKhí", "unlock_stage": 1
     },
     {
-      "id": "hoi_xuan_quyet", "name": "Hồi Xuân Quyết", "name_en": "Spring Revival Art", "glyph": "春", "element": "Mộc",
+      "id": "hoi_xuan_quyet", "name": "Hồi Xuân Quyết", "name_en": "Spring Revival Art", "element": "Mộc",
       "description": "Dẫn sinh khí hồi phục thương thế.", "description_en": "Draws in living qi to mend wounds.",
       "type": "support", "damage": "spirit", "damage_multiplier": 0, "qi_cost": 20, "cooldown": 12,
       "cast": { "shape": "heal" }, "effects": { "heal_percent": 0.25 },
       "unlock_realm": "LuyệnKhí", "unlock_stage": 1
     },
     {
-      "id": "kim_quang_tram", "name": "Kim Quang Trảm", "name_en": "Golden Light Slash", "glyph": "光", "element": "Kim",
+      "id": "kim_quang_tram", "name": "Kim Quang Trảm", "name_en": "Golden Light Slash", "element": "Kim",
       "description": "Một đạo kim quang chém thẳng, xuyên qua mọi kẻ địch trên đường.", "description_en": "A blade of golden light that cuts straight through every foe in its path.",
       "type": "attack", "damage": "spirit", "damage_multiplier": 2.0, "qi_cost": 18, "cooldown": 2.6,
       "cast": { "shape": "beam", "range": 540, "radius": 18, "windup": 0.14 },
       "effects": { "bleed_damage": 3 }, "unlock_realm": "LuyệnKhí", "unlock_stage": 5
     },
     {
-      "id": "van_diep_ho_than", "name": "Vạn Diệp Hộ Thân", "name_en": "Myriad Leaves Guard", "glyph": "葉", "element": "Mộc",
+      "id": "van_diep_ho_than", "name": "Vạn Diệp Hộ Thân", "name_en": "Myriad Leaves Guard", "element": "Mộc",
       "description": "Sáu phiến lá xanh xoay quanh thân sáu giây, cắt kẻ nào tới gần.", "description_en": "Six green leaves whirl around you for six seconds, cutting whoever comes close.",
       "type": "attack", "damage": "spirit", "damage_multiplier": 0.6, "qi_cost": 20, "cooldown": 10,
       "cast": { "shape": "orbit", "range": 180, "count": 6, "radius": 74, "duration": 6, "windup": 0.1 },
       "unlock_realm": "LuyệnKhí", "unlock_stage": 5
     },
     {
-      "id": "thuy_long_ba", "name": "Thủy Long Ba", "name_en": "Water Dragon Wave", "glyph": "波", "element": "Thủy",
+      "id": "thuy_long_ba", "name": "Thủy Long Ba", "name_en": "Water Dragon Wave", "element": "Thủy",
       "description": "Sóng nước cuộn tới như rồng, hất văng và làm chậm kẻ địch.", "description_en": "A wave that rolls in like a dragon, throwing foes back and slowing them.",
       "type": "attack", "damage": "spirit", "damage_multiplier": 1.6, "qi_cost": 18, "cooldown": 3.2,
       "cast": { "shape": "wave", "range": 250, "arc": 70, "windup": 0.15 },
       "effects": { "knockback": 150, "slow": 2 }, "unlock_realm": "LuyệnKhí", "unlock_stage": 5
     },
     {
-      "id": "liet_diem_dia", "name": "Liệt Diễm Địa", "name_en": "Scorched Earth", "glyph": "焰", "element": "Hỏa",
+      "id": "liet_diem_dia", "name": "Liệt Diễm Địa", "name_en": "Scorched Earth", "element": "Hỏa",
       "description": "Mặt đất nơi chỉ định bốc cháy bốn giây, thiêu kẻ nào đứng trong đó.", "description_en": "The ground where you aim burns for four seconds, scorching anyone who stands in it.",
       "type": "attack", "damage": "spirit", "damage_multiplier": 0.45, "qi_cost": 22, "cooldown": 7,
       "cast": { "shape": "field", "range": 380, "radius": 92, "duration": 4, "windup": 0.2 },
       "unlock_realm": "LuyệnKhí", "unlock_stage": 5
     },
     {
-      "id": "tho_lao_thuat", "name": "Thổ Lao Thuật", "name_en": "Stone Palisade", "glyph": "牢", "element": "Thổ",
+      "id": "tho_lao_thuat", "name": "Thổ Lao Thuật", "name_en": "Stone Palisade", "element": "Thổ",
       "description": "Năm cột đá trồi lên thành hàng rào trước mặt, chặn đường và chặn đạn, choáng kẻ bị hất lên.", "description_en": "Five stone pillars burst up in a palisade before you, blocking bodies and shots and stunning whoever they toss.",
       "type": "defense", "damage": "physical", "damage_multiplier": 1.2, "qi_cost": 16, "cooldown": 8,
       "cast": { "shape": "wall", "range": 120, "count": 5, "radius": 17, "duration": 5, "windup": 0.1 },
       "effects": { "stun_chance": 0.5 }, "unlock_realm": "LuyệnKhí", "unlock_stage": 5
     },
     {
-      "id": "thanh_van_kiem_vu", "name": "Thanh Vân Kiếm Vũ", "name_en": "Azure Cloud Sword Rain", "glyph": "絕",
+      "id": "thanh_van_kiem_vu", "name": "Thanh Vân Kiếm Vũ", "name_en": "Azure Cloud Sword Rain",
       "description": "Tuyệt kỹ: mười hai đạo kiếm khí bắn tỏa bốn phương.", "description_en": "Ultimate: twelve sword-qi bolts burst outward.",
       "type": "attack", "damage": "spirit", "damage_multiplier": 1.3, "qi_cost": 0, "cooldown": 1,
       "cast": { "shape": "nova", "range": 420, "radius": 10, "speed": 560, "count": 12 },
@@ -106,47 +106,47 @@
     },
 
     {
-      "id": "vine_thorn", "name": "Gai Đằng", "name_en": "Vine Thorn", "glyph": "刺", "element": "Mộc",
+      "id": "vine_thorn", "name": "Gai Đằng", "name_en": "Vine Thorn", "element": "Mộc",
       "type": "attack", "damage": "spirit", "damage_multiplier": 1.0, "cooldown": 1.9,
       "cast": { "shape": "projectile", "range": 420, "radius": 9, "speed": 330, "windup": 0.45 }
     },
     {
-      "id": "snake_spit", "name": "Độc Tiễn", "name_en": "Venom Spit", "glyph": "毒", "element": "Thủy",
+      "id": "snake_spit", "name": "Độc Tiễn", "name_en": "Venom Spit", "element": "Thủy",
       "type": "attack", "damage": "spirit", "damage_multiplier": 1.0, "cooldown": 1.7,
       "cast": { "shape": "projectile", "range": 380, "radius": 9, "speed": 360, "windup": 0.4 }, "effects": { "bleed_damage": 2 }
     },
     {
-      "id": "root_snare", "name": "Căn Tỏa", "name_en": "Root Snare", "glyph": "根", "element": "Mộc",
+      "id": "root_snare", "name": "Căn Tỏa", "name_en": "Root Snare", "element": "Mộc",
       "type": "attack", "damage": "spirit", "damage_multiplier": 1.3, "cooldown": 3.2,
       "cast": { "shape": "aoe_circle", "range": 600, "radius": 64, "count": 3, "windup": 0.9 }, "effects": { "root": 0.8 }
     },
     {
-      "id": "bandit_blade_qi", "name": "Đao Khí", "name_en": "Blade Qi", "glyph": "刀", "element": "Kim",
+      "id": "bandit_blade_qi", "name": "Đao Khí", "name_en": "Blade Qi", "element": "Kim",
       "type": "attack", "damage": "spirit", "damage_multiplier": 1.0, "cooldown": 2.4,
       "cast": { "shape": "projectile", "range": 420, "radius": 11, "speed": 420, "windup": 0.4 }
     },
     {
-      "id": "disciple_sword_qi", "name": "Kiếm Khí", "name_en": "Sword Qi", "glyph": "劍", "element": "Kim",
+      "id": "disciple_sword_qi", "name": "Kiếm Khí", "name_en": "Sword Qi", "element": "Kim",
       "type": "attack", "damage": "spirit", "damage_multiplier": 0.9, "cooldown": 2.2,
       "cast": { "shape": "projectile", "range": 440, "radius": 10, "speed": 450, "windup": 0.35 }
     },
     {
-      "id": "rogue_qi_bolt", "name": "Linh Đạn", "name_en": "Qi Bolt", "glyph": "彈", "element": "Hỏa",
+      "id": "rogue_qi_bolt", "name": "Linh Đạn", "name_en": "Qi Bolt", "element": "Hỏa",
       "type": "attack", "damage": "spirit", "damage_multiplier": 1.0, "cooldown": 2.0,
       "cast": { "shape": "projectile", "range": 440, "radius": 10, "speed": 430, "windup": 0.35 }
     },
     {
-      "id": "fox_fire", "name": "Hồ Hỏa", "name_en": "Fox-fire", "glyph": "狐", "element": "Hỏa",
+      "id": "fox_fire", "name": "Hồ Hỏa", "name_en": "Fox-fire", "element": "Hỏa",
       "type": "attack", "damage": "spirit", "damage_multiplier": 0.85, "cooldown": 2.2,
       "cast": { "shape": "projectile", "range": 460, "radius": 10, "speed": 420, "count": 3, "spread": 16, "windup": 0.4 }
     },
     {
-      "id": "soul_chill", "name": "Âm Hàn", "name_en": "Soul Chill", "glyph": "寒", "element": "Thủy",
+      "id": "soul_chill", "name": "Âm Hàn", "name_en": "Soul Chill", "element": "Thủy",
       "type": "attack", "damage": "spirit", "damage_multiplier": 1.25, "cooldown": 3.0,
       "cast": { "shape": "aoe_circle", "range": 520, "radius": 84, "count": 1, "windup": 0.75 }, "effects": { "slow": 2 }
     },
     {
-      "id": "python_venom", "name": "Độc Vũ", "name_en": "Venom Rain", "glyph": "毒", "element": "Mộc",
+      "id": "python_venom", "name": "Độc Vũ", "name_en": "Venom Rain", "element": "Mộc",
       "type": "attack", "damage": "spirit", "damage_multiplier": 1.1, "cooldown": 3.4,
       "cast": { "shape": "aoe_circle", "range": 600, "radius": 72, "count": 4, "windup": 0.9 }, "effects": { "bleed_damage": 4 }
     }

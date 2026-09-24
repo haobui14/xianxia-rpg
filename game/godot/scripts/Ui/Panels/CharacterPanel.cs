@@ -2,20 +2,21 @@ using System.Linq;
 using Godot;
 using TuTien.Core;
 using TuTien.Core.Rules;
+using TuTienLuc.Art;
 
 namespace TuTienLuc.Ui.Panels;
 
 /// <summary>The cultivator: attributes and combat profile, arts and slots, and the cultivation path.</summary>
 public partial class CharacterPanel : InkPanel
 {
-    protected override string Glyph => "吾";
+    protected override IconKind Emblem => IconKind.Person;
     protected override string TitleText => E.Player.Name;
     protected override Vector2 PanelSize => new(820, 680);
 
     protected override void Build()
     {
         var p = E.Player;
-        Para($"{Text.Realm(p.Realm, p.Stage)} ({Names.Han(p.Realm)}) · {Text.Path(p.Path)} · {T("linh căn", "root")} {Text.Root(p.Root)}", 17, Ink.InkColor);
+        Para($"{Text.Realm(p.Realm, p.Stage)} · {Text.Path(p.Path)} · {T("linh căn", "root")} {Text.Root(p.Root)}", 17, Ink.InkColor);
         Tabs(T("Căn cơ", "Foundation"), T("Võ học", "Arts"), T("Tu luyện", "Cultivation"));
         switch (Tab)
         {
@@ -117,9 +118,9 @@ public partial class CharacterPanel : InkPanel
         {
             var def = content.Skill(s.Id);
             if (def == null) continue;
-            var element = def.Element != null ? $" · {Names.Han(def.Element.Value)} {Names.Display(def.Element.Value, Game.Instance.Locale)}" : "";
+            var element = def.Element is { } e ? T($" · hệ {Names.Display(e, Locale.Vi)}", $" · {Names.Display(e, Locale.En)}") : "";
             var cost = CombatRules.QiCost(def, p.Root.Elements);
-            Para($"{def.Glyph} {Text.Name(def)} — {T("cấp", "lv")} {s.Level} ({s.Exp}/{s.Level * 100}){element}", 17, def.Element != null ? Ink.Element(def.Element.Value).Darkened(0.2f) : Ink.InkColor);
+            Para($"{Text.Name(def)} — {T("cấp", "lv")} {s.Level} ({s.Exp}/{s.Level * 100}){element}", 17, def.Element != null ? Ink.Element(def.Element.Value).Darkened(0.2f) : Ink.InkColor);
             Para($"    {Text.Desc(def)}  ·  {T("linh lực", "Qi")} {cost} · {T("hồi", "cooldown")} {def.Cooldown:0.#}s · ×{def.DamageMultiplier * Skills.LevelMultiplier(p, s.Id):0.##}", 14, Ink.InkMute);
         }
 

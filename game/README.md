@@ -33,7 +33,7 @@ You can also build from the command line with `dotnet build game/TuTienLuc.sln` 
 | Input | Action |
 |---|---|
 | WASD / arrows | Walk (roads are quicker; forest, swamp and mountains slower) |
-| E | Interact with what the prompt shows: the inn, stall or bounty board, the sect hall, a cave, a spirit vein, a herb patch, a person, a 奇 adventure |
+| E | Interact with what the prompt shows: the inn, stall or bounty board, the sect hall, a cave, a spirit vein, a herb patch, a person, an adventure (a pillar of light under a gold star) |
 | Left click | Strike. Hitting a beast starts the fight with its pack |
 | M | Map: click a place you've seen to plan the way, then set off (from Trúc Cơ, a way over water is flown) |
 | N | End the month early (it also turns by itself when footwork runs out) |
@@ -78,12 +78,12 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
 | Tap the ground | Walk there, round whatever is in the way |
 | Tap a person or thing | Walk up to it and use it (talk, the board, the inn…) |
 | Tap a beast | Strike it if it's in reach, else walk up to it |
-| 武, lower right | Hold to strike; it aims itself at the nearest foe |
+| Sword button, lower right | Hold to strike; it aims itself at the nearest foe |
 | Tap a foe (in a fight) | Strike toward it |
-| Buttons around 武 (in a fight) | The four spirit arts, the ultimate (絕), a pill (丹) |
-| 遁 | Dash |
-| 互 / 飛 (exploring) | Interact / sword flight; each appears when it applies (飛 turns to 降 to land) |
-| 停 (in a fight) | Pause, or flee |
+| Buttons around the sword (in a fight) | The four spirit arts (each drawn by how it is cast, in its element's colour), the ultimate (a starburst), pills |
+| Double chevron | Dash |
+| Hand / flying sword (exploring) | Interact / sword flight; each appears when it applies (in the air the sword becomes a landing arrow) |
+| Pause bars (in a fight) | Pause, or flee |
 | Icons, top right | Character, inventory, journal, map, seclusion, sense pulse, end month, system |
 | Two fingers | Pinch to zoom |
 | Android back | Same as Esc |
@@ -92,7 +92,7 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
 
 - **Character creation:** name, age, a spirit root roll with 3 rerolls, and a path (Qi, Body, or Kiêm tu).
 - **Thanh Vân as a top-down world (48×30 tiles, 128 px each):** painted ground with river banks, bridges and roads; forests, bamboo groves, hills and snow peaks; drifting clouds over unexplored land; seasons that recolour the grass and trees. The village has houses, an inn, a market stall, a bounty board and a well; the Thanh Vân Kiếm Phái sits behind its gate between cliffs; the Linh Thảo Bí Cảnh opens from a glowing cave; there are two spirit veins and herb patches.
-- **A living field:** 25 NPCs stroll where the month's simulation put them (talk to them with E), beast packs prowl their patch and aggressive ones chase you, 奇 adventures glow as pillars of light, and a rumor feed runs in the corner. Trees and roofs in front of you turn see-through.
+- **A living field:** 25 NPCs stroll where the month's simulation put them (talk to them with E), beast packs prowl their patch and aggressive ones chase you, adventures glow as pillars of light under a gold star, and a rumor feed runs in the corner. Trees and roofs in front of you turn see-through.
 - **Time flows as you travel:** each tile crossed spends its footwork (the HUD shows "day N of the month"). When it runs out the month turns (cultivation, world tick, autosave) and a card sums it up while you keep walking.
 - **Real-time combat where you meet:** eleven enemy archetypes, each with a readable telegraph, fighting on real terrain: charger, swarm, ranged, tank, caster and boss, plus the five below. Every hit goes through the core's `CombatRules`. Element marks trigger the 10 Ngũ Hành reactions, and every creature reacts to its own element on a cooldown (for example, Fireball on a wood vine triggers *Liệt Diễm*). Spars end at 15% health; escape by running away.
 - **The Ancient Tree Hollow's creatures** (Cổ Thụ Động, the deep forest):
@@ -124,6 +124,7 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
 - **Sound, all synthesized:** about 40 effects (swishes, hits, casts, coins, the month gong, and more), positional in the world. Five pieces of music are generated in pentatonic modes for the title, exploring, fights, the breakthrough trial and secret realms. The zither plays with glissandi, grace notes and tremolo over flute, bells and drone; fights get taiko drums. The music crossfades as you move between them.
 - **The seasons in the air:** blossom petals, summer fluff and butterflies, autumn leaves and snow drift across the screen. Footsteps raise dust on roads, ripples in the swamp and puffs of snow.
 - **A painted title screen** that moves (mist, falling petals, a slow pan), and a **settings** screen: volumes, fullscreen, screen shake, interface size, touch controls, keys and language.
+- **No Chinese characters:** every sign and label is Vietnamese (or English), and every badge is an ink icon drawn in code. That covers panel seals, HUD and touch buttons, art icons (drawn by how each art is cast, coloured by its element), element and status marks, and map markers.
 - **Phones and tablets:** on-screen touch controls (above), and an interface drawn bigger to suit the screen. Auto picks 135% on a phone and 120% on a small tablet, or you choose 100–145%. Panels shrink to fit and scroll.
 - **Saves and language:** the game saves every month and after every fight, and Vietnamese/English can be switched anywhere.
 

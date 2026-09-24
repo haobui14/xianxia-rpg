@@ -2,6 +2,7 @@ using System.Linq;
 using Godot;
 using TuTien.Core;
 using TuTien.Core.World;
+using TuTienLuc.Art;
 
 namespace TuTienLuc.Ui.Panels;
 
@@ -17,7 +18,7 @@ public partial class MonthReportPanel : InkPanel
         _seclusion = seclusion;
     }
 
-    protected override string Glyph => _seclusion ? "閉" : "月";
+    protected override IconKind Emblem => _seclusion ? IconKind.Lotus : IconKind.Moon;
     protected override string TitleText => _seclusion
         ? T($"Xuất quan sau {_report.Months} tháng", $"Leaving seclusion after {_report.Months} month{(_report.Months == 1 ? "" : "s")}")
         : T("Qua tháng", "The month turns");
@@ -49,7 +50,7 @@ public partial class MonthReportPanel : InkPanel
         {
             Section(T("Tin đồn giang hồ", "Rumors on the road"));
             foreach (var r in _report.Rumors.Take(8))
-                Para("「" + T(r.Text, r.TextEn) + "」", 15, Ink.Violet);
+                Para("“" + T(r.Text, r.TextEn) + "”", 15, Ink.Violet);
         }
 
         if (_report.InterruptEventId != null)

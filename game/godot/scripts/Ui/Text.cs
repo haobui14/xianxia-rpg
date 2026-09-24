@@ -26,8 +26,6 @@ public static class Text
     public static string Root(SpiritRootState root) =>
         string.Join(" · ", root.Elements.Select(e => Names.Display(e, L))) + $" ({Names.Display(root.Grade, L)})";
 
-    public static string RootHan(SpiritRootState root) => string.Concat(root.Elements.Select(Names.Han));
-
     public static string Path(CultivationPath path) => path switch
     {
         CultivationPath.Body => T("Thể tu", "Body cultivation"),
@@ -60,7 +58,7 @@ public static class Text
     public static string Zone(AreaDef area) =>
         Names.Pick(L, area.Name, area.NameEn)
         + (area.IsSafe ? T(" · an toàn", " · safe") : T($" · hiểm {area.DangerLevel}", $" · danger {area.DangerLevel}"))
-        + (area.CultivationBonus > 0 ? $" · 氣 +{area.CultivationBonus}%" : "");
+        + (area.CultivationBonus > 0 ? T($" · linh khí +{area.CultivationBonus}%", $" · qi +{area.CultivationBonus}%") : "");
 
     public static string Rank(string? rank) => rank switch
     {

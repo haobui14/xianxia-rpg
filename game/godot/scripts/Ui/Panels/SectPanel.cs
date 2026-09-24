@@ -3,6 +3,7 @@ using Godot;
 using TuTien.Core;
 using TuTien.Core.Content;
 using TuTien.Core.Rules;
+using TuTienLuc.Art;
 
 namespace TuTienLuc.Ui.Panels;
 
@@ -13,7 +14,7 @@ public partial class SectPanel : InkPanel
 
     public SectPanel(PoiDef poi) => _poi = poi;
 
-    protected override string Glyph => _poi.Glyph;
+    protected override IconKind Emblem => Icons.Named(_poi.Icon);
     protected override string TitleText => T(_poi.Name, _poi.NameEn);
 
     protected override void Build()
