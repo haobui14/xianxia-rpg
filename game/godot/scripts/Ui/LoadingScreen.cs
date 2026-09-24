@@ -57,7 +57,7 @@ public partial class LoadingScreen : Control
         var seal = UiKit.Seal(IconKind.Lotus, 64);
         seal.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         column.AddChild(seal);
-        column.AddChild(Centred(UiKit.Label("Tu Tiên Lục", 44, Ink.InkColor)));
+        column.AddChild(Centred(UiKit.Label(TitleScreen.GameTitle, 44, Ink.InkColor)));
         column.AddChild(Centred(UiKit.Label(T("Đang kiến tạo thế giới…", "Building the world…"), 22, Ink.InkSoft)));
         column.AddChild(UiKit.Spacer(6));
         _bar = new LoadingBar { CustomMinimumSize = new Vector2(560, 22) };

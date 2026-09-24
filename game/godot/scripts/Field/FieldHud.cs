@@ -292,11 +292,16 @@ public partial class FieldHud : Control
         DrawRect(new Rect2(pos, new Vector2(w, h)), Ink.PaperDarker);
         DrawRect(new Rect2(pos, new Vector2(w * Mathf.Clamp(max <= 0 ? 0 : value / max, 0, 1), h)), fill);
         Frame(new Rect2(pos, new Vector2(w, h)), glow ? Ink.Violet : Ink.LineStrong, glow ? 2 : 1);
-        if (label.Length > 0) DrawString(Ink.UiFont, pos + new Vector2(6, h - Mathf.Max(2, (h - 10) / 2)), label, HorizontalAlignment.Left, -1, h >= 13 ? 12 : 10, Ink.InkColor);
+        if (label.Length == 0) return;
+        DrawnText.Note(label);
+        DrawString(Ink.UiFont, pos + new Vector2(6, h - Mathf.Max(2, (h - 10) / 2)), label, HorizontalAlignment.Left, -1, h >= 13 ? 12 : 10, Ink.InkColor);
     }
 
-    private void Text(string text, Vector2 pos, int size, Color color, Font? font = null) =>
+    private void Text(string text, Vector2 pos, int size, Color color, Font? font = null)
+    {
+        DrawnText.Note(text);
         DrawString(font ?? Ink.Serif, pos, text, HorizontalAlignment.Left, -1, size, color);
+    }
 
     private float Width(string text, int size, Font? font = null) =>
         (font ?? Ink.Serif).GetStringSize(text, HorizontalAlignment.Left, -1, size).X;
@@ -316,7 +321,7 @@ public partial class FieldHud : Control
         Frame(seal.Grow(-3), new Color(Ink.Card, 0.8f), 1.2f);
         Icons.Draw(this, IconKind.Person, seal.GetCenter(), 28, Ink.Card);
 
-        Text(p.Name, at + new Vector2(54, 20), 20, Ink.InkColor);
+        Text(Game.Instance.Person(p.Name), at + new Vector2(54, 20), 20, Ink.InkColor);
         Text(Ui.Text.Realm(p.Realm, p.Stage), at + new Vector2(54, 42), 15, Ink.Realm(p.Realm).Darkened(0.25f));
 
         var y = at.Y + 52;
@@ -495,10 +500,10 @@ public partial class FieldHud : Control
         var pos = top is { } y0 ? new Vector2(10, y0) : new Vector2(16, size.Y - 34 - h);
         Panel(new Rect2(pos, new Vector2(w, h)), 0.82f);
         var y = pos.Y + 18;
-        foreach (var (text, level) in lines)
+        foreach (var line in lines)
         {
-            var color = level == EventLevel.Major ? Ink.JadeDeep : level == EventLevel.Warning ? Ink.CinnabarDeep : Ink.InkSoft;
-            Text(Clip("· " + text, 14, w - 18), new Vector2(pos.X + 9, y), 14, color);
+            var color = line.Level == EventLevel.Major ? Ink.JadeDeep : line.Level == EventLevel.Warning ? Ink.CinnabarDeep : Ink.InkSoft;
+            Text(Clip("· " + line.Text, 14, w - 18), new Vector2(pos.X + 9, y), 14, color);
             y += 19;
         }
         if (rumor != null) Text(Clip("“" + T(rumor.Text, rumor.TextEn) + "”", 14, w - 18), new Vector2(pos.X + 9, y), 14, Ink.Violet);
@@ -587,6 +592,8 @@ public partial class FieldHud : Control
     private void Banner(Vector2 size)
     {
         if (_bannerTime <= 0 || _banner.Length == 0) return;
+        DrawnText.Note(_banner);
+        DrawnText.Note(_bannerSub);
         var alpha = Mathf.Clamp(_bannerTime * 2.5f, 0, 1);
         var font = Ink.Serif;
         var s = font.GetStringSize(_banner, HorizontalAlignment.Left, -1, 70);

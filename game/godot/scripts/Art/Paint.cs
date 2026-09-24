@@ -122,10 +122,19 @@ public static class Paint
     }
 
     /// <summary>A word centred on a point (painted signboards, stones).</summary>
-    public static void Caption(Brush ci, string text, Vector2 center, int size, Color color, Font? font = null)
+    /// <summary>
+    /// A line of text centred on <paramref name="center"/>. With <paramref name="maxWidth"/> it shrinks to fit (a
+    /// signboard is one size, and the two languages' words are not).
+    /// </summary>
+    public static void Caption(Brush ci, string text, Vector2 center, int size, Color color, Font? font = null, float maxWidth = 0)
     {
         font ??= Ui.Ink.Serif;
         var s = font.GetStringSize(text, HorizontalAlignment.Left, -1, size);
+        if (maxWidth > 0 && s.X > maxWidth && size > 7)
+        {
+            size = Mathf.Max(7, Mathf.FloorToInt(size * maxWidth / s.X));
+            s = font.GetStringSize(text, HorizontalAlignment.Left, -1, size);
+        }
         ci.DrawString(font, center + new Vector2(-s.X / 2, size * 0.36f), text, HorizontalAlignment.Left, -1, size, A(color));
     }
 

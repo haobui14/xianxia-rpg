@@ -578,7 +578,7 @@ public partial class WorldScreen : FieldScreen
                     var body = new Fighter
                     {
                         Id = pack.Id + ":" + i, PackId = pack.Id, Kind = def.Id, Look = Figures.IsHuman(def.Id) ? Look.ForEnemy(def.Id) : null,
-                        Name = T(def.Name, def.NameEn), Radius = (float)def.Radius, Speed = (float)def.Speed, Archetype = def.Archetype,
+                        NameVi = def.Name, NameEn = def.NameEn, Radius = (float)def.Radius, Speed = (float)def.Speed, Archetype = def.Archetype,
                         Pos = home, Home = home, WanderRadius = def.Speed <= 0 ? 0 : 110, Hostile = true,
                     };
                     body.Side = GD.Randf() < 0.5f ? -1 : 1;

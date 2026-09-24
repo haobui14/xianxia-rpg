@@ -29,6 +29,9 @@ public partial class TitleScreen : Control
 
     private static string T(string vi, string en) => Game.Instance.T(vi, en);
 
+    /// <summary>The game's name: "Tu Tiên Lục" is the record of cultivating immortality.</summary>
+    public static string GameTitle => T("Tu Tiên Lục", "Chronicle of Immortals");
+
     public override void _Ready()
     {
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
@@ -62,9 +65,10 @@ public partial class TitleScreen : Control
     {
         var names = Game.Instance.Content.NpcNames;
         var rng = Seeds.Stream(_seed ^ GD.Randi(), "player-name");
-        if (names.Surnames.Count == 0 || names.GivenMale.Count == 0) return "Lâm Vân";
+        if (names.Surnames.Count == 0 || names.GivenMale.Count == 0) return Game.Instance.Person("Lâm Vân");
         var given = rng.Chance(0.5) || names.GivenFemale.Count == 0 ? names.GivenMale : names.GivenFemale;
-        return rng.Pick(names.Surnames) + " " + rng.Pick(given);
+        // In English the name is offered as it will be shown there, plain ("Lam Van").
+        return Game.Instance.Person(rng.Pick(names.Surnames) + " " + rng.Pick(given));
     }
 
     private void Build()
@@ -136,10 +140,12 @@ public partial class TitleScreen : Control
         var seal = UiKit.Seal(IconKind.Lotus, 72);
         seal.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
         _left.AddChild(seal);
-        _left.AddChild(UiKit.Label("Tu Tiên Lục", 64, Ink.InkColor));
+        _left.AddChild(Game.Instance.Locale == Locale.En
+            ? UiKit.Label(GameTitle, 56, Ink.InkColor, wrap: true)
+            : UiKit.Label(GameTitle, 64, Ink.InkColor));
         _left.AddChild(new IconView(IconKind.Divider, Ink.CinnabarDeep, 1) { CustomMinimumSize = new Vector2(240, 16), SizeFlagsHorizontal = SizeFlags.ShrinkBegin });
         _left.AddChild(UiKit.Label(T("Một đời tu tiên giữa thế giới sống động — vùng Thanh Vân.",
-            "A cultivation life in a living world — the Thanh Vân region."), 18, Ink.InkSoft, wrap: true));
+            "A cultivation life in a living world — the Azure Cloud region."), 18, Ink.InkSoft, wrap: true));
         _left.AddChild(UiKit.Spacer(10));
 
         if (Game.Instance.HasSave)
@@ -268,7 +274,7 @@ public partial class TitleScreen : Control
 
     private void Begin()
     {
-        var name = string.IsNullOrWhiteSpace(_name) ? "Vô Danh" : _name.Trim();
+        var name = string.IsNullOrWhiteSpace(_name) ? T("Vô Danh", "Nameless") : _name.Trim();
         var (age, root, path, seed) = (_age, _root, _path, _seed);
         Main.Instance.EnterWorld(() =>
         {

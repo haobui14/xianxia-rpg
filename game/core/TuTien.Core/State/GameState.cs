@@ -11,7 +11,7 @@ namespace TuTien.Core.State
         public int Version { get; set; } = SaveCodec.CurrentVersion;
         /// <summary>Stored as a decimal string: JSON numbers can't hold a full 64-bit seed.</summary>
         public string WorldSeed { get; set; } = "0";
-        public Locale Locale { get; set; } = Locale.Vi;
+        public Locale Locale { get; set; } = Locale.En;
         public PlayerState Player { get; set; } = new PlayerState();
         public CalendarState Calendar { get; set; } = new CalendarState();
         public WorldState World { get; set; } = new WorldState();

@@ -70,7 +70,8 @@ public sealed class Battle
         body.Speed = (float)inst.Speed;
         body.Archetype = def.Archetype;
         body.Skill = E.Content.Skill(def.Skills.FirstOrDefault());
-        body.Name = T(inst.Name, inst.NameEn);
+        body.NameVi = inst.Name;
+        body.NameEn = inst.NameEn;
         body.InBattle = true;
         body.Alive = true;
         body.Yielded = false;

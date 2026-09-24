@@ -92,7 +92,7 @@ namespace TuTien.Core
         }
 
         public static GameEngine NewGame(ContentDb content, ulong seed, string name, int age, SpiritRootState root,
-            CultivationPath path = CultivationPath.Qi, Locale locale = Locale.Vi) =>
+            CultivationPath path = CultivationPath.Qi, Locale locale = Locale.En) =>
             new GameEngine(content, WorldGen.NewGame(content, seed, name, age, root, path, locale));
 
         public static GameEngine Load(ContentDb content, string json) => new GameEngine(content, SaveCodec.Deserialize(json));

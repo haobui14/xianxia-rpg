@@ -21,6 +21,8 @@ public static class PropArt
 {
     private static Vector2 V(float x, float y) => new(x, y);
     private static float H(int seed, int i) => Paint.Hash(seed, i);
+    /// <summary>A signboard's words, in the interface language (a prop repaints when it changes).</summary>
+    private static string T(string vi, string en) => Game.Instance.T(vi, en);
 
     // ------------------------------------------------------------------ trees
 
@@ -335,7 +337,7 @@ public static class PropArt
         Roof(c, -72, 72, -118, -170, new Color("#4a5566"));
         // Signboard and lanterns.
         Paint.Poly(c, new[] { V(-38, -77), V(38, -77), V(38, -59), V(-38, -59) }, new Color("#2c2a33"), 0.9f, 1.3f);
-        Paint.Caption(c, "Khách điếm", V(0, -68), 12, new Color("#e0c070"));
+        Paint.Caption(c, T("Khách điếm", "Inn"), V(0, -68), 12, new Color("#e0c070"), maxWidth: 70);
         foreach (var x in new[] { -34f, 34 })
         {
             Paint.Line2(c, V(x, -56), V(x, -50), Paint.Ink, 1);
@@ -383,7 +385,7 @@ public static class PropArt
         }
         Roof(c, -34, 34, -68, -84, new Color("#4a5566"), 5);
         Paint.Poly(c, new[] { V(-21, -97), V(21, -97), V(21, -83), V(-21, -83) }, new Color("#2c2a33"), 0.8f, 1);
-        Paint.Caption(c, "Cáo thị", V(0, -90), 10, new Color("#e0c070"));
+        Paint.Caption(c, T("Cáo thị", "Notices"), V(0, -90), 10, new Color("#e0c070"), maxWidth: 38);
     }
 
     public static void Well(Brush c)
@@ -462,7 +464,7 @@ public static class PropArt
         Roof(c, -54, 54, -150, -184, new Color("#2f3b4c"), 12);
         Paint.Poly(c, new[] { V(-42, -128), V(42, -128), V(42, -107), V(-42, -107) }, new Color("#1f3550"), 0.9f, 1.4f);
         Paint.Poly(c, new[] { V(-39, -125), V(39, -125), V(39, -110), V(-39, -110) }, new Color("#c9a54a") with { A = 0.25f }, 0);
-        Paint.Caption(c, "Thanh Vân", V(0, -118), 13, new Color("#e0c070"));
+        Paint.Caption(c, T("Thanh Vân", "Azure Cloud"), V(0, -118), 13, new Color("#e0c070"), maxWidth: 76);
     }
 
     public static void Hall(Brush c)
@@ -480,7 +482,7 @@ public static class PropArt
         Paint.Poly(c, new[] { V(-w / 2 + 40, -122), V(w / 2 - 40, -122), V(w / 2 - 40, -140), V(-w / 2 + 40, -140) }, new Color("#efe5cc"));
         Roof(c, -w / 2 + 40, w / 2 - 40, -138, -186, new Color("#2f3b4c"), 12);
         Paint.Poly(c, new[] { V(-50, -119), V(50, -119), V(50, -99), V(-50, -99) }, new Color("#1f3550"), 0.9f, 1.3f);
-        Paint.Caption(c, "Thanh Vân Điện", V(0, -109), 12, new Color("#e0c070"));
+        Paint.Caption(c, T("Thanh Vân Điện", "Azure Cloud Hall"), V(0, -109), 12, new Color("#e0c070"), maxWidth: 92);
     }
 
     public static void Pagoda(Brush c)
@@ -648,7 +650,7 @@ public static class PropArt
         Paint.Poly(c, new[] { V(-20, 0), V(20, 0), V(16, -10), V(-16, -10) }, new Color("#8c8474"));
         Paint.Poly(c, new[] { V(-13, -10), V(13, -10), V(12, -74), V(-12, -74) }, new Color("#a8a294"));
         Paint.Poly(c, new[] { V(-16, -74), V(16, -74), V(0, -88) }, new Color("#6f685c"));
-        Paint.Caption(c, "Ải", V(0, -44), 18, new Color("#3a3a44"));
+        Paint.Caption(c, T("Ải", "Pass"), V(0, -44), 18, new Color("#3a3a44"), maxWidth: 22);
     }
 
     public static void QiPillar(Brush c, float time)

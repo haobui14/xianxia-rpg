@@ -39,6 +39,11 @@ public partial class Prop : Node2D
 
     public override void _Ready() => SetProcess(_animated);
 
+    // Signboards carry words: every prop repaints in the new language (painted ones at once, the rest when painted).
+    public override void _EnterTree() => Game.Instance.LocaleChanged += Redraw;
+
+    public override void _ExitTree() => Game.Instance.LocaleChanged -= Redraw;
+
     public override void _Process(double delta)
     {
         _time += (float)delta;

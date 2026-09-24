@@ -72,7 +72,11 @@ public partial class FoundationTrial : TrialBase
     private const int W = 16, H = 12;
 
     /// <summary>The eight extraordinary meridians (kỳ kinh bát mạch), clockwise from the north.</summary>
-    public static readonly string[] Meridians = { "Đốc", "Dương", "Đới", "Duy", "Nhâm", "Âm", "Xung", "Kiều" };
+    private static readonly string[] MeridiansVi = { "Đốc", "Dương", "Đới", "Duy", "Nhâm", "Âm", "Xung", "Kiều" };
+    private static readonly string[] MeridiansEn = { "Governing", "Yang", "Girdle", "Linking", "Conception", "Yin", "Penetrating", "Heel" };
+
+    /// <summary>Meridian <paramref name="i"/>'s name in the interface language.</summary>
+    public static string Meridian(int i) => Game.Instance.T(MeridiansVi[i], MeridiansEn[i]);
 
     public readonly List<QiDrop> Drops = new();
     public readonly List<Surge> Surges = new();
@@ -500,7 +504,7 @@ public partial class FoundationFloor : Node2D
             for (var d = sink + 50; d < rim; d += 64) DrawCircle(c + dir * d, 5, new Color(ink, 0.35f));
             // Its name on a jade tag at the rim.
             var seal = c + dir * (rim + 58);
-            var name = FoundationTrial.Meridians[i];
+            var name = FoundationTrial.Meridian(i);
             var ns = Ink.UiFont.GetStringSize(name, HorizontalAlignment.Left, -1, 17);
             var tag = new Rect2(seal - new Vector2(ns.X / 2 + 11, 16), new Vector2(ns.X + 22, 32));
             _tag.BorderColor = new Color(ink, 0.6f);

@@ -124,9 +124,12 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
 - **Sound, all synthesized:** about 40 effects (swishes, hits, casts, coins, the month gong, and more), positional in the world. Five pieces of music are generated in pentatonic modes for the title, exploring, fights, the breakthrough trial and secret realms. The zither plays with glissandi, grace notes and tremolo over flute, bells and drone; fights get taiko drums. The music crossfades as you move between them.
 - **The seasons in the air:** blossom petals, summer fluff and butterflies, autumn leaves and snow drift across the screen. Footsteps raise dust on roads, ripples in the swamp and puffs of snow.
 - **A painted title screen** that moves (mist, falling petals, a slow pan), and a **settings** screen: volumes, fullscreen, screen shake, interface size, touch controls, keys and language.
-- **No Chinese characters:** every sign and label is Vietnamese (or English), and every badge is an ink icon drawn in code. That covers panel seals, HUD and touch buttons, art icons (drawn by how each art is cast, coloured by its element), element and status marks, and map markers.
+- **English first, with a full Vietnamese translation:** the game starts in English, and Vietnamese can be picked on the title screen or in Settings. Every word on screen follows the choice at once, including the painted signboards, the names over people's heads and the message log.
+  - In English, realms, arts, places and signs are translated (Qi Condensation, Azure Cloud Village, "Inn"), and people's names are written without Vietnamese marks (Lâm Bá is Lam Ba), the way English xianxia writes Chinese names.
+  - The language is a setting, not part of a save: a save made in one language opens in the other.
+- **No Chinese characters:** every sign and label is English or Vietnamese, and every badge is an ink icon drawn in code. That covers panel seals, HUD and touch buttons, art icons (drawn by how each art is cast, coloured by its element), element and status marks, and map markers.
 - **Phones and tablets:** on-screen touch controls (above), and an interface drawn bigger to suit the screen. Auto picks 135% on a phone and 120% on a small tablet, or you choose 100–145%. Panels shrink to fit and scroll.
-- **Saves and language:** the game saves every month and after every fight, and Vietnamese/English can be switched anywhere.
+- **Saves:** the game saves every month and after every fight.
 - **Loading screen:** a new life or Continue opens on "Đang kiến tạo thế giới…" ("Building the world…"). The bar follows the real work as the region is built a slice per frame: the land and rivers, the mountains, the forests, the village and the sect, then the scenery around you. It also shows a tip.
 
 The Linh Thức AI storyteller is **offline-only** in this slice. NPC lines, the chronicle and rumors come from templates built on the same facts the online `/api/story` endpoint will receive (§7.13).
@@ -153,16 +156,21 @@ dotnet test game/core/TuTien.Core.Tests
 #    stick, press Interact, tap the ground to walk, pinch to zoom, and in a fight
 #    press an art, pause, and hold the martial art until the bear is beaten
 #  - the new life goes in through the loading screen, like the title's button
-# It exits 0 on success, 1 on failure.
+#  - one language at a time: at every step it reads each visible label and button and
+#    every word painted on the field (signs, names, the HUD). In English no Vietnamese
+#    letter may show, and in Vietnamese no English word. At the end it switches language
+#    mid-game and checks the world, the character sheet and the journal again
+# It plays in English; add --locale vi to play in Vietnamese. It exits 0 on success, 1 on failure.
 dotnet build game/TuTienLuc.sln
 godot --headless --fixed-fps 60 --path game/godot -- --smoke
+godot --headless --fixed-fps 60 --path game/godot -- --smoke --locale vi
 
 # The same run with screenshots (needs a display; xvfb works on CI)
 xvfb-run -s "-screen 0 1600x900x24" godot --rendering-driver opengl3 --fixed-fps 60 \
   --resolution 1600x900 --path game/godot -- --smoke --shots /tmp/tutien-shots
 ```
 
-The smoke test writes to its own save slot (`user://saves/smoke.json`), so it never touches your real save. With `--shots` it also writes the five music loops as WAV files next to the screenshots.
+The smoke test writes to its own save slot (`user://saves/smoke.json`, or `smoke_vi.json` in Vietnamese, so both can run at once), so it never touches your real save. With `--shots` it also writes the five music loops as WAV files next to the screenshots.
 
 To see what the phone flow costs, run `--phone-start` at a phone's resolution. It uses touch controls and the 135% interface, taps through the title and character creation, then reports memory, GPU buffer memory, objects and draw calls each second in the world (add `--shots DIR` for pictures of the loading screen and the world):
 

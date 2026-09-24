@@ -28,7 +28,20 @@ public sealed class Fighter
     /// <summary>"human", or an enemy template id ("forest_wolf") that picks the creature drawing.</summary>
     public string Kind = "human";
     public Look? Look;
-    public string Name = "";
+    /// <summary>Both spellings of the name: a creature has an English one, a person's name is the same in both.</summary>
+    public string NameVi = "", NameEn = "";
+
+    /// <summary>The name in the interface language, so switching language renames everyone on the field.</summary>
+    public string Name
+    {
+        get => Game.Instance.T(NameVi, NameEn.Length > 0 ? NameEn : NameVi);
+        set
+        {
+            NameVi = value;
+            NameEn = "";
+        }
+    }
+
     public string Archetype = "charger";
     public string? PackId;
     public string? NpcId;

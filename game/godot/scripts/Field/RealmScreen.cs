@@ -211,7 +211,7 @@ public partial class RealmScreen : FieldScreen
             var body = new Fighter
             {
                 Id = "guard:" + i, PackId = "floor", Kind = def.Id, Look = Figures.IsHuman(def.Id) ? Look.ForEnemy(def.Id) : null,
-                Name = T(def.Name, def.NameEn), Radius = (float)def.Radius, Speed = (float)def.Speed, Archetype = def.Archetype,
+                NameVi = def.Name, NameEn = def.NameEn, Radius = (float)def.Radius, Speed = (float)def.Speed, Archetype = def.Archetype,
                 Pos = home, Home = home, WanderRadius = def.Speed <= 0 ? 0 : 60, Facing = Vector2.Down, Hostile = true,
             };
             AddActor(body);

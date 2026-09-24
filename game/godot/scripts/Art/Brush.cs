@@ -191,6 +191,7 @@ public sealed class Brush : IDisposable
 
     public void DrawString(Font font, Vector2 pos, string text, HorizontalAlignment alignment = HorizontalAlignment.Left, float width = -1, int fontSize = 16, Color? modulate = null)
     {
+        Ui.DrawnText.Note(text);
         Through();
         _ci.DrawString(font, pos, text, alignment, width, fontSize, modulate);
         Back();
@@ -198,6 +199,7 @@ public sealed class Brush : IDisposable
 
     public void DrawStringOutline(Font font, Vector2 pos, string text, HorizontalAlignment alignment = HorizontalAlignment.Left, float width = -1, int fontSize = 16, int size = 1, Color? modulate = null)
     {
+        Ui.DrawnText.Note(text);
         Through();
         _ci.DrawStringOutline(font, pos, text, alignment, width, fontSize, size, modulate);
         Back();

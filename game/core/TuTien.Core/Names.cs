@@ -30,8 +30,43 @@ namespace TuTien.Core
         private static readonly string[] GradeVi = { "Phổ Thông", "Khá", "Hiếm", "Thiên Phẩm" };
         private static readonly string[] GradeEn = { "Common", "Uncommon", "Rare", "Heavenly" };
 
+        /// <summary>
+        /// The text for <paramref name="locale"/>. English never shows a Vietnamese letter: a name inside it is
+        /// written plain ("Lâm Bá" → "Lam Ba"), the way English xianxia writes Chinese names without tones.
+        /// A missing English text falls back to the Vietnamese one as it is, so the gap stays visible.
+        /// </summary>
         public static string Pick(Locale locale, string vi, string? en) =>
-            locale == Locale.En && !string.IsNullOrEmpty(en) ? en! : vi;
+            locale == Locale.En && !string.IsNullOrEmpty(en) ? Plain(en!) : vi;
+
+        /// <summary>A person's name as shown in <paramref name="locale"/> (plain letters in English).</summary>
+        public static string Person(string name, Locale locale) => locale == Locale.En ? Plain(name) : name;
+
+        /// <summary>The text without Vietnamese marks, spaces kept ("Âu Dương" → "Au Duong").</summary>
+        public static string Plain(string s)
+        {
+            if (!HasVietnamese(s)) return s;
+            var decomposed = s.Normalize(NormalizationForm.FormD);
+            var sb = new StringBuilder(decomposed.Length);
+            foreach (var ch in decomposed)
+            {
+                if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch) == System.Globalization.UnicodeCategory.NonSpacingMark) continue;
+                sb.Append(ch == 'đ' ? 'd' : ch == 'Đ' ? 'D' : ch);
+            }
+            return sb.ToString().Normalize(NormalizationForm.FormC);
+        }
+
+        /// <summary>Whether the text holds an accented Latin letter (every Vietnamese diacritic, đ, ơ, ư).</summary>
+        public static bool HasVietnamese(string s)
+        {
+            foreach (var ch in s)
+            {
+                if (ch < 'À') continue;
+                if (ch <= 'ɏ' && ch != '×' && ch != '÷') return true; // Latin-1 letters and Latin Extended A/B, not × ÷
+                if (ch >= '̀' && ch <= 'ͯ') return true;                   // combining marks
+                if (ch >= 'Ḁ' && ch <= 'ỿ') return true;                   // Latin Extended Additional (ạ, ế, ữ …)
+            }
+            return false;
+        }
 
         public static string Id(Realm realm) => RealmIds[(int)realm];
         public static string Display(Realm realm, Locale locale) =>

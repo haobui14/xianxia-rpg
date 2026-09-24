@@ -10,7 +10,7 @@ namespace TuTienLuc.Ui.Panels;
 public partial class CharacterPanel : InkPanel
 {
     protected override IconKind Emblem => IconKind.Person;
-    protected override string TitleText => E.Player.Name;
+    protected override string TitleText => Game.Instance.Person(E.Player.Name);
     protected override Vector2 PanelSize => new(820, 680);
 
     protected override void Build()

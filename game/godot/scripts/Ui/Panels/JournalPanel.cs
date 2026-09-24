@@ -22,7 +22,7 @@ public partial class JournalPanel : InkPanel
                 foreach (var entry in state.Chronicle.AsEnumerable().Reverse().Take(40))
                     Para(T(entry.Text, entry.TextEn), 15, Ink.InkSoft);
                 Para(T("(Biên niên ngoại tuyến. Linh Thức sẽ chấp bút lại thành truyện khi trực tuyến.)",
-                    "(Offline chronicle. The Linh Thức storyteller rewrites it as prose when online.)"), 13, Ink.InkFaint);
+                    "(Offline chronicle. The Spirit Sense storyteller rewrites it as prose when online.)"), 13, Ink.InkFaint);
                 break;
             case 1:
                 if (state.World.Rumors.Count == 0) Para(T("Giang hồ còn yên ắng.", "All is quiet so far."));

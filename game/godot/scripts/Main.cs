@@ -37,7 +37,9 @@ public partial class Main : Node
         {
             var shotsIndex = Array.IndexOf(args, "--shots");
             var shots = shotsIndex >= 0 && shotsIndex + 1 < args.Length ? args[shotsIndex + 1] : null;
-            AddChild(new SmokeTest(shots));
+            var localeIndex = Array.IndexOf(args, "--locale");
+            var locale = localeIndex >= 0 && localeIndex + 1 < args.Length && args[localeIndex + 1] == "vi" ? Locale.Vi : Locale.En;
+            AddChild(new SmokeTest(shots, locale));
             return;
         }
         if (args.Contains("--phone-start"))

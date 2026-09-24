@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Godot;
 using TuTien.Core;
@@ -24,9 +26,17 @@ namespace TuTienLuc.Dev;
 public partial class SmokeTest : Node
 {
     private readonly string? _shots;
+    private readonly Locale _locale;
     private int _shotIndex;
+    private int _languageChecks, _controlTexts, _paintedTexts;
 
-    public SmokeTest(string? shotsDir) => _shots = shotsDir;
+    /// <param name="shotsDir">Where to save screenshots (null: none).</param>
+    /// <param name="locale">The language to play in (<c>--locale vi</c>; English by default).</param>
+    public SmokeTest(string? shotsDir, Locale locale = Locale.En)
+    {
+        _shots = shotsDir;
+        _locale = locale;
+    }
 
     private static GameEngine E => Game.Instance.Engine!;
     private bool Rendering => _shots != null && DisplayServer.GetName() != "headless";
@@ -51,12 +61,17 @@ public partial class SmokeTest : Node
         try
         {
             var game = Game.Instance;
-            game.SavePath = "user://saves/smoke.json";
+            // One save per language, so an English and a Vietnamese run can go side by side.
+            game.SavePath = _locale == Locale.En ? "user://saves/smoke.json" : "user://saves/smoke_vi.json";
             // Play on the default keys, and never write the player's own settings.
             game.PersistSettings = false;
             KeyMap.Reset();
+            game.SetLocale(_locale);
+            DrawnText.Seen = new HashSet<string>();
             if (_shots != null) Directory.CreateDirectory(_shots);
             await Steps(game);
+            Log($"ok — every screen checked ({_languageChecks} times: {_controlTexts} control texts, {_paintedTexts} painted words) "
+                + $"shows only {(_locale == Locale.En ? "English" : "Vietnamese")}, then the other language");
             Log("PASSED");
             Game.Instance.Quit(0);
         }
@@ -132,8 +147,11 @@ public partial class SmokeTest : Node
             AddChild(sheetLayer);
             sheetLayer.AddChild(new IconSheet());
             await Frames(3);
-            await Shot("icons");
+            // A developer's sheet: its captions are the icons' code names.
+            await Shot("icons", checkLanguage: false);
             sheetLayer.QueueFree();
+            await Frames(1);
+            DrawnText.Seen!.Clear();
         }
 
         // ---------------------------------------------------------------- title and creation
@@ -365,11 +383,25 @@ public partial class SmokeTest : Node
         var saved = E.Save();
         Check(game.LoadGame(), "the save loads");
         Check(E.Save() == saved, "save → load round-trips exactly");
-        game.SetLocale(Locale.En);
+
+        // The other language, switched mid-game: the world, its signs and names, the log and a panel follow at once.
+        var other = _locale == Locale.En ? Locale.Vi : Locale.En;
         world = Main.Instance.ShowWorld();
-        await Frames(40);
-        await Shot("world_en");
-        game.SetLocale(Locale.Vi);
+        await Frames(10);
+        game.SetLocale(other);
+        DrawnText.Seen!.Clear();
+        await Frames(30);
+        await Shot("world_" + (other == Locale.En ? "en" : "vi"));
+        world.OpenPanel(new CharacterPanel());
+        await Frames(3);
+        await Shot("character_" + (other == Locale.En ? "en" : "vi"));
+        world.OpenPanel(new JournalPanel());
+        await Frames(3);
+        await Shot("journal_" + (other == Locale.En ? "en" : "vi"));
+        world.ClosePanel();
+        game.SetLocale(_locale);
+        DrawnText.Seen.Clear();
+        await Frames(3);
 
         var p = E.Player;
         Log($"final: {p.Name}, {p.Realm} {p.Stage}, month {E.State.Calendar.MonthIndex}, fights {p.Counters.Fights}, kills {p.Counters.Kills}, silver {p.Silver}, sect {p.SectId ?? "-"}");
@@ -860,8 +892,81 @@ public partial class SmokeTest : Node
         for (var i = 0; i < n; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
     }
 
-    private async Task Shot(string name)
+    // ---------------------------------------------------------------- one language at a time
+
+    /// <summary>Words that read the same on either side: the language switch's own labels.</summary>
+    private static readonly HashSet<string> BothLanguages = new() { "Tiếng Việt", "English" };
+
+    /// <summary>Plainly English words that no Vietnamese sentence here would use.</summary>
+    private static readonly HashSet<string> EnglishWords = new(StringComparer.OrdinalIgnoreCase)
     {
+        "the", "and", "you", "your", "with", "from", "this", "that", "month", "months", "level", "press", "click", "open",
+        "close", "settings", "continue", "save", "load", "quit", "attack", "damage", "health", "spirit", "realm", "skill",
+        "skills", "arts", "map", "inventory", "character", "journal", "fight", "spar", "flee", "escape", "ready", "back",
+        "new", "life", "world", "village", "sect", "inn", "market", "silver", "stones", "pill", "pills", "herb", "herbs",
+        "beast", "beasts", "trial", "breakthrough", "cultivation", "footwork", "days", "year", "spring", "summer",
+        "autumn", "winter", "gate", "hall", "notices", "safe", "danger", "rest", "buy", "sell", "reward", "bounty",
+        "enemy", "enemies", "martial", "ultimate", "dash", "strike", "boss", "enraged", "floor", "chest", "chests",
+        "none", "empty", "weapon", "armor", "equip", "learn", "manual", "technique", "karma", "gratitude", "grudge",
+    };
+
+    private static bool WrongLanguage(string text, Locale locale)
+    {
+        if (string.IsNullOrWhiteSpace(text) || BothLanguages.Contains(text.Trim())) return false;
+        if (locale == Locale.En) return Names.HasVietnamese(text);
+        return Regex.Split(text, @"[^\p{L}]+").Any(word => word.Length > 1 && EnglishWords.Contains(word));
+    }
+
+    /// <summary>The words of every visible control under <paramref name="node"/> (not what the player typed).</summary>
+    private static void Gather(Node node, List<string> texts)
+    {
+        if (node is CanvasItem { Visible: false } || node is CanvasLayer { Visible: false } || node is LineEdit) return;
+        switch (node)
+        {
+            case RichTextLabel rich:
+                texts.Add(rich.GetParsedText());
+                break;
+            case Label label:
+                texts.Add(label.Text);
+                break;
+            case OptionButton option:
+                for (var i = 0; i < option.ItemCount; i++) texts.Add(option.GetItemText(i));
+                break;
+            case Button button:
+                texts.Add(button.Text);
+                break;
+        }
+        if (node is Control { TooltipText.Length: > 0 } control) texts.Add(control.TooltipText);
+        foreach (var child in node.GetChildren()) Gather(child, texts);
+    }
+
+    /// <summary>
+    /// Everything on screen is in the interface language: in English no Vietnamese letter shows (names are written
+    /// plain), in Vietnamese no English sentence does. Reads every visible control and every word painted since the
+    /// last check.
+    /// </summary>
+    private void CheckLanguage(string where)
+    {
+        var locale = Game.Instance.Locale;
+        var texts = new List<string>();
+        Gather(GetTree().Root, texts);
+        _controlTexts += texts.Count;
+        if (DrawnText.Seen != null)
+        {
+            _paintedTexts += DrawnText.Seen.Count;
+            texts.AddRange(DrawnText.Seen);
+            DrawnText.Seen.Clear();
+        }
+        var wrong = texts.Where(t => WrongLanguage(t, locale)).Distinct().ToList();
+        if (wrong.Count > 0)
+            throw new InvalidOperationException($"check failed: '{where}' shows words that aren't {(locale == Locale.En ? "English" : "Vietnamese")}: "
+                                                + string.Join(" | ", wrong.Take(15)));
+        _languageChecks++;
+    }
+
+    private async Task Shot(string name, bool checkLanguage = true)
+    {
+        if (checkLanguage) CheckLanguage(name);
         if (!Rendering) return;
         RenderingServer.RenderLoopEnabled = true;
         await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);

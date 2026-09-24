@@ -22,7 +22,8 @@ public partial class Game : Node
 
     public ContentDb Content { get; private set; } = null!;
     public GameEngine? Engine { get; private set; }
-    public Locale Locale { get; private set; } = Locale.Vi;
+    /// <summary>The interface language: English unless the player picked Vietnamese (a setting, not part of a save).</summary>
+    public Locale Locale { get; private set; } = Locale.En;
     /// <summary>One save slot for now; the smoke test points this elsewhere so it never touches a real save.</summary>
     public string SavePath { get; set; } = "user://saves/slot1.json";
 
@@ -100,7 +101,11 @@ public partial class Game : Node
 
     // ------------------------------------------------------------------ text
 
-    public string T(string vi, string en) => Locale == Locale.En ? en : vi;
+    /// <summary>The text in the interface language (English written plain: see <see cref="Names.Pick"/>).</summary>
+    public string T(string vi, string en) => Names.Pick(Locale, vi, en);
+
+    /// <summary>A person's name in the interface language ("Lâm Bá", or "Lam Ba" in English).</summary>
+    public string Person(string name) => Names.Person(name, Locale);
 
     public void SetLocale(Locale locale)
     {
@@ -138,7 +143,8 @@ public partial class Game : Node
         {
             using var f = FileAccess.Open(SavePath, FileAccess.ModeFlags.Read);
             Engine = GameEngine.Load(Content, f.GetAsText());
-            Locale = Engine.State.Locale;
+            // The language is the player's setting; a save made in the other language follows it.
+            Engine.State.Locale = Locale;
             Log.Clear();
             Changed();
             return true;
@@ -157,33 +163,39 @@ public partial class Game : Node
         if (HasSave) DirAccess.RemoveAbsolute(ProjectSettings.GlobalizePath(SavePath));
     }
 
+    /// <summary>A line of the message log, kept in both languages so switching language rewrites it too.</summary>
+    public readonly record struct LogLine(string Vi, string En, EventLevel Level)
+    {
+        public string Text => Instance.T(Vi, En);
+    }
+
     /// <summary>The last messages shown, newest last — the HUD's log survives screen changes.</summary>
-    public List<(string Text, EventLevel Level)> Log { get; } = new();
+    public List<LogLine> Log { get; } = new();
 
     /// <summary>Report events from a command as toasts, then refresh listeners.</summary>
     public void Notify(IEnumerable<GameEvent> events)
     {
         var list = events as ICollection<GameEvent> ?? new List<GameEvent>(events);
-        foreach (var e in list) Say(e.Localized(Locale), e.Level);
+        foreach (var e in list) Say(e.Text, e.TextEn, e.Level);
         SoundBoard.ForEvents(list);
         Changed();
     }
 
-    public void Toast(string vi, string en, EventLevel level = EventLevel.Info) => Say(T(vi, en), level);
+    public void Toast(string vi, string en, EventLevel level = EventLevel.Info) => Say(vi, en, level);
 
     /// <summary>Log events a panel already shows in full, without toasting them again.</summary>
     public void Remember(IEnumerable<GameEvent> events)
     {
-        foreach (var e in events) Log.Add((e.Localized(Locale), e.Level));
+        foreach (var e in events) Log.Add(new LogLine(e.Text, e.TextEn, e.Level));
         if (Log.Count > 40) Log.RemoveRange(0, Log.Count - 40);
         Changed();
     }
 
-    private void Say(string text, EventLevel level)
+    private void Say(string vi, string en, EventLevel level)
     {
-        Log.Add((text, level));
+        Log.Add(new LogLine(vi, en, level));
         if (Log.Count > 40) Log.RemoveRange(0, Log.Count - 40);
-        EmitSignal(SignalName.Toasted, text, (int)level);
+        EmitSignal(SignalName.Toasted, T(vi, en), (int)level);
     }
 
     public void Changed() => EmitSignal(SignalName.StateChanged);
