@@ -1,0 +1,38 @@
+<!-- Tu Tien Luc app icon, adaptive foreground. Written by scripts/make-game-icons.mjs; the layers are 432 px, the launcher shows the middle 288 and the middle 264 is always safe. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="432" height="432" viewBox="0 0 432 432">
+  <defs>
+  </defs>
+  <g transform="translate(216 218) scale(1.08) translate(-216 -218)">
+  <!-- The sword's wake. -->
+  <path d="M158 298 C130 305 104 312 80 318 C104 306 130 297 156 290 Z" fill="#bfe3d2" opacity="0.6"/>
+  <path d="M152 303 C126 313 102 322 80 330 C102 316 126 305 150 297 Z" fill="#bfe3d2" opacity="0.32"/>
+  <!-- The flying sword: blade, a line of sword qi along it, guard, hilt, tassel. -->
+  <path d="M164 294 L318 259 L330 259 L321 267 L166 304 Z" fill="#efe8d6"/>
+  <path d="M172 296 L316 263 L319 264 L174 299 Z" fill="#ffffff" opacity="0.95"/>
+  <path d="M158 283 L164 282 L172 312 L166 314 Z" fill="#c9a54a"/>
+  <path d="M162 297 L130 305 L131 312 L164 304 Z" fill="#c9a54a"/>
+  <circle cx="128" cy="309" r="5" fill="#c9a54a"/>
+  <path d="M125 312 C117 320 108 321 96 328 C106 316 113 312 121 305 Z" fill="#b3362c"/>
+  <!-- The sash, streaming back from the belt. -->
+  <path d="M206 216 C186 210 168 218 148 210 C132 203 120 193 104 196 C118 184 136 194 152 198 C172 204 190 198 210 208 Z" fill="#3f7d68"/>
+  <path d="M206 224 C184 228 166 238 144 234 C128 231 118 222 104 226 C118 212 134 222 150 223 C170 225 188 216 206 216 Z" fill="#7fb49c"/>
+  <!-- The robe, leaning into the flight, its hem blown back in two points. -->
+  <path d="M210 176 C203 188 202 200 206 212 C198 230 186 246 164 262 C176 264 186 262 194 258 C188 270 180 278 166 288 C186 290 202 286 214 281 L247 283 C244 264 241 244 238 226 C242 210 244 194 241 178 C232 169 218 169 210 176 Z" fill="#1c2230"/>
+  <!-- A jade belt. -->
+  <path d="M205 209 L239 212 L238 220 L204 217 Z" fill="#4e7f6c"/>
+  <!-- The forward arm in "sword fingers", its wide sleeve hanging back. -->
+  <path d="M236 182 C248 184 258 188 270 190 L281 186 L283 189 L273 195 C258 196 246 194 234 192 Z" fill="#1c2230"/>
+  <path d="M238 188 C244 202 251 214 256 228 C246 226 239 219 234 206 Z" fill="#1c2230"/>
+  <!-- The back arm, hand behind. -->
+  <path d="M211 182 C202 192 196 202 191 213 L197 216 C202 207 208 199 215 190 Z" fill="#1c2230"/>
+  <!-- Feet on the blade. -->
+  <path d="M209 282 L226 284 L225 289 L207 288 Z" fill="#1c2230"/>
+  <path d="M231 281 L248 278 L249 283 L232 286 Z" fill="#1c2230"/>
+  <!-- Head, topknot and pin, a ribbon from the knot. -->
+  <path d="M216 168 L234 170 L233 179 L215 178 Z" fill="#1c2230"/>
+  <circle cx="226" cy="158" r="13" fill="#1c2230"/>
+  <circle cx="228" cy="142" r="7" fill="#1c2230"/>
+  <path d="M216 140 L242 145" stroke="#1c2230" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M222 142 C210 140 198 146 186 144 C194 137 206 135 220 138 Z" fill="#3f7d68"/>
+  </g>
+</svg>

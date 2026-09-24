@@ -236,6 +236,7 @@ The world now holds a few hundred buffers and makes about 75 draw calls a frame,
 - Saves go to the app's own storage.
 - The back button works like Esc.
 - The package name is `com.tutienluc.game`; change it in the preset before publishing.
+- The launcher icon is adaptive: a cultivator riding a flying sword across a cinnabar sun, over ink mountains in mist. The background, foreground and a monochrome silhouette for Android 13's themed icons are separate layers, so any launcher shape (Samsung's squircle, circles) crops only the sky. `node scripts/make-game-icons.mjs` rewrites them (`godot/art/icon/`) and `godot/icon.svg` from one description.
 
 ## Re-export content from the web game
 
