@@ -91,6 +91,18 @@ public class ProgressionTests
     }
 
     [Fact]
+    public void Halfway_through_luyen_khi_the_root_opens_its_second_art()
+    {
+        var state = TestContent.NewEngine().State; // a Mộc root
+        state.Player.Realm = Realm.LuyenKhi;
+        state.Player.Stage = 4;
+        var events = Cultivation.AddExp(state, C, Progression.RequiredExp(C, Realm.LuyenKhi, 4), 0);
+        Assert.Equal(5, state.Player.Stage);
+        Assert.True(Skills.Knows(state.Player, "van_diep_ho_than"));
+        Assert.Contains(events, e => e.Kind == "skill_learned");
+    }
+
+    [Fact]
     public void Mortals_wait_for_the_first_breakthrough_set_piece()
     {
         var state = TestContent.NewEngine().State;
@@ -113,6 +125,80 @@ public class ProgressionTests
         Assert.Equal(Realm.PhamNhan, state.Player.Realm);
         Assert.Equal(80, state.Player.Exp);
         Assert.Single(state.Player.Injuries);
+    }
+
+    [Theory]
+    [InlineData(0.5, FoundationGrade.Ha)]
+    [InlineData(0.62, FoundationGrade.Trung)]
+    [InlineData(0.8, FoundationGrade.Thuong)]
+    [InlineData(0.97, FoundationGrade.Thien)]
+    public void The_foundation_grade_follows_the_trial(double performance, FoundationGrade grade) =>
+        Assert.Equal(grade, Foundation.GradeFor(performance));
+
+    private static GameState ReadyForTrucCo()
+    {
+        var state = TestContent.NewEngine().State;
+        var p = state.Player;
+        p.Realm = Realm.LuyenKhi;
+        p.Stage = 9;
+        p.HpMax = 430;
+        p.QiMax = 450;
+        p.PendingMajorBreakthrough = true;
+        return state;
+    }
+
+    [Fact]
+    public void A_flawless_meridian_storm_lays_a_heaven_grade_foundation_and_doubles_the_gains()
+    {
+        var state = ReadyForTrucCo();
+        var p = state.Player;
+        var str = p.Attrs.Str;
+        var events = Cultivation.CompleteMajorBreakthrough(state, C, performance: 1.0);
+        Assert.Equal((Realm.TrucCo, 1, FoundationGrade.Thien), (p.Realm, p.Stage, p.Foundation));
+        Assert.Equal((430 + 200, 450 + 400, str + 6), (p.HpMax, p.QiMax, p.Attrs.Str)); // the realm change's +100/+200/+3, doubled
+        Assert.Equal((p.HpMax, p.QiMax), (p.Hp, p.Qi));
+        Assert.Contains(events, e => e.Kind == "foundation");
+    }
+
+    [Fact]
+    public void Scraping_through_lays_a_lower_grade_foundation_with_the_plain_gains()
+    {
+        var state = ReadyForTrucCo();
+        var p = state.Player;
+        Cultivation.CompleteMajorBreakthrough(state, C, performance: Cultivation.MajorBreakthroughThreshold(p));
+        Assert.Equal((Realm.TrucCo, FoundationGrade.Ha, 530, 650), (p.Realm, p.Foundation, p.HpMax, p.QiMax));
+    }
+
+    [Fact]
+    public void Failing_the_storm_lays_no_foundation()
+    {
+        var state = ReadyForTrucCo();
+        Cultivation.CompleteMajorBreakthrough(state, C, performance: 0.1);
+        Assert.Equal((Realm.LuyenKhi, FoundationGrade.None), (state.Player.Realm, state.Player.Foundation));
+    }
+
+    [Fact]
+    public void The_foundation_adds_power_in_every_fight()
+    {
+        var p = new PlayerState();
+        var plain = CombatRules.PlayerCombatant(C, p);
+        p.Foundation = FoundationGrade.Thuong;
+        var founded = CombatRules.PlayerCombatant(C, p);
+        Assert.Equal(plain.PhysicalPower * 1.1, founded.PhysicalPower, 6);
+        Assert.Equal(plain.SpiritPower * 1.1, founded.SpiritPower, 6);
+    }
+
+    [Fact]
+    public void Saves_from_before_foundations_give_trúc_cơ_a_plain_one()
+    {
+        var e = TestContent.NewEngine();
+        e.State.Player.Realm = Realm.TrucCo;
+        e.State.Player.Stage = 1;
+        var json = e.Save();
+        Assert.Contains("\"version\":2", json);
+        var loaded = GameEngine.Load(C, json.Replace("\"version\":2", "\"version\":1"));
+        Assert.Equal(FoundationGrade.Ha, loaded.Player.Foundation);
+        Assert.Equal(FoundationGrade.None, GameEngine.Load(C, json).Player.Foundation);
     }
 
     [Fact]

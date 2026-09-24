@@ -47,6 +47,9 @@ public static class DevCheats
         fog.SaveTo(e.Player, e.Map);
     }
 
+    /// <summary>Learn an art without its manual (tests of every art).</summary>
+    public static List<GameEvent> LearnArt(GameEngine e, string skillId) => Skills.Learn(e.State, e.Content, skillId);
+
     /// <summary>Jump to a major realm (tests of realm-gated things like sword flight).</summary>
     public static void SetRealm(GameEngine e, Realm realm)
     {

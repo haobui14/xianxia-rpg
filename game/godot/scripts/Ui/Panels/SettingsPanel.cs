@@ -5,12 +5,12 @@ using TuTienLuc.Audio;
 
 namespace TuTienLuc.Ui.Panels;
 
-/// <summary>Sound, display and language. Changes apply at once and are saved to user://settings.json.</summary>
+/// <summary>Sound, display, keys and language. Changes apply at once and are saved to user://settings.json.</summary>
 public partial class SettingsPanel : InkPanel
 {
     protected override string Glyph => "設";
     protected override string TitleText => T("Cài đặt", "Settings");
-    protected override Vector2 PanelSize => new(620, 560);
+    protected override Vector2 PanelSize => new(620, 640);
 
     protected override void Build()
     {
@@ -34,6 +34,10 @@ public partial class SettingsPanel : InkPanel
         });
         Toggle(T("Rung màn hình khi trúng đòn", "Screen shake on hits"), g.ScreenShake, on => g.ScreenShake = on);
 
+        Section(T("Phím", "Keys"));
+        Row(UiKit.Label(KeyMap.IsDefault ? T("Bố cục mặc định", "The default layout") : T("Bố cục riêng của ngươi", "Your own layout"), 16, Ink.InkColor),
+            UiKit.Button(T("Đổi phím…", "Rebind keys…"), OpenKeys));
+
         Section(T("Ngôn ngữ", "Language"));
         Buttons(
             UiKit.Button("Tiếng Việt", () => g.SetLocale(Locale.Vi), primary: g.Locale == Locale.Vi),
@@ -41,6 +45,26 @@ public partial class SettingsPanel : InkPanel
 
         Body.AddChild(UiKit.Spacer(8));
         Buttons(UiKit.Button(T("Xong", "Done"), Close, primary: true));
+    }
+
+    public override void _UnhandledInput(InputEvent e)
+    {
+        // Hidden while the keys panel is open: Esc belongs to that one.
+        if (Visible) base._UnhandledInput(e);
+    }
+
+    /// <summary>The keys panel opens in this one's place (over the world or the title alike) and hands back on close.</summary>
+    private void OpenKeys()
+    {
+        var keys = new KeysPanel();
+        Visible = false;
+        keys.Closed += () =>
+        {
+            if (!IsInstanceValid(this)) return;
+            Visible = true;
+            RequestRefresh();
+        };
+        GetParent().AddChild(keys);
     }
 
     private void Slider(string label, float value, Action<float> set)

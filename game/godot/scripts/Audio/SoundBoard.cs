@@ -315,8 +315,9 @@ public partial class SoundBoard : Node
 
     private void FadeOutMusic()
     {
+        var playing = new[] { _musicA, _musicB }.Where(p => p.Playing).ToList();
+        if (playing.Count == 0) return;
         var tween = CreateTween().SetParallel();
-        foreach (var p in new[] { _musicA, _musicB })
-            if (p.Playing) tween.TweenProperty(p, "volume_db", -60f, 1.2f);
+        foreach (var p in playing) tween.TweenProperty(p, "volume_db", -60f, 1.2f);
     }
 }

@@ -46,7 +46,7 @@ public partial class Actor : Node2D
         var b = Body;
         var alpha = b.Alive ? (b.Yielded ? 0.8f : 1f) : Mathf.Clamp(b.DeathFade / 0.8f, 0, 1);
         if (alpha <= 0 || b.Gone) return;
-        Paint.Alpha = alpha * (b.Invuln > 0 && b.IsPlayer && _field.Player.Dashing ? 0.6f : 1);
+        Paint.Alpha = alpha * (b.Invuln > 0 && b.IsPlayer && _field.Player.Dashing ? 0.6f : 1) * (b.Faded ? 0.22f : 1);
         if (b.IsPlayer)
         {
             DrawArc(Vector2.Zero, 17, 0, Mathf.Tau, 32, new Color(0.61f, 0.16f, 0.15f, 0.55f * Paint.Alpha), 2, true);

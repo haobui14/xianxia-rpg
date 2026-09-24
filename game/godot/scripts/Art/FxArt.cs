@@ -21,6 +21,7 @@ public static class FxArt
         "bandit_blade_qi" => "blade",
         "disciple_sword_qi" => "sword",
         "rogue_qi_bolt" => "bolt",
+        "fox_fire" => "fire",
         _ => element switch
         {
             Element.Hoa => "fire",
@@ -164,6 +165,44 @@ public static class FxArt
         }
     }
 
+    /// <summary>Burning ground: a scorched patch with a ring of flame licking at its edge.</summary>
+    public static void GroundFire(CanvasItem c, GroundFire g)
+    {
+        var fade = Mathf.Clamp(g.Time / 0.2f, 0, 1) * Mathf.Clamp((g.Duration - g.Time) / 0.5f, 0, 1);
+        c.DrawCircle(g.Pos, g.Radius, new Color(0.35f, 0.12f, 0.06f, 0.28f * fade));
+        c.DrawCircle(g.Pos, g.Radius * 0.7f, new Color(0.9f, 0.4f, 0.12f, 0.16f * fade));
+        const int tongues = 14;
+        for (var i = 0; i < tongues; i++)
+        {
+            var a = Mathf.Tau * i / tongues + g.Time * 0.6f;
+            var flick = 0.6f + 0.4f * Mathf.Sin(g.Time * 11 + i * 1.7f);
+            var at = g.Pos + Vector2.Right.Rotated(a) * g.Radius * 0.92f;
+            var tip = at + new Vector2(0, -18 * flick);
+            c.DrawColoredPolygon(new[] { at + new Vector2(-6, 0), tip, at + new Vector2(6, 0) }, new Color(0.95f, 0.45f + 0.2f * flick, 0.15f, 0.7f * fade));
+        }
+        c.DrawArc(g.Pos, g.Radius, 0, Mathf.Tau, 48, new Color(0.75f, 0.25f, 0.1f, 0.6f * fade), 2, true);
+    }
+
+    /// <summary>An orbit art: leaves (or blades) wheeling round the caster.</summary>
+    public static void Orbit(CanvasItem c, Orbiter o)
+    {
+        var fade = Mathf.Clamp(o.Time / 0.25f, 0, 1) * Mathf.Clamp((o.Duration - o.Time) / 0.4f, 0, 1);
+        var centre = o.Owner.Pos + new Vector2(0, -22);
+        var leaf = o.Color.Lightened(0.15f);
+        c.DrawArc(centre, o.Radius, 0, Mathf.Tau, 48, new Color(o.Color, 0.12f * fade), 10, true);
+        for (var i = 0; i < o.Count; i++)
+        {
+            var angle = o.Angle + Mathf.Tau * i / o.Count;
+            // A wake along the circle behind each leaf (the ring turns clockwise), so the whirl reads at a glance.
+            c.DrawArc(centre, o.Radius, angle - 0.6f, angle, 8, new Color(leaf, 0.35f * fade), 5, true);
+            var at = o.At(i);
+            var heading = angle + Mathf.Pi / 2;
+            c.DrawCircle(at, 15, new Color(o.Color, 0.18f * fade));
+            c.DrawColoredPolygon(Paint.EllipsePts(at, 15, 6, 12, heading), new Color(leaf, 0.95f * fade));
+            c.DrawLine(at - Vector2.Right.Rotated(heading) * 14, at + Vector2.Right.Rotated(heading) * 14, new Color(o.Color.Darkened(0.45f), 0.85f * fade), 1.4f, true);
+        }
+    }
+
     /// <summary>A brush-stroke crescent (slash) or an expanding ring (burst).</summary>
     public static void Swoosh(CanvasItem c, Swoosh s)
     {
@@ -171,6 +210,13 @@ public static class FxArt
         if (s.Ring)
         {
             c.DrawArc(s.Pos, s.Radius * (1.05f - 0.35f * k), 0, Mathf.Tau, 48, new Color(s.Color, 0.7f * k), 3 + 5 * k, true);
+            return;
+        }
+        if (s.Beam)
+        {
+            c.DrawLine(s.Pos, s.End, new Color(s.Color, 0.22f * k), s.Width * (1.6f + k), true);
+            c.DrawLine(s.Pos, s.End, new Color(s.Color, 0.85f * k), s.Width * (0.35f + 0.65f * k), true);
+            c.DrawLine(s.Pos, s.End, new Color(1, 1, 0.94f, 0.95f * k), Mathf.Max(1.5f, s.Width * 0.25f * k), true);
             return;
         }
         var half = Mathf.DegToRad(s.Arc) / 2;

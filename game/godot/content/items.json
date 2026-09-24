@@ -22,6 +22,31 @@
       "teaches_skill_id": "hoi_xuan_quyet"
     },
     {
+      "id": "manual_kim_quang", "name": "Bí Kíp Kim Quang Trảm", "name_en": "Manual: Golden Light Slash", "type": "Book", "rarity": "Rare",
+      "description": "Dạy linh kỹ «Kim Quang Trảm» (hệ Kim). Linh căn hợp hệ thì tốn ít linh lực hơn.", "description_en": "Teaches the Metal art “Golden Light Slash”. Cheaper in Qi for a matching root.",
+      "teaches_skill_id": "kim_quang_tram"
+    },
+    {
+      "id": "manual_van_diep", "name": "Bí Kíp Vạn Diệp Hộ Thân", "name_en": "Manual: Myriad Leaves Guard", "type": "Book", "rarity": "Rare",
+      "description": "Dạy linh kỹ «Vạn Diệp Hộ Thân» (hệ Mộc). Linh căn hợp hệ thì tốn ít linh lực hơn.", "description_en": "Teaches the Wood art “Myriad Leaves Guard”. Cheaper in Qi for a matching root.",
+      "teaches_skill_id": "van_diep_ho_than"
+    },
+    {
+      "id": "manual_thuy_long", "name": "Bí Kíp Thủy Long Ba", "name_en": "Manual: Water Dragon Wave", "type": "Book", "rarity": "Rare",
+      "description": "Dạy linh kỹ «Thủy Long Ba» (hệ Thủy). Linh căn hợp hệ thì tốn ít linh lực hơn.", "description_en": "Teaches the Water art “Water Dragon Wave”. Cheaper in Qi for a matching root.",
+      "teaches_skill_id": "thuy_long_ba"
+    },
+    {
+      "id": "manual_liet_diem", "name": "Bí Kíp Liệt Diễm Địa", "name_en": "Manual: Scorched Earth", "type": "Book", "rarity": "Rare",
+      "description": "Dạy linh kỹ «Liệt Diễm Địa» (hệ Hỏa). Linh căn hợp hệ thì tốn ít linh lực hơn.", "description_en": "Teaches the Fire art “Scorched Earth”. Cheaper in Qi for a matching root.",
+      "teaches_skill_id": "liet_diem_dia"
+    },
+    {
+      "id": "manual_tho_lao", "name": "Bí Kíp Thổ Lao Thuật", "name_en": "Manual: Stone Palisade", "type": "Book", "rarity": "Rare",
+      "description": "Dạy linh kỹ «Thổ Lao Thuật» (hệ Thổ). Linh căn hợp hệ thì tốn ít linh lực hơn.", "description_en": "Teaches the Earth art “Stone Palisade”. Cheaper in Qi for a matching root.",
+      "teaches_skill_id": "tho_lao_thuat"
+    },
+    {
       "id": "wood_cultivation_manual", "name": "Thanh Mộc Trường Sinh Quyết", "name_en": "Evergreen Longevity Art", "type": "Book", "rarity": "Rare",
       "description": "Công pháp Mộc hệ từ Linh Thảo Bí Cảnh.", "description_en": "A Wood technique from the Spirit Herb Secret Realm.",
       "teaches_technique": {

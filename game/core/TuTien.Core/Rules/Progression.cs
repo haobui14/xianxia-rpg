@@ -131,15 +131,19 @@ namespace TuTien.Core.Rules
         public static Gains RealmChangeGains(Realm from) => RealmChange[(int)from];
         public static Gains StageStepGains(Realm realm) => StageStep[(int)realm];
 
-        private static void Apply(PlayerState p, Gains g)
+        private static void Apply(PlayerState p, Gains g) => Apply(p, g, 1.0);
+
+        /// <summary>Add <paramref name="scale"/> × the gains (a Trúc Cơ foundation adds a share on top of the realm change's own).</summary>
+        public static void Apply(PlayerState p, Gains g, double scale)
         {
-            p.HpMax += g.Hp;
-            p.QiMax += g.Qi;
-            p.StaminaMax += g.Stamina;
-            p.Attrs.Str += g.Str;
-            p.Attrs.Agi += g.Agi;
-            p.Attrs.Int += g.Int;
-            p.Attrs.Per += g.Per;
+            int S(int v) => (int)Math.Round(v * scale);
+            p.HpMax += S(g.Hp);
+            p.QiMax += S(g.Qi);
+            p.StaminaMax += S(g.Stamina);
+            p.Attrs.Str += S(g.Str);
+            p.Attrs.Agi += S(g.Agi);
+            p.Attrs.Int += S(g.Int);
+            p.Attrs.Per += S(g.Per);
         }
 
         /// <summary>

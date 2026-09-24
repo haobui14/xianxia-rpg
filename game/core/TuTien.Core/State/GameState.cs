@@ -68,6 +68,8 @@ namespace TuTien.Core.State
         public int QiShare { get; set; } = 70;
         /// <summary>Set when a major breakthrough (a set piece) is available and waiting.</summary>
         public bool PendingMajorBreakthrough { get; set; }
+        /// <summary>The foundation laid at Trúc Cơ; it scales that breakthrough's gains and every fight after.</summary>
+        public FoundationGrade Foundation { get; set; }
 
         public int Hp { get; set; } = 100;
         public int HpMax { get; set; } = 100;

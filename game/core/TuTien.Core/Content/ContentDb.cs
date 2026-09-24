@@ -72,7 +72,13 @@ namespace TuTien.Core.Content
             db.Progression = GameJson.ReadEnvelope<ProgressionDef>(Require("progression.json"), "progression.json");
 
             foreach (var enemy in GameJson.ReadEnvelope<List<EnemyDef>>(Require("enemies.json"), "enemies.json"))
+            {
                 db.Enemies[enemy.Id] = enemy;
+                // Hand-authored creatures join the exported zones' pools here.
+                foreach (var zone in enemy.Zones)
+                    if (db.Areas.TryGetValue(zone, out var area) && !area.EnemyPool.Contains(enemy.Id))
+                        area.EnemyPool.Add(enemy.Id);
+            }
             foreach (var skill in GameJson.ReadEnvelope<List<SkillDef>>(Require("skills.json"), "skills.json"))
                 db.Skills[skill.Id] = skill;
             foreach (var item in GameJson.ReadEnvelope<List<ItemDef>>(Require("items.json"), "items.json"))
@@ -148,8 +154,14 @@ namespace TuTien.Core.Content
                 }
             }
             foreach (var enemy in Enemies.Values)
+            {
                 foreach (var skillId in enemy.Skills.Where(id => !Skills.ContainsKey(id)))
                     issues.Add($"enemy {enemy.Id}: skill '{skillId}' does not exist");
+                foreach (var zone in enemy.Zones.Where(z => !Areas.ContainsKey(z)))
+                    issues.Add($"enemy {enemy.Id}: zone '{zone}' does not exist");
+            }
+            foreach (var item in Items.Values.Where(i => i.TeachesSkillId != null && !Skills.ContainsKey(i.TeachesSkillId)))
+                issues.Add($"item {item.Id}: teaches unknown skill '{item.TeachesSkillId}'");
             foreach (var map in Maps.Values)
             {
                 if (!Regions.ContainsKey(map.RegionId)) issues.Add($"map {map.Id}: region '{map.RegionId}' does not exist");

@@ -50,7 +50,7 @@ public static class EnemyAi
         var dir = dist > 0.01f ? to / dist : Vector2.Left;
         if (f.State is "approach" or "recover") f.Face(dir);
 
-        if (f.Archetype == "boss" && !f.Enraged && f.Hp < f.HpMax * 0.5f)
+        if (f.Archetype is "boss" or "serpent" && !f.Enraged && f.Hp < f.HpMax * 0.5f)
         {
             f.Enraged = true;
             b.F.Fx.Say(f.Pos + new Vector2(0, -Figures.HeightOf(f.Kind) * f.Scale - 36), T("Cuồng nộ!", "Enraged!"), Ink.Cinnabar, 26, 1.4f);
@@ -82,6 +82,21 @@ public static class EnemyAi
                 case "boss":
                     Boss(b, f, dir, dist, dt);
                     break;
+                case "brute":
+                    Brute(b, f, dir, dist, dt);
+                    break;
+                case "trickster":
+                    Trickster(b, f, dir, dist, dt);
+                    break;
+                case "flier":
+                    Flier(b, f, dir, dist, dt);
+                    break;
+                case "phantom":
+                    Phantom(b, f, dir, dist, dt);
+                    break;
+                case "serpent":
+                    Serpent(b, f, dir, dist, dt);
+                    break;
                 default:
                     Charger(b, f, dir, dist, dt);
                     break;
@@ -95,7 +110,7 @@ public static class EnemyAi
     private static void Move(Battle b, Fighter f, Vector2 dir, float factor, float dt)
     {
         if (f.Speed <= 0) return;
-        f.Pos = b.F.Walls.Move(f.Pos, f.Radius, dir * f.Speed * f.SpeedFactor * factor * dt);
+        f.Pos = b.F.Walls.Move(f.Pos, f.Radius, dir * f.Speed * f.SpeedFactor * factor * dt, flying: f.Airborne);
     }
 
     private static Vector2 Tangent(Vector2 dir, float side) => new Vector2(-dir.Y, dir.X) * side;
@@ -212,6 +227,246 @@ public static class EnemyAi
         else if (dist < Reach(b, f, 18) && f.MeleeCd <= 0) Melee(b, f, dir, 0.35f, 1.2f, 120, 34);
     }
 
+    /// <summary>Black bear: lumbers in, rears up on its hind legs and crashes down on everything in front.</summary>
+    private static void Brute(Battle b, Fighter f, Vector2 dir, float dist, float dt)
+    {
+        if (f.State != "approach") return;
+        if (dist > Reach(b, f, 6)) Move(b, f, dir, 1, dt);
+        if (dist < 175 && f.AttackCd <= 0)
+        {
+            f.State = "rear";
+            f.StateTime = 0;
+            f.CastAnim = 1;
+            f.CastColor = Ink.Ochre;
+            var origin = f.Pos;
+            var aim = dir;
+            SoundBoard.PlayAt("notice", origin, -4, 0.6f);
+            b.AddTelegraph(new Telegraph
+            {
+                Shape = Telegraph.Shapes.Arc, Pos = origin, Dir = aim, Radius = 160, Arc = 150, Duration = f.Enraged ? 0.6f : 0.8f, Owner = f,
+                Fire = () =>
+                {
+                    f.AttackAnim = 1;
+                    f.AttackDir = aim;
+                    SoundBoard.PlayAt("slam", origin, 2, 0.8f);
+                    b.F.Shake(9);
+                    b.F.Fx.Dust(origin + aim * 70, 14);
+                    b.F.Fx.Slash(origin + new Vector2(0, -16), aim, 150, 160, Ink.Ochre, 0.3f, 1.8f);
+                    if (FieldMath.InArc(origin, aim, 150, 160, b.Player.Pos, b.Player.Radius) && b.HitPlayer(f, 1.7f, DamageKind.Physical, null, null) > 0)
+                        b.Status(b.Player, ref b.Player.Stun, 0.45f, "暈");
+                    Recover(f, 3.2f);
+                },
+            });
+        }
+        else if (dist < Reach(b, f, 14) && f.MeleeCd <= 0)
+        {
+            Melee(b, f, dir, 0.35f, 1.1f, 120, 28);
+        }
+    }
+
+    /// <summary>Fire fox: keeps its distance and throws fox-fire; get close and it vanishes in a puff and reappears elsewhere.</summary>
+    private static void Trickster(Battle b, Fighter f, Vector2 dir, float dist, float dt)
+    {
+        if (f.State != "approach") return;
+        if (dist < 115 && f.AttackCd <= 0)
+        {
+            Blink(b, f, dir);
+            return;
+        }
+        var want = dist < 230 ? -dir + Tangent(dir, f.Strafe) * 0.6f : dist > 380 ? dir : Tangent(dir, f.Strafe);
+        Move(b, f, want.Normalized(), 1, dt);
+        if (b.Rng.Chance(dt * 0.6)) f.Strafe *= -1;
+        if (f.SkillCd <= 0 && dist < 520) Cast(b, f, f.Skill ?? Bolt, dir);
+        else if (dist < Reach(b, f, 10) && f.MeleeCd <= 0) Melee(b, f, dir, 0.25f, 0.9f, 100, 18);
+    }
+
+    private static void Blink(Battle b, Fighter f, Vector2 dir)
+    {
+        f.AttackCd = 3.4f;
+        var from = f.Pos;
+        for (var tries = 0; tries < 12; tries++)
+        {
+            var angle = FieldMath.Angle(-dir) + ((float)b.Rng.NextDouble() - 0.5f) * 2.4f;
+            var to = b.Player.Pos + Vector2.Right.Rotated(angle) * (200 + (float)b.Rng.NextDouble() * 70);
+            if (!b.F.Walls.Free(to, f.Radius)) continue;
+            f.Pos = to;
+            break;
+        }
+        if (f.Pos == from) return;
+        SoundBoard.PlayAt("portal", from, -6, 1.5f);
+        b.F.Fx.Burst(from + new Vector2(0, -18), new Color("#f08a3a"), 14, 180, ParticleKind.Ember, 3);
+        b.F.Fx.Burst(f.Pos + new Vector2(0, -18), new Color("#ffd27a"), 10, 120, ParticleKind.Ember, 3);
+        f.Face(b.Player.Pos - f.Pos);
+        // It likes to throw fire straight after reappearing.
+        f.SkillCd = Mathf.Min(f.SkillCd, 0.35f);
+    }
+
+    /// <summary>Blood bat: circles overhead, then swoops through you and drinks what it takes.</summary>
+    private static void Flier(Battle b, Fighter f, Vector2 dir, float dist, float dt)
+    {
+        switch (f.State)
+        {
+            case "approach":
+            {
+                var want = dist > 170 ? dir + Tangent(dir, f.Strafe) * 0.6f : Tangent(dir, f.Strafe) + dir * 0.1f;
+                Move(b, f, want.Normalized(), 1, dt);
+                if (b.Rng.Chance(dt * 0.5)) f.Strafe *= -1;
+                if (dist < 250 && f.AttackCd <= 0)
+                {
+                    f.State = "windup";
+                    f.StateTime = 0;
+                    f.Dir = dir;
+                    b.AddTelegraph(new Telegraph
+                    {
+                        Shape = Telegraph.Shapes.Line, Pos = f.Pos, Dir = dir, Length = dist + 90, Width = f.Radius * 2 + 8, Duration = 0.4f, Owner = f,
+                        Fire = () =>
+                        {
+                            f.State = "swoop";
+                            f.StateTime = 0;
+                            f.MeleeCd = 0;
+                            SoundBoard.PlayAt("dash", f.Pos, -6, 1.4f);
+                        },
+                    });
+                }
+                break;
+            }
+            case "swoop":
+            {
+                Move(b, f, f.Dir, 3.4f, dt);
+                if (f.MeleeCd <= 0 && f.Pos.DistanceTo(b.Player.Pos) < f.Radius + b.Player.Radius + 6)
+                {
+                    f.MeleeCd = 1;
+                    f.AttackAnim = 1;
+                    var taken = b.HitPlayer(f, 1.0f, DamageKind.Physical, null, null);
+                    if (taken > 0)
+                    {
+                        var drink = taken * 0.6f;
+                        f.Hp = Mathf.Min(f.HpMax, f.Hp + drink);
+                        b.F.Fx.Say(f.Pos + new Vector2(0, -70), $"+{drink:0}", Ink.CinnabarDeep, 16);
+                        b.F.Fx.Burst(b.Player.Pos + new Vector2(0, -30), Ink.CinnabarDeep, 6, 90, ParticleKind.Spark, 2);
+                    }
+                }
+                if (f.StateTime > 0.45f) Recover(f, 2.2f);
+                break;
+            }
+        }
+    }
+
+    /// <summary>Wraith: drifts through trees, turns to mist (untouchable) and forms again at your side to chill you.</summary>
+    private static void Phantom(Battle b, Fighter f, Vector2 dir, float dist, float dt)
+    {
+        if (f.State == "faded")
+        {
+            Move(b, f, dir, dist > 120 ? 1.8f : 0.2f, dt);
+            if (f.StateTime < 1.4f) return;
+            f.State = "approach";
+            f.StateTime = 0;
+            f.Faded = false;
+            f.SkillCd = Mathf.Min(f.SkillCd, 0.3f);
+            SoundBoard.PlayAt("portal", f.Pos, -6, 0.7f);
+            b.F.Fx.Burst(f.Pos + new Vector2(0, -34), new Color(0.8f, 0.88f, 0.95f, 0.6f), 12, 120, ParticleKind.Mist, 7);
+            return;
+        }
+        if (f.State != "approach") return;
+        Move(b, f, dist > 210 ? dir : Tangent(dir, f.Strafe), 1, dt);
+        if (b.Rng.Chance(dt * 0.4)) f.Strafe *= -1;
+        if (f.AttackCd <= 0 && f.StateTime > 1.5f)
+        {
+            f.State = "faded";
+            f.StateTime = 0;
+            f.Faded = true;
+            f.AttackCd = 6.5f;
+            SoundBoard.PlayAt("dash", f.Pos, -8, 0.6f);
+            b.F.Fx.Burst(f.Pos + new Vector2(0, -34), new Color(0.8f, 0.88f, 0.95f, 0.5f), 10, 90, ParticleKind.Mist, 7);
+            return;
+        }
+        if (f.SkillCd <= 0 && dist < 520) Cast(b, f, f.Skill ?? Bolt, dir);
+        else if (dist < Reach(b, f, 14) && f.MeleeCd <= 0) Melee(b, f, dir, 0.35f, 1.0f, 110, 24);
+    }
+
+    /// <summary>Azure-scale python: lunges down a line, sweeps its tail around behind it, and rains venom.</summary>
+    private static void Serpent(Battle b, Fighter f, Vector2 dir, float dist, float dt)
+    {
+        switch (f.State)
+        {
+            case "approach":
+            {
+                var pace = f.Enraged ? 1.25f : 1f;
+                if (dist > Reach(b, f, 10)) Move(b, f, dir, pace, dt);
+                if (dist < 175 && f.AttackCd <= 0)
+                {
+                    TailSweep(b, f, dir);
+                }
+                else if (dist is > 150 and < 430 && f.MeleeCd <= 0)
+                {
+                    f.State = "windup";
+                    f.StateTime = 0;
+                    f.Dir = dir;
+                    f.MeleeCd = f.Enraged ? 2.6f : 3.6f;
+                    b.AddTelegraph(new Telegraph
+                    {
+                        Shape = Telegraph.Shapes.Line, Pos = f.Pos, Dir = dir, Length = 400, Width = f.Radius * 2 + 12, Duration = f.Enraged ? 0.45f : 0.6f, Owner = f,
+                        Fire = () =>
+                        {
+                            f.State = "lunge";
+                            f.StateTime = 0;
+                            SoundBoard.PlayAt("dash", f.Pos, 0, 0.6f);
+                        },
+                    });
+                }
+                else if (f.SkillCd <= 0 && f.Skill != null)
+                {
+                    Cast(b, f, f.Skill, dir);
+                }
+                break;
+            }
+            case "lunge":
+            {
+                var before = f.Pos;
+                Move(b, f, f.Dir, 4.4f, dt);
+                if (GD.Randf() < 0.6f) b.F.Fx.Dust(f.Pos, 1);
+                var stuck = f.Pos.DistanceTo(before) < f.Speed * 4.4f * dt * 0.5f;
+                if (f.Pos.DistanceTo(b.Player.Pos) < f.Radius + b.Player.Radius + 4)
+                {
+                    f.AttackAnim = 1;
+                    f.AttackDir = f.Dir;
+                    b.HitPlayer(f, 1.5f, DamageKind.Physical, null, f.Skill);
+                    Recover(f, 1.2f);
+                }
+                else if (f.StateTime > 0.38f || stuck)
+                {
+                    if (stuck) b.F.Shake(4);
+                    Recover(f, 1.2f);
+                }
+                break;
+            }
+        }
+    }
+
+    private static void TailSweep(Battle b, Fighter f, Vector2 dir)
+    {
+        f.State = "sweep";
+        f.StateTime = 0;
+        f.CastAnim = 1;
+        f.CastColor = Ink.JadeDeep;
+        var origin = f.Pos;
+        var back = -dir;
+        b.AddTelegraph(new Telegraph
+        {
+            Shape = Telegraph.Shapes.Arc, Pos = origin, Dir = back, Radius = 200, Arc = 280, Duration = f.Enraged ? 0.65f : 0.85f, Owner = f,
+            Fire = () =>
+            {
+                f.AttackAnim = 1;
+                f.AttackDir = back;
+                SoundBoard.PlayAt("swing_big", origin, 0, 0.6f);
+                b.F.Fx.Slash(origin + new Vector2(0, -14), back, 280, 200, Ink.JadeDeep, 0.35f, 2);
+                b.F.Shake(6);
+                if (FieldMath.InArc(origin, back, 280, 200, b.Player.Pos, b.Player.Radius)) b.HitPlayer(f, 1.35f, DamageKind.Physical, null, null);
+                Recover(f, f.Enraged ? 2.4f : 3.2f);
+            },
+        });
+    }
+
     // ---------------------------------------------------------------- attacks
 
     private static void Recover(Fighter f, float attackCd)
@@ -295,10 +550,10 @@ public static class EnemyAi
                     Fire = () =>
                     {
                         b.F.Fx.Ring(pos, radius, color);
-                        b.F.Fx.Leaves(pos, new Color("#5f9356"), 5);
+                        Splash(b, pos, skill.Element);
+                        // Roots, slows and bleeds come with the art (its effects), through HitPlayer.
                         if (b.Player.Pos.DistanceTo(pos) > radius + b.Player.Radius * 0.4f) return;
                         b.HitPlayer(f, (float)skill.DamageMultiplier, DamageKind.Spirit, skill.Element, skill);
-                        if (b.Player.Invuln <= 0) b.Status(b.Player, ref b.Player.Rooted, 0.8f, "縛");
                     },
                 });
             }
@@ -323,7 +578,27 @@ public static class EnemyAi
         });
     }
 
-    /// <summary>Bodies don't overlap each other or the player, and never end up inside a wall.</summary>
+    /// <summary>What an area art throws up where it lands, by its element.</summary>
+    private static void Splash(Battle b, Vector2 pos, TuTien.Core.Element? element)
+    {
+        switch (element)
+        {
+            case TuTien.Core.Element.Moc:
+                b.F.Fx.Leaves(pos, new Color("#5f9356"), 5);
+                break;
+            case TuTien.Core.Element.Thuy:
+                b.F.Fx.Burst(pos, new Color(0.78f, 0.88f, 0.96f, 0.6f), 12, 110, ParticleKind.Mist, 7);
+                break;
+            case TuTien.Core.Element.Hoa:
+                b.F.Fx.Burst(pos, new Color("#f08a3a"), 14, 180, ParticleKind.Ember, 3);
+                break;
+            default:
+                b.F.Fx.Dust(pos, 8);
+                break;
+        }
+    }
+
+    /// <summary>Bodies don't overlap each other or the player, and never end up inside a wall (fliers go over them).</summary>
     private static void Separate(Battle b, Fighter f)
     {
         foreach (var o in b.Enemies)
@@ -338,7 +613,7 @@ public static class EnemyAi
         var toPlayer = f.Pos - b.Player.Pos;
         var reach = f.Radius + b.Player.Radius;
         var l = toPlayer.Length();
-        if (l < reach && l > 0.01f && f.State != "charge") f.Pos += toPlayer / l * (reach - l);
-        f.Pos = b.F.Walls.Resolve(f.Pos, f.Radius);
+        if (l < reach && l > 0.01f && f.State is not ("charge" or "swoop" or "lunge") && !f.Faded) f.Pos += toPlayer / l * (reach - l);
+        if (!f.Airborne) f.Pos = b.F.Walls.Resolve(f.Pos, f.Radius);
     }
 }

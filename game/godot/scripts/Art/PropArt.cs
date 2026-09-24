@@ -618,6 +618,30 @@ public static class PropArt
         }
     }
 
+    /// <summary>A pillar of rough stone thrust up by an earth art (Thổ Lao Thuật); it rises fast and sinks back.</summary>
+    public static void StonePillar(CanvasItem c, TuTienLuc.Field.Pillar pillar)
+    {
+        var k = pillar.Rise;
+        var w = pillar.Radius;
+        var h = 58 * k;
+        var seed = (int)(pillar.Pos.X * 3 + pillar.Pos.Y);
+        Paint.Shadow(c, V(4, 1), w * 1.5f, w * 0.5f, 0.2f * k);
+        // Broken earth around the base.
+        for (var i = 0; i < 5; i++)
+        {
+            var a = Mathf.Tau * i / 5 + H(seed, i);
+            Paint.Poly(c, Paint.Blob(V(Mathf.Cos(a) * w * 1.2f, Mathf.Sin(a) * w * 0.4f), w * 0.4f, w * 0.22f, 6, 0.2f, seed + i), new Color("#8a7a62"), 0.6f, 1);
+        }
+        if (h < 2) return;
+        // The shoulder notch scales with the rise so a pillar just breaking ground never folds under its base.
+        var body = new[] { V(-w, 0), V(w, 0), V(w * 0.82f, -h), V(w * 0.2f, -h - 6 * k), V(-w * 0.78f, -h + 3 * k) };
+        Paint.Poly(c, body, new Color("#9a8a70"), 0.9f, 1.8f);
+        Paint.Poly(c, new[] { V(w * 0.15f, 0), V(w, 0), V(w * 0.82f, -h), V(w * 0.2f, -h - 6 * k) }, new Color("#7f705a"), 0);
+        Paint.Line2(c, V(-w * 0.4f, -h * 0.3f), V(-w * 0.1f, -h * 0.55f), new Color(Paint.Ink, 0.4f), 1.2f);
+        Paint.Line2(c, V(w * 0.3f, -h * 0.65f), V(w * 0.55f, -h * 0.85f), new Color(Paint.Ink, 0.35f), 1.1f);
+        Paint.Glyph(c, "土", V(-w * 0.15f, -h * 0.5f), 13, new Color(0.3f, 0.24f, 0.18f, 0.6f * k));
+    }
+
     public static void Stele(CanvasItem c)
     {
         Paint.Shadow(c, V(6, 2), 24, 7, 0.18f);

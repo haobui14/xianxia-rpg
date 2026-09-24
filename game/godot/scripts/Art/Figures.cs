@@ -53,6 +53,11 @@ public static class Figures
         "bark_golem" => 70,
         "ancient_tree_guardian" => 120,
         "ancient_tree_spirit" => 128,
+        "black_bear" => 58,
+        "fire_fox" => 42,
+        "blood_bat" => 60,
+        "wandering_wraith" => 80,
+        "azure_python" => 58,
         _ => 70,
     };
 
@@ -78,6 +83,11 @@ public static class Figures
                 case "bark_golem": Front(ci, pose, scale, 24, BarkGolem); break;
                 case "ancient_tree_guardian": Front(ci, pose, scale, 34, (c, p) => TreeBoss(c, p, false)); break;
                 case "ancient_tree_spirit": Front(ci, pose, scale, 36, (c, p) => TreeBoss(c, p, true)); break;
+                case "black_bear": Profile(ci, pose, scale, 26, Bear); break;
+                case "fire_fox": Profile(ci, pose, scale, 16, Fox); break;
+                case "blood_bat": Front(ci, pose, scale, 9, Bat); break;
+                case "wandering_wraith": Front(ci, pose, scale, 12, Wraith); break;
+                case "azure_python": Profile(ci, pose, scale, 36, Python); break;
                 default: Front(ci, pose, scale, 16, Blob); break;
             }
         }
@@ -967,6 +977,193 @@ public static class Figures
                 var a = p.Time * 1.4f + i * Mathf.Tau / 3;
                 c.DrawCircle(V(Mathf.Cos(a) * 30, -60 + Mathf.Sin(a) * 12), 3, Paint.A(new Color("#b8ffd8") with { A = 0.7f }));
             }
+        }
+    }
+
+    /// <summary>Black bear (hắc hùng): heavy, with the pale crescent on its chest; rears up to slam.</summary>
+    private static void Bear(CanvasItem c, Pose p)
+    {
+        var fur = new Color("#3a322d");
+        var dark = new Color("#241f1c");
+        var sw = Mathf.Sin(p.Walk) * 4f * p.Move;
+        var rear = Mathf.Clamp(p.Cast, 0, 1) * 18;
+        var slam = p.Attack > 0 ? Mathf.Sin(p.Attack * Mathf.Pi) * 9 : 0;
+        var bob = -Mathf.Abs(Mathf.Sin(p.Walk)) * 1.4f * p.Move;
+        void FrontLeg(float x, float swing, float width, Color color)
+        {
+            var foot = -rear + (rear > 1 ? 0 : 0);
+            Paint.Poly(c, new[] { V(x - width / 2, -16 + bob - rear), V(x + width / 2, -16 + bob - rear), V(x + width / 2 + swing * 0.6f + slam, foot), V(x - width / 2 + swing * 0.6f + slam, foot) }, color, 0.75f, 1.2f);
+            Paint.Ellipse(c, V(x + swing * 0.6f + slam + 1, foot - 0.5f), width * 0.8f, 2, color.Darkened(0.3f), 0.6f, 1, 0, 10);
+            for (var k = -1; k <= 1; k++) Paint.Line2(c, V(x + swing * 0.6f + slam + 2 + k * 1.6f, foot), V(x + swing * 0.6f + slam + 4 + k * 1.6f, foot + 1.5f), new Color("#e8e0cc"), 0.8f);
+        }
+        Leg(c, -15, -14 + bob, -sw, 6.5f, dark);
+        FrontLeg(11, sw, 6.5f, dark);
+        var o = V(slam * 0.5f, bob);
+        Paint.Ellipse(c, V(-1, -25 - rear * 0.45f) + o, 25, 15, fur, 0.85f, 1.8f, -rear * 0.018f);
+        Paint.Ellipse(c, V(-4, -34 - rear * 0.5f) + o, 16, 4, dark with { A = 0.5f }, 0, 1, -rear * 0.018f);
+        Leg(c, -12, -14 + bob, sw, 7, fur);
+        FrontLeg(14, -sw, 7, fur);
+        var h = V(23, -34 - rear) + o;
+        // The pale crescent (nguyệt nha) on the chest, under the head.
+        Paint.Poly(c, new[] { h + V(-12, 6), h + V(-7, 12), h + V(-3, 7), h + V(-7, 9.5f) }, new Color("#e8e0cc"), 0.6f, 1);
+        Paint.Circle(c, h, 11, fur);
+        Paint.Circle(c, h + V(-6, -9), 3.6f, fur);
+        Paint.Circle(c, h + V(2, -10), 3.6f, fur);
+        Paint.Ellipse(c, h + V(9, 3), 6, 4.5f, new Color("#8a6f58"));
+        c.DrawCircle(h + V(14, 2), 1.8f, Paint.A(Paint.Ink));
+        var jaw = p.Attack > 0 || rear > 4 ? 1.8f : 0;
+        Paint.Line2(c, h + V(6, 6 + jaw), h + V(13, 5 + jaw), new Color(Paint.Ink, 0.7f), 1);
+        Eye(c, h + V(4, -2), 1.5f, new Color("#2a1a14"), p.Enraged);
+    }
+
+    /// <summary>Fire fox (hỏa hồ): slender, black-socked, two tails tipped with flame.</summary>
+    private static void Fox(CanvasItem c, Pose p)
+    {
+        var fur = new Color("#d8702c");
+        var pale = new Color("#f3e3c8");
+        var sock = new Color("#3a2418");
+        var sw = Mathf.Sin(p.Walk) * 4f * p.Move;
+        var pounce = p.Attack > 0 ? Mathf.Sin(p.Attack * Mathf.Pi) * 6 : 0;
+        var bob = -Mathf.Abs(Mathf.Sin(p.Walk)) * 1.5f * p.Move;
+        var o = V(pounce, bob);
+        for (var k = 0; k < 2; k++)
+        {
+            var sway = Mathf.Sin(p.Time * 3 + k * 1.6f) * 4;
+            var root = V(-12, -19) + o;
+            var tip = V(-31 - k * 4, -37 + k * 10 + sway) + o;
+            Paint.Poly(c, Paint.Taper(root, tip, 6.5f, 3.5f), fur);
+            var flick = 1 + 0.25f * Mathf.Sin(p.Time * 14 + k * 2);
+            c.DrawCircle(tip, 8 * flick, Paint.A(new Color(1f, 0.55f, 0.15f, 0.3f)));
+            Paint.Poly(c, Paint.Blob(tip + V(0, -2), 4.5f * flick, 6.5f * flick, 8, 0.25f, k * 7 + (int)(p.Time * 8) % 9), new Color("#f5a04a"), 0.5f, 1);
+            c.DrawCircle(tip + V(0.5f, -1.5f), 2.2f, Paint.A(new Color("#fff0b0")));
+        }
+        Leg(c, -9, -11 + bob, -sw, 2.8f, sock);
+        Leg(c, 9 + pounce, -11 + bob, sw, 2.8f, sock);
+        Paint.Ellipse(c, V(0, -16) + o, 14.5f, 6.5f, fur);
+        Paint.Ellipse(c, V(4, -12.5f) + o, 9, 2.8f, pale, 0);
+        Leg(c, -7, -11 + bob, sw, 3, sock);
+        Leg(c, 11 + pounce, -11 + bob, -sw, 3, sock);
+        var h = V(15, -23) + o;
+        Paint.Poly(c, new[] { h + V(-4, 4), h + V(-2, -5), h + V(6, -6), h + V(15, 0), h + V(6, 3.5f) }, fur);
+        Paint.Poly(c, new[] { h + V(3, 1), h + V(15, 0), h + V(6, 4) }, pale, 0.6f, 1);
+        c.DrawCircle(h + V(15, -0.3f), 1.3f, Paint.A(Paint.Ink));
+        Paint.Poly(c, new[] { h + V(-2, -4), h + V(-1, -14), h + V(3, -5) }, fur);
+        Paint.Poly(c, new[] { h + V(2, -5), h + V(5, -14), h + V(8, -5) }, fur);
+        Paint.Poly(c, new[] { h + V(-0.5f, -5), h + V(0, -10.5f), h + V(2, -5.5f) }, sock, 0);
+        Eye(c, h + V(6, -2.5f), 1.3f, new Color("#f0c040"), p.Enraged);
+    }
+
+    /// <summary>Blood bat (huyết bức): a small dark body on wide membrane wings, hovering high.</summary>
+    private static void Bat(CanvasItem c, Pose p)
+    {
+        var h = -42 + Mathf.Sin(p.Time * 4) * 3;
+        // 0.35 (wings swept down, nearly edge-on) … 1 (spread high).
+        var lift = 0.35f + 0.65f * (0.5f + 0.5f * Mathf.Sin(p.Time * 16));
+        var swoop = p.Attack > 0 ? Mathf.Sin(p.Attack * Mathf.Pi) * 8 : 0;
+        var o = V(0, h + swoop);
+        var membrane = new Color("#3b2230");
+        var bone = new Color("#1f1219");
+        var body = new Color("#4a2a36");
+        // The wing is a simple shape drawn flat, then squashed toward the shoulder line: scaling one axis
+        // never makes a polygon cross itself, whatever the flap.
+        Vector2[] flat = { V(3, -4), V(16, -16), V(31, -14), V(26, -4), V(20, 1), V(14, -2), V(9, 3), V(3, 2) };
+        foreach (var s in new[] { -1f, 1f })
+        {
+            var pts = new Vector2[flat.Length];
+            for (var i = 0; i < flat.Length; i++) pts[i] = o + V(s * flat[i].X, -4 + (flat[i].Y + 4) * lift);
+            Paint.Poly(c, pts, membrane, 0.85f, 1.3f);
+            Paint.Line2(c, pts[0], pts[1], bone, 1.4f);
+            Paint.Line2(c, pts[1], pts[2], bone, 1.1f);
+            Paint.Line2(c, pts[1], pts[4], bone, 0.9f);
+        }
+        Paint.Ellipse(c, o, 6, 8.5f, body);
+        Paint.Circle(c, o + V(0, -9), 5.2f, body);
+        foreach (var s in new[] { -1f, 1f }) Paint.Poly(c, new[] { o + V(s * 3.5f, -12), o + V(s * 6, -19.5f), o + V(s * 1.2f, -13) }, body, 0.7f, 1);
+        var eye = p.Enraged ? new Color("#ff5a3a") : new Color("#e8423a");
+        c.DrawCircle(o + V(-2, -9.5f), 1.4f, Paint.A(eye));
+        c.DrawCircle(o + V(2, -9.5f), 1.4f, Paint.A(eye));
+        foreach (var s in new[] { -1f, 1f }) Paint.Poly(c, new[] { o + V(s * 1.6f, -6), o + V(s * 1.2f, -3.2f), o + V(s * 0.6f, -6) }, new Color("#f0e8e0"), 0, 1);
+    }
+
+    /// <summary>Wandering wraith (u hồn): a pale robe fraying into mist, long black hair, a will-o'-wisp circling.</summary>
+    private static void Wraith(CanvasItem c, Pose p)
+    {
+        var h = -10 + Mathf.Sin(p.Time * 2) * 4;
+        var sway = Mathf.Sin(p.Time * 1.6f) * 3;
+        var robe = new Color(0.84f, 0.89f, 0.95f, 0.88f);
+        var shade = new Color(0.64f, 0.72f, 0.82f, 0.85f);
+        c.DrawCircle(V(0, h - 40), 32, Paint.A(new Color(0.7f, 0.85f, 1f, 0.1f + p.Cast * 0.14f)));
+        var body = new List<Vector2> { V(-9, h - 54), V(9, h - 54), V(15, h - 32) };
+        for (var i = 0; i <= 6; i++)
+        {
+            var x = 15 - i * 5f;
+            var wisp = Mathf.Sin(p.Time * 5 + i) * 3;
+            body.Add(V(x + sway * (i / 6f), h - 6 + (i % 2) * 8 + wisp));
+        }
+        body.Add(V(-15, h - 32));
+        Paint.Poly(c, body.ToArray(), robe, 0.55f, 1.2f);
+        Paint.Line2(c, V(-4, h - 48), V(-6 + sway * 0.5f, h - 14), new Color(shade, 0.8f), 1.2f);
+        Paint.Line2(c, V(4, h - 48), V(5 + sway * 0.5f, h - 16), new Color(shade, 0.8f), 1.2f);
+        var reach = p.Cast * 8;
+        foreach (var s in new[] { -1f, 1f })
+        {
+            var hand = V(s * (22 + reach), h - 30 + sway * s - reach);
+            Paint.Poly(c, Paint.Taper(V(s * 9, h - 48), hand, 5.5f, 3), shade);
+            c.DrawCircle(hand, 2.6f, Paint.A(new Color("#eef2f5")));
+        }
+        Paint.Ellipse(c, V(0, h - 63), 9.5f, 11.5f, new Color("#1c2230"));
+        Paint.Poly(c, new[] { V(-9, h - 64), V(-11, h - 44), V(-6, h - 48), V(-7, h - 60) }, new Color("#1c2230"), 0.5f, 1);
+        Paint.Poly(c, new[] { V(9, h - 64), V(11, h - 44), V(6, h - 48), V(7, h - 60) }, new Color("#1c2230"), 0.5f, 1);
+        Paint.Ellipse(c, V(0, h - 60), 6.5f, 8, new Color("#eef2f5"));
+        foreach (var x in new[] { -2.6f, 2.6f })
+        {
+            Paint.Ellipse(c, V(x, h - 61), 1.6f, 2.2f, new Color("#1a1f2c"), 0, 1, 0, 8);
+            c.DrawCircle(V(x, h - 61), 0.8f, Paint.A(p.Enraged ? new Color("#ff8a6a") : new Color("#9fd8ff")));
+        }
+        Paint.Ellipse(c, V(0, h - 55.5f), 1.4f, 1, new Color("#3a3f4c"), 0, 1, 0, 8);
+        var a = p.Time * 1.8f;
+        var wispAt = V(Mathf.Cos(a) * 22, h - 40 + Mathf.Sin(a) * 7);
+        c.DrawCircle(wispAt, 7, Paint.A(new Color(0.55f, 0.85f, 1f, 0.3f)));
+        c.DrawCircle(wispAt, 2.8f, Paint.A(new Color(0.88f, 0.97f, 1f)));
+    }
+
+    /// <summary>Azure-scale python (thanh lân mãng): long and thick, horned, with a dorsal ridge; lunges and sweeps.</summary>
+    private static void Python(CanvasItem c, Pose p)
+    {
+        const int n = 22;
+        var body = new Color("#3f7f86");
+        var dark = new Color("#27575c");
+        var belly = new Color("#cfe0c8");
+        var strike = p.Attack > 0 ? Mathf.Sin(p.Attack * Mathf.Pi) : 0;
+        var coil = Mathf.Clamp(p.Cast, 0, 1);
+        var pts = new Vector2[n];
+        var radii = new float[n];
+        for (var i = 0; i < n; i++)
+        {
+            var k = i / (float)(n - 1);
+            var wave = Mathf.Sin(p.Time * 5 - i * 0.55f) * 6 * (0.35f + 0.65f * p.Move) * (1 - k * 0.6f);
+            var tail = coil * Mathf.Sin(p.Time * 9) * 10 * (1 - k) * (1 - k);
+            pts[i] = V(-62 + i * 4.3f + strike * 14 * k * k, -9 + wave + tail - (strike * 26 + coil * 8) * k * k * k);
+            radii[i] = 3.2f + 8.5f * Mathf.Sin(Mathf.Min(1, k * 1.25f) * Mathf.Pi * 0.5f);
+        }
+        for (var i = 0; i < n; i++) Paint.Rim(c, pts[i], radii[i]);
+        for (var i = 0; i < n; i++) c.DrawCircle(pts[i], radii[i], Paint.A(body));
+        for (var i = 2; i < n; i += 2) c.DrawCircle(pts[i] + V(0, -radii[i] * 0.35f), radii[i] * 0.42f, Paint.A(dark));
+        for (var i = 0; i < n; i++) c.DrawCircle(pts[i] + V(0, radii[i] * 0.45f), radii[i] * 0.42f, Paint.A(belly with { A = 0.75f }));
+        for (var i = 4; i < n - 2; i += 3)
+            Paint.Poly(c, new[] { pts[i] + V(-2.2f, -radii[i] + 1), pts[i] + V(0, -radii[i] - 6), pts[i] + V(2.6f, -radii[i] + 1) }, dark, 0.6f, 0.8f);
+        var head = pts[n - 1] + V(10, -3);
+        var jaw = strike * 0.55f;
+        Paint.Poly(c, Paint.Rotate(new[] { head + V(-4, 2), head + V(13, 4), head + V(11, 7.5f), head + V(-3, 6.5f) }, head + V(-4, 3), jaw), new Color("#e8d6b8"));
+        Paint.Ellipse(c, head, 13.5f, 8.2f, body);
+        Paint.Ellipse(c, head + V(4, 2.8f), 8, 3, belly, 0);
+        Paint.Poly(c, new[] { head + V(-6, -6), head + V(-13, -16), head + V(-3, -7) }, new Color("#c8b88a"), 0.7f, 1);
+        Paint.Poly(c, new[] { head + V(-1, -7.5f), head + V(-5, -18), head + V(2.5f, -8) }, new Color("#c8b88a"), 0.7f, 1);
+        Eye(c, head + V(4, -2.5f), 2.3f, new Color("#f0d040"), p.Enraged);
+        if (strike > 0.2f || Mathf.Sin(p.Time * 2.3f) > 0.8f)
+        {
+            Paint.Line2(c, head + V(13, 3), head + V(21, 1), new Color("#c0392b"), 1.2f);
+            Paint.Line2(c, head + V(13, 3), head + V(21, 5), new Color("#c0392b"), 1.2f);
         }
     }
 

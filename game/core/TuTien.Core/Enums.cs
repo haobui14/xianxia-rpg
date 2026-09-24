@@ -35,6 +35,19 @@ namespace TuTien.Core
         Tho,
     }
 
+    /// <summary>
+    /// The foundation laid at Trúc Cơ (design §7.5): Hạ / Trung / Thượng / Thiên phẩm, from how well the
+    /// meridian storm went. None before Trúc Cơ.
+    /// </summary>
+    public enum FoundationGrade
+    {
+        None = 0,
+        Ha = 1,
+        Trung = 2,
+        Thuong = 3,
+        Thien = 4,
+    }
+
     public enum RootGrade
     {
         PhoThong,

@@ -399,6 +399,17 @@ public partial class WorldScreen : FieldScreen
         foreach (var prop in _scenery) prop.Redraw();
     }
 
+    public override string HintText()
+    {
+        if (Battle != null) return base.HintText();
+        var fly = KeyName("fly");
+        if (PlayerBody.Flying) return T($"Đang ngự kiếm — bay qua sông núi · {fly} hạ xuống", $"Riding the sword — cross rivers and cliffs · {fly} to land");
+        var move = KeyMap.MoveKeys;
+        return T($"{move} đi · {KeyName("interact")} tương tác · chém yêu thú để giao chiến · {KeyName("open_map")} bản đồ · {KeyName("end_month")} qua tháng sớm · cuộn chuột phóng to",
+                $"{move} walk · {KeyName("interact")} interact · strike a beast to fight · {KeyName("open_map")} map · {KeyName("end_month")} end month early · wheel zooms")
+            + (Player.CanFly ? T($" · {fly} ngự kiếm", $" · {fly} sword flight") : "");
+    }
+
     protected override void HandleKey(InputEvent e)
     {
         if (e.IsActionPressed("end_month")) EndMonth();

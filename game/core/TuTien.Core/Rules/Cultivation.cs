@@ -150,6 +150,9 @@ namespace TuTien.Core.Rules
                 events.Add(GameEvent.Major("stage_up",
                     $"Đột phá {Names.Display(p.Realm, Locale.Vi)} tầng {p.Stage}!",
                     $"Broke through to {Names.Display(p.Realm, Locale.En)} stage {p.Stage}!"));
+                // Halfway through Luyện Khí the root's element opens its second art.
+                if (p.Realm == Realm.LuyenKhi && p.Stage == Skills.SecondArtStage && p.Root.Elements.Count > 0)
+                    events.AddRange(Skills.Learn(state, content, Skills.SecondArt(p.Root.Elements[0])));
             }
 
             for (var guard = 0; guard < 20; guard++)
@@ -185,7 +188,6 @@ namespace TuTien.Core.Rules
                 var need = Progression.RequiredExp(content, p.Realm, p.Stage);
                 var carry = need == long.MaxValue ? 0 : Math.Max(0, p.Exp - need);
                 Progression.StepQi(p);
-                p.Exp = carry;
                 events.Add(GameEvent.Major("realm_up",
                     $"Đột phá thành công! Bước vào {Names.Display(p.Realm, Locale.Vi)} ({Names.Han(p.Realm)}).",
                     $"Breakthrough! You enter {Names.Display(p.Realm, Locale.En)} ({Names.Han(p.Realm)})."));
@@ -195,6 +197,19 @@ namespace TuTien.Core.Rules
                         "Linh khí nhập thể — ngươi đã có thể thi triển linh kỹ.",
                         "Qi flows through you — you can now use spirit arts."));
                 }
+                if (from == Realm.LuyenKhi)
+                {
+                    // The meridian storm laid the foundation: a better one adds a share of the gains on top, for good.
+                    var grade = Foundation.GradeFor(performance);
+                    p.Foundation = grade;
+                    Progression.Apply(p, Progression.RealmChangeGains(from), Foundation.GainMultiplier(grade) - 1);
+                    p.Hp = p.HpMax;
+                    p.Qi = p.QiMax;
+                    events.Add(GameEvent.Major("foundation",
+                        $"Trúc cơ {Foundation.Name(grade, Locale.Vi)}! Uy lực +{(Foundation.PowerMultiplier(grade) - 1) * 100:0}% vĩnh viễn.",
+                        $"A {Foundation.Name(grade, Locale.En)} foundation! +{(Foundation.PowerMultiplier(grade) - 1) * 100:0}% power for good."));
+                }
+                p.Exp = carry;
                 return events;
             }
 
@@ -222,5 +237,48 @@ namespace TuTien.Core.Rules
             if (p.Injuries.Count > 0) t += 0.15;
             return Math.Max(0.25, Math.Min(0.9, t));
         }
+    }
+
+    /// <summary>
+    /// Trúc Cơ's foundation (design §7.5): the meridian storm's result, graded Hạ / Trung / Thượng / Thiên.
+    /// It multiplies that breakthrough's gains and adds a permanent edge in every fight.
+    /// </summary>
+    public static class Foundation
+    {
+        /// <summary>Performance needed for each grade above Hạ (passing at all lays at least a Hạ foundation).</summary>
+        public const double Trung = 0.62, Thuong = 0.8, Thien = 0.95;
+
+        public static FoundationGrade GradeFor(double performance) =>
+            performance >= Thien ? FoundationGrade.Thien
+            : performance >= Thuong ? FoundationGrade.Thuong
+            : performance >= Trung ? FoundationGrade.Trung
+            : FoundationGrade.Ha;
+
+        /// <summary>The Trúc Cơ realm change's gains, ×1 / ×1.25 / ×1.5 / ×2 by grade.</summary>
+        public static double GainMultiplier(FoundationGrade g) => g switch
+        {
+            FoundationGrade.Thien => 2.0,
+            FoundationGrade.Thuong => 1.5,
+            FoundationGrade.Trung => 1.25,
+            _ => 1.0,
+        };
+
+        /// <summary>Physical and spirit power, for good: +0% / 5% / 10% / 20%.</summary>
+        public static double PowerMultiplier(FoundationGrade g) => g switch
+        {
+            FoundationGrade.Thien => 1.2,
+            FoundationGrade.Thuong => 1.1,
+            FoundationGrade.Trung => 1.05,
+            _ => 1.0,
+        };
+
+        public static string Name(FoundationGrade g, Locale locale) => g switch
+        {
+            FoundationGrade.Thien => locale == Locale.En ? "heaven-grade" : "Thiên phẩm",
+            FoundationGrade.Thuong => locale == Locale.En ? "upper-grade" : "Thượng phẩm",
+            FoundationGrade.Trung => locale == Locale.En ? "middle-grade" : "Trung phẩm",
+            FoundationGrade.Ha => locale == Locale.En ? "lower-grade" : "Hạ phẩm",
+            _ => locale == Locale.En ? "none" : "chưa có",
+        };
     }
 }

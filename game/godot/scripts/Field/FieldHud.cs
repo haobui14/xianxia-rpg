@@ -246,7 +246,7 @@ public partial class FieldHud : Control
             BossBar(size, battle);
             Flee(size, battle);
         }
-        if (_f is TrialScreen trial) trial.DrawHud(this, size);
+        if (_f is TrialBase trial) trial.DrawHud(this, size);
         else SkillBar(size);
         Log(size);
         if (_month != null) DrawCard(_month, new Vector2(size.X / 2 - 210, _f.Battle != null ? 130 : 92), 420);
@@ -353,7 +353,7 @@ public partial class FieldHud : Control
 
     private void BossBar(Vector2 size, Battle battle)
     {
-        var boss = battle.Enemies.FirstOrDefault(e => e.Active && (e.Archetype == "boss" || e.HpMax >= 300));
+        var boss = battle.Enemies.FirstOrDefault(e => e.Active && (e.Archetype is "boss" or "serpent" || e.HpMax >= 300));
         if (boss == null) return;
         var w = 560f;
         var pos = new Vector2(size.X / 2 - w / 2, 110);
@@ -380,12 +380,12 @@ public partial class FieldHud : Control
         {
             (T("Trái", "LMB"), pc.Basic, ""),
             (T("Phải", "RMB"), pc.SlotSkill(0), ""),
-            ("1", pc.SlotSkill(1), ""),
-            ("2", pc.SlotSkill(2), ""),
-            ("3", pc.SlotSkill(3), ""),
-            ("R", pc.Ultimate, ""),
-            ("Q", null, "丹"),
-            ("Space", null, "遁"),
+            (KeyMap.Label("skill_2"), pc.SlotSkill(1), ""),
+            (KeyMap.Label("skill_3"), pc.SlotSkill(2), ""),
+            (KeyMap.Label("skill_4"), pc.SlotSkill(3), ""),
+            (KeyMap.Label("ultimate"), pc.Ultimate, ""),
+            (KeyMap.Label("pill"), null, "丹"),
+            (KeyMap.Label("dash"), null, "遁"),
         };
         var total = slots.Length * box + (slots.Length - 1) * gap;
         var x0 = size.X / 2 - total / 2;
@@ -491,18 +491,7 @@ public partial class FieldHud : Control
 
     private void Hint(Vector2 size)
     {
-        string hint;
-        if (_f is TrialScreen)
-            hint = T("WASD di chuyển · Space lướt xuyên tâm ma · chuột trái chém · Esc tạm dừng", "WASD move · Space dash through demons · left click cuts · Esc pause");
-        else if (_f.Battle != null)
-            hint = T("WASD · chuột ngắm & chém · chuột phải/1/2/3 linh kỹ · Space lướt · R tuyệt kỹ · Q đan dược · chạy thật xa để thoát",
-                "WASD · mouse aims & strikes · RMB/1/2/3 arts · Space dash · R ultimate · Q pill · run far away to escape");
-        else if (_f.PlayerBody.Flying)
-            hint = T("Đang ngự kiếm — bay qua sông núi · V hạ xuống", "Riding the sword — cross rivers and cliffs · V to land");
-        else
-            hint = T("WASD đi · E tương tác · chém yêu thú để giao chiến · M bản đồ · N qua tháng sớm · cuộn chuột phóng to",
-                "WASD walk · E interact · strike a beast to fight · M map · N end month early · wheel zooms")
-                + (_f.Player.CanFly ? T(" · V ngự kiếm", " · V sword flight") : "");
+        var hint = _f.HintText();
         // Bottom right, clear of the log (left) and the skill bar (centre); two lines when it's long.
         var parts = hint.Split(" · ");
         var half = (parts.Length + 1) / 2;

@@ -35,7 +35,10 @@ public partial class GroundFxLayer : Node2D
     public override void _Draw()
     {
         if (_f.Battle is { } battle)
+        {
+            foreach (var g in battle.Fires) FxArt.GroundFire(this, g);
             foreach (var t in battle.Telegraphs) FxArt.Telegraph(this, t);
+        }
         if (_f.Target is { } target)
         {
             var at = target.At();
@@ -61,7 +64,10 @@ public partial class AirFxLayer : Node2D
     public override void _Draw()
     {
         if (_f.Battle is { } battle)
+        {
             foreach (var p in battle.Projectiles) FxArt.Projectile(this, p);
+            foreach (var o in battle.Orbits) FxArt.Orbit(this, o);
+        }
         foreach (var s in _f.Fx.Swooshes) FxArt.Swoosh(this, s);
         foreach (var p in _f.Fx.Particles) FxArt.Particle(this, p);
     }
@@ -108,7 +114,7 @@ public partial class OverlayLayer : Node2D
         if (_f.Target is { } target && _f.Battle == null)
         {
             var at = target.At() + new Vector2(0, -target.Height - 18);
-            var text = "[E] " + target.Label();
+            var text = $"[{Ui.KeyMap.Label("interact")}] " + target.Label();
             var font = Ui.Ink.UiFont;
             var size = font.GetStringSize(text, HorizontalAlignment.Left, -1, 15);
             var box = new Rect2(at - new Vector2(size.X / 2 + 10, 14), new Vector2(size.X + 20, 26));

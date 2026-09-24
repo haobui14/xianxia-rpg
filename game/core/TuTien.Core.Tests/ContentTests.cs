@@ -31,6 +31,29 @@ public class ContentTests
     }
 
     [Fact]
+    public void Hand_authored_creatures_join_the_zones_they_name()
+    {
+        var hollow = C.Area("ancient_tree_hollow")!;
+        foreach (var id in new[] { "black_bear", "fire_fox", "blood_bat", "wandering_wraith", "azure_python" })
+            Assert.Contains(id, hollow.EnemyPool);
+        Assert.True(C.Enemy("azure_python")!.Solitary);
+        Assert.DoesNotContain("black_bear", C.Area("verdant_forest")!.EnemyPool);
+    }
+
+    [Fact]
+    public void Every_element_has_a_second_art_and_a_manual_for_it()
+    {
+        foreach (var element in new[] { Element.Kim, Element.Moc, Element.Thuy, Element.Hoa, Element.Tho })
+        {
+            var art = C.Skill(Rules.Skills.SecondArt(element));
+            Assert.NotNull(art);
+            Assert.Equal(element, art!.Element);
+            Assert.Contains(C.Items.Values, i => i.TeachesSkillId == art.Id);
+        }
+        Assert.DoesNotContain(C.Validate(), i => i.StartsWith("item "));
+    }
+
+    [Fact]
     public void Reports_known_content_debt_for_other_regions()
     {
         var issues = C.Validate();

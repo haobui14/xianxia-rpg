@@ -85,10 +85,10 @@ public partial class Main : Node
         return realm;
     }
 
-    /// <summary>The breakthrough set piece (design §7.5).</summary>
-    public TrialScreen ShowBreakthroughTrial()
+    /// <summary>The breakthrough set piece (design §7.5): the meridian storm into Trúc Cơ, otherwise drawing qi in.</summary>
+    public TrialBase ShowBreakthroughTrial()
     {
-        var trial = new TrialScreen();
+        TrialBase trial = Game.Instance.Engine?.Player.Realm == TuTien.Core.Realm.LuyenKhi ? new FoundationTrial() : new TrialScreen();
         Swap(trial);
         return trial;
     }

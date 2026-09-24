@@ -240,6 +240,19 @@ public abstract partial class FieldScreen : Node2D
     {
     }
 
+    protected static string KeyName(string action) => KeyMap.Label(action);
+
+    /// <summary>The key hints in the corner, named after the player's own keys.</summary>
+    public virtual string HintText()
+    {
+        var move = KeyMap.MoveKeys;
+        if (Battle != null)
+            return T($"{move} · chuột ngắm & chém · chuột phải/{KeyName("skill_2")}/{KeyName("skill_3")}/{KeyName("skill_4")} linh kỹ · {KeyName("dash")} lướt · {KeyName("ultimate")} tuyệt kỹ · {KeyName("pill")} đan dược · chạy thật xa để thoát",
+                $"{move} · mouse aims & strikes · RMB/{KeyName("skill_2")}/{KeyName("skill_3")}/{KeyName("skill_4")} arts · {KeyName("dash")} dash · {KeyName("ultimate")} ultimate · {KeyName("pill")} pill · run far away to escape");
+        return T($"{move} đi · {KeyName("interact")} tương tác · chém yêu thú để giao chiến · cuộn chuột phóng to",
+            $"{move} walk · {KeyName("interact")} interact · strike a beast to fight · wheel zooms");
+    }
+
     // ================================================================ interactions
 
     private void UpdateTarget()

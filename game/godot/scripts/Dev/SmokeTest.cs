@@ -52,6 +52,9 @@ public partial class SmokeTest : Node
         {
             var game = Game.Instance;
             game.SavePath = "user://saves/smoke.json";
+            // Play on the default keys, and never write the player's own settings.
+            game.PersistSettings = false;
+            KeyMap.Reset();
             if (_shots != null) Directory.CreateDirectory(_shots);
             await Steps(game);
             Log("PASSED");
@@ -144,6 +147,7 @@ public partial class SmokeTest : Node
 
         // ---------------------------------------------------------------- real input: keys and the mouse
         world = await DriveByHand(world);
+        world = await RebindByHand(world);
 
         // ---------------------------------------------------------------- panels
         foreach (var panel in new InkPanel[] { new CharacterPanel(), new InventoryPanel(), new JournalPanel(), new MapPanel(world), new SettingsPanel() })
@@ -312,6 +316,12 @@ public partial class SmokeTest : Node
         await Frames(6);
         world = await Settle(world);
 
+        // ---------------------------------------------------------------- Trúc Cơ: the meridian storm
+        world = await FoundationBreakthrough(world);
+
+        // ---------------------------------------------------------------- new beasts, new arts
+        world = await NewBeastsAndArts(world);
+
         // ---------------------------------------------------------------- sword flight over the river
         world = await SwordFlight(world);
 
@@ -374,6 +384,21 @@ public partial class SmokeTest : Node
     }
 
     /// <summary>
+    /// A mouse click on a control, pushed into the viewport's GUI input at the control's centre (headless
+    /// there is no window to map screen positions through, so <see cref="Input.ParseInputEvent"/> can't aim).
+    /// </summary>
+    private async Task ClickGui(Control control)
+    {
+        var at = control.GetGlobalRect().GetCenter();
+        var viewport = GetViewport();
+        viewport.PushInput(new InputEventMouseMotion { Position = at, GlobalPosition = at }, true);
+        viewport.PushInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, Position = at, GlobalPosition = at, ButtonMask = MouseButtonMask.Left }, true);
+        await Frames(2);
+        viewport.PushInput(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = false, Position = at, GlobalPosition = at }, true);
+        await Frames(3);
+    }
+
+    /// <summary>
     /// The path a human takes, not the autopilot's: key and mouse events through Godot's input pipeline —
     /// walking with WASD, E at the bounty board, Esc, M for the map, a click that swings the sword, N.
     /// </summary>
@@ -408,10 +433,110 @@ public partial class SmokeTest : Node
         return await Settle(World);
     }
 
+    /// <summary>
+    /// Esc → Keys: click Interact's key and press F. From then on F talks to the bounty board, E does
+    /// nothing, and the corner hint says F. Then back to the defaults.
+    /// </summary>
+    private async Task<WorldScreen> RebindByHand(WorldScreen world)
+    {
+        world.DebugPlace(new Vector2(846, 3040));
+        await Frames(4);
+        world.OpenPanel(new KeysPanel());
+        await Frames(3);
+        var button = world.CurrentPanel!.FindChild("key_interact", true, false) as Button;
+        Check(button != null && button.Text == "E", "the keys panel lists Interact on E");
+        await ClickGui(button!);
+        Check((world.CurrentPanel!.FindChild("key_interact", true, false) as Button)?.Text != "E", "clicking Interact's key waits for a new one");
+        await Tap(Key.F);
+        Check(KeyMap.Get("interact") == Key.F, "clicking Interact's key and pressing F rebinds it");
+        await Tap(Key.Escape);
+        Check(!world.PanelOpen, "Esc closes the keys panel");
+        await Tap(Key.E);
+        Check(!world.PanelOpen, "E no longer interacts");
+        await Tap(Key.F);
+        Check(world.CurrentPanel is TownPanel, "F now opens the bounty board");
+        Check(world.HintText().Contains("F "), "the corner hint names the new key");
+        await Tap(Key.Escape);
+        KeyMap.Reset();
+        Check(KeyMap.IsDefault && KeyMap.Label("interact") == "E", "restoring the defaults puts Interact back on E");
+        return await Settle(World);
+    }
+
+    /// <summary>Luyện Khí 9 → Trúc Cơ through the meridian storm, played by the autopilot; the foundation gets a grade.</summary>
+    private async Task<WorldScreen> FoundationBreakthrough(WorldScreen world)
+    {
+        for (var attempt = 1; attempt <= 3 && E.Player.Realm == Realm.LuyenKhi; attempt++)
+        {
+            DevCheats.Restore(E);
+            E.Player.Injuries.Clear(); // a failed attempt injures; each retry starts whole
+            Game.Instance.Notify(DevCheats.FillToBreakthrough(E));
+            Check(E.BreakthroughReady && E.Player.Stage == 9, "Luyện Khí fills to its ninth stage, a breakthrough waiting");
+            world.OpenPanel(new BreakthroughPanel());
+            await Frames(3);
+            if (attempt == 1) await Shot("breakthrough_truc_co");
+            var trial = Main.Instance.ShowBreakthroughTrial();
+            Check(trial is FoundationTrial, "Luyện Khí's breakthrough is the meridian storm");
+            var storm = (FoundationTrial)trial;
+            await Frames(2);
+            storm.Player.Autopilot = true;
+            await Frames(60 * 46);
+            if (attempt == 1) await Shot("foundation_trial");
+            await Until(() => storm.Ended, 60 * 30, "the meridian storm ends");
+            Log($"meridian storm {attempt}: {storm.Score:0}/{FoundationTrial.Goal:0}, {storm.Hits} hits, performance {storm.Performance:0.00} (needed {storm.Threshold:0.00})");
+            world = await UntilWorld();
+            await Frames(40);
+            if (attempt == 1) await Shot("foundation_result");
+            world = await Settle(world);
+        }
+        Check(E.Player.Realm == Realm.TrucCo && E.Player.Foundation != FoundationGrade.None,
+            $"the meridian storm lays a foundation: Trúc Cơ, {E.Player.Foundation} grade");
+        Check(TuTien.Core.Rules.Skills.Knows(E.Player, "liet_diem_dia"), "at Luyện Khí 5 the Hỏa root comprehended Scorched Earth");
+        return world;
+    }
+
+    /// <summary>
+    /// Every second-tier art gets a fight of its own against one of the Ancient Tree Hollow's new creatures,
+    /// cast by the autopilot from slot 1: every new cast shape and every new behaviour runs for real.
+    /// </summary>
+    private async Task<WorldScreen> NewBeastsAndArts(WorldScreen world)
+    {
+        (string Art, string Foe)[] pairs =
+        {
+            ("kim_quang_tram", "black_bear"), ("van_diep_ho_than", "blood_bat"), ("thuy_long_ba", "fire_fox"),
+            ("liet_diem_dia", "wandering_wraith"), ("tho_lao_thuat", "azure_python"),
+        };
+        foreach (var (art, foe) in pairs)
+        {
+            world.DebugPlace(WorldScreen.TileCenter(33, 13));
+            DevCheats.Restore(E);
+            DevCheats.LearnArt(E, art);
+            Check(E.SetSkillSlot(0, art), $"{art} goes in the first slot");
+            world.Player.SyncFromEngine();
+            await Frames(4);
+            var fights = E.Player.Counters.Fights;
+            world.Fight(E.StartAdventureFight(foe, "ancient_tree_hollow")!);
+            Check(world.Battle != null, $"the {foe} fights where the cultivator stands");
+            world.Player.Autopilot = true;
+            var used = false;
+            var shotAt = -1;
+            for (var i = 0; i < 60 * 150 && world.Battle != null; i++)
+            {
+                // The picture is taken just after the art's first cast, once its windup is over.
+                if (!used && world.Battle.SkillUses.ContainsKey(art)) shotAt = i + 18;
+                used |= world.Battle.SkillUses.ContainsKey(art);
+                if (i == shotAt) await Shot("battle_" + foe);
+                await Frames(1);
+            }
+            world = await FightThrough(world);
+            Check(used && E.Player.Counters.Fights == fights + 1 && E.ActiveEncounter == null, $"{art} is cast against the {foe}, and the fight resolves");
+            world = await Settle(world);
+        }
+        return world;
+    }
+
     /// <summary>At Trúc Cơ the cultivator rides the sword across water that stops anyone on foot.</summary>
     private async Task<WorldScreen> SwordFlight(WorldScreen world)
     {
-        DevCheats.SetRealm(E, Realm.TrucCo);
         DevCheats.Restore(E);
         world.Player.SyncFromEngine();
         // A bank with the river two tiles wide east of it (the river winds; find such a stretch).
@@ -423,12 +548,22 @@ public partial class SmokeTest : Node
                 if (Ground(x, y) && map.At(x + 1, y) == Terrain.Water && map.At(x + 2, y) == Terrain.Water && Ground(x + 3, y))
                     bank = new Vector2I(x, y);
         Check(bank.X >= 0, $"the river has a stretch two tiles wide (bank at {bank})");
-        world.DebugPlace(WorldScreen.TileCenter(bank.X, bank.Y));
-        await Frames(4);
-        await Hold(Key.D, 45);
+        // Something roaming the bank may jump the cultivator while they stand there: fight it off and try again.
+        for (var tries = 0; tries < 4; tries++)
+        {
+            world.DebugPlace(WorldScreen.TileCenter(bank.X, bank.Y));
+            await Frames(4);
+            if (world.Battle == null && !world.Frozen) await Hold(Key.D, 45);
+            if (world.Battle == null && !world.Frozen) break;
+            Log($"sword flight: interrupted on the bank ({(world.Battle != null ? "a fight" : "a panel")}), trying again");
+            world = await Settle(world);
+            DevCheats.Restore(E);
+            world.Player.SyncFromEngine();
+        }
         Check(E.Player.X == bank.X && world.Tile.X == bank.X, "on foot, the river stops you");
         await Tap(Key.V);
-        Check(world.PlayerBody.Flying, "V takes to the flying sword");
+        Check(world.PlayerBody.Flying,
+            $"V takes to the flying sword (fight {world.Battle != null}, frozen {world.Frozen}, stun {world.PlayerBody.Stun:0.00}, realm {E.Player.Realm})");
         var sawWater = false;
         KeyEvent(Key.D, true);
         for (var i = 0; i < 100 && E.Player.X < bank.X + 3; i++)

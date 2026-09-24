@@ -120,10 +120,11 @@ namespace TuTien.Core.Rules
         public static Combatant PlayerCombatant(ContentDb content, PlayerState p)
         {
             var a = EffectiveAttrs(content, p);
+            var foundation = Foundation.PowerMultiplier(p.Foundation);
             return new Combatant
             {
-                PhysicalPower = a.Str * 1.5 + WeaponBonus(content, p, "atk"),
-                SpiritPower = a.Int * 2 + a.Str * 0.5,
+                PhysicalPower = (a.Str * 1.5 + WeaponBonus(content, p, "atk")) * foundation,
+                SpiritPower = (a.Int * 2 + a.Str * 0.5) * foundation,
                 Def = PlayerDefense(p, a),
                 Res = PlayerResistance(p, a),
                 Per = a.Per,

@@ -14,13 +14,20 @@
         { "item_id": "qi_condensation_manual", "price": 220 },
         { "item_id": "manual_ho_the", "price": 180 },
         { "item_id": "manual_hoi_xuan", "price": 200 },
-        { "item_id": "qi_gathering_pill", "price": 150 }
+        { "item_id": "qi_gathering_pill", "price": 150 },
+        { "item_id": "manual_kim_quang", "price": 480 },
+        { "item_id": "manual_van_diep", "price": 460 },
+        { "item_id": "manual_thuy_long", "price": 460 },
+        { "item_id": "manual_liet_diem", "price": 500 },
+        { "item_id": "manual_tho_lao", "price": 440 }
       ],
       "bounties": [
         { "id": "bounty_wolves", "name": "Trừ sói hoang Thanh Lâm", "name_en": "Cull the Verdant Forest wolves", "enemy_id": "forest_wolf", "count": 3, "reward_silver": 60, "reward_karma": 5 },
         { "id": "bounty_boars", "name": "Lợn rừng phá nương rẫy", "name_en": "Boars trampling the fields", "enemy_id": "wild_boar", "count": 2, "reward_silver": 70, "reward_karma": 3 },
         { "id": "bounty_snakes", "name": "Độc xà ở Linh Thảo Viên", "name_en": "Snakes in the herb garden", "enemy_id": "venomous_snake", "count": 2, "reward_silver": 55, "reward_karma": 3 },
-        { "id": "bounty_vines", "name": "Diệt tà đằng", "name_en": "Burn out the corrupted vines", "enemy_id": "corrupted_vine", "count": 2, "reward_silver": 45, "reward_karma": 4 }
+        { "id": "bounty_vines", "name": "Diệt tà đằng", "name_en": "Burn out the corrupted vines", "enemy_id": "corrupted_vine", "count": 2, "reward_silver": 45, "reward_karma": 4 },
+        { "id": "bounty_bears", "name": "Hắc hùng quấy nhiễu Cổ Thụ Động", "name_en": "Black bears in the Ancient Tree Hollow", "enemy_id": "black_bear", "count": 2, "reward_silver": 120, "reward_karma": 4 },
+        { "id": "bounty_python", "name": "Trừ Thanh Lân Mãng", "name_en": "Slay the Azure-Scale Python", "enemy_id": "azure_python", "count": 1, "reward_silver": 320, "reward_karma": 10 }
       ]
     }
   ]

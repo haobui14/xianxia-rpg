@@ -24,6 +24,10 @@ public sealed class Fx
     public void Ring(Vector2 pos, float radius, Color color, float life = 0.35f) =>
         Swooshes.Add(new Swoosh { Pos = pos, Ring = true, Radius = radius, Color = color, Life = life, MaxLife = life });
 
+    /// <summary>A stroke of light from <paramref name="from"/> to <paramref name="to"/> that narrows as it fades.</summary>
+    public void Beam(Vector2 from, Vector2 to, Color color, float width, float life = 0.3f) =>
+        Swooshes.Add(new Swoosh { Pos = from, End = to, Beam = true, Width = width, Color = color, Life = life, MaxLife = life });
+
     public void Burst(Vector2 pos, Color color, int count = 10, float speed = 160, ParticleKind kind = ParticleKind.Spark, float size = 3)
     {
         for (var i = 0; i < count; i++)

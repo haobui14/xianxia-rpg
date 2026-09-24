@@ -69,6 +69,13 @@ public partial class CharacterPanel : InkPanel
             Row(UiKit.Label(T(vi, en), 16, Ink.InkSoft), UiKit.Label(value, 16, Ink.InkColor));
         var weapon = content.Item(p.WeaponId);
         Row(UiKit.Label(T("Binh khí", "Weapon"), 16, Ink.InkSoft), UiKit.Label(weapon != null ? Text.Name(weapon) + " · " + Text.Effects(weapon) : T("tay không", "bare hands"), 16, Ink.InkColor));
+        if (p.Foundation != FoundationGrade.None)
+        {
+            var bonus = (TuTien.Core.Rules.Foundation.PowerMultiplier(p.Foundation) - 1) * 100;
+            Row(UiKit.Label(T("Nền móng Trúc Cơ", "Foundation"), 16, Ink.InkSoft),
+                UiKit.Label(T($"{TuTien.Core.Rules.Foundation.Name(p.Foundation, Locale.Vi)} (uy lực +{bonus:0}%)", $"{TuTien.Core.Rules.Foundation.Name(p.Foundation, Locale.En)} (+{bonus:0}% power)"),
+                    16, p.Foundation >= FoundationGrade.Thuong ? Ink.GoldDeep : Ink.JadeDeep));
+        }
 
         Section(T("Nhân quả & danh vọng", "Karma & renown"));
         Para(T("Nhân quả: ", "Karma: ") + Text.Karma(p.Karma) + T($" · danh vọng {p.Reputation}", $" · reputation {p.Reputation}"), 16, Ink.InkColor);

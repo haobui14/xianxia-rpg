@@ -67,6 +67,8 @@ public sealed class Fighter
     /// <summary>Riding a flying sword (Trúc Cơ and above), and how high the body currently floats.</summary>
     public bool Flying;
     public float Hover;
+    /// <summary>A phantom gone insubstantial: nothing touches it until it forms again.</summary>
+    public bool Faded;
 
     // Ngũ Hành: an applied mark, and a cooldown on reacting against the creature's own phase.
     public Element? Mark;
@@ -96,6 +98,10 @@ public sealed class Fighter
 
     public bool Active => Alive && !Yielded;
     public bool IsHuman => Kind == "human";
+    /// <summary>Bats and phantoms go over trees and walls instead of around them.</summary>
+    public bool Airborne => Archetype is "flier" or "phantom";
+    /// <summary>Too big to throw around: tanks, bosses and brutes barely budge when hit.</summary>
+    public bool Heavy => Archetype is "tank" or "boss" or "brute" or "serpent";
     public float SpeedFactor => Rooted > 0 ? 0 : Slow > 0 ? 0.5f : 1;
     public EnemyDef Def => Enemy!.Template;
 
@@ -199,7 +205,7 @@ public sealed class Floater
     public float MaxLife = 0.9f;
 }
 
-/// <summary>A brush stroke: a slash crescent or an expanding ring.</summary>
+/// <summary>A brush stroke: a slash crescent, an expanding ring, or a beam of light between two points.</summary>
 public sealed class Swoosh
 {
     public Vector2 Pos;
@@ -211,6 +217,50 @@ public sealed class Swoosh
     public Color Color = Colors.Black;
     public bool Ring;
     public float Width = 1;
+    public bool Beam;
+    public Vector2 End;
+}
+
+/// <summary>Leaves or blades circling the caster for a while (an "orbit" art); each foe is cut at most twice a second.</summary>
+public sealed class Orbiter
+{
+    public Fighter Owner = null!;
+    public SkillDef Skill = null!;
+    public float Mult = 1;
+    public DamageKind Kind = DamageKind.Spirit;
+    public int Count = 6;
+    public float Radius = 74;
+    public float Time;
+    public float Duration = 6;
+    public float Angle;
+    public Color Color = Colors.White;
+    public readonly Dictionary<Fighter, float> Cooldowns = new();
+    public Vector2 At(int i) => Owner.Pos + new Vector2(0, -22) + Vector2.Right.Rotated(Angle + Mathf.Tau * i / Count) * Radius;
+}
+
+/// <summary>Ground that keeps burning (a "field" art): everyone inside takes a hit every half second.</summary>
+public sealed class GroundFire
+{
+    public Vector2 Pos;
+    public float Radius = 90;
+    public float Time;
+    public float Duration = 4;
+    public float Tick;
+    public SkillDef Skill = null!;
+    public float Mult = 1;
+    public DamageKind Kind = DamageKind.Spirit;
+    public Color Color = Colors.White;
+}
+
+/// <summary>A stone pillar raised by a "wall" art: solid to bodies and shots until it crumbles.</summary>
+public sealed class Pillar
+{
+    public Vector2 Pos;
+    public float Radius = 17;
+    public float Time;
+    public float Duration = 5;
+    public Obstacle Obstacle = null!;
+    public float Rise => Mathf.Clamp(Time / 0.18f, 0, 1) * Mathf.Clamp((Duration - Time) / 0.35f, 0, 1);
 }
 
 public enum ParticleKind

@@ -56,6 +56,16 @@ namespace TuTien.Core.World
                     if (cell == null) break;
                     var size = rng.Range(1, Math.Min(3, area.DangerLevel));
                     var members = Enumerable.Range(0, size).Select(_ => rng.Pick(pool)).ToList();
+                    // A lair beast prowls alone, and a zone only ever holds one.
+                    var lone = members.FirstOrDefault(id => content.Enemy(id)?.Solitary == true);
+                    if (lone != null)
+                    {
+                        var taken = state.World.Beasts.Any(b => b.Zone == area.Id && b.EnemyIds.Any(id => content.Enemy(id)?.Solitary == true));
+                        members = taken
+                            ? members.Where(id => content.Enemy(id)?.Solitary != true).ToList()
+                            : new List<string> { lone };
+                        if (members.Count == 0) continue;
+                    }
                     state.World.Beasts.Add(new BeastPack
                     {
                         Id = state.NewId("pack"),

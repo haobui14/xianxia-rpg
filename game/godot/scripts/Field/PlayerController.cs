@@ -416,7 +416,8 @@ public sealed class PlayerController
                 });
             }
         }
-        if (c.Attack || c.Slot >= 0 || c.Ultimate || c.Dash) Warn(T("Hạ xuống (V) để ra tay", "Land (V) to fight"));
+        if (c.Attack || c.Slot >= 0 || c.Ultimate || c.Dash)
+            Warn(T($"Hạ xuống ({KeyMap.Label("fly")}) để ra tay", $"Land ({KeyMap.Label("fly")}) to fight"));
     }
 
     /// <summary>Outside a fight the battle doesn't tick the player's timers; do the few that matter.</summary>
@@ -502,7 +503,8 @@ public sealed class PlayerController
         {
             Warn(E.Player.Skills.Count == 0
                 ? T("Chưa có linh kỹ — cần đột phá Luyện Khí", "No spirit arts yet — reach Qi Condensation")
-                : T("Ô trống — gán linh kỹ ở bảng Nhân vật (C)", "Empty slot — assign an art in Character (C)"));
+                : T($"Ô trống — gán linh kỹ ở bảng Nhân vật ({KeyMap.Label("open_character")})",
+                    $"Empty slot — assign an art in Character ({KeyMap.Label("open_character")})"));
             return;
         }
         Cast(skill, c);
@@ -555,9 +557,10 @@ public sealed class PlayerController
     /// <summary>How far in front of the player an art can start a fight.</summary>
     private static float EngageReach(SkillDef skill) => skill.Cast.Shape switch
     {
-        "melee_arc" => (float)skill.Cast.Range + 30,
-        "dash_strike" => (float)skill.Cast.Range + 30,
-        "aoe_circle" => (float)skill.Cast.Range + (float)skill.Cast.Radius,
+        "melee_arc" or "dash_strike" or "wave" => (float)skill.Cast.Range + 30,
+        "aoe_circle" or "field" => (float)skill.Cast.Range + (float)skill.Cast.Radius,
+        "orbit" => (float)skill.Cast.Radius + 90,
+        "wall" => (float)skill.Cast.Range + 60,
         _ => Mathf.Min(520, (float)skill.Cast.Range),
     };
 
@@ -696,6 +699,107 @@ public sealed class PlayerController
                 F.Fx.Rise(p.Pos, new Color("#88ad9b"), 10, 20);
                 break;
             }
+            case "beam":
+            {
+                // A line of light: announced for a blink, then it cuts through everyone on it.
+                p.CastAnim = 1;
+                p.CastColor = color;
+                var origin = p.Pos;
+                var length = (float)cast.Range;
+                var width = (float)cast.Radius * 2;
+                battle.AddTelegraph(new Telegraph
+                {
+                    Shape = Telegraph.Shapes.Line, Pos = origin, Dir = dir, Length = length, Width = width, Duration = (float)Math.Max(0.08, cast.Windup),
+                    FromPlayer = true, Owner = p, Tint = color,
+                    Fire = () =>
+                    {
+                        var end = battle.LineHit(origin, dir, length, width, skill, mult, kind);
+                        F.Fx.Beam(origin + new Vector2(0, -26), end + new Vector2(0, -26), color, width);
+                        F.Fx.Burst(end + new Vector2(0, -26), color.Lightened(0.3f), 10, 180, ParticleKind.Spark, 3);
+                        F.Shake(3);
+                    },
+                });
+                break;
+            }
+            case "orbit":
+                p.CastAnim = 1;
+                p.CastColor = color;
+                // Casting again renews the circle rather than stacking a second one.
+                battle.Orbits.RemoveAll(o => o.Owner == p && o.Skill.Id == skill.Id);
+                battle.Orbits.Add(new Orbiter
+                {
+                    Owner = p, Skill = skill, Mult = mult, Kind = kind, Count = Math.Max(1, cast.Count), Radius = (float)cast.Radius,
+                    Duration = (float)Math.Max(1, cast.Duration), Color = color,
+                });
+                F.Fx.Ring(p.Pos + new Vector2(0, -22), (float)cast.Radius, color, 0.4f);
+                F.Fx.Leaves(p.Pos, color, 8);
+                break;
+            case "wave":
+            {
+                // A cone of water rolls out from the caster and throws everything in it back.
+                p.AttackAnim = 1;
+                p.AttackDir = dir;
+                var origin = p.Pos + new Vector2(0, -10);
+                var arc = (float)cast.Arc;
+                var range = (float)cast.Range;
+                battle.AddTelegraph(new Telegraph
+                {
+                    Shape = Telegraph.Shapes.Arc, Pos = p.Pos, Dir = dir, Radius = range, Arc = arc, Duration = (float)Math.Max(0.08, cast.Windup),
+                    FromPlayer = true, Owner = p, Tint = color,
+                    Fire = () =>
+                    {
+                        F.Fx.Slash(origin + new Vector2(0, -12), dir, arc, range, color, 0.35f, 2.2f);
+                        F.Fx.Slash(origin + new Vector2(0, -12), dir, arc * 0.7f, range * 0.7f, color.Lightened(0.3f), 0.3f, 1.4f);
+                        for (var i = 0; i < 10; i++)
+                            F.Fx.Burst(origin + dir.Rotated((GD.Randf() - 0.5f) * Mathf.DegToRad(arc)) * range * GD.Randf(), new Color(0.75f, 0.88f, 0.95f, 0.7f), 2, 120, ParticleKind.Mist, 6);
+                        battle.MeleeHit(origin, dir, arc, range, skill, mult, kind);
+                        F.Shake(4);
+                    },
+                });
+                break;
+            }
+            case "field":
+            {
+                p.CastAnim = 1;
+                p.CastColor = color;
+                var reach = Mathf.Min((float)cast.Range, (AimPoint - p.Pos).Length());
+                var at = p.Pos + dir * reach;
+                var radius = (float)cast.Radius;
+                battle.AddTelegraph(new Telegraph
+                {
+                    Shape = Telegraph.Shapes.Circle, Pos = at, Radius = radius, Duration = (float)Math.Max(0.1, cast.Windup), FromPlayer = true, Owner = p, Tint = color,
+                    Fire = () =>
+                    {
+                        battle.Fires.Add(new GroundFire
+                        {
+                            Pos = at, Radius = radius, Duration = (float)Math.Max(1, cast.Duration), Skill = skill, Mult = mult, Kind = kind, Color = color,
+                        });
+                        F.Fx.Ring(at, radius, color, 0.4f);
+                        F.Fx.Burst(at, new Color("#f5a04a"), 16, 200, ParticleKind.Ember, 3);
+                        SoundBoard.PlayAt("explode", at, -4);
+                    },
+                });
+                break;
+            }
+            case "wall":
+            {
+                // A palisade of stone in an arc in front of the caster.
+                p.CastAnim = 1;
+                p.CastColor = color;
+                var count = Math.Max(1, cast.Count);
+                var raised = 0;
+                for (var i = 0; i < count; i++)
+                {
+                    var angle = Mathf.DegToRad(24 * (i - (count - 1) / 2f));
+                    if (battle.RaisePillar(p.Pos + dir.Rotated(angle) * (float)cast.Range, (float)cast.Radius, (float)Math.Max(1, cast.Duration), skill, mult, kind)) raised++;
+                }
+                if (raised > 0)
+                {
+                    F.Shake(6);
+                    SoundBoard.PlayAt("slam", p.Pos + dir * (float)cast.Range, -2, 1.2f);
+                }
+                break;
+            }
         }
         return true;
     }
@@ -722,6 +826,21 @@ public sealed class PlayerController
                 break;
             case "heal":
                 SoundBoard.Play("heal");
+                break;
+            case "beam":
+                SoundBoard.Play("swing_big", -2, 1.4f);
+                SoundBoard.Play("cast", -4, 1.3f);
+                break;
+            case "orbit":
+                SoundBoard.Play("shield", -2, 1.3f);
+                break;
+            case "wave":
+                SoundBoard.Play("swing_big", -1, 0.7f);
+                break;
+            case "field":
+                SoundBoard.Play("fire", -2, 0.85f);
+                break;
+            case "wall":
                 break;
             default:
                 SoundBoard.Play("cast", -2);

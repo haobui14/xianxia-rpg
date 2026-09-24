@@ -54,20 +54,21 @@ public partial class JournalPanel : InkPanel
 
     private void HowToPlay()
     {
+        static string K(string action) => KeyMap.Label(action);
         Section(T("Vòng lặp", "The loop"));
-        Para(T("Mỗi tháng ngươi có một lượng cước lực (足) để đi lại trên bản đồ. Địa hình khó tốn nhiều hơn. Khi hết, bấm Qua tháng [N]: tu vi tăng, thế giới chuyển động (tu sĩ tu luyện, kết thù, tọa hóa), yêu thú di chuyển, kỳ ngộ mới xuất hiện.",
-            "Each month you have footwork (足) to spend moving on the map; rough terrain costs more. When it runs out, End month [N]: you cultivate, the world moves (NPCs cultivate, feud, die), beasts roam, new encounters appear."), 15);
-        Para(T("Bế quan [B] đốt nhiều tháng một lúc với tu vi ×1.6 — tốt nhất ở linh mạch (脈, 泉). Khi tu vi viên mãn, bấm Đột phá: một thử thách thật, có thể thất bại.",
-            "Seclusion [B] burns several months at ×1.6 cultivation — best at a spirit vein (脈, 泉). When full, Break through: a real trial you can fail."), 15);
-        Section(T("Bản đồ", "Map"));
-        Para(T("WASD / phím mũi tên: đi một bước · nhấp chuột: đi theo đường (xem trước chi phí) · E: tương tác · Tab: thần thức (10 linh lực, mở rộng tầm cảm nhận) · C/I/J: nhân vật / hành trang / sổ tay · con lăn: phóng to · Esc: hệ thống.",
-            "WASD / arrows: step · click: walk a path (cost previewed) · E: interact · Tab: sense pulse (10 Qi, widens your sense) · C/I/J: character / inventory / journal · wheel: zoom · Esc: system."), 15);
-        Para(T("Chấm đỏ là yêu thú (bước vào để đánh), vòng tròn là tu sĩ, 奇 vàng là kỳ ngộ. Chỉ thấy chúng trong tầm thần thức.",
-            "Red discs are beasts (step in to fight), rings are cultivators, gold 奇 are encounters. You only see them within your spiritual sense."), 15);
+        Para(T($"Mỗi tháng ngươi có một lượng cước lực (足). Mỗi ô đất bước qua tốn cước lực theo địa hình; hết cước lực thì tháng tự qua ngay trên đường: tu vi tăng, thế giới chuyển động (tu sĩ tu luyện, kết thù, tọa hóa), yêu thú di chuyển, kỳ ngộ mới xuất hiện. Muốn qua tháng sớm thì bấm {K("end_month")}.",
+            $"Each month you have footwork (足). Every tile you cross spends some, more on rough ground; when it runs out the month turns right there on the road: you cultivate, the world moves (cultivators train, feud, pass away), beasts roam, new encounters appear. {K("end_month")} ends the month early."), 15);
+        Para(T($"Bế quan ({K("seclude")}) đốt nhiều tháng một lúc với tu vi ×1.6 — tốt nhất ở linh mạch (脈, 泉). Khi tu vi viên mãn, mở Đột phá: một thử thách thật, có thể thất bại.",
+            $"Seclusion ({K("seclude")}) burns several months at ×1.6 cultivation — best at a spirit vein (脈, 泉). When your cultivation is full, Break through: a real trial you can fail."), 15);
+        Section(T("Thế giới", "The world"));
+        Para(KeysText.World(), 15);
+        Para(T($"Yêu thú lang thang quanh ổ; bầy hung hãn thấy ngươi sẽ đuổi theo (dấu «!»). Người tu hành đi lại trong vùng — tới gần bấm {K("interact")} để gặp. Cột sáng vàng 奇 là kỳ ngộ. Chỉ thấy chúng khi mây mù trong tầm thần thức đã tan. Trên bản đồ ({K("open_map")}), nhấp nơi đã thấy để tự đi tới; từ Trúc Cơ, đường qua sông sẽ bay.",
+            $"Beasts prowl around their lair; aggressive packs that spot you give chase (a “!”). Cultivators walk the region — go up to one and press {K("interact")} to meet them. Gold pillars of light (奇) are encounters. You only see things where the clouds of your sense have cleared. On the map ({K("open_map")}), click somewhere you've seen and you'll walk there; from Foundation, a way over the river is flown."), 15);
         Section(T("Chiến đấu", "Combat"));
-        Para(T("WASD di chuyển · chuột ngắm · chuột trái: võ kỹ · chuột phải / 1 / 2 / 3: linh kỹ · Space: lướt né (bất khả xâm phạm trong chớp mắt) · R: tuyệt kỹ khi sát ý đầy · Q: đan dược · Esc: tạm dừng / bỏ chạy.",
-            "WASD move · mouse aims · left click: martial art · right click / 1 / 2 / 3: spirit arts · Space: dash (brief invulnerability) · R: ultimate when killing intent is full · Q: pill · Esc: pause / flee."), 15);
+        Para(KeysText.Fight(), 15);
         Para(T("Ngũ Hành: đòn có hệ để lại ấn (金木水火土) trên địch. Đòn kế tiếp khắc ấn đó thì phá ấn (chảy máu, phá giáp, trói chân…); đòn được ấn sinh ra thì cộng hưởng ×1.5. Vùng đỏ là đòn sắp giáng — hãy lướt ra.",
             "Five Phases: elemental hits leave a mark (金木水火土). A hit that overcomes the mark shatters it (bleed, armor break, root…); a hit the mark generates is amplified ×1.5. Red zones are incoming attacks — dash out."), 15);
+        Section(T("Phím", "Keys"));
+        Para(T("Mọi phím đều đổi được: Cài đặt → Phím (hoặc Esc → Đổi phím).", "Every key can be changed: Settings → Keys (or Esc → Rebind keys)."), 14, Ink.InkMute);
     }
 }

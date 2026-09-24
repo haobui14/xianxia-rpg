@@ -313,10 +313,16 @@ namespace TuTien.Core.Content
 
     /// <summary>
     /// Enemy catalog entry. The web game only had IDs; archetype + element + stats are new.
-    /// Archetypes: charger, swarm, ranged, tank, caster, boss.
+    /// Archetypes: charger, swarm, ranged, tank, caster, boss, and brute (rears up and slams),
+    /// trickster (blinks away and casts), flier (swoops and drains), phantom (drifts through trees,
+    /// fades out), serpent (a lair boss that lunges, sweeps and spits).
     /// </summary>
     public sealed class EnemyDef
     {
+        /// <summary>Zones this creature also roams (added to their enemy pools; the exported areas stay untouched).</summary>
+        public List<string> Zones { get; set; } = new List<string>();
+        /// <summary>A lair beast: it always prowls alone, and a zone holds only one.</summary>
+        public bool Solitary { get; set; }
         public string Id { get; set; } = "";
         public string Name { get; set; } = "";
         public string NameEn { get; set; } = "";
@@ -366,7 +372,11 @@ namespace TuTien.Core.Content
 
     public sealed class CastDef
     {
-        /// <summary>melee_arc | projectile | aoe_circle | dash_strike | self_buff | heal | nova</summary>
+        /// <summary>
+        /// melee_arc | projectile | aoe_circle | dash_strike | self_buff | heal | nova, and beam (a piercing
+        /// line), orbit (blades or leaves circling the caster), wave (a cone that throws foes back), field
+        /// (burning ground that lingers) and wall (pillars that block movement and shots).
+        /// </summary>
         public string Shape { get; set; } = "projectile";
         public double Range { get; set; } = 400;
         public double Radius { get; set; } = 12;
@@ -389,6 +399,12 @@ namespace TuTien.Core.Content
         public double? HealPercent { get; set; }
         public double? DefenseBoost { get; set; }
         public double? Shield { get; set; }
+        /// <summary>Pixels a hit throws the target back.</summary>
+        public double? Knockback { get; set; }
+        /// <summary>Seconds a hit slows the target to half speed.</summary>
+        public double? Slow { get; set; }
+        /// <summary>Seconds a hit roots the target in place.</summary>
+        public double? Root { get; set; }
     }
 
     /// <summary>A region map authored as ASCII rows: one terrain char and one zone char per tile.</summary>

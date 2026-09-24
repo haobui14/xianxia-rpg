@@ -31,6 +31,11 @@ public sealed class Battle
     public readonly List<Fighter> Enemies = new();
     public readonly List<Projectile> Projectiles = new();
     public readonly List<Telegraph> Telegraphs = new();
+    // Arts that stay on the field for a while.
+    public readonly List<Orbiter> Orbits = new();
+    public readonly List<GroundFire> Fires = new();
+    public readonly List<Pillar> Pillars = new();
+    private readonly Dictionary<Pillar, Prop> _pillarProps = new();
     public readonly Dictionary<string, int> SkillUses = new();
     public readonly Dictionary<string, int> ItemsUsed = new();
     public Pcg32 Rng { get; }
@@ -89,6 +94,7 @@ public sealed class Battle
         foreach (var enemy in Enemies) EnemyAi.Update(this, enemy, dt);
         UpdateProjectiles(dt);
         UpdateTelegraphs(dt);
+        UpdateLasting(dt);
         CheckEnd(dt);
     }
 
@@ -139,6 +145,9 @@ public sealed class Battle
         };
         Telegraphs.Clear();
         Projectiles.Clear();
+        Orbits.Clear();
+        Fires.Clear();
+        foreach (var pillar in Pillars.ToList()) Crumble(pillar);
     }
 
     /// <summary>The first healing pill in the bag, and how many are left after this fight's use.</summary>
@@ -160,6 +169,12 @@ public sealed class Battle
     public void HitEnemy(Fighter target, SkillDef? skill, float mult, DamageKind kind, Element? element, Vector2 from)
     {
         if (!target.Active || !target.InBattle) return;
+        if (target.Faded)
+        {
+            // A phantom between forms: the blow passes through nothing.
+            Fx.Say(target.Pos + new Vector2(0, -Figures.HeightOf(target.Kind) * target.Scale - 8), T("Hư ảnh", "Insubstantial"), Ink.InkMute, 15, 0.5f);
+            return;
+        }
         // Every creature carries its own phase: with no applied mark it reacts to its own element (on a cooldown).
         var innate = target.Mark == null && target.InnateCd <= 0 ? target.Element : null;
         var mark = target.Mark ?? innate;
@@ -189,24 +204,33 @@ public sealed class Battle
             target.BleedTime = 3;
         }
         if (fx?.DefenseBreak != null) target.DefBreak = 4;
+        if (fx?.Slow is { } slow && target.Active) Status(target, ref target.Slow, (float)slow, "緩");
+        if (fx?.Root is { } root && target.Active) Status(target, ref target.Rooted, (float)root, "縛");
+        if (fx?.Knockback is { } knock && target.Active && target.Speed > 0)
+        {
+            // A wave throws them back (the heavy ones only stagger).
+            var away = (target.Pos - from).Normalized();
+            var push = (float)knock * (target.Heavy ? 0.3f : 1f);
+            target.Pos = target.Airborne ? F.Walls.Move(target.Pos, target.Radius, away * push, flying: true) : F.Walls.Move(target.Pos, target.Radius, away * push);
+        }
         Pc.Intent = Mathf.Min(100, Pc.Intent + (r.Crit ? 5 : 2.5f));
     }
 
-    /// <summary>An enemy's hit on the player (dodged during a dash; the shield soaks first).</summary>
-    public void HitPlayer(Fighter source, float mult, DamageKind kind, Element? element, SkillDef? skill)
+    /// <summary>An enemy's hit on the player (dodged during a dash; the shield soaks first). Returns the damage that got through.</summary>
+    public float HitPlayer(Fighter source, float mult, DamageKind kind, Element? element, SkillDef? skill)
     {
-        if (Over || !source.Active) return;
+        if (Over || !source.Active) return 0;
         var p = Player;
         if (p.Invuln > 0)
         {
             Fx.Say(p.Pos + new Vector2(0, -76), T("Né!", "Dodge!"), Ink.Jade, 18);
             SoundBoard.Play("dodge", -4);
-            return;
+            return 0;
         }
         if (source.Blind > 0 && Rng.Chance(0.5))
         {
             Fx.Say(p.Pos + new Vector2(0, -76), T("Trượt", "Miss"), Ink.InkMute, 16);
-            return;
+            return 0;
         }
         var attacker = source.Stats;
         var r = CombatRules.Compute(kind, mult, element, in attacker, p.Stats, null, Rng);
@@ -230,6 +254,9 @@ public sealed class Battle
             p.BleedTime = 3;
         }
         if (fx?.StunChance is { } stun && Rng.Chance(stun)) Status(p, ref p.Stun, 0.5f, "暈");
+        if (fx?.Slow is { } slow) Status(p, ref p.Slow, (float)slow, "緩");
+        if (fx?.Root is { } root) Status(p, ref p.Rooted, (float)root, "縛");
+        return amount;
     }
 
     private void Damage(Fighter target, int amount, bool crit, Vector2 from)
@@ -242,8 +269,8 @@ public sealed class Battle
         Fx.Ink(target.Pos + new Vector2(0, -head * 0.45f), target.Pos - from, crit ? 9 : 5);
         if (!target.IsPlayer && target.Speed > 0 && target.Stun <= 0)
         {
-            var knock = target.Archetype is "tank" or "boss" ? 5f : 16f;
-            target.Pos = F.Walls.Move(target.Pos, target.Radius, (target.Pos - from).Normalized() * knock);
+            var knock = (target.Pos - from).Normalized() * (target.Heavy ? 5f : 16f);
+            target.Pos = target.Airborne ? F.Walls.Move(target.Pos, target.Radius, knock, flying: true) : F.Walls.Move(target.Pos, target.Radius, knock);
         }
         if (crit) F.Hitstop(0.045f);
         CheckDown(target);
@@ -437,7 +464,7 @@ public sealed class Battle
             }
             if (proj.FromPlayer)
             {
-                var hit = Enemies.FirstOrDefault(x => x.Active && x.InBattle && x.Pos.DistanceTo(ground) <= x.Radius + proj.Radius);
+                var hit = Enemies.FirstOrDefault(x => x.Active && x.InBattle && !x.Faded && x.Pos.DistanceTo(ground) <= x.Radius + proj.Radius);
                 if (hit == null) continue;
                 HitEnemy(hit, proj.Skill, proj.Mult, proj.Kind, proj.Element, proj.Pos - proj.Vel.Normalized() * 12);
                 if (proj.Burst > 0) Explode(proj, hit);
@@ -499,5 +526,92 @@ public sealed class Battle
     {
         foreach (var enemy in Enemies.Where(x => x.Active && x.InBattle && FieldMath.InArc(origin, dir, arc, range, x.Pos, x.Radius)).ToList())
             HitEnemy(enemy, skill, mult, kind, skill.Element, origin);
+    }
+
+    /// <summary>A beam: everyone along the line, however many (walls stop it where they stand).</summary>
+    public Vector2 LineHit(Vector2 origin, Vector2 dir, float length, float width, SkillDef skill, float mult, DamageKind kind)
+    {
+        // The light runs until something solid stops it.
+        var end = origin;
+        for (var d = 0f; d <= length; d += 8)
+        {
+            var at = origin + dir * d;
+            if (F.Walls.BlocksShot(at, 4)) break;
+            end = at;
+        }
+        foreach (var enemy in Enemies.Where(x => x.Active && x.InBattle && FieldMath.SegmentDistance(x.Pos, origin, end) <= width / 2 + x.Radius).ToList())
+            HitEnemy(enemy, skill, mult, kind, skill.Element, origin);
+        return end;
+    }
+
+    // ================================================================ arts that stay a while
+
+    /// <summary>Raise a stone pillar where there's room; anything standing there is tossed aside (and struck).</summary>
+    public bool RaisePillar(Vector2 at, float radius, float duration, SkillDef skill, float mult, DamageKind kind)
+    {
+        var cell = F.Walls.CellOf(at);
+        if (F.Walls.SolidCell(cell.X, cell.Y) || Pillars.Any(p => p.Pos.DistanceTo(at) < radius * 2) || at.DistanceTo(Player.Pos) < radius + Player.Radius + 4)
+            return false;
+        foreach (var enemy in Enemies.Where(x => x.Active && x.InBattle && x.Pos.DistanceTo(at) < radius + x.Radius).ToList())
+        {
+            HitEnemy(enemy, skill, mult, kind, skill.Element, at);
+            var away = (enemy.Pos - at).LengthSquared() > 1 ? (enemy.Pos - at).Normalized() : Vector2.Right;
+            enemy.Pos = at + away * (radius + enemy.Radius + 2);
+        }
+        var pillar = new Pillar { Pos = at, Radius = radius, Duration = duration, Obstacle = Obstacle.Circle(at, radius) };
+        F.Walls.Add(pillar.Obstacle);
+        Pillars.Add(pillar);
+        _pillarProps[pillar] = F.AddProp(at, (c, _) => PropArt.StonePillar(c, pillar), animated: true);
+        Fx.Dust(at, 6);
+        return true;
+    }
+
+    private void Crumble(Pillar pillar)
+    {
+        F.Walls.Remove(pillar.Obstacle);
+        if (_pillarProps.Remove(pillar, out var prop)) prop.QueueFree();
+        Pillars.Remove(pillar);
+        Fx.Dust(pillar.Pos, 5);
+    }
+
+    private void UpdateLasting(float dt)
+    {
+        foreach (var o in Orbits)
+        {
+            o.Time += dt;
+            o.Angle += dt * 4.4f;
+            foreach (var key in o.Cooldowns.Keys.ToList()) o.Cooldowns[key] -= dt;
+            for (var i = 0; i < o.Count; i++)
+            {
+                var at = o.At(i);
+                var ground = at + new Vector2(0, 22);
+                foreach (var enemy in Enemies.Where(x => x.Active && x.InBattle && x.Pos.DistanceTo(ground) <= x.Radius + 12).ToList())
+                {
+                    if (o.Cooldowns.TryGetValue(enemy, out var cd) && cd > 0) continue;
+                    o.Cooldowns[enemy] = 0.5f;
+                    HitEnemy(enemy, o.Skill, o.Mult, o.Kind, o.Skill.Element, at);
+                    Fx.Leaves(at, o.Color, 2);
+                }
+            }
+        }
+        Orbits.RemoveAll(o => o.Time >= o.Duration);
+
+        foreach (var g in Fires)
+        {
+            g.Time += dt;
+            g.Tick -= dt;
+            if (GD.Randf() < dt * 14) Fx.Burst(g.Pos + Vector2.Right.Rotated(GD.Randf() * Mathf.Tau) * GD.Randf() * g.Radius, new Color("#f08a3a"), 1, 50, ParticleKind.Ember, 2.5f);
+            if (g.Tick > 0) continue;
+            g.Tick = 0.5f;
+            foreach (var enemy in Enemies.Where(x => x.Active && x.InBattle && x.Pos.DistanceTo(g.Pos) <= g.Radius + x.Radius * 0.5f).ToList())
+                HitEnemy(enemy, g.Skill, g.Mult, g.Kind, g.Skill.Element, g.Pos);
+        }
+        Fires.RemoveAll(g => g.Time >= g.Duration);
+
+        foreach (var pillar in Pillars.ToList())
+        {
+            pillar.Time += dt;
+            if (pillar.Time >= pillar.Duration) Crumble(pillar);
+        }
     }
 }

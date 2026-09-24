@@ -37,7 +37,7 @@ public sealed class Demon
 /// hunt you. A demon's touch costs 4; cutting one down or dashing through it is worth 1.
 /// Performance = score / target, compared against the preparation-dependent threshold.
 /// </summary>
-public partial class TrialScreen : FieldScreen
+public partial class TrialScreen : TrialBase
 {
     public const float Duration = 25f;
     public const float ScoreGoal = 60f;
@@ -48,25 +48,19 @@ public partial class TrialScreen : FieldScreen
     public readonly List<Demon> Demons = new();
     public float Time;
     public float Score;
-    public float Threshold { get; private set; }
 
     private HashSet<Element> _root = null!;
     private int _realm;
     private float _moteTimer;
     private float _demonTimer = 2.5f;
     private float _calm = 1.8f;
-    private bool _ended;
-    private float _endTimer;
-    private double _performance;
 
-    public override bool FreeStrikes => true;
-    protected override string MusicMood => "trial";
     public override string PlaceName => T($"Đột phá: {Names.Display(E.Player.Realm + 1, Locale.Vi)}", $"Breakthrough: {Names.Display(E.Player.Realm + 1, Locale.En)}");
     public override string PlaceSub => T("Thu linh khí, tránh tâm ma", "Gather qi, avoid heart demons");
-    public override string FleeLabel => T("Dừng đột phá (tính là thất bại)", "Abort (counts as a failure)");
-    public override string FleeNote => T("Bỏ dở giữa chừng sẽ khiến linh khí phản phệ.", "Stopping midway makes the qi lash back.");
+    public override string HintText() => T($"{KeyMap.MoveKeys} di chuyển · {KeyName("dash")} lướt xuyên tâm ma · chuột trái chém · Esc tạm dừng",
+        $"{KeyMap.MoveKeys} move · {KeyName("dash")} dash through demons · left click cuts · Esc pause");
 
-    public double Performance => Mathf.Clamp(Score / ScoreGoal, 0, 1);
+    public override double Performance => Mathf.Clamp(Score / ScoreGoal, 0, 1);
     public float TimeLeft => Mathf.Max(0, Duration - Time);
     public bool IsRoot(Element e) => _root.Contains(e);
     private Rect2 Arena => new(Cell * 1.3f, Cell * 1.6f, (W - 2.6f) * Cell, (H - 2.9f) * Cell);
@@ -78,7 +72,7 @@ public partial class TrialScreen : FieldScreen
         var p = E.Player;
         _root = new HashSet<Element>(p.Root.Elements);
         _realm = (int)p.Realm;
-        Threshold = (float)Cultivation.MajorBreakthroughThreshold(p);
+        ReadPreparation();
 
         Walls = new CollisionWorld(W, H, Cell);
         var grid = new int[W, H];
@@ -135,12 +129,7 @@ public partial class TrialScreen : FieldScreen
     protected override void UpdateField(float dt)
     {
         foreach (var m in Motes) m.Age += dt;
-        if (_ended)
-        {
-            _endTimer -= dt;
-            if (_endTimer <= 0) Finish();
-            return;
-        }
+        if (UpdateVerdict(dt)) return;
         if (_calm > 0)
         {
             // Settle into meditation before the storm of qi begins.
@@ -269,51 +258,13 @@ public partial class TrialScreen : FieldScreen
         foreach (var d in Demons.Where(d => !d.Dead && d.Pos.DistanceTo(pos) <= radius + 16).ToList()) Cut(d);
     }
 
-    public override void Flee()
+    protected override void OnEnded(bool passed)
     {
-        SetPaused(false);
-        EndTrial(0);
-    }
-
-    private void EndTrial(double performance)
-    {
-        if (_ended) return;
-        _ended = true;
-        _performance = performance;
         Motes.Clear();
         Demons.Clear();
-        var passed = performance >= Threshold;
-        SoundBoard.Play(passed ? "breakthrough" : "defeat");
-        SoundBoard.Music("");
-        Hud.Banner(passed ? T("Linh khí quy nguyên!", "The qi settles!") : T("Linh khí tán loạn…", "The qi scatters…"),
-            T($"Thành tích {performance * 100:0}% · cần {Threshold * 100:0}%", $"Performance {performance * 100:0}% · needed {Threshold * 100:0}%"),
-            passed ? Ink.JadeDeep : Ink.CinnabarDeep, 2.4f);
-        if (passed)
-        {
-            Fx.Ring(PlayerBody.Pos + V(0, -30), 240, Ink.Gold, 1.2f);
-            Fx.Rise(PlayerBody.Pos, Ink.Gold, 30, 60);
-        }
-        PlayerBody.Meditating = true;
-        _endTimer = 2.4f;
     }
 
-    private void Finish()
-    {
-        _ended = false;
-        _endTimer = float.MaxValue;
-        var performance = _performance;
-        var events = E.CompleteBreakthrough(performance);
-        Game.Instance.SaveGame();
-        FadeThrough(() =>
-        {
-            var world = Main.Instance.ShowWorld();
-            Game.Instance.Notify(events);
-            world.OpenPanel(new BreakthroughResultPanel(events, performance));
-        }, 0.4f);
-    }
-
-    /// <summary>The trial's gauge, drawn by the HUD in place of the skill bar.</summary>
-    public void DrawHud(FieldHud hud, Vector2 size)
+    public override void DrawHud(FieldHud hud, Vector2 size)
     {
         var w = 620f;
         var pos = new Vector2(size.X / 2 - w / 2, size.Y - 112);

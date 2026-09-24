@@ -15,6 +15,7 @@ public static class Autopilot
         var c = Controls.None;
         var p = pc.Body;
         c.Aim = p.Facing;
+        if (pc.F is FoundationTrial storm) return Storm(pc, storm);
         if (pc.F is TrialScreen trial) return Trial(pc, trial);
         var battle = pc.F.Battle;
         if (battle == null) return c;
@@ -56,6 +57,74 @@ public static class Autopilot
             c.Aim = (demon.Pos - p.Pos).Normalized();
             c.Attack = true;
             if (demon.Pos.DistanceTo(p.Pos) < 64) c.Dash = pc.Stamina >= PlayerController.DashCost;
+        }
+        return c;
+    }
+
+    /// <summary>
+    /// The meridian storm: first get off a meridian a surge is coming down, then stand in a shockwave's gap
+    /// (or dash through it), cut turbid qi in reach, and otherwise go meet the best qi on its way in.
+    /// </summary>
+    private static Controls Storm(PlayerController pc, FoundationTrial t)
+    {
+        var c = Controls.None;
+        var p = pc.Body;
+        c.Aim = p.Facing;
+        var pos = p.Pos;
+        var rel = pos - t.Center;
+        var dist = rel.Length();
+        var canDash = pc.Stamina >= PlayerController.DashCost && pc.DashCd <= 0;
+
+        foreach (var s in t.Surges.Where(s => !s.Fired).OrderByDescending(s => s.Progress))
+        {
+            if (!t.OnChannel(s.Channel, pos, p.Radius + 52)) continue;
+            var dir = FoundationTrial.Dir(s.Channel);
+            var side = new Vector2(-dir.Y, dir.X);
+            c.Move = rel.Dot(side) >= 0 ? side : -side;
+            c.Dash = s.Duration - s.Time < 0.3f && canDash;
+            return c;
+        }
+
+        var wave = t.Waves.Where(w => !w.Resolved).OrderBy(w => w.Radius).FirstOrDefault();
+        if (wave != null && (!wave.Emitted || dist - wave.Radius < 150))
+        {
+            var angle = Mathf.Atan2(rel.Y, rel.X);
+            if (!wave.InGap(angle))
+            {
+                var gap = wave.NearestGap(angle);
+                var turn = Mathf.Wrap(gap - angle, -Mathf.Pi, Mathf.Pi);
+                var tangent = new Vector2(-rel.Y, rel.X).Normalized() * Mathf.Sign(turn);
+                c.Move = tangent;
+                if (wave.Emitted && dist - wave.Radius < 34 && canDash)
+                {
+                    c.Dash = true;
+                    c.Move = -rel.Normalized();
+                }
+                return c;
+            }
+            if (wave.Emitted) return c;
+        }
+
+        var turbid = t.Drops.Where(d => d.Turbid).OrderBy(d => d.Pos.DistanceSquaredTo(pos)).FirstOrDefault();
+        if (turbid != null && turbid.Pos.DistanceTo(pos) < 105)
+        {
+            c.Aim = (turbid.Pos - pos).Normalized();
+            c.Attack = true;
+        }
+
+        // Where a drop will be by the time we get there, and how much it's worth the walk.
+        var speed = Mathf.Max(120, p.Speed);
+        Vector2 Meet(QiDrop d)
+        {
+            var eta = d.Pos.DistanceTo(pos) / speed;
+            return t.At(d.Channel, Mathf.Max(FoundationTrial.Sink + 30, d.Dist - d.Speed * eta));
+        }
+        var best = t.Drops.Where(d => !d.Turbid && d.Dist > FoundationTrial.Sink + 40)
+            .OrderBy(d => Meet(d).DistanceTo(pos) / (d.Essence ? 3f : 1f)).FirstOrDefault();
+        if (best != null)
+        {
+            var to = Meet(best) - pos;
+            if (to.Length() > 6) c.Move = to.Normalized();
         }
         return c;
     }

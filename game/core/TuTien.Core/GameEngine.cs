@@ -860,14 +860,7 @@ namespace TuTien.Core
         }
 
         /// <summary>The first spirit art comes from the spirit root's element.</summary>
-        public static string StarterArt(Element element) => element switch
-        {
-            Element.Kim => "kim_kiem_khi",
-            Element.Moc => "thanh_moc_cham",
-            Element.Thuy => "thuy_nhan",
-            Element.Hoa => "hoa_cau_thuat",
-            _ => "tho_thu",
-        };
+        public static string StarterArt(Element element) => Skills.StarterArt(element);
 
         // ================================================================ secret realms
 

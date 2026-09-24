@@ -7,7 +7,7 @@ namespace TuTien.Core
     /// <summary>Versioned save files. Bump <see cref="CurrentVersion"/> and add a migration step for every format change.</summary>
     public static class SaveCodec
     {
-        public const int CurrentVersion = 1;
+        public const int CurrentVersion = 2;
 
         public static string Serialize(GameState state, bool indented = false)
         {
@@ -27,8 +27,10 @@ namespace TuTien.Core
 
         private static void Migrate(GameState state)
         {
-            // v1 is the first format. Future steps go here: if (state.Version < 2) { …; state.Version = 2; }
             while (state.Player.SkillSlots.Count < 4) state.Player.SkillSlots.Add("");
+            // v2: Trúc Cơ carries a foundation grade. Whoever got there before it existed laid a plain one.
+            if (state.Version < 2 && state.Player.Realm >= Realm.TrucCo && state.Player.Foundation == FoundationGrade.None)
+                state.Player.Foundation = FoundationGrade.Ha;
             state.Version = CurrentVersion;
         }
     }

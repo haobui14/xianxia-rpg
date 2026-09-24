@@ -160,6 +160,29 @@ namespace TuTien.Core.Rules
 
     public static class Skills
     {
+        /// <summary>Luyện Khí stage at which the root's element opens its second art (lĩnh ngộ).</summary>
+        public const int SecondArtStage = 5;
+
+        /// <summary>The first spirit art, awakened by the root's element at Luyện Khí.</summary>
+        public static string StarterArt(Element element) => element switch
+        {
+            Element.Kim => "kim_kiem_khi",
+            Element.Moc => "thanh_moc_cham",
+            Element.Thuy => "thuy_nhan",
+            Element.Hoa => "hoa_cau_thuat",
+            _ => "tho_thu",
+        };
+
+        /// <summary>The second: comprehended at Luyện Khí 5, or learned from a manual by anyone.</summary>
+        public static string SecondArt(Element element) => element switch
+        {
+            Element.Kim => "kim_quang_tram",
+            Element.Moc => "van_diep_ho_than",
+            Element.Thuy => "thuy_long_ba",
+            Element.Hoa => "liet_diem_dia",
+            _ => "tho_lao_thuat",
+        };
+
         public static bool Knows(PlayerState p, string skillId) => p.Skills.Any(s => s.Id == skillId);
 
         /// <summary>Learn an art and slot it into the first free spirit-art slot.</summary>

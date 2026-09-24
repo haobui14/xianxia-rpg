@@ -167,6 +167,31 @@ public class WorldTickTests
     }
 
     [Fact]
+    public void A_lair_beast_prowls_alone_and_only_once_per_zone()
+    {
+        bool Lair(string id) => C.Enemy(id)?.Solitary == true;
+        var seen = false;
+        for (ulong seed = 1; seed <= 30; seed++)
+        {
+            var e = TestContent.NewEngine(seed);
+            for (var month = 0; month < 6; month++)
+            {
+                foreach (var pack in e.State.World.Beasts.Where(b => b.EnemyIds.Any(Lair)))
+                {
+                    seen = true;
+                    Assert.Single(pack.EnemyIds);
+                }
+                foreach (var zone in e.State.World.Beasts.GroupBy(b => b.Zone))
+                    Assert.True(zone.Count(b => b.EnemyIds.Any(Lair)) <= 1, $"seed {seed}: two lairs in {zone.Key}");
+                // Clear the zone's packs now and then, so it restocks.
+                if (month % 2 == 1) e.State.World.Beasts.RemoveAll(b => b.Zone == "ancient_tree_hollow" && !b.EnemyIds.Any(Lair));
+                e.EndMonth();
+            }
+        }
+        Assert.True(seen, "the python should turn up in some world");
+    }
+
+    [Fact]
     public void Beasts_and_adventures_spawn_in_wild_zones_only()
     {
         var e = TestContent.NewEngine();

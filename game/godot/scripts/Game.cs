@@ -5,6 +5,7 @@ using TuTien.Core;
 using TuTien.Core.Content;
 using TuTien.Core.State;
 using TuTienLuc.Audio;
+using TuTienLuc.Ui;
 using FileAccess = Godot.FileAccess;
 
 namespace TuTienLuc;
@@ -49,6 +50,7 @@ public partial class Game : Node
         GD.Print($"[content] loaded: {Content.Regions.Count} regions, {Content.Enemies.Count} enemies, {Content.Events.Count} events, {issues.Count} known content gaps");
         RegisterInput();
         LoadSettings();
+        KeyMap.Apply();
         AddChild(new SoundBoard());
         ApplyDisplay();
         // Closing the window goes through Quit too, so the sound stops before the engine does.
@@ -187,10 +189,15 @@ public partial class Game : Node
         SfxVolume = Volume("sfx_volume", SfxVolume);
         if (data.TryGetValue("fullscreen", out var fs)) Fullscreen = fs.AsBool();
         if (data.TryGetValue("screen_shake", out var shake)) ScreenShake = shake.AsBool();
+        if (data.TryGetValue("keys", out var keys) && keys.VariantType == Variant.Type.Dictionary) KeyMap.Load(keys.AsGodotDictionary());
     }
+
+    /// <summary>Off while the smoke test runs, so testing never rewrites the player's own settings.</summary>
+    public bool PersistSettings { get; set; } = true;
 
     public void SaveSettings()
     {
+        if (!PersistSettings) return;
         using var f = FileAccess.Open(SettingsPath, FileAccess.ModeFlags.Write);
         f?.StoreString(Json.Stringify(new Godot.Collections.Dictionary
         {
@@ -200,6 +207,7 @@ public partial class Game : Node
             ["sfx_volume"] = SfxVolume,
             ["fullscreen"] = Fullscreen,
             ["screen_shake"] = ScreenShake,
+            ["keys"] = KeyMap.Save(),
         }));
     }
 
@@ -214,13 +222,12 @@ public partial class Game : Node
 
     // ------------------------------------------------------------------ input (design §8)
 
+    /// <summary>
+    /// The controller layout and the mouse-free axes. Keyboard keys come from <see cref="KeyMap"/> (the
+    /// player's own layout), applied once the settings are loaded.
+    /// </summary>
     private static void RegisterInput()
     {
-        void Keys(string action, params Key[] keys)
-        {
-            if (!InputMap.HasAction(action)) InputMap.AddAction(action);
-            foreach (var k in keys) InputMap.ActionAddEvent(action, new InputEventKey { PhysicalKeycode = k });
-        }
         void Pad(string action, JoyButton button)
         {
             if (!InputMap.HasAction(action)) InputMap.AddAction(action);
@@ -232,10 +239,6 @@ public partial class Game : Node
             InputMap.ActionAddEvent(action, new InputEventJoypadMotion { Axis = axis, AxisValue = value });
         }
 
-        Keys("move_up", Key.W, Key.Up);
-        Keys("move_down", Key.S, Key.Down);
-        Keys("move_left", Key.A, Key.Left);
-        Keys("move_right", Key.D, Key.Right);
         Axis("move_up", JoyAxis.LeftY, -1);
         Axis("move_down", JoyAxis.LeftY, 1);
         Axis("move_left", JoyAxis.LeftX, -1);
@@ -247,38 +250,21 @@ public partial class Game : Node
 
         // Exploring and fighting share one field, so one button may mean different things in and out
         // of a fight (Y talks to people, or looses the ultimate).
-        Keys("interact", Key.E);
         Pad("interact", JoyButton.Y);
-        Keys("end_month", Key.N);
         Pad("end_month", JoyButton.LeftStick);
-        Keys("pulse", Key.Tab);
         Pad("pulse", JoyButton.RightStick);
-        Keys("open_map", Key.M);
-        Keys("fly", Key.V);
         Pad("open_map", JoyButton.Back);
-        Keys("seclude", Key.B);
-        Keys("open_character", Key.C);
-        Keys("open_inventory", Key.I);
-        Keys("open_journal", Key.J);
-        Keys("pause", Key.Escape);
         Pad("pause", JoyButton.Start);
-        Keys("debug", Key.F9);
 
         // The mouse buttons are read from unhandled input by the field (so HUD clicks never swing),
         // which is why "attack" and "skill_1" have only pad bindings here.
         Axis("attack", JoyAxis.TriggerRight, 1);
         Pad("skill_1", JoyButton.RightShoulder);
-        Keys("skill_2", Key.Key1);
         Pad("skill_2", JoyButton.LeftShoulder);
-        Keys("skill_3", Key.Key2);
         Axis("skill_3", JoyAxis.TriggerLeft, 1);
-        Keys("skill_4", Key.Key3);
         Pad("skill_4", JoyButton.X);
-        Keys("dash", Key.Space, Key.Shift);
         Pad("dash", JoyButton.A);
-        Keys("ultimate", Key.R);
         Pad("ultimate", JoyButton.Y);
-        Keys("pill", Key.Q);
         Pad("pill", JoyButton.B);
         Axis("aim_left", JoyAxis.RightX, -1);
         Axis("aim_right", JoyAxis.RightX, 1);

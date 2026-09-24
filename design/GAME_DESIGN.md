@@ -243,7 +243,7 @@ A full run from mortal to peak Nguyên Anh targets **~360 in-game months (~30 ye
 | **Tâm pháp** — heart methods (passive) | — | — | Existing `techniques`: element passive scaled by technique level | — |
 | **Thần thông** — divine powers | later | | From Nguyên Anh breakthroughs | Charges |
 
-**Skill cast shapes.** We add one field to existing `Skill` data: `cast: { shape, range, radius, speed, windup, recovery }`. Each shape is `melee_arc`, `projectile`, `aoe_circle`, `dash_strike`, `beam`, `self_buff` or `summon`. Skills the AI generated in old saves get a default shape from `type × element`:
+**Skill cast shapes.** We add one field to existing `Skill` data: `cast: { shape, range, radius, speed, windup, recovery }`. Each shape is `melee_arc`, `projectile`, `aoe_circle`, `dash_strike`, `beam`, `self_buff` or `summon`. The slice adds four more for the second-tier arts: `orbit` (blades that circle you), `wave` (a cone that rolls outward), `field` (burning ground that lasts) and `wall` (pillars that block bodies and shots). Skills the AI generated in old saves get a default shape from `type × element`:
 
 | | Kim 金 | Mộc 木 | Thủy 水 | Hỏa 火 | Thổ 土 |
 |---|---|---|---|---|---|
@@ -251,7 +251,15 @@ A full run from mortal to peak Nguyên Anh targets **~360 in-game months (~30 ye
 | defense | metal skin (self buff) | vine barrier | water shield | flame aura | earth wall (summon) |
 | support | edge sharpening (buff) | regeneration (heal over time) | cleanse | battle fury | fortify |
 
-- The existing `effects` map directly: `stun_chance`, `bleed_damage`, `defense_break`, `heal_percent` and `defense_boost`. Cooldowns convert at 1 old turn = 2.5 s.
+- The existing `effects` map directly: `stun_chance`, `bleed_damage`, `defense_break`, `heal_percent` and `defense_boost`. The slice adds `knockback`, `slow` and `root`. Cooldowns convert at 1 old turn = 2.5 s.
+- **Second-tier arts (in the slice):** at Luyện Khí 5 your root comprehends a second art, one per element:
+  - Kim: *Kim Quang Trảm*, a beam.
+  - Mộc: *Vạn Diệp Hộ Thân*, an orbit of leaves.
+  - Thủy: *Thủy Long Ba*, a wave with knockback and slow.
+  - Hỏa: *Liệt Diễm Địa*, burning ground.
+  - Thổ: *Thổ Lao Thuật*, a palisade of stone pillars.
+
+  The village stall sells all five as manuals, so off-root builds can buy them.
 - **Stats in real time:**
   - **STR** scales martial art and body-art damage.
   - **AGI** scales move speed (+1%/pt), attack speed and dash recovery, and adds Cước lực.
@@ -271,6 +279,13 @@ A full run from mortal to peak Nguyên Anh targets **~360 in-game months (~30 ye
 | **Thiết giáp** (tank) | Slow, armored, long-telegraph AoE slams | bark_golem, magma_golem, coral_golem, static_golem |
 | **Pháp tu** (cultivator) | Uses *the same Skill data as the player*, dashes, has a Qi pool | bandit_leader, rival disciples, ghost_cultivator |
 | **Thủ lĩnh** (boss) | Scripted phases | ancient_tree_spirit, flame_specter_patriarch, … |
+| **Cự thú** (brute) | Lumbers in, rears up and crashes down on a wide arc in front, stunning | black_bear |
+| **Huyễn hồ** (trickster) | Keeps its distance and throws fox-fire; close in and it blinks away and throws again | fire_fox |
+| **Phi cầm** (flier) | Circles overhead, then swoops along a marked line and drinks what it takes | blood_bat |
+| **U linh** (phantom) | Turns to mist (untouchable), forms again nearby and chills the ground (slow) | wandering_wraith |
+| **Mãng xà** (serpent, lair beast) | Lunges down a line, sweeps its tail across everything but its front, rains venom, enrages at half health; prowls alone, one per zone, with a boss bar | azure_python |
+
+The last five live in the Ancient Tree Hollow (Cổ Thụ Động) in the slice. An enemy definition can name extra `zones` to join those zones' spawn pools, and `solitary: true` makes it a lair beast.
 
 - **Waves:** all enemies in a wave spawn, not just `enemies[0]`.
 - **Outcomes:**
@@ -331,10 +346,22 @@ exp/month = base(realm) × root_grade × technique × sect × (1 + qi_density + 
 | Breakthrough | Set piece | Result quality |
 |---|---|---|
 | Phàm Nhân → Luyện Khí: *Dẫn khí nhập thể* | Tutorial: guide jade qi motes into the dantian and avoid turbid ones | Teaches movement & aiming |
-| Luyện Khí 9 → Trúc Cơ: *Trúc cơ* | 60 s **meridian storm**: absorb pure qi, dodge impurities | Foundation grade (Hạ / Trung / Thượng / Thiên) → permanent stat multiplier |
+| Luyện Khí 9 → Trúc Cơ: *Trúc cơ* *(playable in the slice)* | 60 s **meridian storm** inside the body: catch pure qi flowing in along the eight meridians, cut or dodge turbid qi, step off a meridian when a surge is announced down it, and find the gaps in the foundation's shockwaves | Foundation grade (Hạ / Trung / Thượng / Thiên) → permanent stat multiplier |
 | Trúc Cơ 9 → Kết Đan: *Ngưng đan* | **Lôi kiếp**: survive telegraphed lightning; **strike count scales with negative karma** | Golden Core grade (9 tiers) |
 | Kết Đan 9 → Nguyên Anh: *Tâm ma kiếp* | Fight your **heart demon** (a shadow using *your* kit), then a **dialogue trial written by Linh Thức from your karma ledger** | Dao-heart stability; failure → qi deviation |
 | Nguyên Anh 9 → *Phi thăng* (ending) | Great tribulation: lightning + heart demon + a nemesis from your ledger | Win screen; the sandbox continues |
+
+**Foundation grades (as built):** the storm scores the qi you catch (your root's essence counts more), minus hits taken, against a goal of 150.
+
+| Grade | Performance | Gains | Power |
+|---|---|---|---|
+| Hạ phẩm (lower) | passing (the preparation threshold) | ×1 of the realm change's gains | +0% |
+| Trung phẩm (middle) | ≥ 62% | ×1.25 | +5% |
+| Thượng phẩm (upper) | ≥ 80% | ×1.5 | +10% |
+| Thiên phẩm (heaven) | ≥ 95% | ×2 | +20% |
+
+- The power bonus is a permanent multiplier on physical and spirit power.
+- The grade is saved (save schema v2 migrates older saves) and shown on the character sheet.
 
 ### 7.6 Qi + Body: *Khí–Thể kiêm tu* (our pillar)
 
@@ -490,8 +517,13 @@ The existing `cultivation_path: "qi" | "body" | "dual"`, the body realms (Phàm 
 | Menus | C character · I inventory · J journal (chronicle + arcs) · K arts · O sect · L relations · Esc system | Start/Select + shoulder tabs |
 
 - **Main screen:** the world fills the screen, with a thin HUD: the cultivator card (realm, HP, Qi, cultivation; stamina and killing intent appear in a fight), the date card with the footwork bar ("day N of the month"), a minimap with icon buttons, the skill bar, and a log with the latest rumor. Month turns and fight results appear as cards that fade by themselves, so walking never stops. Panels open over the paused world. The old narrative card lives on as the **Journal** (the Linh Thức chronicle).
-- **Keys are fully remappable** (Godot `InputMap`). There's pause everywhere, and text size and colorblind-safe telegraph options.
-- **Settings** (from the title screen, or Esc → Settings): master, music and effects volume, fullscreen, screen shake, and language. They're saved to `user://settings.json`. Remapping, text size and telegraph colors come next.
+- **Keys are fully remappable** (Godot `InputMap`), and it is built in the slice: Settings → Keys, or Esc → Rebind keys.
+  - Click an action and press the new key. A key that's taken swaps places with it.
+  - Esc cancels a pending rebind. So the game can't be locked out, the arrow keys always walk, Shift always dashes, and Esc and F9 can't be rebound.
+  - The HUD, prompts and how-to-play text always name the chosen key.
+
+  There's pause everywhere. Text size and colorblind-safe telegraph options come next.
+- **Settings** (from the title screen, or Esc → Settings): master, music and effects volume, fullscreen, screen shake, language and keys. They're saved to `user://settings.json`.
 - **Sound, all made in code:**
   - About 40 effects, each built from a recipe: blade swishes, hits and crits, a dash, element casts, a shield, pills, coins, herbs, a portal, and the month gong. Sounds in the world are positional, so a fight to the left is heard on the left.
   - Music is generated at start-up in the Chinese pentatonic modes (宮 Gong, 商 Shang, 羽 Yu), in five moods that crossfade as the situation changes:
@@ -582,7 +614,11 @@ xianxia-rpg/
 
 - **Tests:**
   - xUnit on the core: formulas, month tick and seeded golden runs, save migrations.
-  - Godot headless smoke runs in CI: import and build, then play the slice end to end. Part of the run uses real key and mouse events sent through Godot's input pipeline (walk, interact, open the map, strike, end the month, take to the sword and cross the river). It walks the map, fights, passes a breakthrough, clears a secret-realm floor, and checks that every sound and piece of music renders cleanly and loops without a click.
+  - Godot headless smoke runs in CI: import and build, then play the slice end to end.
+    - Part of the run uses real key and mouse events sent through Godot's input pipeline: walk, interact, open the map, strike, end the month, take to the sword and cross the river, and rebind Interact by clicking in the keys panel and pressing a new key.
+    - It walks the map, fights, and passes both breakthroughs. The Trúc Cơ meridian storm is played by an autopilot and must lay a foundation.
+    - It clears a secret-realm floor, and fights each of the five new creatures with a different second-tier art.
+    - It checks that every sound and piece of music renders cleanly and loops without a click.
 - **Performance budgets:** 60 fps on integrated GPUs, ≤200 live projectiles, NPC tick under 50 ms for 200 NPCs, cold start under 3 s.
 
 ---
@@ -613,9 +649,9 @@ Port each rule module **with tests that pin the TypeScript behavior** (golden va
 | Milestone | Scope | Exit criteria |
 |---|---|---|
 | **M0 — Foundations** *(done in this branch)* | Monorepo scaffold; core library (RNG, content, calendar, cultivation, elements, karma, map & footwork, month tick, NPC sim v0, combat rules, loot, events); content export; a playable greybox slice | `dotnet test` green; Godot headless smoke passes |
-| **M1 — Vertical slice: Thanh Vân** (4–6 wks; *playable top-down in this branch, see `game/README.md`*) | Hand-built Thanh Vân map with 4 zones; village + Thanh Vân Kiếm Phái gate + Linh Thảo Bí Cảnh (3 floors); 6 enemies across 4 archetypes; full kit (martial art, 3 spirit arts, dash, ultimate); element marks and reactions; month tick with ~30 NPCs + rumors; Bế quan; *Dẫn khí nhập thể* breakthrough; saves; settings; procedural sound and music; sword flight | A 60-minute playtest is fun without the AI; 60 fps on an integrated GPU |
+| **M1 — Vertical slice: Thanh Vân** (4–6 wks; *playable top-down in this branch, see `game/README.md`*) | Hand-built Thanh Vân map with 4 zones; village + Thanh Vân Kiếm Phái gate + Linh Thảo Bí Cảnh (3 floors); 6 enemies across 4 archetypes (built: 11 archetypes, including the Ancient Tree Hollow's five creatures and its lair beast); full kit (martial art, 3 spirit arts, dash, ultimate); second-tier arts at Luyện Khí 5; element marks and reactions; month tick with ~30 NPCs + rumors; Bế quan; *Dẫn khí nhập thể* breakthrough; saves; settings with key remapping; procedural sound and music; sword flight | A 60-minute playtest is fun without the AI; 60 fps on an integrated GPU |
 | **M2 — Living world & storyteller** (4–6 wks) | NPC interactions, relations and karma ledger; `/api/story` dialogue + chronicle + rumors; sect joining and missions on the map; bounty board; auction | NPC stories emerge unprompted in a 3-hour run |
-| **M3 — Cultivation depth** (4 wks) | Trúc Cơ set piece, body path trials and body arts, Tâm pháp passives, alchemy v1 | Qi, body and kiêm tu builds feel distinct |
+| **M3 — Cultivation depth** (4 wks) | Trúc Cơ set piece *(built early: the meridian storm and foundation grades)*, body path trials and body arts, Tâm pháp passives, alchemy v1 | Qi, body and kiêm tu builds feel distinct |
 | **M4 — World breadth** (8–10 wks) | Regions 2–5, 71-enemy catalog, 5 secret realms, events for all pools, sect war territory, Kết Đan tribulation, Nguyên Anh heart demon, ascension ending | Mortal → ascension is completable |
 | **M5 — Steam** (4–6 wks) | Steamworks, achievements, cloud saves, controller/Deck, localization QA, performance, mods v1, demo | Store-ready demo build |
 
