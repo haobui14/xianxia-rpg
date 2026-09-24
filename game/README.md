@@ -188,6 +188,23 @@ adb install -r game/godot/export/android/TuTienLuc-debug.apk
 
 Or in the editor: Project → Export → Android → Export Project. You can also use the one-click deploy button with a phone plugged in (USB debugging on).
 
+**Or let GitHub build it.** `.github/workflows/android.yml` runs on GitHub Actions for every push to `main` or this branch that touches `game/`, and it can also be started by hand from the Actions tab.
+
+- It installs .NET 8 and 9, Java 17, the Android SDK, and Godot 4.7.2 .NET with its Android templates, then runs the rules tests and exports two APKs.
+- Download them from the run's **Artifacts** (`tu-tien-luc-android-<run number>`):
+  - `TuTienLuc.apk` is the release build, for playing.
+  - `TuTienLuc-debug.apk` is the debug build; its log shows in `adb logcat`.
+- Each build's version code is the run number, so it installs as an update.
+
+By default each run signs with a throwaway key, so you must uninstall the old build first, which deletes its saves. To sign every build with the same key, add three repository secrets (Settings → Secrets and variables → Actions):
+
+```bash
+keytool -genkeypair -keystore tutienluc.keystore -alias tutienluc -keyalg RSA -keysize 2048 -validity 10000
+base64 -w0 tutienluc.keystore   # → ANDROID_KEYSTORE_BASE64
+```
+
+Then set `ANDROID_KEYSTORE_PASSWORD` (the password you chose) and `ANDROID_KEY_ALIAS` (`tutienluc`). Keep the keystore file itself safe and out of the repository.
+
 **A release build** needs your own keystore. Godot reads it from `GODOT_ANDROID_KEYSTORE_RELEASE_PATH`, `GODOT_ANDROID_KEYSTORE_RELEASE_USER` and `GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD`; then run `--export-release`. No keystore or password is kept in the repository.
 
 **On the phone:**

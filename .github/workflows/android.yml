@@ -1,0 +1,183 @@
+name: Android APK
+
+# Builds Tu Tiên Lục for Android phones and tablets (64-bit ARM) with Godot 4.7.2 .NET and attaches the
+# APKs to the run as an artifact: TuTienLuc.apk (release, for playing) and TuTienLuc-debug.apk (debug,
+# writes its log to logcat). See game/README.md → Android.
+#
+# Signing: set the repository secrets ANDROID_KEYSTORE_BASE64 (the keystore file, base64), ANDROID_KEYSTORE_PASSWORD
+# and ANDROID_KEY_ALIAS to sign every build with the same key, so a new build installs over the old one and
+# keeps its saves. Without them each run signs with a throwaway key (uninstall the old build first).
+
+on:
+  push:
+    branches: [main, claude/blissful-pasteur-5rwf1e]
+    paths: ["game/**", ".github/workflows/android.yml"]
+  pull_request:
+    paths: ["game/**", ".github/workflows/android.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  GODOT_VERSION: "4.7.2"
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+
+jobs:
+  apk:
+    name: Build the APKs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # The desktop build and the tests target .NET 8; Godot 4.7's Android template runs .NET 9.
+      - name: .NET 8 and 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Rules tests
+        run: dotnet test game/core/TuTien.Core.Tests
+
+      - name: Android SDK
+        run: |
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdkmanager" --licenses > /dev/null || true
+          "$sdkmanager" --install "platform-tools" "build-tools;35.0.0" "platforms;android-35" > /dev/null
+          ls "$ANDROID_HOME/build-tools"
+
+      - name: Cache Godot and its Android templates
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable.mono
+          key: godot-${{ env.GODOT_VERSION }}-mono-android-v1
+
+      - name: Download Godot and its export templates
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          # Official builds are published on both godotengine/godot and godotengine/godot-builds.
+          fetch() {
+            for repo in godot godot-builds; do
+              if curl -fsSL --retry 3 -o "$2" "https://github.com/godotengine/$repo/releases/download/${GODOT_VERSION}-stable/$1"; then
+                return 0
+              fi
+            done
+            echo "::error::Could not download $1"
+            return 1
+          }
+          fetch "Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64.zip" "$RUNNER_TEMP/godot.zip"
+          mkdir -p ~/godot
+          unzip -q "$RUNNER_TEMP/godot.zip" -d ~/godot
+          fetch "Godot_v${GODOT_VERSION}-stable_mono_export_templates.tpz" "$RUNNER_TEMP/templates.tpz"
+          unzip -q "$RUNNER_TEMP/templates.tpz" -d "$RUNNER_TEMP/templates"
+          # Only the Android templates are kept (the archive carries every platform's).
+          dest=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono
+          mkdir -p "$dest"
+          cp "$RUNNER_TEMP"/templates/templates/android_* "$RUNNER_TEMP"/templates/templates/version.txt "$dest"/
+          rm -rf "$RUNNER_TEMP/godot.zip" "$RUNNER_TEMP/templates.tpz" "$RUNNER_TEMP/templates"
+          ls -la "$dest"
+
+      - name: Configure Godot (SDK paths, signing key, version)
+        run: |
+          godot=$(find ~/godot -type f -name "Godot_v*_mono_linux.x86_64" | head -1)
+          chmod +x "$godot"
+          echo "GODOT=$godot" >> "$GITHUB_ENV"
+
+          keystore="$RUNNER_TEMP/signing.keystore"
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$keystore"
+            alias="${KEY_ALIAS:-tutienluc}"
+            pass="$KEYSTORE_PASSWORD"
+          else
+            echo "::warning::No ANDROID_KEYSTORE_BASE64 secret, so this build is signed with a throwaway key: uninstall an older build before installing it."
+            alias=tutienluc
+            pass=android
+            keytool -genkeypair -keyalg RSA -keysize 2048 -validity 10000 -alias "$alias" \
+              -storepass "$pass" -keypass "$pass" -dname "CN=Tu Tien Luc, O=Tu Tien Luc, C=VN" \
+              -keystore "$keystore" -storetype pkcs12
+          fi
+          # Godot reads the signing keys from these for both exports.
+          for kind in DEBUG RELEASE; do
+            echo "GODOT_ANDROID_KEYSTORE_${kind}_PATH=$keystore"
+            echo "GODOT_ANDROID_KEYSTORE_${kind}_USER=$alias"
+            echo "GODOT_ANDROID_KEYSTORE_${kind}_PASSWORD=$pass"
+          done >> "$GITHUB_ENV"
+
+          # Where the Android SDK and Java live.
+          mkdir -p ~/.config/godot
+          cat > ~/.config/godot/editor_settings-4.7.tres <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_HOME"
+          export/android/java_sdk_path = "$JAVA_HOME"
+          export/android/debug_keystore = "$keystore"
+          export/android/debug_keystore_user = "$alias"
+          export/android/debug_keystore_pass = "$pass"
+          EOF
+
+          # Every build is newer than the last, so it installs as an update.
+          sed -i -e "s/^version\/code=.*/version\/code=${{ github.run_number }}/" \
+                 -e "s/^version\/name=.*/version\/name=\"0.4.${{ github.run_number }}\"/" \
+                 game/godot/export_presets.cfg
+          grep -E "^version/" game/godot/export_presets.cfg
+
+      - name: Import the project
+        run: |
+          dotnet build game/godot/TuTienLuc.csproj
+          "$GODOT" --headless --path game/godot --import
+
+      - name: Export the APKs
+        run: |
+          mkdir -p game/godot/export/android
+          "$GODOT" --headless --path game/godot --export-release "Android" export/android/TuTienLuc.apk
+          "$GODOT" --headless --path game/godot --export-debug "Android" export/android/TuTienLuc-debug.apk
+          ls -la game/godot/export/android
+          test -s game/godot/export/android/TuTienLuc.apk
+          test -s game/godot/export/android/TuTienLuc-debug.apk
+
+      - name: Upload the APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: tu-tien-luc-android-${{ github.run_number }}
+          path: game/godot/export/android/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          size() { du -h "$1" | cut -f1; }
+          {
+            echo "### Tu Tiên Lục for Android, build ${{ github.run_number }}"
+            echo
+            echo "Download **tu-tien-luc-android-${{ github.run_number }}** from this run's artifacts, unzip it and copy an APK to a 64-bit ARM phone or tablet."
+            echo
+            echo "| APK | Size | Use |"
+            echo "|---|---|---|"
+            echo "| TuTienLuc.apk | $(size game/godot/export/android/TuTienLuc.apk) | Release build, for playing |"
+            echo "| TuTienLuc-debug.apk | $(size game/godot/export/android/TuTienLuc-debug.apk) | Debug build; its log shows in \`adb logcat\` |"
+            echo
+            echo "To install it, allow installing unknown apps for your file manager or browser, then open the APK, or run \`adb install -r TuTienLuc.apk\`."
+          } >> "$GITHUB_STEP_SUMMARY"
