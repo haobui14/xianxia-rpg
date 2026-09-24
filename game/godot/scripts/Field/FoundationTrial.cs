@@ -111,9 +111,20 @@ public partial class FoundationTrial : TrialBase
         _ => T("Trúc cơ — nền móng rung chuyển, tìm khe hở", "Laying the foundation — find the gaps in the shockwaves"),
     };
 
-    public override string HintText() => T(
-        $"{KeyMap.MoveKeys} di chuyển · đứng trên kinh mạch để đón linh khí · chuột trái chém trọc khí · {KeyName("dash")} lướt qua sóng xung kích · Esc tạm dừng",
-        $"{KeyMap.MoveKeys} move · stand on a meridian to catch qi · left click cuts turbid qi · {KeyName("dash")} dashes through shockwaves · Esc pause");
+    public override string HintText() => TouchUi.Active
+        ? T($"Cần gạt để đi · đứng trên kinh mạch để đón linh khí · giữ {Player.Basic.Glyph} để chém trọc khí gần nhất · 遁 lướt qua sóng xung kích",
+            $"Stick moves · stand on a meridian to catch qi · hold {Player.Basic.Glyph} to cut the nearest turbid qi · 遁 dashes through shockwaves")
+        : T($"{KeyMap.MoveKeys} di chuyển · đứng trên kinh mạch để đón linh khí · chuột trái chém trọc khí · {KeyName("dash")} lướt qua sóng xung kích · Esc tạm dừng",
+            $"{KeyMap.MoveKeys} move · stand on a meridian to catch qi · left click cuts turbid qi · {KeyName("dash")} dashes through shockwaves · Esc pause");
+
+    /// <summary>With touch controls a strike aims at the nearest turbid qi within reach of the blade.</summary>
+    public override Vector2? AimAssist(Vector2 from)
+    {
+        QiDrop? best = null;
+        foreach (var d in Drops)
+            if (d.Turbid && d.Pos.DistanceTo(from) < 360 && (best == null || d.Pos.DistanceSquaredTo(from) < best.Pos.DistanceSquaredTo(from))) best = d;
+        return best?.Pos;
+    }
 
     protected override string PassedTitle => T($"Trúc cơ {Foundation.Name(Foundation.GradeFor(Performance), Locale.Vi)}!",
         $"A {Foundation.Name(Foundation.GradeFor(Performance), Locale.En)} foundation!");
@@ -407,7 +418,7 @@ public partial class FoundationTrial : TrialBase
     public override void DrawHud(FieldHud hud, Vector2 size)
     {
         var w = 640f;
-        var pos = new Vector2(size.X / 2 - w / 2, size.Y - 112);
+        var pos = new Vector2(size.X / 2 - w / 2, GaugeY(size));
         var box = new Rect2(pos - new Vector2(12, 28), new Vector2(w + 24, 98));
         hud.DrawRect(box, new Color(Ink.Card, 0.9f));
         hud.DrawRect(box, Ink.LineStrong, false, 1);

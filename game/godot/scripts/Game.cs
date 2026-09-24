@@ -32,6 +32,10 @@ public partial class Game : Node
     public float SfxVolume { get; set; } = 0.85f;
     public bool Fullscreen { get; set; }
     public bool ScreenShake { get; set; } = true;
+    /// <summary>On-screen touch controls: by default only on phones and tablets.</summary>
+    public TouchMode Touch { get; set; } = TouchMode.Auto;
+    /// <summary>How big the interface is drawn; 0 picks for the screen (bigger on a phone).</summary>
+    public float UiScale { get; set; }
 
     /// <summary>Raised after anything changes the game state, so HUDs can refresh.</summary>
     [Signal] public delegate void StateChangedEventHandler();
@@ -60,6 +64,15 @@ public partial class Game : Node
     public override void _Notification(int what)
     {
         if (what == NotificationWMCloseRequest) Quit();
+        // Android's back button (or gesture) is Esc: it closes a panel, pauses a fight, or opens the menu.
+        else if (what == NotificationWMGoBackRequest) Press("pause");
+    }
+
+    /// <summary>Press and let go of an input action, as if its key had been tapped (touch buttons, the back button).</summary>
+    public static void Press(string action)
+    {
+        Input.ParseInputEvent(new InputEventAction { Action = action, Pressed = true, Strength = 1 });
+        Input.ParseInputEvent(new InputEventAction { Action = action, Pressed = false });
     }
 
     private bool _quitting;
@@ -190,6 +203,9 @@ public partial class Game : Node
         if (data.TryGetValue("fullscreen", out var fs)) Fullscreen = fs.AsBool();
         if (data.TryGetValue("screen_shake", out var shake)) ScreenShake = shake.AsBool();
         if (data.TryGetValue("keys", out var keys) && keys.VariantType == Variant.Type.Dictionary) KeyMap.Load(keys.AsGodotDictionary());
+        if (data.TryGetValue("touch", out var touch))
+            Touch = touch.AsString() switch { "on" => TouchMode.On, "off" => TouchMode.Off, _ => TouchMode.Auto };
+        if (data.TryGetValue("ui_scale", out var scale)) UiScale = Mathf.Clamp((float)scale.AsDouble(), 0, 2);
     }
 
     /// <summary>Off while the smoke test runs, so testing never rewrites the player's own settings.</summary>
@@ -208,13 +224,32 @@ public partial class Game : Node
             ["fullscreen"] = Fullscreen,
             ["screen_shake"] = ScreenShake,
             ["keys"] = KeyMap.Save(),
+            ["touch"] = Touch switch { TouchMode.On => "on", TouchMode.Off => "off", _ => "auto" },
+            ["ui_scale"] = UiScale,
         }));
     }
 
-    /// <summary>Window mode from the settings (never in the headless smoke test).</summary>
+    /// <summary>The interface scale in use: the player's pick, or one that suits the screen.</summary>
+    public float EffectiveUiScale => UiScale > 0 ? UiScale : AutoUiScale();
+
+    /// <summary>
+    /// The 1600×900 layout is made for a monitor; on a phone its text would be about a millimetre tall. On a
+    /// phone or tablet the interface is drawn bigger, by how short the screen's short side is.
+    /// </summary>
+    public static float AutoUiScale()
+    {
+        if (!OS.HasFeature("mobile")) return 1f;
+        var size = DisplayServer.ScreenGetSize();
+        var dpi = Math.Max(96, DisplayServer.ScreenGetDpi());
+        var inches = Math.Min(size.X, size.Y) / (float)dpi;
+        return inches < 3.3f ? 1.35f : inches < 4.8f ? 1.2f : 1f;
+    }
+
+    /// <summary>Window mode and interface scale from the settings (the window mode never in the headless smoke test).</summary>
     public void ApplyDisplay()
     {
-        if (DisplayServer.GetName() == "headless") return;
+        GetTree().Root.ContentScaleFactor = EffectiveUiScale;
+        if (DisplayServer.GetName() == "headless" || OS.HasFeature("mobile")) return;
         var want = Fullscreen ? DisplayServer.WindowMode.Fullscreen : DisplayServer.WindowMode.Windowed;
         if (DisplayServer.WindowGetMode() != want && !(want == DisplayServer.WindowMode.Windowed && DisplayServer.WindowGetMode() == DisplayServer.WindowMode.Maximized))
             DisplayServer.WindowSetMode(want);

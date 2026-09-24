@@ -523,7 +523,15 @@ The existing `cultivation_path: "qi" | "body" | "dual"`, the body realms (Phàm 
   - The HUD, prompts and how-to-play text always name the chosen key.
 
   There's pause everywhere. Text size and colorblind-safe telegraph options come next.
-- **Settings** (from the title screen, or Esc → Settings): master, music and effects volume, fullscreen, screen shake, language and keys. They're saved to `user://settings.json`.
+- **Settings** (from the title screen, or Esc → Settings): master, music and effects volume, fullscreen, screen shake, interface size, touch controls, language and keys. They're saved to `user://settings.json`.
+- **Touch (phones and tablets; Android is buildable from the slice):**
+  - **Stick:** a floating stick under the left thumb.
+  - **Martial art:** under the right thumb; hold it and it aims itself at the nearest foe (or the nearest heart demon or turbid qi in a trial).
+  - **Around it:** in a fight, the four spirit arts, the ultimate and a pill. Exploring, the same arc holds Interact and Sword flight when they apply.
+  - **Also:** Dash, and a pause button in fights.
+  - **On the field:** a tap walks there, goes and uses the person or thing tapped, or strikes a beast in reach; in a fight a tap strikes toward the finger. Two fingers pinch to zoom.
+  - **Under the hood:** every button presses the same input action as its key, so no rule knows a thumb from a keyboard.
+  - **Interface size:** the 1600×900 layout would put 1 mm text on a phone, so the interface is drawn at 135% on a phone and 120% on a small tablet (the player can pick 100–145%). Panels shrink to fit and scroll.
 - **Sound, all made in code:**
   - About 40 effects, each built from a recipe: blade swishes, hits and crits, a dash, element casts, a shield, pills, coins, herbs, a portal, and the month gong. Sounds in the world are positional, so a fight to the left is heard on the left.
   - Music is generated at start-up in the Chinese pentatonic modes (宮 Gong, 商 Shang, 羽 Yu), in five moods that crossfade as the situation changes:
@@ -618,6 +626,7 @@ xianxia-rpg/
     - Part of the run uses real key and mouse events sent through Godot's input pipeline: walk, interact, open the map, strike, end the month, take to the sword and cross the river, and rebind Interact by clicking in the keys panel and pressing a new key.
     - It walks the map, fights, and passes both breakthroughs. The Trúc Cơ meridian storm is played by an autopilot and must lay a foundation.
     - It clears a secret-realm floor, and fights each of the five new creatures with a different second-tier art.
+    - It plays like a phone: at 135% interface size, touch events drag the stick, press Interact, tap to walk, pinch to zoom, and win a fight by holding the self-aiming martial art.
     - It checks that every sound and piece of music renders cleanly and loops without a click.
 - **Performance budgets:** 60 fps on integrated GPUs, ≤200 live projectiles, NPC tick under 50 ms for 200 NPCs, cold start under 3 s.
 
@@ -665,7 +674,7 @@ Port each rule module **with tests that pin the TypeScript behavior** (golden va
 | **Art cost.** | Han-glyph greybox → ink-silhouette sprites (fewer animation frames) → commission key art and portraits. |
 | **AI cost, latency and quality.** | Offline-first fallbacks, schema validation, per-user quotas, caching, cheaper models for bulk prose. |
 | **Paying for AI in a premium PC game.** | Decide the model early (§13): an included quota, a paid storyteller tier, or bring-your-own-key. |
-| **Godot C# gaps.** | No web export (accepted: PC first). Mobile .NET would need validation before any port. |
+| **Godot C# gaps.** | No web export (accepted: PC first). Android works but Godot calls C# there experimental, and 4.7's template needs .NET 9. The slice exports with touch controls; it still needs testing on real devices (performance of the procedural drawing and the music synthesis on low-end phones). iOS isn't tried. |
 | **Balance and pacing** (moves per month versus content density). | Telemetry on months per realm and fights per month; playtests every milestone. |
 | **Save compatibility.** | Versioned saves plus migration tests from day one. |
 | **IP.** | Use ToI for structure only. Never copy its names, text or art. Don't use protagonists from famous novels as NPC names. |

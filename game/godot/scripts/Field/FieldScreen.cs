@@ -31,6 +31,8 @@ public abstract partial class FieldScreen : Node2D
     /// <summary>What [E] would act on right now.</summary>
     public Interaction? Target { get; private set; }
     public FieldHud Hud { get; private set; } = null!;
+    /// <summary>The on-screen stick and buttons, shown when touch controls are on.</summary>
+    public TouchControls TouchPad { get; private set; } = null!;
     public Vector2 MouseWorld => GetGlobalMousePosition();
     public bool PanelOpen => _panel != null && IsInstanceValid(_panel);
     public InkPanel? CurrentPanel => PanelOpen ? _panel : null;
@@ -91,6 +93,11 @@ public abstract partial class FieldScreen : Node2D
         AddChild(ui);
         Hud = new FieldHud(this);
         ui.AddChild(Hud);
+
+        var touch = new CanvasLayer { Layer = 15 };
+        AddChild(touch);
+        TouchPad = new TouchControls(this);
+        touch.AddChild(TouchPad);
 
         var modal = new CanvasLayer { Layer = 20 };
         AddChild(modal);
@@ -232,6 +239,9 @@ public abstract partial class FieldScreen : Node2D
 
     public void Zoom(float factor) => _zoom = Mathf.Clamp(_zoom * factor, 0.6f, 1.5f);
 
+    /// <summary>The zoom the camera is easing toward.</summary>
+    public float ZoomTarget => _zoom;
+
     /// <summary>How fast the ground here lets you walk (roads help, swamps don't).</summary>
     public virtual float TerrainSpeed(Vector2 pos) => 1;
 
@@ -242,9 +252,18 @@ public abstract partial class FieldScreen : Node2D
 
     protected static string KeyName(string action) => KeyMap.Label(action);
 
-    /// <summary>The key hints in the corner, named after the player's own keys.</summary>
+    /// <summary>The key hints in the corner, named after the player's own keys (or the touch buttons).</summary>
     public virtual string HintText()
     {
+        if (TouchUi.Active)
+        {
+            var strike = Player.Basic.Glyph;
+            return Battle != null
+                ? T($"Cần gạt trái để đi · giữ {strike} để chém, tự nhắm kẻ gần nhất · chạm kẻ địch để chém về phía nó · linh kỹ quanh nút {strike} · 遁 lướt · chạy thật xa để thoát",
+                    $"Left stick moves · hold {strike} to strike (it aims at the nearest foe) · tap a foe to strike at it · arts around {strike} · 遁 dashes · run far away to escape")
+                : T("Cần gạt trái để đi · chạm mặt đất để đi tới · chạm người hay vật để tới dùng · chạm yêu thú để giao chiến · chụm hai ngón để phóng to",
+                    "Left stick walks · tap the ground to walk there · tap a person or thing to go and use it · tap a beast to fight · pinch to zoom");
+        }
         var move = KeyMap.MoveKeys;
         if (Battle != null)
             return T($"{move} · chuột ngắm & chém · chuột phải/{KeyName("skill_2")}/{KeyName("skill_3")}/{KeyName("skill_4")} linh kỹ · {KeyName("dash")} lướt · {KeyName("ultimate")} tuyệt kỹ · {KeyName("pill")} đan dược · chạy thật xa để thoát",
@@ -257,6 +276,7 @@ public abstract partial class FieldScreen : Node2D
 
     private void UpdateTarget()
     {
+        if (_goingTo != null) GoOnTo(_goingTo);
         Interaction? best = null;
         var bestDist = float.MaxValue;
         if (Battle == null)
@@ -284,6 +304,21 @@ public abstract partial class FieldScreen : Node2D
     public override void _UnhandledInput(InputEvent e)
     {
         if (PanelOpen || _pause.Visible || Game.Instance.Engine == null) return;
+        if (TouchUi.Active)
+        {
+            switch (e)
+            {
+                case InputEventScreenTouch touch:
+                    OnTouch(touch);
+                    return;
+                case InputEventScreenDrag drag:
+                    OnTouchDrag(drag);
+                    return;
+                // The mouse Godot fakes from the first finger: the touch itself was handled above.
+                case InputEventMouseButton fake when fake.Device == InputEvent.DeviceIdEmulation:
+                    return;
+            }
+        }
         if (e is InputEventMouseButton { Pressed: true } mb)
         {
             switch (mb.ButtonIndex)
@@ -330,6 +365,139 @@ public abstract partial class FieldScreen : Node2D
     /// <summary>Keys only some places understand (the world: N, B, Tab, M).</summary>
     protected virtual void HandleKey(InputEvent e)
     {
+    }
+
+    // ================================================================ touch: taps and pinches on the field
+
+    private readonly Dictionary<int, (Vector2 From, Vector2 At, ulong Since)> _touches = new();
+    private float _pinchFrom, _pinchZoom;
+    /// <summary>Something tapped from afar: walk up to it, then use it.</summary>
+    private Interaction? _goingTo;
+
+    private Vector2 ScreenToWorld(Vector2 screen) => GetCanvasTransform().AffineInverse() * screen;
+
+    private void OnTouch(InputEventScreenTouch t)
+    {
+        if (t.Pressed)
+        {
+            _touches[t.Index] = (t.Position, t.Position, Time.GetTicksMsec());
+            if (_touches.Count == 2)
+            {
+                _pinchFrom = PinchSpan();
+                _pinchZoom = _zoom;
+            }
+            // In a fight (and the trial) a tap strikes at once, toward the finger.
+            else if (_touches.Count == 1 && (Battle != null || FreeStrikes)) Player.TapStrike(ScreenToWorld(t.Position));
+            return;
+        }
+        if (!_touches.Remove(t.Index, out var touch)) return;
+        if (_pinchFrom > 0)
+        {
+            if (_touches.Count == 0) _pinchFrom = 0;
+            return;
+        }
+        var tap = Time.GetTicksMsec() - touch.Since < 450 && touch.From.DistanceTo(t.Position) < 28;
+        if (tap && Battle == null && !FreeStrikes) OnTap(ScreenToWorld(t.Position));
+    }
+
+    private void OnTouchDrag(InputEventScreenDrag d)
+    {
+        if (!_touches.TryGetValue(d.Index, out var touch)) return;
+        _touches[d.Index] = (touch.From, d.Position, touch.Since);
+        if (_pinchFrom > 0 && _touches.Count >= 2) _zoom = Mathf.Clamp(_pinchZoom * PinchSpan() / _pinchFrom, 0.6f, 1.5f);
+    }
+
+    private float PinchSpan()
+    {
+        var points = _touches.Values.Take(2).Select(t => t.At).ToArray();
+        return Mathf.Max(1, points[0].DistanceTo(points[1]));
+    }
+
+    /// <summary>
+    /// A tap on the field while exploring: strike a beast that's in reach (or walk up to one that isn't), go
+    /// and use the person or thing tapped, or else walk to the spot.
+    /// </summary>
+    private void OnTap(Vector2 at)
+    {
+        _goingTo = null;
+        Fighter? beast = null;
+        foreach (var actor in Actors)
+        {
+            var b = actor.Body;
+            if (b.PackId == null || !b.Alive || b.InBattle || b.Gone || !actor.Visible) continue;
+            if (at.DistanceTo(b.Pos + new Vector2(0, -20)) > b.Radius + 44) continue;
+            if (beast == null || b.Pos.DistanceTo(at) < beast.Pos.DistanceTo(at)) beast = b;
+        }
+        if (beast != null)
+        {
+            if (beast.Pos.DistanceTo(PlayerBody.Pos) <= Player.StrikeReach + beast.Radius) Player.TapStrike(beast.Pos + new Vector2(0, -20));
+            else Player.WalkTo(beast.Pos);
+            return;
+        }
+        var thing = Interactions
+            .Where(i => i.IsVisible && at.DistanceTo(i.At() + new Vector2(0, -i.Height / 2)) < Mathf.Max(56, i.Height * 0.6f))
+            .OrderBy(i => at.DistanceTo(i.At()))
+            .FirstOrDefault();
+        if (thing != null)
+        {
+            if (thing.At().DistanceTo(PlayerBody.Pos) <= thing.Reach) thing.Act();
+            else
+            {
+                _goingTo = thing;
+                Player.WalkTo(thing.At());
+            }
+            return;
+        }
+        Player.WalkTo(at);
+        Fx.Ring(at, 20, new Color(Ink.InkColor, 0.45f), 0.3f);
+    }
+
+    private void GoOnTo(Interaction thing)
+    {
+        var near = PlayerBody.Pos.DistanceTo(thing.At()) <= thing.Reach;
+        if (Battle != null || !thing.IsVisible || (!near && Player.Route.Count == 0))
+        {
+            _goingTo = null;
+            return;
+        }
+        if (!near) return;
+        _goingTo = null;
+        Player.Route.Clear();
+        thing.Act();
+    }
+
+    /// <summary>
+    /// What a strike aims at when there's no cursor (touch controls): in a fight the nearest foe, exploring a
+    /// beast close by. The trials aim at their own targets.
+    /// </summary>
+    public virtual Vector2? AimAssist(Vector2 from)
+    {
+        Fighter? best = null;
+        var bestDist = float.MaxValue;
+        if (Battle != null)
+        {
+            foreach (var foe in Battle.Enemies)
+            {
+                if (!foe.Active || !foe.InBattle || foe.Faded) continue;
+                var d = foe.Pos.DistanceTo(from);
+                if (d >= bestDist) continue;
+                best = foe;
+                bestDist = d;
+            }
+        }
+        else
+        {
+            foreach (var actor in Actors)
+            {
+                var b = actor.Body;
+                if (b.PackId == null || !b.Alive || b.InBattle || b.Gone || !actor.Visible) continue;
+                var d = b.Pos.DistanceTo(from);
+                if (d > 260 + b.Radius || d >= bestDist) continue;
+                best = b;
+                bestDist = d;
+            }
+        }
+        return best == null ? null : best.Pos + new Vector2(0, -20);
     }
 
     public void SetPaused(bool paused)

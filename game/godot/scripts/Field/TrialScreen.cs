@@ -57,8 +57,20 @@ public partial class TrialScreen : TrialBase
 
     public override string PlaceName => T($"Đột phá: {Names.Display(E.Player.Realm + 1, Locale.Vi)}", $"Breakthrough: {Names.Display(E.Player.Realm + 1, Locale.En)}");
     public override string PlaceSub => T("Thu linh khí, tránh tâm ma", "Gather qi, avoid heart demons");
-    public override string HintText() => T($"{KeyMap.MoveKeys} di chuyển · {KeyName("dash")} lướt xuyên tâm ma · chuột trái chém · Esc tạm dừng",
-        $"{KeyMap.MoveKeys} move · {KeyName("dash")} dash through demons · left click cuts · Esc pause");
+    public override string HintText() => TouchUi.Active
+        ? T($"Cần gạt để đi · 遁 lướt xuyên tâm ma · giữ {Player.Basic.Glyph} để chém, tự nhắm tâm ma gần nhất",
+            $"Stick moves · 遁 dashes through demons · hold {Player.Basic.Glyph} to cut (it aims at the nearest demon)")
+        : T($"{KeyMap.MoveKeys} di chuyển · {KeyName("dash")} lướt xuyên tâm ma · chuột trái chém · Esc tạm dừng",
+            $"{KeyMap.MoveKeys} move · {KeyName("dash")} dash through demons · left click cuts · Esc pause");
+
+    /// <summary>With touch controls a strike aims at the nearest heart demon.</summary>
+    public override Vector2? AimAssist(Vector2 from)
+    {
+        Demon? best = null;
+        foreach (var d in Demons)
+            if (best == null || d.Pos.DistanceSquaredTo(from) < best.Pos.DistanceSquaredTo(from)) best = d;
+        return best == null ? null : best.Pos + new Vector2(0, -20);
+    }
 
     public override double Performance => Mathf.Clamp(Score / ScoreGoal, 0, 1);
     public float TimeLeft => Mathf.Max(0, Duration - Time);
@@ -267,7 +279,7 @@ public partial class TrialScreen : TrialBase
     public override void DrawHud(FieldHud hud, Vector2 size)
     {
         var w = 620f;
-        var pos = new Vector2(size.X / 2 - w / 2, size.Y - 112);
+        var pos = new Vector2(size.X / 2 - w / 2, GaugeY(size));
         hud.DrawRect(new Rect2(pos - new Vector2(12, 28), new Vector2(w + 24, 98)), new Color(Ink.Card, 0.9f));
         hud.DrawRect(new Rect2(pos - new Vector2(12, 28), new Vector2(w + 24, 98)), Ink.LineStrong, false, 1);
         hud.DrawString(Ink.Serif, pos + new Vector2(0, -8), T($"Linh khí {Score:0}/{ScoreGoal:0}", $"Qi gathered {Score:0}/{ScoreGoal:0}"), HorizontalAlignment.Left, -1, 17, Ink.InkColor);

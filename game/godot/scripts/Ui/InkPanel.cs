@@ -23,7 +23,8 @@ public abstract partial class InkPanel : PanelContainer
 
     public override void _Ready()
     {
-        CustomMinimumSize = PanelSize;
+        Refit();
+        GetViewport().SizeChanged += Refit;
         AddThemeStyleboxOverride("panel", Ink.Box(Ink.Card, Ink.InkColor, 1, 4, 18));
 
         var root = new VBoxContainer();
@@ -60,8 +61,20 @@ public abstract partial class InkPanel : PanelContainer
 
     public override void _ExitTree()
     {
+        GetViewport().SizeChanged -= Refit;
         Game.Instance.StateChanged -= RequestRefresh;
         Game.Instance.LocaleChanged -= RequestRefresh;
+    }
+
+    /// <summary>
+    /// The panel's size, shrunk to leave a margin when the screen has less room (a phone, a bigger interface);
+    /// the body scrolls.
+    /// </summary>
+    private void Refit()
+    {
+        var room = GetViewportRect().Size - new Vector2(24, 24);
+        // (A headless run may report no screen at all: then the panel keeps its own size.)
+        CustomMinimumSize = room.X < 300 || room.Y < 300 ? PanelSize : new Vector2(Mathf.Min(PanelSize.X, room.X), Mathf.Min(PanelSize.Y, room.Y));
     }
 
     protected abstract void Build();

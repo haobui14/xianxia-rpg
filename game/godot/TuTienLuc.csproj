@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
+    <!-- Godot 4.7's Android export template runs .NET 9, so phones get net9.0 (it needs the .NET 9 SDK). -->
+    <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'android' ">net9.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <RootNamespace>TuTienLuc</RootNamespace>
     <Nullable>enable</Nullable>

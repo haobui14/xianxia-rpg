@@ -66,6 +66,10 @@ public sealed class PlayerController
     private float _routeClock;
     private float _replanCd;
     private bool _landAtEnd;
+    // Touch: a tap asks for one strike toward where it landed.
+    private float _tapStrike;
+    private Vector2 _tapAim;
+    private float _tapAimTime;
 
     public PlayerController(FieldScreen field, Vector2 pos)
     {
@@ -178,11 +182,15 @@ public sealed class PlayerController
             return c;
         }
         c.Move = Input.GetVector("move_left", "move_right", "move_up", "move_down");
+        if (TouchControls.Stick.LengthSquared() > 0.0001f) c.Move = TouchControls.Stick;
         var stick = Input.GetVector("aim_left", "aim_right", "aim_up", "aim_down");
-        AimPoint = stick.LengthSquared() > 0.09f ? Body.Pos + new Vector2(0, -30) + stick.Normalized() * 160 : F.MouseWorld;
-        c.Aim = AimPoint - (Body.Pos + new Vector2(0, -30));
         if (!Input.IsMouseButtonPressed(MouseButton.Left)) MouseAttack = false;
-        c.Attack = MouseAttack || Input.GetJoyAxis(0, JoyAxis.TriggerRight) > 0.5f;
+        AimPoint = stick.LengthSquared() > 0.09f ? Body.Pos + new Vector2(0, -30) + stick.Normalized() * 160
+            : TouchUi.Active && !MouseAttack ? TouchAim()
+            : F.MouseWorld;
+        c.Aim = AimPoint - (Body.Pos + new Vector2(0, -30));
+        // "attack" is the right trigger, or the touch button held down.
+        c.Attack = MouseAttack || _tapStrike > 0 || Input.IsActionPressed("attack");
         c.Dash = Input.IsActionJustPressed("dash");
         c.Ultimate = Input.IsActionJustPressed("ultimate");
         c.Pill = Input.IsActionJustPressed("pill");
@@ -209,6 +217,8 @@ public sealed class PlayerController
         CastLock -= dt;
         _warnCd -= dt;
         _dustCd -= dt;
+        _tapStrike -= dt;
+        _tapAimTime -= dt;
 
         var c = Autopilot ? TuTienLuc.Field.Autopilot.Think(this) : ReadInput(inputEnabled);
         if (Autopilot) AimPoint = p.Pos + new Vector2(0, -30) + (c.Aim.LengthSquared() > 0.01f ? c.Aim.Normalized() : p.Facing) * 140;
@@ -271,7 +281,35 @@ public sealed class PlayerController
         else if (c.Ultimate) TryUltimate(c);
         else if (c.Slot >= 0) TrySlot(c.Slot, c);
         else if (c.Pill) TryPill();
-        else if (c.Attack && CastLock <= 0) Cast(Basic, c);
+        else if (c.Attack && CastLock <= 0 && Cast(Basic, c)) _tapStrike = 0;
+    }
+
+    // ================================================================ touch (no cursor to aim with)
+
+    /// <summary>A tap on the field with touch controls: strike toward that point (in a fight, or at a beast in reach).</summary>
+    public void TapStrike(Vector2 at)
+    {
+        _tapAim = at;
+        _tapAimTime = 0.45f;
+        _tapStrike = 0.3f;
+    }
+
+    /// <summary>A tap on open ground with touch controls: walk there (round whatever is in the way).</summary>
+    public void WalkTo(Vector2 at)
+    {
+        Route.Clear();
+        Route.Enqueue(at);
+        _routeHead = null;
+    }
+
+    /// <summary>How close a beast must be for the martial art to start a fight with it.</summary>
+    public float StrikeReach => EngageReach(Basic);
+
+    /// <summary>With touch controls: aim where the player just tapped, else at what the field suggests (the nearest foe).</summary>
+    private Vector2 TouchAim()
+    {
+        if (_tapAimTime > 0) return _tapAim;
+        return F.AimAssist(Body.Pos) ?? Body.Pos + new Vector2(0, -30) + Body.Facing * 140;
     }
 
     // ================================================================ routes
@@ -417,7 +455,7 @@ public sealed class PlayerController
             }
         }
         if (c.Attack || c.Slot >= 0 || c.Ultimate || c.Dash)
-            Warn(T($"Hạ xuống ({KeyMap.Label("fly")}) để ra tay", $"Land ({KeyMap.Label("fly")}) to fight"));
+            Warn(T($"Hạ xuống ({TouchUi.Prompt("fly")}) để ra tay", $"Land ({TouchUi.Prompt("fly")}) to fight"));
     }
 
     /// <summary>Outside a fight the battle doesn't tick the player's timers; do the few that matter.</summary>
@@ -503,8 +541,8 @@ public sealed class PlayerController
         {
             Warn(E.Player.Skills.Count == 0
                 ? T("Chưa có linh kỹ — cần đột phá Luyện Khí", "No spirit arts yet — reach Qi Condensation")
-                : T($"Ô trống — gán linh kỹ ở bảng Nhân vật ({KeyMap.Label("open_character")})",
-                    $"Empty slot — assign an art in Character ({KeyMap.Label("open_character")})"));
+                : T($"Ô trống — gán linh kỹ ở bảng Nhân vật ({TouchUi.Prompt("open_character")})",
+                    $"Empty slot — assign an art in Character ({TouchUi.Prompt("open_character")})"));
             return;
         }
         Cast(skill, c);

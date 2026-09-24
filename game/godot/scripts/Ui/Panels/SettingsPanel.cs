@@ -27,12 +27,29 @@ public partial class SettingsPanel : InkPanel
             "Every sound is synthesized in the game itself: guzheng, bamboo flute, drums, bells and gong."), 13, Ink.InkMute);
 
         Section(T("Hiển thị", "Display"));
-        Toggle(T("Toàn màn hình", "Fullscreen"), g.Fullscreen, on =>
-        {
-            g.Fullscreen = on;
-            g.ApplyDisplay();
-        });
+        if (!OS.HasFeature("mobile"))
+            Toggle(T("Toàn màn hình", "Fullscreen"), g.Fullscreen, on =>
+            {
+                g.Fullscreen = on;
+                g.ApplyDisplay();
+            });
         Toggle(T("Rung màn hình khi trúng đòn", "Screen shake on hits"), g.ScreenShake, on => g.ScreenShake = on);
+        var auto = Game.AutoUiScale();
+        Para(T("Cỡ giao diện (chữ, bảng và nút)", "Interface size (text, panels and buttons)"), 16, Ink.InkColor);
+        Buttons(
+            Choice(T($"Tự động ({auto * 100:0}%)", $"Auto ({auto * 100:0}%)"), g.UiScale <= 0, () => SetScale(0)),
+            Choice("100%", Mathf.IsEqualApprox(g.UiScale, 1f), () => SetScale(1f)),
+            Choice("115%", Mathf.IsEqualApprox(g.UiScale, 1.15f), () => SetScale(1.15f)),
+            Choice("130%", Mathf.IsEqualApprox(g.UiScale, 1.3f), () => SetScale(1.3f)),
+            Choice("145%", Mathf.IsEqualApprox(g.UiScale, 1.45f), () => SetScale(1.45f)));
+
+        Section(T("Điều khiển cảm ứng", "Touch controls"));
+        Buttons(
+            Choice(T("Tự động", "Auto"), g.Touch == TouchMode.Auto, () => SetTouch(TouchMode.Auto)),
+            Choice(T("Bật", "On"), g.Touch == TouchMode.On, () => SetTouch(TouchMode.On)),
+            Choice(T("Tắt", "Off"), g.Touch == TouchMode.Off, () => SetTouch(TouchMode.Off)));
+        Para(T("Cần gạt bên trái, nút chiêu thức bên phải; chạm mặt đất để đi, chạm yêu thú để đánh. Tự động: bật trên điện thoại và máy tính bảng.",
+            "A stick on the left, the arts on the right; tap the ground to walk, tap a beast to fight. Auto: on for phones and tablets."), 13, Ink.InkMute);
 
         Section(T("Phím", "Keys"));
         Row(UiKit.Label(KeyMap.IsDefault ? T("Bố cục mặc định", "The default layout") : T("Bố cục riêng của ngươi", "Your own layout"), 16, Ink.InkColor),
@@ -65,6 +82,26 @@ public partial class SettingsPanel : InkPanel
             RequestRefresh();
         };
         GetParent().AddChild(keys);
+    }
+
+    private static Button Choice(string label, bool chosen, Action pick) => UiKit.Button(label, () =>
+    {
+        pick();
+        SoundBoard.Play("click", -6);
+        Game.Instance.SaveSettings();
+    }, primary: chosen);
+
+    private void SetScale(float scale)
+    {
+        Game.Instance.UiScale = scale;
+        Game.Instance.ApplyDisplay();
+        RequestRefresh();
+    }
+
+    private void SetTouch(TouchMode mode)
+    {
+        Game.Instance.Touch = mode;
+        RequestRefresh();
     }
 
     private void Slider(string label, float value, Action<float> set)

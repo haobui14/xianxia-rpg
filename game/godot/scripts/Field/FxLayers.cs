@@ -114,7 +114,7 @@ public partial class OverlayLayer : Node2D
         if (_f.Target is { } target && _f.Battle == null)
         {
             var at = target.At() + new Vector2(0, -target.Height - 18);
-            var text = $"[{Ui.KeyMap.Label("interact")}] " + target.Label();
+            var text = $"[{Ui.TouchUi.Prompt("interact")}] " + target.Label();
             var font = Ui.Ink.UiFont;
             var size = font.GetStringSize(text, HorizontalAlignment.Left, -1, 15);
             var box = new Rect2(at - new Vector2(size.X / 2 + 10, 14), new Vector2(size.X + 20, 26));

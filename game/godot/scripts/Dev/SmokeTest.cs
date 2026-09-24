@@ -325,6 +325,9 @@ public partial class SmokeTest : Node
         // ---------------------------------------------------------------- sword flight over the river
         world = await SwordFlight(world);
 
+        // ---------------------------------------------------------------- a phone: touch controls, a bigger interface
+        world = await TouchByHand(world);
+
         // ---------------------------------------------------------------- seclusion
         world.OpenPanel(new SeclusionPanel());
         await Frames(3);
@@ -593,6 +596,139 @@ public partial class SmokeTest : Node
         await Frames(2);
         Check(world.Battle != null || (world.Tile == bank && !world.PlayerBody.Flying), "the sword sets you down where the way ends");
         return await Settle(World);
+    }
+
+    /// <summary>
+    /// A phone's way of playing, through touch events pushed into the viewport: the interface drawn bigger,
+    /// the stick walks, the Interact button opens the bounty board, a tap on open ground walks there and two
+    /// fingers pinch the zoom; in a fight an art button casts, 停 pauses, and holding the martial art aims
+    /// itself at the foe until the fight is won. Panels still fit the smaller screen.
+    /// </summary>
+    private async Task<WorldScreen> TouchByHand(WorldScreen world)
+    {
+        var game = Game.Instance;
+        var fullSize = GetViewport().GetVisibleRect().Size;
+        game.Touch = TouchMode.On;
+        game.UiScale = 1.35f;
+        game.ApplyDisplay();
+        world.DebugPlace(new Vector2(846, 3040));
+        DevCheats.Restore(E);
+        world.Player.SyncFromEngine();
+        await Frames(6);
+        var screen = GetViewport().GetVisibleRect().Size;
+        Log($"interface at 135%: the screen is {screen.X:0}×{screen.Y:0} (from {fullSize.X:0}×{fullSize.Y:0})");
+        var pad = world.TouchPad;
+        Check(pad.Visible && pad.CentreOf("attack") != null, "touch controls appear when switched on");
+
+        // Interact: by the bounty board its button shows, and a press opens the town.
+        var interact = pad.CentreOf("interact");
+        Check(interact != null, "the Interact button shows by the bounty board");
+        await Shot("touch_world");
+        await TapScreen(1, interact!.Value);
+        Check(world.CurrentPanel is TownPanel, "pressing Interact opens the bounty board");
+        var panelRect = world.CurrentPanel!.GetGlobalRect();
+        Check(new Rect2(Vector2.Zero, screen).Grow(1).Encloses(panelRect), $"the town panel fits the scaled screen ({panelRect.Size.X:0}×{panelRect.Size.Y:0})");
+        await Shot("touch_panel");
+        world.ClosePanel();
+        await Frames(3);
+
+        // The stick: a thumb in the lower left, dragged right, walks east; letting go stops.
+        var before = world.PlayerBody.Pos;
+        var home = pad.StickCentre;
+        TouchAt(0, home, true);
+        await Frames(1);
+        DragTo(0, home + new Vector2(80, 0));
+        await Frames(30);
+        Check(TouchControls.Stick.X > 0.5f && world.PlayerBody.Pos.X > before.X + 40, "dragging the stick right walks east");
+        TouchAt(0, home + new Vector2(80, 0), false);
+        await Frames(2);
+        Check(TouchControls.Stick == Vector2.Zero, "letting go of the stick stops");
+
+        // A tap on open ground walks there (a spot clear of the controls, walls and anything to use).
+        var canvas = world.GetCanvasTransform();
+        Vector2? target = null;
+        foreach (var offset in new[] { new Vector2(0, -230), new Vector2(230, 0), new Vector2(200, -200), new Vector2(-200, -200), new Vector2(0, 230) })
+        {
+            var spot = world.PlayerBody.Pos + offset;
+            var at = canvas * spot;
+            if (!world.Walls.Free(spot, 20) || pad._HasPoint(at) || world.Interactions.Any(i => i.At().DistanceTo(spot) < 140)) continue;
+            target = spot;
+            break;
+        }
+        Check(target != null, "there is open ground to tap near the board");
+        var start = world.PlayerBody.Pos.DistanceTo(target!.Value);
+        await TapScreen(0, canvas * target.Value);
+        await Frames(50);
+        Check(world.PlayerBody.Pos.DistanceTo(target.Value) < start - 60, "a tap on the ground walks there");
+
+        // Two fingers apart pinch the camera closer.
+        world.Player.Route.Clear();
+        var zoom = world.ZoomTarget;
+        var mid = new Vector2(screen.X / 2, screen.Y * 0.3f);
+        TouchAt(0, mid - new Vector2(60, 0), true);
+        TouchAt(1, mid + new Vector2(60, 0), true);
+        await Frames(2);
+        DragTo(0, mid - new Vector2(90, 0));
+        DragTo(1, mid + new Vector2(90, 0));
+        await Frames(2);
+        TouchAt(0, mid - new Vector2(90, 0), false);
+        TouchAt(1, mid + new Vector2(90, 0), false);
+        await Frames(2);
+        Check(world.ZoomTarget > zoom * 1.3f, $"two fingers apart zoom in ({zoom:0.00} → {world.ZoomTarget:0.00})");
+        world.Zoom(1 / world.ZoomTarget);
+
+        // A fight: the arts and pause appear; an art button casts, 停 pauses, and holding the martial art wins it.
+        // (Fresh cooldowns: the last fight may have ended just after this art was cast.)
+        DevCheats.Restore(E);
+        world.Player.SyncFromEngine();
+        world.Player.Cooldowns.Clear();
+        var art = E.Player.SkillSlots[0];
+        world.Fight(E.StartAdventureFight("black_bear", "ancient_tree_hollow")!);
+        await Frames(4);
+        Check(world.Battle != null && pad.CentreOf("skill_1") != null && pad.CentreOf("pause") != null && pad.CentreOf("interact") == null,
+            "in a fight the arts and pause take the place of Interact");
+        await TapScreen(1, pad.CentreOf("skill_1")!.Value);
+        Check(world.Battle?.SkillUses.ContainsKey(art) == true,
+            $"the art button casts {art} (cooldown {world.Player.CooldownLeft(art):0.0}, stun {world.PlayerBody.Stun:0.0}, dash {world.Player.DashTime:0.0}, frozen {world.Frozen})");
+        await TapScreen(1, pad.CentreOf("pause")!.Value);
+        Check(world.Frozen && !pad.Visible, "停 pauses the fight (the controls step aside)");
+        world.SetPaused(false);
+        await Frames(2);
+        var basic = world.Player.Basic.Id;
+        var attack = pad.CentreOf("attack")!.Value;
+        TouchAt(2, attack, true);
+        var struck = false;
+        for (var i = 0; i < 60 * 25 && world.Battle != null; i++)
+        {
+            struck |= world.Battle.SkillUses.ContainsKey(basic);
+            if (i == 45) await Shot("touch_battle");
+            await Frames(1);
+        }
+        TouchAt(2, attack, false);
+        await Frames(2);
+        Check(struck && world.Battle == null, "holding the martial art aims itself at the bear and wins the fight");
+        world = await Settle(World);
+
+        game.Touch = TouchMode.Auto;
+        game.UiScale = 0;
+        game.ApplyDisplay();
+        await Frames(3);
+        Check(!World.TouchPad.Visible, "touch controls go away again (Auto on a desktop)");
+        return world;
+    }
+
+    private void TouchAt(int finger, Vector2 at, bool pressed) =>
+        GetViewport().PushInput(new InputEventScreenTouch { Index = finger, Position = at, Pressed = pressed }, true);
+
+    private void DragTo(int finger, Vector2 at) =>
+        GetViewport().PushInput(new InputEventScreenDrag { Index = finger, Position = at }, true);
+
+    private async Task TapScreen(int finger, Vector2 at)
+    {
+        TouchAt(finger, at, true);
+        await Frames(2);
+        TouchAt(finger, at, false);
+        await Frames(3);
     }
 
     /// <summary>

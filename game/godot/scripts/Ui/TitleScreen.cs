@@ -108,6 +108,22 @@ public partial class TitleScreen : Control
         Build();
     }
 
+    /// <summary>Esc (Android's back button): out of character creation; from the menu on a phone, out of the game.</summary>
+    public override void _UnhandledInput(InputEvent e)
+    {
+        if (!e.IsActionPressed("pause")) return;
+        if (_creating)
+        {
+            GetViewport().SetInputAsHandled();
+            _creating = false;
+            Build();
+        }
+        else if (OS.HasFeature("mobile"))
+        {
+            Game.Instance.Quit();
+        }
+    }
+
     private void BuildMenu()
     {
         var seal = UiKit.Seal("修", 72);

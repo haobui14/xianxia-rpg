@@ -31,7 +31,7 @@ public partial class FieldHud : Control
 
     private readonly FieldScreen _f;
     private VBoxContainer _toasts = null!;
-    private HBoxContainer _icons = null!;
+    private GridContainer _icons = null!;
     private Button _breakthrough = null!;
     private Minimap? _minimap;
 
@@ -42,6 +42,8 @@ public partial class FieldHud : Control
     private Card? _result;
     private Card? _month;
     private float _clock;
+    /// <summary>Whether the icons were built finger-sized (rebuilt when touch controls are switched).</summary>
+    private bool _builtForTouch;
 
     public FieldHud(FieldScreen field) => _f = field;
 
@@ -92,15 +94,18 @@ public partial class FieldHud : Control
 
     private void Build()
     {
+        _builtForTouch = TouchUi.Active;
         var right = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         right.AddThemeConstantOverride("separation", 8);
         if (_f is WorldScreen world)
         {
-            _minimap = new Minimap(world) { CustomMinimumSize = new Vector2(252, 160) };
+            _minimap = new Minimap(world) { CustomMinimumSize = new Vector2(252, 160), SizeFlagsHorizontal = SizeFlags.ShrinkEnd };
             right.AddChild(_minimap);
         }
-        _icons = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.End };
-        _icons.AddThemeConstantOverride("separation", 4);
+        // One row under the minimap; two rows of finger-sized icons with touch controls.
+        _icons = new GridContainer { MouseFilter = MouseFilterEnum.Ignore, Columns = _builtForTouch ? 4 : 8, SizeFlagsHorizontal = SizeFlags.ShrinkEnd };
+        _icons.AddThemeConstantOverride("h_separation", 4);
+        _icons.AddThemeConstantOverride("v_separation", 4);
         right.AddChild(_icons);
         if (_f is WorldScreen w)
         {
@@ -133,9 +138,11 @@ public partial class FieldHud : Control
 
     private void Icon(string glyph, string tip, Action act)
     {
-        var b = new Button { Text = glyph, TooltipText = tip, FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(30, 34) };
+        // Finger-sized with touch controls.
+        var touch = TouchUi.Active;
+        var b = new Button { Text = glyph, TooltipText = tip, FocusMode = FocusModeEnum.None, CustomMinimumSize = touch ? new Vector2(46, 50) : new Vector2(30, 34) };
         b.AddThemeFontOverride("font", Ink.Han);
-        b.AddThemeFontSizeOverride("font_size", 18);
+        b.AddThemeFontSizeOverride("font_size", touch ? 26 : 18);
         b.AddThemeStyleboxOverride("normal", Ink.Box(new Color(Ink.Card, 0.92f), Ink.LineStrong, 1, 3, 4));
         b.AddThemeStyleboxOverride("hover", Ink.Box(Ink.PaperDeep, Ink.InkColor, 1, 3, 4));
         b.AddThemeStyleboxOverride("pressed", Ink.Box(Ink.InkColor, Ink.InkColor, 1, 3, 4));
@@ -226,6 +233,7 @@ public partial class FieldHud : Control
     {
         var dt = (float)delta;
         _clock += dt;
+        if (TouchUi.Active != _builtForTouch) Rebuild();
         _bannerTime = Mathf.Max(0, _bannerTime - dt);
         if (_result != null && (_result.Time -= dt) <= 0) _result = null;
         if (_month != null && (_month.Time -= dt) <= 0) _month = null;
@@ -239,7 +247,10 @@ public partial class FieldHud : Control
     {
         if (Game.Instance.Engine == null || _f.Player == null) return;
         var size = Size;
-        Who(new Vector2(16, 14));
+        // With touch controls the stick and buttons take the bottom corners: no skill bar or key hints there,
+        // and the log moves up under the character card.
+        var touch = TouchUi.Active;
+        var whoBottom = Who(new Vector2(16, 14));
         When(size);
         if (_f.Battle is { } battle)
         {
@@ -247,11 +258,12 @@ public partial class FieldHud : Control
             Flee(size, battle);
         }
         if (_f is TrialBase trial) trial.DrawHud(this, size);
-        else SkillBar(size);
-        Log(size);
+        else if (!touch) SkillBar(size);
+        Log(size, touch ? whoBottom + 10 : null);
         if (_month != null) DrawCard(_month, new Vector2(size.X / 2 - 210, _f.Battle != null ? 130 : 92), 420);
-        if (_result != null) DrawCard(_result, new Vector2(size.X - 396, size.Y / 2 - 60), 380);
-        Hint(size);
+        if (_result != null) DrawCard(_result, touch ? new Vector2(size.X / 2 - 190, 96) : new Vector2(size.X - 396, size.Y / 2 - 60), 380);
+        if (touch) TouchHint(size);
+        else Hint(size);
         Banner(size);
     }
 
@@ -275,7 +287,8 @@ public partial class FieldHud : Control
     private float Width(string text, int size, Font? font = null) =>
         (font ?? Ink.Serif).GetStringSize(text, HorizontalAlignment.Left, -1, size).X;
 
-    private void Who(Vector2 at)
+    /// <summary>The cultivator's card, top left; returns where it ends.</summary>
+    private float Who(Vector2 at)
     {
         var pc = _f.Player;
         var body = pc.Body;
@@ -320,6 +333,7 @@ public partial class FieldHud : Control
         Bar(new Vector2(at.X, y), 330, 11, expFrac, 1, p.PendingMajorBreakthrough ? Ink.Gold : Ink.Jade, expLabel, p.PendingMajorBreakthrough);
         y += 15;
         if (body.Shield > 0) Text(T($"Hộ thể {body.Shield:0}", $"Shield {body.Shield:0}"), new Vector2(at.X + 250, at.Y + 42), 13, Ink.JadeDeep, Ink.UiFont);
+        return at.Y - 4 + height;
     }
 
     private void When(Vector2 size)
@@ -459,17 +473,18 @@ public partial class FieldHud : Control
         }
     }
 
-    private void Log(Vector2 size)
+    /// <summary>The latest messages and rumor: bottom left, or from <paramref name="top"/> down (touch controls).</summary>
+    private void Log(Vector2 size, float? top)
     {
         var log = Game.Instance.Log;
-        var lines = log.Skip(Math.Max(0, log.Count - 4)).ToList();
+        var lines = log.Skip(Math.Max(0, log.Count - (top != null ? 2 : 4))).ToList();
         var rumors = E.State.World.Rumors;
         var rumor = rumors.Count > 0 ? rumors[^1] : null;
         var count = lines.Count + (rumor != null ? 1 : 0);
         if (count == 0) return;
-        const float w = 440;
+        var w = top != null ? 344f : 440f;
         var h = 16 + count * 19;
-        var pos = new Vector2(16, size.Y - 34 - h);
+        var pos = top is { } y0 ? new Vector2(10, y0) : new Vector2(16, size.Y - 34 - h);
         Panel(new Rect2(pos, new Vector2(w, h)), 0.82f);
         var y = pos.Y + 18;
         foreach (var (text, level) in lines)
@@ -503,6 +518,41 @@ public partial class FieldHud : Control
             var w = Width(lines[i], 12, Ink.UiFont);
             var y = size.Y - 12 - (lines.Length - 1 - i) * 16;
             DrawString(Ink.UiFont, new Vector2(size.X - 16 - w, y), lines[i], HorizontalAlignment.Left, -1, 12, Ink.InkSoft);
+        }
+    }
+
+    /// <summary>With touch controls: what the thumbs do, small, at the bottom between the stick and the buttons.</summary>
+    private void TouchHint(Vector2 size)
+    {
+        var left = 300f;
+        var right = size.X - 530;
+        var width = right - left;
+        if (width < 200) return;
+        var lines = new List<string>();
+        var line = "";
+        foreach (var part in _f.HintText().Split(" · "))
+        {
+            var next = line.Length == 0 ? part : line + " · " + part;
+            if (line.Length > 0 && Width(next, 12, Ink.UiFont) > width)
+            {
+                lines.Add(line);
+                line = part;
+            }
+            else
+            {
+                line = next;
+            }
+        }
+        if (line.Length > 0) lines.Add(line);
+        if (lines.Count > 4) lines = lines.Take(4).ToList();
+        var y = size.Y - 14 - (lines.Count - 1) * 16;
+        foreach (var text in lines)
+        {
+            var w = Width(text, 12, Ink.UiFont);
+            var x = left + (width - w) / 2;
+            DrawRect(new Rect2(x - 6, y - 12, w + 12, 16), new Color(Ink.Card, 0.7f));
+            DrawString(Ink.UiFont, new Vector2(x, y), text, HorizontalAlignment.Left, -1, 12, Ink.InkSoft);
+            y += 16;
         }
     }
 

@@ -33,6 +33,9 @@ public abstract partial class TrialBase : FieldScreen
     /// <summary>The gauge drawn by the HUD in place of the skill bar.</summary>
     public abstract void DrawHud(FieldHud hud, Vector2 size);
 
+    /// <summary>Where the gauge sits: at the bottom, or under the date when the touch buttons need the bottom corners.</summary>
+    protected static float GaugeY(Vector2 size) => TouchUi.Active ? 150 : size.Y - 112;
+
     protected void ReadPreparation() => Threshold = (float)Cultivation.MajorBreakthroughThreshold(E.Player);
 
     public override void Flee()

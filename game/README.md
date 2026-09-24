@@ -70,6 +70,24 @@ These are the default keys.
 
 Controllers are mapped too: the left stick moves, the right stick aims, Y talks or looses the ultimate, A dashes, and Back opens the map.
 
+**Touch** (phones and tablets; Settings → Touch controls → On to try it on a desktop)
+
+| Touch | Action |
+|---|---|
+| Stick, lower left | Walk. It appears under your thumb anywhere in that corner |
+| Tap the ground | Walk there, round whatever is in the way |
+| Tap a person or thing | Walk up to it and use it (talk, the board, the inn…) |
+| Tap a beast | Strike it if it's in reach, else walk up to it |
+| 武, lower right | Hold to strike; it aims itself at the nearest foe |
+| Tap a foe (in a fight) | Strike toward it |
+| Buttons around 武 (in a fight) | The four spirit arts, the ultimate (絕), a pill (丹) |
+| 遁 | Dash |
+| 互 / 飛 (exploring) | Interact / sword flight; each appears when it applies (飛 turns to 降 to land) |
+| 停 (in a fight) | Pause, or flee |
+| Icons, top right | Character, inventory, journal, map, seclusion, sense pulse, end month, system |
+| Two fingers | Pinch to zoom |
+| Android back | Same as Esc |
+
 ### What the slice has
 
 - **Character creation:** name, age, a spirit root roll with 3 rerolls, and a path (Qi, Body, or Kiêm tu).
@@ -105,7 +123,8 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
 - **Sword flight (ngự kiếm):** from Trúc Cơ, press V to ride your sword over the river and peaks, twice as fast as walking and out of reach of beasts. Land with V, which doesn't work over water. Set off on the map across water and the sword takes you there and sets you down.
 - **Sound, all synthesized:** about 40 effects (swishes, hits, casts, coins, the month gong, and more), positional in the world. Five pieces of music are generated in pentatonic modes for the title, exploring, fights, the breakthrough trial and secret realms. The zither plays with glissandi, grace notes and tremolo over flute, bells and drone; fights get taiko drums. The music crossfades as you move between them.
 - **The seasons in the air:** blossom petals, summer fluff and butterflies, autumn leaves and snow drift across the screen. Footsteps raise dust on roads, ripples in the swamp and puffs of snow.
-- **A painted title screen** that moves (mist, falling petals, a slow pan), and a **settings** screen: volumes, fullscreen, screen shake, language.
+- **A painted title screen** that moves (mist, falling petals, a slow pan), and a **settings** screen: volumes, fullscreen, screen shake, interface size, touch controls, keys and language.
+- **Phones and tablets:** on-screen touch controls (above), and an interface drawn bigger to suit the screen. Auto picks 135% on a phone and 120% on a small tablet, or you choose 100–145%. Panels shrink to fit and scroll.
 - **Saves and language:** the game saves every month and after every fight, and Vietnamese/English can be switched anywhere.
 
 The Linh Thức AI storyteller is **offline-only** in this slice. NPC lines, the chronicle and rumors come from templates built on the same facts the online `/api/story` endpoint will receive (§7.13).
@@ -128,6 +147,9 @@ dotnet test game/core/TuTien.Core.Tests
 #    realm floor, the Trúc Cơ meridian storm (it must lay a foundation), a fight with
 #    each of the five new creatures using a different second-tier art, sword flight
 #    across the river (by key and by map), seclusion, and a save/load round trip
+#  - a phone: at 135% interface size, touch events pushed into the viewport drag the
+#    stick, press Interact, tap the ground to walk, pinch to zoom, and in a fight
+#    press an art, pause, and hold the martial art until the bear is beaten
 # It exits 0 on success, 1 on failure.
 dotnet build game/TuTienLuc.sln
 godot --headless --fixed-fps 60 --path game/godot -- --smoke
@@ -138,6 +160,40 @@ xvfb-run -s "-screen 0 1600x900x24" godot --rendering-driver opengl3 --fixed-fps
 ```
 
 The smoke test writes to its own save slot (`user://saves/smoke.json`), so it never touches your real save. With `--shots` it also writes the five music loops as WAV files next to the screenshots.
+
+## Android
+
+The game runs on Android phones and tablets (arm64, landscape). There's a ready preset in `godot/export_presets.cfg`, and touch controls and a bigger interface switch on by themselves on a phone. Godot marks C# on Android as experimental.
+
+**You need:**
+
+- **Godot 4.7.2 .NET** and its **export templates**. In the editor use Editor → Manage Export Templates → Download and Install, or install the `.tpz` from the Godot download page.
+- **.NET 9 SDK.** Godot 4.7's Android template runs .NET 9, so `TuTienLuc.csproj` builds for `net9.0` when exporting to Android (desktop builds stay on `net8.0`). The .NET 9 SDK builds both.
+- **JDK 17** or newer.
+- **Android SDK** with platform-tools and build-tools:
+  ```bash
+  sdkmanager "platform-tools" "build-tools;35.0.0" "platforms;android-35"
+  ```
+
+**Set up once:** in Editor → Editor Settings → Export → Android, set the **Android SDK path** and the **Java SDK path**. Godot makes a debug keystore itself.
+
+**Build and install a debug APK:**
+
+```bash
+mkdir -p game/godot/export/android   # the output path is relative to the project (and gitignored)
+godot --headless --path game/godot --export-debug "Android" export/android/TuTienLuc-debug.apk
+adb install -r game/godot/export/android/TuTienLuc-debug.apk
+```
+
+Or in the editor: Project → Export → Android → Export Project. You can also use the one-click deploy button with a phone plugged in (USB debugging on).
+
+**A release build** needs your own keystore. Godot reads it from `GODOT_ANDROID_KEYSTORE_RELEASE_PATH`, `GODOT_ANDROID_KEYSTORE_RELEASE_USER` and `GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD`; then run `--export-release`. No keystore or password is kept in the repository.
+
+**On the phone:**
+
+- Saves go to the app's own storage.
+- The back button works like Esc.
+- The package name is `com.tutienluc.game`; change it in the preset before publishing.
 
 ## Re-export content from the web game
 
