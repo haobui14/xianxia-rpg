@@ -60,7 +60,7 @@ public partial class TitleScene : Node2D
 
         var objects = new Node2D { YSortEnabled = true };
         _world.AddChild(objects);
-        void Add(Vector2 at, System.Action<CanvasItem, float> art, bool animated = false, Material? mat = null) =>
+        void Add(Vector2 at, System.Action<Brush, float> art, bool animated = false, Material? mat = null) =>
             objects.AddChild(new Prop(at, art, animated, null, mat));
 
         // Snow peaks across the top, taller at the back.

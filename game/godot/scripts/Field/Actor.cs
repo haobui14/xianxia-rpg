@@ -43,17 +43,18 @@ public partial class Actor : Node2D
 
     public override void _Draw()
     {
+        using var ink = Brush.On(this);
         var b = Body;
         var alpha = b.Alive ? (b.Yielded ? 0.8f : 1f) : Mathf.Clamp(b.DeathFade / 0.8f, 0, 1);
         if (alpha <= 0 || b.Gone) return;
         Paint.Alpha = alpha * (b.Invuln > 0 && b.IsPlayer && _field.Player.Dashing ? 0.6f : 1) * (b.Faded ? 0.22f : 1);
         if (b.IsPlayer)
         {
-            DrawArc(Vector2.Zero, 17, 0, Mathf.Tau, 32, new Color(0.61f, 0.16f, 0.15f, 0.55f * Paint.Alpha), 2, true);
+            ink.DrawArc(Vector2.Zero, 17, 0, Mathf.Tau, 32, new Color(0.61f, 0.16f, 0.15f, 0.55f * Paint.Alpha), 2, true);
         }
         else if (b.InBattle && b.Active)
         {
-            DrawArc(Vector2.Zero, b.Radius + 4, 0, Mathf.Tau, 32, new Color(0.61f, 0.16f, 0.15f, 0.35f), 1.5f, true);
+            ink.DrawArc(Vector2.Zero, b.Radius + 4, 0, Mathf.Tau, 32, new Color(0.61f, 0.16f, 0.15f, 0.35f), 1.5f, true);
         }
         var pose = new Pose
         {
@@ -72,29 +73,29 @@ public partial class Actor : Node2D
             LookAt = _field.PlayerBody.Pos - b.Pos,
             Lift = b.Hover,
         };
-        if (b.Hover > 0.5f) FlyingSword(b);
-        Figures.Draw(this, b.Kind, b.Look, pose, b.Scale);
-        if (b.Shield > 0) DrawArc(new Vector2(0, -26 - b.Hover), 30, 0, Mathf.Tau, 40, new Color(0.53f, 0.79f, 0.66f, 0.7f * Paint.Alpha), 3, true);
+        if (b.Hover > 0.5f) FlyingSword(ink, b);
+        Figures.Draw(ink, b.Kind, b.Look, pose, b.Scale);
+        if (b.Shield > 0) ink.DrawArc(new Vector2(0, -26 - b.Hover), 30, 0, Mathf.Tau, 40, new Color(0.53f, 0.79f, 0.66f, 0.7f * Paint.Alpha), 3, true);
         Paint.Alpha = 1;
     }
 
     /// <summary>The sword under the feet when riding it (ngự kiếm): a long blade with a trail of qi.</summary>
-    private void FlyingSword(Fighter b)
+    private static void FlyingSword(Brush ink, Fighter b)
     {
         var k = Mathf.Clamp(b.Hover / 30f, 0, 1);
         var dir = Mathf.Abs(b.Facing.X) > 0.2f ? Mathf.Sign(b.Facing.X) : b.Side;
         var y = -b.Hover + 2;
         var tip = new Vector2(dir * 40, y);
         var tail = new Vector2(-dir * 34, y);
-        DrawColoredPolygon(Paint.EllipsePts(new Vector2(0, y + 1), 44, 7, 16), new Color(0.55f, 0.85f, 0.95f, 0.18f * k));
+        ink.DrawColoredPolygon(Paint.EllipsePts(new Vector2(0, y + 1), 44, 7, 16), new Color(0.55f, 0.85f, 0.95f, 0.18f * k));
         var blade = new[] { tip, new Vector2(dir * 26, y - 3), new Vector2(-dir * 22, y - 3), new Vector2(-dir * 22, y + 3), new Vector2(dir * 26, y + 3) };
-        DrawColoredPolygon(blade, new Color(0.86f, 0.9f, 0.94f, k));
-        DrawPolyline(new[] { blade[0], blade[1], blade[2], blade[3], blade[4], blade[0] }, new Color(0.11f, 0.13f, 0.19f, 0.8f * k), 1.2f, true);
-        DrawLine(new Vector2(-dir * 22, y - 6), new Vector2(-dir * 22, y + 6), new Color(0.63f, 0.48f, 0.18f, k), 3, true);
-        DrawLine(new Vector2(-dir * 22, y), tail, new Color(0.35f, 0.25f, 0.2f, k), 3, true);
-        DrawLine(tip, new Vector2(-dir * 18, y), new Color(1, 1, 1, 0.8f * k), 1, true);
+        ink.DrawColoredPolygon(blade, new Color(0.86f, 0.9f, 0.94f, k));
+        ink.DrawPolyline(new[] { blade[0], blade[1], blade[2], blade[3], blade[4], blade[0] }, new Color(0.11f, 0.13f, 0.19f, 0.8f * k), 1.2f, true);
+        ink.DrawLine(new Vector2(-dir * 22, y - 6), new Vector2(-dir * 22, y + 6), new Color(0.63f, 0.48f, 0.18f, k), 3, true);
+        ink.DrawLine(new Vector2(-dir * 22, y), tail, new Color(0.35f, 0.25f, 0.2f, k), 3, true);
+        ink.DrawLine(tip, new Vector2(-dir * 18, y), new Color(1, 1, 1, 0.8f * k), 1, true);
         if (b.Moving > 0.3f)
             for (var i = 1; i <= 3; i++)
-                DrawLine(tail + new Vector2(-dir * i * 9, 0), tail + new Vector2(-dir * (i * 9 + 14), 0), new Color(0.55f, 0.85f, 0.95f, 0.45f * k / i), 2, true);
+                ink.DrawLine(tail + new Vector2(-dir * i * 9, 0), tail + new Vector2(-dir * (i * 9 + 14), 0), new Color(0.55f, 0.85f, 0.95f, 0.45f * k / i), 2, true);
     }
 }

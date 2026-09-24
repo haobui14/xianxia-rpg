@@ -77,7 +77,8 @@ public partial class WorldScreen : FieldScreen
 
     // ================================================================ building
 
-    protected override void BuildField()
+    /// <summary>The region, a slice at a time: the land and rivers, then the scenery a row of tiles at a time.</summary>
+    protected override IEnumerable<BuildStep> BuildSteps()
     {
         var map = E.Map;
         Walls = new CollisionWorld(map.Width, map.Height, Cell);
@@ -93,6 +94,7 @@ public partial class WorldScreen : FieldScreen
                 if (t == Terrain.Bridge) BridgeRails(map, x, y);
             }
         }
+        yield return new BuildStep(0.03f, "Trải đất, khơi sông", "Laying the land, carving the rivers");
 
         Season = Calendar.SeasonOf(E.Content, E.State.Calendar.Month);
         _sway = ShaderQuad.MakeMaterial("res://shaders/sway.gdshader", new Dictionary<string, Variant> { ["strength"] = 1f });
@@ -114,8 +116,10 @@ public partial class WorldScreen : FieldScreen
         });
         AddChild(new ShaderQuad(area, fogMat, 20));
         AddChild(new Ambience(this, () => Season));
+        yield return new BuildStep(0.1f, "Trải đất, khơi sông", "Laying the land, carving the rivers");
 
-        WorldScenery.Build(this);
+        foreach (var step in WorldScenery.Build(this))
+            yield return step with { Progress = 0.1f + 0.9f * step.Progress };
     }
 
     /// <summary>A bridge tile: the deck is walkable, the water on either side is not.</summary>
@@ -137,7 +141,7 @@ public partial class WorldScreen : FieldScreen
     }
 
     /// <summary>Scenery with optional wind sway, animation, and fading when the player walks behind it.</summary>
-    public Prop AddScenery(Vector2 at, Action<CanvasItem, float> art, bool animated = false, bool occludes = false, bool sway = false, Vector2? extent = null)
+    public Prop AddScenery(Vector2 at, Action<Brush, float> art, bool animated = false, bool occludes = false, bool sway = false, Vector2? extent = null)
     {
         var prop = AddProp(at, art, animated, sway ? _sway : null);
         _scenery.Add(prop);

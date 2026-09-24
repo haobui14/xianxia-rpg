@@ -33,7 +33,7 @@ public static class FxArt
         },
     };
 
-    public static void Telegraph(CanvasItem c, Telegraph t)
+    public static void Telegraph(Brush c, Telegraph t)
     {
         var color = t.Tint ?? (t.FromPlayer ? new Color("#4e7f6c") : new Color("#9b2a26"));
         var k = t.Progress;
@@ -76,7 +76,7 @@ public static class FxArt
         return pts;
     }
 
-    public static void Projectile(CanvasItem c, Projectile p)
+    public static void Projectile(Brush c, Projectile p)
     {
         var dir = p.Vel.LengthSquared() > 0.01f ? p.Vel.Normalized() : Vector2.Right;
         var n = new Vector2(-dir.Y, dir.X);
@@ -166,7 +166,7 @@ public static class FxArt
     }
 
     /// <summary>Burning ground: a scorched patch with a ring of flame licking at its edge.</summary>
-    public static void GroundFire(CanvasItem c, GroundFire g)
+    public static void GroundFire(Brush c, GroundFire g)
     {
         var fade = Mathf.Clamp(g.Time / 0.2f, 0, 1) * Mathf.Clamp((g.Duration - g.Time) / 0.5f, 0, 1);
         c.DrawCircle(g.Pos, g.Radius, new Color(0.35f, 0.12f, 0.06f, 0.28f * fade));
@@ -184,7 +184,7 @@ public static class FxArt
     }
 
     /// <summary>An orbit art: leaves (or blades) wheeling round the caster.</summary>
-    public static void Orbit(CanvasItem c, Orbiter o)
+    public static void Orbit(Brush c, Orbiter o)
     {
         var fade = Mathf.Clamp(o.Time / 0.25f, 0, 1) * Mathf.Clamp((o.Duration - o.Time) / 0.4f, 0, 1);
         var centre = o.Owner.Pos + new Vector2(0, -22);
@@ -204,7 +204,7 @@ public static class FxArt
     }
 
     /// <summary>A brush-stroke crescent (slash) or an expanding ring (burst).</summary>
-    public static void Swoosh(CanvasItem c, Swoosh s)
+    public static void Swoosh(Brush c, Swoosh s)
     {
         var k = s.Life / s.MaxLife;
         if (s.Ring)
@@ -244,7 +244,7 @@ public static class FxArt
         c.DrawPolyline(outer, new Color(1, 1, 1, 0.7f * k), 1.6f, true);
     }
 
-    public static void Particle(CanvasItem c, Particle p)
+    public static void Particle(Brush c, Particle p)
     {
         var k = Mathf.Clamp(p.Life / p.MaxLife, 0, 1);
         switch (p.Kind)
@@ -272,7 +272,7 @@ public static class FxArt
         }
     }
 
-    public static void Floater(CanvasItem c, Floater f)
+    public static void Floater(Brush c, Floater f)
     {
         var alpha = Mathf.Clamp(f.Life / f.MaxLife * 1.6f, 0, 1);
         Paint.Alpha = alpha;

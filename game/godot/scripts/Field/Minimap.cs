@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using TuTienLuc.Art;
 using TuTien.Core;
 using TuTien.Core.World;
 using TuTienLuc.Ui;
@@ -91,39 +92,40 @@ public partial class Minimap : Control
         var e = Game.Instance.Engine;
         if (e == null) return;
         if (_tex == null) Refresh();
+        using var ink = Brush.On(this);
         var map = e.Map;
         var size = Size;
-        DrawRect(new Rect2(Vector2.Zero, size), new Color(Ink.Card, 0.92f));
+        ink.DrawRect(new Rect2(Vector2.Zero, size), new Color(Ink.Card, 0.92f));
         var scale = Mathf.Min((size.X - 12) / map.Width, (size.Y - 12) / map.Height);
         var mapSize = new Vector2(map.Width, map.Height) * scale;
         var origin = (size - mapSize) / 2;
-        if (_tex != null) DrawTextureRect(_tex, new Rect2(origin, mapSize), false);
-        DrawRect(new Rect2(origin, mapSize), new Color(Ink.InkColor, 0.7f), false, 1.5f);
+        if (_tex != null) ink.DrawTextureRect(_tex, new Rect2(origin, mapSize), false);
+        ink.DrawRect(new Rect2(origin, mapSize), new Color(Ink.InkColor, 0.7f), false, 1.5f);
 
         Vector2 At(float x, float y) => origin + new Vector2(x, y) * scale;
         foreach (var poi in map.Def.Pois)
         {
             if (!_w.Explored(poi.X, poi.Y) || poi.Kind == "herb") continue;
             var p = At(poi.X + 0.5f, poi.Y + 0.5f);
-            DrawRect(new Rect2(p - new Vector2(3, 3), new Vector2(6, 6)), MapImage.PoiColor(poi.Kind));
+            ink.DrawRect(new Rect2(p - new Vector2(3, 3), new Vector2(6, 6)), MapImage.PoiColor(poi.Kind));
         }
         foreach (var adv in e.State.World.Adventures)
         {
             if (!_w.Explored(adv.X, adv.Y) || !e.Senses(adv.X, adv.Y) || (adv.Hidden && !e.Player.SensePulse && e.Player.Attrs.Per < 12)) continue;
-            DrawCircle(At(adv.X + 0.5f, adv.Y + 0.5f), 2.6f, Ink.Gold);
+            ink.DrawCircle(At(adv.X + 0.5f, adv.Y + 0.5f), 2.6f, Ink.Gold);
         }
         foreach (var pack in e.State.World.Beasts.Where(b => e.Senses(b.X, b.Y)))
-            DrawCircle(At(pack.X + 0.5f, pack.Y + 0.5f), 2.2f, pack.Aggressive ? Ink.Cinnabar : Ink.CinnabarSoft);
+            ink.DrawCircle(At(pack.X + 0.5f, pack.Y + 0.5f), 2.2f, pack.Aggressive ? Ink.Cinnabar : Ink.CinnabarSoft);
 
         // What the camera sees, then you.
         var view = _w.View;
         var cell = WorldScreen.Cell;
-        DrawRect(new Rect2(At(view.Position.X / cell, view.Position.Y / cell), view.Size / cell * scale), new Color(Ink.InkColor, 0.35f), false, 1);
+        ink.DrawRect(new Rect2(At(view.Position.X / cell, view.Position.Y / cell), view.Size / cell * scale), new Color(Ink.InkColor, 0.35f), false, 1);
         var me = At(_w.PlayerBody.Pos.X / cell, _w.PlayerBody.Pos.Y / cell);
-        DrawCircle(me, 4, Ink.Cinnabar);
-        DrawArc(me, 4, 0, Mathf.Tau, 12, Ink.Card, 1.2f, true);
-        DrawLine(me, me + _w.PlayerBody.Facing * 8, Ink.Cinnabar, 1.5f, true);
+        ink.DrawCircle(me, 4, Ink.Cinnabar);
+        ink.DrawArc(me, 4, 0, Mathf.Tau, 12, Ink.Card, 1.2f, true);
+        ink.DrawLine(me, me + _w.PlayerBody.Facing * 8, Ink.Cinnabar, 1.5f, true);
         var r = e.SenseRadius * scale;
-        DrawArc(me, r, 0, Mathf.Tau, 32, new Color(Ink.Jade, e.Player.SensePulse ? 0.7f : 0.35f), 1, true);
+        ink.DrawArc(me, r, 0, Mathf.Tau, 32, new Color(Ink.Jade, e.Player.SensePulse ? 0.7f : 0.35f), 1, true);
     }
 }

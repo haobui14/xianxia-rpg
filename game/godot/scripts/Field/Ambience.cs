@@ -163,21 +163,22 @@ public partial class Ambience : Node2D
 
     public override void _Draw()
     {
+        using var ink = Brush.On(this);
         foreach (var m in _motes)
         {
             var fade = Mathf.Clamp(m.Life / 1.2f, 0, 1) * Mathf.Clamp((m.MaxLife - m.Life) / 0.8f, 0, 1);
             switch (m.Kind)
             {
                 case Kind.Snow:
-                    DrawCircle(m.Pos, m.Size * 1.8f, new Color(1, 1, 1, 0.18f * fade));
-                    DrawCircle(m.Pos, m.Size, new Color(1, 1, 1, 0.9f * fade));
+                    ink.DrawCircle(m.Pos, m.Size * 1.8f, new Color(1, 1, 1, 0.18f * fade));
+                    ink.DrawCircle(m.Pos, m.Size, new Color(1, 1, 1, 0.9f * fade));
                     break;
                 case Kind.Fluff:
-                    DrawCircle(m.Pos, m.Size, new Color(m.Color, 0.8f * fade));
+                    ink.DrawCircle(m.Pos, m.Size, new Color(m.Color, 0.8f * fade));
                     for (var k = 0; k < 5; k++)
                     {
                         var dir = Vector2.Right.Rotated(m.Angle + k * 1.2566f);
-                        DrawLine(m.Pos, m.Pos + dir * m.Size * 2.4f, new Color(1, 1, 1, 0.45f * fade), 0.8f, true);
+                        ink.DrawLine(m.Pos, m.Pos + dir * m.Size * 2.4f, new Color(1, 1, 1, 0.45f * fade), 0.8f, true);
                     }
                     break;
                 case Kind.Butterfly:
@@ -188,17 +189,17 @@ public partial class Ambience : Node2D
                     foreach (var s in new[] { -1f, 1f })
                     {
                         var wing = body + new Vector2(s * m.Size * 0.7f * flap, -m.Size * 0.3f);
-                        DrawColoredPolygon(Paint.EllipsePts(wing, m.Size * 0.75f * (0.35f + 0.65f * flap), m.Size * 0.6f, 10), new Color(m.Color, 0.95f * fade));
-                        DrawColoredPolygon(Paint.EllipsePts(wing + new Vector2(0, m.Size * 0.55f), m.Size * 0.45f * (0.35f + 0.65f * flap), m.Size * 0.35f, 8), new Color(m.Color.Darkened(0.15f), 0.95f * fade));
+                        ink.DrawColoredPolygon(Paint.EllipsePts(wing, m.Size * 0.75f * (0.35f + 0.65f * flap), m.Size * 0.6f, 10), new Color(m.Color, 0.95f * fade));
+                        ink.DrawColoredPolygon(Paint.EllipsePts(wing + new Vector2(0, m.Size * 0.55f), m.Size * 0.45f * (0.35f + 0.65f * flap), m.Size * 0.35f, 8), new Color(m.Color.Darkened(0.15f), 0.95f * fade));
                     }
-                    DrawLine(body + new Vector2(0, -m.Size * 0.6f), body + new Vector2(0, m.Size * 0.7f), new Color(0.15f, 0.13f, 0.12f, fade), 1.4f, true);
-                    DrawLine(body + new Vector2(0, -m.Size * 0.6f), body + new Vector2(side * 2.5f, -m.Size * 1.2f), new Color(0.15f, 0.13f, 0.12f, 0.8f * fade), 0.8f, true);
+                    ink.DrawLine(body + new Vector2(0, -m.Size * 0.6f), body + new Vector2(0, m.Size * 0.7f), new Color(0.15f, 0.13f, 0.12f, fade), 1.4f, true);
+                    ink.DrawLine(body + new Vector2(0, -m.Size * 0.6f), body + new Vector2(side * 2.5f, -m.Size * 1.2f), new Color(0.15f, 0.13f, 0.12f, 0.8f * fade), 0.8f, true);
                     break;
                 }
                 default:
-                    DrawColoredPolygon(Paint.EllipsePts(m.Pos, m.Size, m.Size * (m.Kind == Kind.Leaf ? 0.55f : 0.5f), 8, m.Angle), new Color(m.Color, 0.9f * fade));
+                    ink.DrawColoredPolygon(Paint.EllipsePts(m.Pos, m.Size, m.Size * (m.Kind == Kind.Leaf ? 0.55f : 0.5f), 8, m.Angle), new Color(m.Color, 0.9f * fade));
                     if (m.Kind == Kind.Leaf)
-                        DrawLine(m.Pos - Vector2.Right.Rotated(m.Angle) * m.Size, m.Pos + Vector2.Right.Rotated(m.Angle) * m.Size, new Color(m.Color.Darkened(0.35f), 0.8f * fade), 0.8f, true);
+                        ink.DrawLine(m.Pos - Vector2.Right.Rotated(m.Angle) * m.Size, m.Pos + Vector2.Right.Rotated(m.Angle) * m.Size, new Color(m.Color.Darkened(0.35f), 0.8f * fade), 0.8f, true);
                     break;
             }
         }

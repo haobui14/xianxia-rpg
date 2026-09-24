@@ -42,7 +42,7 @@ public static class PropArt
         }
     }
 
-    public static void Tree(CanvasItem c, TreeKind kind, int seed, Season season, float scale)
+    public static void Tree(Brush c, TreeKind kind, int seed, Season season, float scale)
     {
         switch (kind)
         {
@@ -53,14 +53,14 @@ public static class PropArt
         }
     }
 
-    private static void Trunk(CanvasItem c, float s, float height, Color bark)
+    private static void Trunk(Brush c, float s, float height, Color bark)
     {
         Paint.Poly(c, new[] { V(-7 * s, 0), V(-3 * s, -3 * s), V(-4.4f * s, -height * 0.45f), V(-4.8f * s, -height), V(4.8f * s, -height), V(4.2f * s, -height * 0.45f), V(3 * s, -3 * s), V(7 * s, 0) }, bark);
         Paint.Line2(c, V(-1.5f * s, -4 * s), V(-2 * s, -height * 0.8f), bark.Darkened(0.25f), 1.1f);
         Paint.Line2(c, V(2 * s, -6 * s), V(1.4f * s, -height * 0.6f), bark.Darkened(0.25f), 1);
     }
 
-    private static void Broadleaf(CanvasItem c, int seed, Season season, float s, bool blossom)
+    private static void Broadleaf(Brush c, int seed, Season season, float s, bool blossom)
     {
         Paint.Shadow(c, V(12 * s, 2 * s), 36 * s, 12 * s, 0.16f);
         var bark = blossom ? new Color("#5a3f33") : new Color("#6b4a32");
@@ -110,7 +110,7 @@ public static class PropArt
         Paint.Ellipse(c, V(4, -46) * s, 16 * s, 5 * s, new Color(0, 0, 0, 0.12f), 0);
     }
 
-    private static void Pine(CanvasItem c, int seed, Season season, float s)
+    private static void Pine(Brush c, int seed, Season season, float s)
     {
         Paint.Shadow(c, V(10 * s, 2 * s), 28 * s, 9 * s, 0.17f);
         Paint.Poly(c, new[] { V(-4 * s, 0), V(4 * s, 0), V(3 * s, -18 * s), V(-3 * s, -18 * s) }, new Color("#5a3d2b"));
@@ -131,7 +131,7 @@ public static class PropArt
         }
     }
 
-    private static void Bamboo(CanvasItem c, int seed, Season season, float s)
+    private static void Bamboo(Brush c, int seed, Season season, float s)
     {
         Paint.Shadow(c, V(6 * s, 2 * s), 22 * s, 7 * s, 0.14f);
         var green = season == Season.Autumn ? new Color("#9aa05a") : new Color("#7fa05a");
@@ -153,7 +153,7 @@ public static class PropArt
         }
     }
 
-    private static void Willow(CanvasItem c, int seed, Season season, float s)
+    private static void Willow(Brush c, int seed, Season season, float s)
     {
         Paint.Shadow(c, V(10 * s, 2 * s), 32 * s, 10 * s, 0.15f);
         Trunk(c, s, 44 * s, new Color("#6b5a42"));
@@ -168,7 +168,7 @@ public static class PropArt
         }
     }
 
-    public static void Bush(CanvasItem c, int seed, Season season, float s)
+    public static void Bush(Brush c, int seed, Season season, float s)
     {
         var (dark, mid, light) = Canopy(season, seed + 7);
         var blobs = new[] { (V(-8, -8), 9f, dark), (V(8, -8), 9f, dark), (V(0, -13), 10f, mid), (V(-3, -18), 6f, light) };
@@ -180,7 +180,7 @@ public static class PropArt
             for (var i = 0; i < 4; i++) c.DrawCircle(V(-8 + i * 5, -12 - (i % 2) * 5) * s, 1.6f * s, Paint.A(new Color("#f0e6a0")));
     }
 
-    public static void Reeds(CanvasItem c, int seed)
+    public static void Reeds(Brush c, int seed)
     {
         for (var i = 0; i < 6; i++)
         {
@@ -194,7 +194,7 @@ public static class PropArt
 
     // ------------------------------------------------------------------ rocks and mountains
 
-    public static void Rock(CanvasItem c, int seed, float size, bool snow)
+    public static void Rock(Brush c, int seed, float size, bool snow)
     {
         Paint.Shadow(c, V(size * 0.2f, 1), size * 1.1f, size * 0.35f, 0.18f);
         var body = Paint.Blob(V(0, -size * 0.45f), size, size * 0.62f, 11, 0.16f, seed);
@@ -207,7 +207,7 @@ public static class PropArt
     }
 
     /// <summary>A mountain mass for impassable peaks and the world's rim.</summary>
-    public static void Cliff(CanvasItem c, int seed, float w, float h, bool snow)
+    public static void Cliff(Brush c, int seed, float w, float h, bool snow)
     {
         Paint.Shadow(c, V(10, 4), w * 0.62f, 16, 0.2f);
         var n = 9;
@@ -260,7 +260,7 @@ public static class PropArt
 
     // ------------------------------------------------------------------ buildings
 
-    private static void Roof(CanvasItem c, float left, float right, float eave, float ridge, Color tile, float curl = 10)
+    private static void Roof(Brush c, float left, float right, float eave, float ridge, Color tile, float curl = 10)
     {
         var w = right - left;
         var roof = new[]
@@ -282,7 +282,7 @@ public static class PropArt
         Paint.Line2(c, V(left - 12, eave + 2), V(right + 12, eave + 2), tile.Lightened(0.25f), 1.6f);
     }
 
-    private static void Window(CanvasItem c, float x, float y, float w, float h)
+    private static void Window(Brush c, float x, float y, float w, float h)
     {
         Paint.Poly(c, new[] { V(x, y), V(x + w, y), V(x + w, y + h), V(x, y + h) }, new Color("#3a2a22"), 0.8f, 1.2f);
         for (var i = 1; i < 3; i++)
@@ -292,7 +292,7 @@ public static class PropArt
         }
     }
 
-    public static void House(CanvasItem c, int seed, float width)
+    public static void House(Brush c, int seed, float width)
     {
         var w = width;
         var roofColor = H(seed, 1) < 0.6f ? new Color("#4a5566") : new Color("#7a3e30");
@@ -315,7 +315,7 @@ public static class PropArt
         Roof(c, -w / 2, w / 2, -50, -104, roofColor);
     }
 
-    public static void Inn(CanvasItem c)
+    public static void Inn(Brush c)
     {
         const float w = 200;
         Paint.Shadow(c, V(16, 4), w * 0.6f, 16, 0.2f);
@@ -348,7 +348,7 @@ public static class PropArt
         Icons.Draw(c, IconKind.Gourd, V(w / 2 + 27, -89), 24, new Color("#9b2a26"));
     }
 
-    public static void Stall(CanvasItem c, int seed)
+    public static void Stall(Brush c, int seed)
     {
         Paint.Shadow(c, V(8, 3), 58, 12, 0.18f);
         foreach (var x in new[] { -46f, 46 }) Paint.Stroke(c, V(x, 0), V(x, -60), new Color("#6b4a32"), 3, 0.7f);
@@ -370,7 +370,7 @@ public static class PropArt
         Paint.Ellipse(c, V(32, -2), 8, 5, new Color("#a07a4a"), 0.7f, 1.1f);
     }
 
-    public static void NoticeBoard(CanvasItem c)
+    public static void NoticeBoard(Brush c)
     {
         Paint.Shadow(c, V(6, 2), 34, 8, 0.18f);
         foreach (var x in new[] { -30f, 30 }) Paint.Stroke(c, V(x, 0), V(x, -70), new Color("#5b3d2b"), 4, 0.8f);
@@ -386,7 +386,7 @@ public static class PropArt
         Paint.Caption(c, "Cáo thị", V(0, -90), 10, new Color("#e0c070"));
     }
 
-    public static void Well(CanvasItem c)
+    public static void Well(Brush c)
     {
         Paint.Shadow(c, V(4, 2), 26, 8, 0.18f);
         Paint.Ellipse(c, V(0, -8), 22, 11, new Color("#9d968a"), 0.85f, 1.6f);
@@ -398,7 +398,7 @@ public static class PropArt
         Roof(c, -22, 22, -46, -60, new Color("#4a5566"), 4);
     }
 
-    public static void Lantern(CanvasItem c, bool stone, float time)
+    public static void Lantern(Brush c, bool stone, float time)
     {
         if (stone)
         {
@@ -415,7 +415,7 @@ public static class PropArt
         c.DrawCircle(V(12, -44), 3.5f, Paint.A(new Color("#ffb070") with { A = 0.55f + 0.2f * Mathf.Sin(time * 4) }));
     }
 
-    public static void Fence(CanvasItem c, float length)
+    public static void Fence(Brush c, float length)
     {
         var posts = Mathf.Max(2, (int)(length / 22) + 1);
         for (var i = 0; i < posts; i++)
@@ -427,7 +427,7 @@ public static class PropArt
         Paint.Stroke(c, V(-length / 2, -7), V(length / 2, -7), new Color("#8a6a48"), 2, 0.5f);
     }
 
-    public static void Crates(CanvasItem c, int seed)
+    public static void Crates(Brush c, int seed)
     {
         Paint.Shadow(c, V(4, 2), 22, 6, 0.16f);
         Paint.Poly(c, new[] { V(-16, 0), V(2, 0), V(2, -16), V(-16, -16) }, new Color("#9a7a52"), 0.8f, 1.3f);
@@ -439,7 +439,7 @@ public static class PropArt
 
     // ------------------------------------------------------------------ the sect
 
-    public static void SectGate(CanvasItem c)
+    public static void SectGate(Brush c)
     {
         Paint.Shadow(c, V(10, 4), 140, 16, 0.2f);
         var red = new Color("#9b2a26");
@@ -465,7 +465,7 @@ public static class PropArt
         Paint.Caption(c, "Thanh Vân", V(0, -118), 13, new Color("#e0c070"));
     }
 
-    public static void Hall(CanvasItem c)
+    public static void Hall(Brush c)
     {
         const float w = 300;
         Paint.Shadow(c, V(18, 6), w * 0.62f, 20, 0.2f);
@@ -483,7 +483,7 @@ public static class PropArt
         Paint.Caption(c, "Thanh Vân Điện", V(0, -109), 12, new Color("#e0c070"));
     }
 
-    public static void Pagoda(CanvasItem c)
+    public static void Pagoda(Brush c)
     {
         Paint.Shadow(c, V(10, 4), 60, 14, 0.2f);
         Paint.Poly(c, new[] { V(-46, 0), V(46, 0), V(40, -12), V(-40, -12) }, new Color("#b8b2a4"));
@@ -501,7 +501,7 @@ public static class PropArt
         for (var i = 0; i < 3; i++) Paint.Circle(c, V(0, y - 6 - i * 6), 2.6f, new Color("#c9a54a"), 0.6f, 1);
     }
 
-    public static void Dummy(CanvasItem c)
+    public static void Dummy(Brush c)
     {
         Paint.Shadow(c, V(3, 2), 12, 4, 0.16f);
         Paint.Stroke(c, V(0, 0), V(0, -44), new Color("#7a5a3e"), 4, 0.7f);
@@ -510,7 +510,7 @@ public static class PropArt
         Paint.Line2(c, V(-4, -50), V(4, -46), new Color(Paint.Ink, 0.5f), 1);
     }
 
-    public static void Incense(CanvasItem c, float time)
+    public static void Incense(Brush c, float time)
     {
         Paint.Shadow(c, V(4, 2), 20, 6, 0.18f);
         foreach (var x in new[] { -10f, 0, 10 }) Paint.Stroke(c, V(x * 0.9f, 0), V(x, -14), new Color("#6f5a3a"), 3, 0.6f);
@@ -526,7 +526,7 @@ public static class PropArt
 
     // ------------------------------------------------------------------ places of power
 
-    public static void Cave(CanvasItem c, float time)
+    public static void Cave(Brush c, float time)
     {
         Paint.Shadow(c, V(10, 4), 110, 18, 0.22f);
         var rock = Paint.Blob(V(0, -58), 100, 64, 18, 0.1f, 17);
@@ -551,7 +551,7 @@ public static class PropArt
         Icons.Draw(c, IconKind.Portal, V(0, -128 + Mathf.Sin(time * 1.5f) * 4), 28, new Color(0.75f, 0.6f, 0.95f, 0.85f));
     }
 
-    public static void Crystals(CanvasItem c, float time)
+    public static void Crystals(Brush c, float time)
     {
         var pulse = 0.5f + 0.5f * Mathf.Sin(time * 1.8f);
         c.DrawCircle(V(0, -30), 58 + pulse * 6, Paint.A(new Color(0.55f, 0.85f, 0.7f, 0.12f)));
@@ -574,7 +574,7 @@ public static class PropArt
         Icons.Draw(c, IconKind.Core, V(0, -100 + Mathf.Sin(time * 1.3f) * 3), 24, new Color(0.4f, 0.75f, 0.55f, 0.8f));
     }
 
-    public static void Spring(CanvasItem c, float time)
+    public static void Spring(Brush c, float time)
     {
         var rim = Paint.EllipsePts(V(0, -8), 74, 38, 28);
         Paint.Poly(c, rim, new Color("#a8a294"), 0.8f, 1.6f);
@@ -598,7 +598,7 @@ public static class PropArt
         }
     }
 
-    public static void Herb(CanvasItem c, bool ready, float time, int seed)
+    public static void Herb(Brush c, bool ready, float time, int seed)
     {
         Paint.Shadow(c, V(3, 1), 20, 6, 0.16f);
         var leaf = ready ? new Color("#5f9356") : new Color("#9a9468");
@@ -620,7 +620,7 @@ public static class PropArt
     }
 
     /// <summary>A pillar of rough stone thrust up by an earth art (Thổ Lao Thuật); it rises fast and sinks back.</summary>
-    public static void StonePillar(CanvasItem c, TuTienLuc.Field.Pillar pillar)
+    public static void StonePillar(Brush c, TuTienLuc.Field.Pillar pillar)
     {
         var k = pillar.Rise;
         var w = pillar.Radius;
@@ -642,7 +642,7 @@ public static class PropArt
         Paint.Line2(c, V(w * 0.3f, -h * 0.65f), V(w * 0.55f, -h * 0.85f), new Color(Paint.Ink, 0.35f), 1.1f);
     }
 
-    public static void Stele(CanvasItem c)
+    public static void Stele(Brush c)
     {
         Paint.Shadow(c, V(6, 2), 24, 7, 0.18f);
         Paint.Poly(c, new[] { V(-20, 0), V(20, 0), V(16, -10), V(-16, -10) }, new Color("#8c8474"));
@@ -651,7 +651,7 @@ public static class PropArt
         Paint.Caption(c, "Ải", V(0, -44), 18, new Color("#3a3a44"));
     }
 
-    public static void QiPillar(CanvasItem c, float time)
+    public static void QiPillar(Brush c, float time)
     {
         var pulse = 0.5f + 0.5f * Mathf.Sin(time * 3);
         c.DrawCircle(V(0, -4), 26 + pulse * 6, Paint.A(new Color(0.95f, 0.8f, 0.4f, 0.16f)));
@@ -664,7 +664,7 @@ public static class PropArt
         Icons.Draw(c, IconKind.Star, V(0, -98 + Mathf.Sin(time * 2) * 5), 32, new Color(0.63f, 0.48f, 0.18f, 0.95f));
     }
 
-    public static void Chest(CanvasItem c, bool open, float time)
+    public static void Chest(Brush c, bool open, float time)
     {
         Paint.Shadow(c, V(4, 2), 24, 7, 0.2f);
         Paint.Poly(c, new[] { V(-20, 0), V(20, 0), V(20, -22), V(-20, -22) }, new Color("#7a4e2e"));
@@ -682,7 +682,7 @@ public static class PropArt
         }
     }
 
-    public static void Portal(CanvasItem c, float time, Color color)
+    public static void Portal(Brush c, float time, Color color)
     {
         Paint.Ellipse(c, V(0, -6), 46, 16, new Color("#6f685c"), 0.8f, 1.6f);
         for (var i = 0; i < 4; i++)

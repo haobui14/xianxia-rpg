@@ -144,9 +144,20 @@ public partial class SmokeTest : Node
         await Frames(3);
         await Shot("creation");
 
+        // Into the world the way the title's button goes: behind the loading screen, built a slice per frame.
         var root = new SpiritRootState { Elements = { Element.Hoa }, Grade = RootGrade.Kha };
-        game.NewGame("Lâm Vân", 16, root, CultivationPath.Qi, 20240917UL);
-        var world = Main.Instance.ShowWorld();
+        Main.Instance.EnterWorld(() =>
+        {
+            game.NewGame("Lâm Vân", 16, root, CultivationPath.Qi, 20240917UL);
+            return true;
+        });
+        await Frames(3);
+        Check(Main.Instance.Loading != null && Main.Instance.World == null, "entering the world shows the loading screen first");
+        await Until(() => Main.Instance.Loading is not { Shown: < 0.4f }, 60 * 20, "the loading bar to move");
+        if (Main.Instance.Loading != null) await Shot("loading");
+        await Until(() => Main.Instance.Loading == null, 60 * 30, "the world to be built behind the loading screen");
+        var world = World;
+        Check(world.Actors.Count > 1 && world.Interactions.Count > 3, "the world stands when the loading screen goes");
         await Frames(40);
         Check(E.Player.Realm == Realm.PhamNhan && E.Player.Footwork > 0, "new life starts as a mortal with footwork");
         Check(world.Actors.Count > 1, "people and beasts stand on the field");
@@ -562,20 +573,24 @@ public partial class SmokeTest : Node
                 if (Ground(x, y) && map.At(x + 1, y) == Terrain.Water && map.At(x + 2, y) == Terrain.Water && Ground(x + 3, y))
                     bank = new Vector2I(x, y);
         Check(bank.X >= 0, $"the river has a stretch two tiles wide (bank at {bank})");
-        // Something roaming the bank may jump the cultivator while they stand there: fight it off and try again.
+        // Something roaming the bank may jump the cultivator while they stand there (even as the sword is
+        // drawn): fight it off and try again.
         for (var tries = 0; tries < 4; tries++)
         {
             world.DebugPlace(WorldScreen.TileCenter(bank.X, bank.Y));
             await Frames(4);
             if (world.Battle == null && !world.Frozen) await Hold(Key.D, 45);
-            if (world.Battle == null && !world.Frozen) break;
-            Log($"sword flight: interrupted on the bank ({(world.Battle != null ? "a fight" : "a panel")}), trying again");
+            if (world.Battle == null && !world.Frozen)
+            {
+                Check(E.Player.X == bank.X && world.Tile.X == bank.X, "on foot, the river stops you");
+                await Tap(Key.V);
+                if (world.PlayerBody.Flying) break;
+            }
+            Log($"sword flight: interrupted on the bank ({(world.Battle != null ? "a fight" : world.Frozen ? "a panel" : "no take-off")}), trying again");
             world = await Settle(world);
             DevCheats.Restore(E);
             world.Player.SyncFromEngine();
         }
-        Check(E.Player.X == bank.X && world.Tile.X == bank.X, "on foot, the river stops you");
-        await Tap(Key.V);
         Check(world.PlayerBody.Flying,
             $"V takes to the flying sword (fight {world.Battle != null}, frozen {world.Frozen}, stun {world.PlayerBody.Stun:0.00}, realm {E.Player.Realm})");
         var sawWater = false;

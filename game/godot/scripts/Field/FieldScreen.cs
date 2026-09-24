@@ -46,7 +46,7 @@ public abstract partial class FieldScreen : Node2D
     /// <summary>The music this place plays when nobody is fighting.</summary>
     protected virtual string MusicMood => "explore";
 
-    protected Node2D Objects { get; private set; } = null!;
+    protected Node2D Objects { get; } = new() { Name = "Objects", YSortEnabled = true };
     protected Camera2D Camera { get; private set; } = null!;
 
     private float _shake;
@@ -62,15 +62,49 @@ public abstract partial class FieldScreen : Node2D
     private readonly List<Fighter> _temporary = new();
     private Rect2 _view;
     private float _zoom = 1;
+    private IEnumerator<BuildStep>? _steps;
+    private bool _built;
+    private readonly List<Prop> _props = new();
+    private float _paintTimer;
 
     protected static string T(string vi, string en) => Game.Instance.T(vi, en);
 
     // ================================================================ building
 
+    /// <summary>
+    /// Build the place ahead of showing it, one slice per call: false once it is all built. The loading
+    /// screen steps through it across frames (so a phone never sits on one long frame); entering the tree
+    /// builds whatever is left.
+    /// </summary>
+    public bool Step()
+    {
+        if (_built) return false;
+        _steps ??= BuildSteps().GetEnumerator();
+        if (_steps.MoveNext())
+        {
+            CurrentStep = _steps.Current;
+            return true;
+        }
+        _built = true;
+        _steps.Dispose();
+        return false;
+    }
+
+    /// <summary>How far the last <see cref="Step"/> got, and what it was doing.</summary>
+    public BuildStep CurrentStep { get; private set; }
+
+    /// <summary>The slices of building the place (by default all of <see cref="BuildField"/> at once).</summary>
+    protected virtual IEnumerable<BuildStep> BuildSteps()
+    {
+        BuildField();
+        yield return new BuildStep(1, "Dựng cảnh", "Setting the scene");
+    }
+
     public override void _Ready()
     {
-        Objects = new Node2D { Name = "Objects", YSortEnabled = true };
-        BuildField();
+        while (Step())
+        {
+        }
         AddChild(Objects);
         AddChild(new GroundFxLayer(this));
         AddChild(new AirFxLayer(this));
@@ -88,6 +122,7 @@ public abstract partial class FieldScreen : Node2D
         AddChild(Camera);
         Camera.MakeCurrent();
         Camera.ResetSmoothing();
+        PaintNearby(0, now: true);
 
         var ui = new CanvasLayer { Layer = 10 };
         AddChild(ui);
@@ -130,8 +165,13 @@ public abstract partial class FieldScreen : Node2D
 
     public override void _ExitTree() => Game.Instance.StateChanged -= OnStateChanged;
 
-    /// <summary>Create <see cref="Walls"/>, the ground, scenery (<see cref="AddProp"/>), people and interactions.</summary>
-    protected abstract void BuildField();
+    /// <summary>
+    /// Create <see cref="Walls"/>, the ground, scenery (<see cref="AddProp"/>), people and interactions — all at
+    /// once, or override <see cref="BuildSteps"/> instead to build in slices.
+    /// </summary>
+    protected virtual void BuildField()
+    {
+    }
 
     /// <summary>Where the player appears.</summary>
     protected abstract Vector2 SpawnPoint();
@@ -147,11 +187,42 @@ public abstract partial class FieldScreen : Node2D
         if (Battle == null && Game.Instance.Engine != null) Player.SyncFromEngine();
     }
 
-    public Prop AddProp(Vector2 pos, Action<CanvasItem, float> art, bool animated = false, Material? material = null)
+    public Prop AddProp(Vector2 pos, Action<Brush, float> art, bool animated = false, Material? material = null)
     {
         var prop = new Prop(pos, art, animated, this, material);
         Objects.AddChild(prop);
+        _props.Add(prop);
+        // Something raised mid-fight (a stone pillar) shows at once; the rest waits for the painter.
+        if (_view.Size.X > 1 && _view.Grow(PaintMargin).HasPoint(pos)) prop.SetPainted(true);
         return prop;
+    }
+
+    private const float PaintMargin = 700, UnpaintMargin = 1100;
+
+    /// <summary>
+    /// Only the scenery around the camera is painted. A painted prop keeps its shapes in GPU buffers, and a
+    /// region is thousands of props; far ones let theirs go and paint again on the way back. The margin is
+    /// wide enough that nothing pops in at a run or on the flying sword.
+    /// </summary>
+    private void PaintNearby(float dt, bool now = false)
+    {
+        _paintTimer -= dt;
+        if (_paintTimer > 0 && !now) return;
+        _paintTimer = 0.2f;
+        var view = _view;
+        if (view.Size.X <= 1)
+        {
+            var size = GetViewportRect().Size;
+            view = new Rect2(PlayerBody.Pos - size / 2, size);
+        }
+        var near = view.Grow(PaintMargin);
+        var far = view.Grow(UnpaintMargin);
+        _props.RemoveAll(p => !IsInstanceValid(p) || p.IsQueuedForDeletion());
+        foreach (var prop in _props)
+        {
+            if (near.HasPoint(prop.Position)) prop.SetPainted(true);
+            else if (!far.HasPoint(prop.Position)) prop.SetPainted(false);
+        }
     }
 
     public Actor AddActor(Fighter body)
@@ -179,6 +250,7 @@ public abstract partial class FieldScreen : Node2D
         var dt = Mathf.Min((float)delta, 1f / 30f);
         if (Game.Instance.Engine == null) return; // the run just ended; this screen is on its way out
         UpdateCamera(dt);
+        PaintNearby(dt);
         Fx.Update(dt);
         if (Frozen)
         {
@@ -767,5 +839,10 @@ public abstract partial class FieldScreen : Node2D
         Player.Route.Clear();
         Camera.Position = PlayerBody.Pos;
         Camera.ResetSmoothing();
+        // Paint the new surroundings on the next frame.
+        _paintTimer = 0;
     }
 }
+
+/// <summary>A slice of building a place: how far along (0–1), and what it was doing.</summary>
+public readonly record struct BuildStep(float Progress, string Vi, string En);

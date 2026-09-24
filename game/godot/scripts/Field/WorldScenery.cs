@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Godot;
 using TuTien.Core;
@@ -24,15 +25,24 @@ public static class WorldScenery
     private static int Seed(int x, int y, int salt = 0) => (int)(H(x, y, salt + 101) * 100000);
     private static Vector2 V(float x, float y) => new(x, y);
 
-    public static void Build(WorldScreen w)
+    /// <summary>Dress the region a row of tiles at a time, then the places; each step says how far it got (0–1).</summary>
+    public static IEnumerable<BuildStep> Build(WorldScreen w)
     {
         var map = w.E.Map;
         for (var y = 0; y < map.Height; y++)
+        {
             for (var x = 0; x < map.Width; x++)
                 Dress(w, map, x, y);
+            var done = (y + 1f) / map.Height;
+            yield return done < 0.4f ? new BuildStep(done * 0.8f, "Dựng núi non", "Raising the mountains")
+                : done < 0.75f ? new BuildStep(done * 0.8f, "Trồng rừng cây", "Planting the forests")
+                : new BuildStep(done * 0.8f, "Mọc lau sậy ven sông", "Growing reeds along the rivers");
+        }
 
-        foreach (var poi in map.Def.Pois)
+        var pois = map.Def.Pois;
+        for (var i = 0; i < pois.Count; i++)
         {
+            var poi = pois[i];
             switch (poi.Kind)
             {
                 case "town":
@@ -51,6 +61,7 @@ public static class WorldScenery
                     Pass(w, poi);
                     break;
             }
+            yield return new BuildStep(0.8f + 0.2f * (i + 1) / pois.Count, "Dựng làng mạc, tông môn", "Raising the village and the sect");
         }
     }
 

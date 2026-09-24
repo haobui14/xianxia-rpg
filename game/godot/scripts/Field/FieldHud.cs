@@ -271,14 +271,27 @@ public partial class FieldHud : Control
     private void Panel(Rect2 r, float alpha = 0.9f)
     {
         DrawRect(r, new Color(Ink.Card, alpha));
-        DrawRect(r, new Color(Ink.LineStrong, 0.9f), false, 1);
+        Frame(r, new Color(Ink.LineStrong, 0.9f), 1);
+    }
+
+    /// <summary>
+    /// A rectangle's outline as four filled strips. The HUD redraws every frame, and an unfilled rect is a
+    /// polyline with GPU buffers of its own each time; filled rects cost nothing extra.
+    /// </summary>
+    private void Frame(Rect2 r, Color color, float width)
+    {
+        var h = width / 2;
+        DrawRect(new Rect2(r.Position.X - h, r.Position.Y - h, r.Size.X + width, width), color);
+        DrawRect(new Rect2(r.Position.X - h, r.End.Y - h, r.Size.X + width, width), color);
+        DrawRect(new Rect2(r.Position.X - h, r.Position.Y + h, width, r.Size.Y - width), color);
+        DrawRect(new Rect2(r.End.X - h, r.Position.Y + h, width, r.Size.Y - width), color);
     }
 
     public void Bar(Vector2 pos, float w, float h, float value, float max, Color fill, string label, bool glow = false)
     {
         DrawRect(new Rect2(pos, new Vector2(w, h)), Ink.PaperDarker);
         DrawRect(new Rect2(pos, new Vector2(w * Mathf.Clamp(max <= 0 ? 0 : value / max, 0, 1), h)), fill);
-        DrawRect(new Rect2(pos, new Vector2(w, h)), glow ? Ink.Violet : Ink.LineStrong, false, glow ? 2 : 1);
+        Frame(new Rect2(pos, new Vector2(w, h)), glow ? Ink.Violet : Ink.LineStrong, glow ? 2 : 1);
         if (label.Length > 0) DrawString(Ink.UiFont, pos + new Vector2(6, h - Mathf.Max(2, (h - 10) / 2)), label, HorizontalAlignment.Left, -1, h >= 13 ? 12 : 10, Ink.InkColor);
     }
 
@@ -300,7 +313,7 @@ public partial class FieldHud : Control
 
         var seal = new Rect2(at + new Vector2(2, 2), new Vector2(42, 42));
         DrawRect(seal, Ink.Cinnabar);
-        DrawRect(seal.Grow(-3), new Color(Ink.Card, 0.8f), false, 1.2f);
+        Frame(seal.Grow(-3), new Color(Ink.Card, 0.8f), 1.2f);
         Icons.Draw(this, IconKind.Person, seal.GetCenter(), 28, Ink.Card);
 
         Text(p.Name, at + new Vector2(54, 20), 20, Ink.InkColor);
@@ -457,7 +470,7 @@ public partial class FieldHud : Control
             }
 
             DrawRect(r, usable ? Ink.Card : Ink.PaperDeep);
-            DrawRect(r, usable ? color : Ink.LineStrong, false, usable ? 2 : 1);
+            Frame(r, usable ? color : Ink.LineStrong, usable ? 2 : 1);
             Icons.Draw(this, icon, r.GetCenter() + new Vector2(0, 2), box * 0.58f, usable ? color : Ink.InkFaint);
             if (cdFrac > 0) DrawRect(new Rect2(r.Position, new Vector2(box, box * cdFrac)), new Color(Ink.InkColor, 0.45f));
             DrawString(Ink.UiFont, r.Position + new Vector2(4, 12), key, HorizontalAlignment.Left, -1, 10, Ink.InkMute);
@@ -558,7 +571,7 @@ public partial class FieldHud : Control
         var h = 50 + lines.Count * 21;
         var r = new Rect2(pos, new Vector2(w, h));
         DrawRect(r, new Color(Ink.Card, 0.95f * alpha));
-        DrawRect(r, new Color(card.Color, alpha), false, 2);
+        Frame(r, new Color(card.Color, alpha), 2);
         var seal = new Rect2(pos + new Vector2(12, 12), new Vector2(34, 34));
         DrawRect(seal, new Color(card.Color, alpha));
         Icons.Draw(this, card.Icon, seal.GetCenter(), 24, new Color(Ink.Card, alpha));

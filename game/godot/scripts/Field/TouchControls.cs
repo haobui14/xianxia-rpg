@@ -229,45 +229,46 @@ public partial class TouchControls : Control
 
     public override void _Draw()
     {
+        using var ink = Brush.On(this);
         var held = _stickFinger >= 0;
         var centre = held ? _stickBase : StickHome;
         var a = held ? 1f : 0.6f;
-        DrawCircle(centre, StickRadius, new Color(Ink.Card, 0.3f * a));
-        DrawArc(centre, StickRadius, 0, Mathf.Tau, 48, new Color(Ink.InkColor, 0.35f * a), 2, true);
+        ink.DrawCircle(centre, StickRadius, new Color(Ink.Card, 0.3f * a));
+        ink.DrawArc(centre, StickRadius, 0, Mathf.Tau, 48, new Color(Ink.InkColor, 0.35f * a), 2, true);
         for (var i = 0; i < 4; i++)
         {
             var d = Vector2.Right.Rotated(i * Mathf.Pi / 2);
-            DrawLine(centre + d * (StickRadius - 18), centre + d * (StickRadius - 7), new Color(Ink.InkColor, 0.35f * a), 2, true);
+            ink.DrawLine(centre + d * (StickRadius - 18), centre + d * (StickRadius - 7), new Color(Ink.InkColor, 0.35f * a), 2, true);
         }
         var knob = held ? centre + (_stickAt - centre).LimitLength(StickRadius) : centre;
-        DrawCircle(knob, KnobRadius, new Color(Ink.Card, 0.88f * a));
-        DrawArc(knob, KnobRadius, 0, Mathf.Tau, 36, new Color(Ink.InkColor, 0.7f * a), 2, true);
-        DrawCircle(knob, 7, new Color(Ink.Cinnabar, 0.65f * a));
+        ink.DrawCircle(knob, KnobRadius, new Color(Ink.Card, 0.88f * a));
+        ink.DrawArc(knob, KnobRadius, 0, Mathf.Tau, 36, new Color(Ink.InkColor, 0.7f * a), 2, true);
+        ink.DrawCircle(knob, 7, new Color(Ink.Cinnabar, 0.65f * a));
 
         foreach (var pad in _pads)
-            if (pad.Visible) DrawPad(pad);
+            if (pad.Visible) DrawPad(ink, pad);
     }
 
-    private void DrawPad(Pad pad)
+    private void DrawPad(Brush ink, Pad pad)
     {
         var (icon, caption, color, cooldown, usable) = Look(pad);
         var held = pad.Finger >= 0;
         var r = pad.Radius * (held ? 0.93f : 1f);
         var c = pad.Centre;
-        DrawCircle(c, r + 3, new Color(Ink.InkColor, 0.12f));
-        DrawCircle(c, r, new Color(usable ? Ink.Card : Ink.PaperDeep, held ? 0.97f : 0.86f));
-        if (cooldown > 0.01f) DrawColoredPolygon(Sector(c, r, Mathf.Min(cooldown, 0.995f)), new Color(Ink.InkColor, 0.38f));
-        if (held) DrawCircle(c, r, new Color(color, 0.18f));
-        DrawArc(c, r, 0, Mathf.Tau, 48, usable ? color : new Color(Ink.LineStrong, 0.9f), usable ? 3 : 1.5f, true);
-        Icons.Draw(this, icon, c, r * 1.02f, usable ? color : Ink.InkFaint);
+        ink.DrawCircle(c, r + 3, new Color(Ink.InkColor, 0.12f));
+        ink.DrawCircle(c, r, new Color(usable ? Ink.Card : Ink.PaperDeep, held ? 0.97f : 0.86f));
+        if (cooldown > 0.01f) ink.DrawColoredPolygon(Sector(c, r, Mathf.Min(cooldown, 0.995f)), new Color(Ink.InkColor, 0.38f));
+        if (held) ink.DrawCircle(c, r, new Color(color, 0.18f));
+        ink.DrawArc(c, r, 0, Mathf.Tau, 48, usable ? color : new Color(Ink.LineStrong, 0.9f), usable ? 3 : 1.5f, true);
+        Icons.Draw(ink, icon, c, r * 1.02f, usable ? color : Ink.InkFaint);
         if (caption.Length == 0) return;
         if (caption.Length > 24) caption = caption[..23] + "…";
         var cs = Ink.UiFont.GetStringSize(caption, HorizontalAlignment.Left, -1, 14);
         // Buttons up in the arc wear their caption above, clear of the martial art below them.
         var above = c.Y < Cluster.Y - 40;
         var at = c + new Vector2(-cs.X / 2, above ? -r - 12 : r + 22);
-        DrawRect(new Rect2(at - new Vector2(7, 15), new Vector2(cs.X + 14, 21)), new Color(Ink.Card, 0.88f));
-        DrawString(Ink.UiFont, at, caption, HorizontalAlignment.Left, -1, 14, Ink.InkColor);
+        ink.DrawRect(new Rect2(at - new Vector2(7, 15), new Vector2(cs.X + 14, 21)), new Color(Ink.Card, 0.88f));
+        ink.DrawString(Ink.UiFont, at, caption, HorizontalAlignment.Left, -1, 14, Ink.InkColor);
     }
 
     /// <summary>A button's face: its icon, a caption under it, its colour, how much cooldown is left (0–1), and whether it can be used.</summary>

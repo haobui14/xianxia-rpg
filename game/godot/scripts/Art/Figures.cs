@@ -61,7 +61,13 @@ public static class Figures
         _ => 70,
     };
 
-    public static void Draw(CanvasItem ci, string kind, Look? look, in Pose pose, float scale)
+    public static void Draw(CanvasItem canvas, string kind, Look? look, in Pose pose, float scale)
+    {
+        using var b = Brush.On(canvas);
+        Draw(b, kind, look, pose, scale);
+    }
+
+    public static void Draw(Brush ci, string kind, Look? look, in Pose pose, float scale)
     {
         if (IsHuman(kind))
         {
@@ -94,14 +100,14 @@ public static class Figures
         ci.DrawSetTransform(Vector2.Zero, 0, Vector2.One);
     }
 
-    private static void Profile(CanvasItem ci, in Pose p, float scale, float shadow, Action<CanvasItem, Pose> body)
+    private static void Profile(Brush ci, in Pose p, float scale, float shadow, Action<Brush, Pose> body)
     {
         Paint.Shadow(ci, Vector2.Zero, shadow * scale, shadow * 0.32f * scale);
         ci.DrawSetTransform(new Vector2(0, -p.Lift), 0, new Vector2((p.Side < 0 ? -1 : 1) * scale, scale));
         body(ci, p);
     }
 
-    private static void Front(CanvasItem ci, in Pose p, float scale, float shadow, Action<CanvasItem, Pose> body)
+    private static void Front(Brush ci, in Pose p, float scale, float shadow, Action<Brush, Pose> body)
     {
         Paint.Shadow(ci, Vector2.Zero, shadow * scale, shadow * 0.32f * scale);
         ci.DrawSetTransform(new Vector2(0, -p.Lift), 0, new Vector2(scale, scale));
@@ -115,7 +121,7 @@ public static class Figures
     // People
     // =====================================================================================
 
-    public static void Human(CanvasItem ci, Look k, in Pose p, float scale)
+    public static void Human(Brush ci, Look k, in Pose p, float scale)
     {
         var s = k.Height * scale;
         Paint.Shadow(ci, Vector2.Zero, 13 * scale * k.Bulk, 4.6f * scale, 0.22f);
@@ -130,14 +136,14 @@ public static class Figures
 
     private sealed class Rig
     {
-        private readonly CanvasItem _c;
+        private readonly Brush _c;
         private readonly Look _k;
         private readonly Pose _p;
         private readonly float _bob, _kneel, _sw, _arm, _b;
         private readonly Vector2 _attack;
         private readonly Color _robe, _robeDark, _skin, _hair;
 
-        public Rig(CanvasItem c, Look k, Pose p, float side)
+        public Rig(Brush c, Look k, Pose p, float side)
         {
             _c = c;
             _k = k;
@@ -670,20 +676,20 @@ public static class Figures
     // Creatures (profile ones face +x; the transform mirrors them)
     // =====================================================================================
 
-    private static void Leg(CanvasItem c, float x, float top, float swing, float width, Color color)
+    private static void Leg(Brush c, float x, float top, float swing, float width, Color color)
     {
         Paint.Poly(c, new[] { V(x - width / 2, top), V(x + width / 2, top), V(x + width / 2 + swing * 0.6f, 0), V(x - width / 2 + swing * 0.6f, 0) }, color, 0.75f, 1.2f);
         Paint.Ellipse(c, V(x + swing * 0.6f + 0.8f, -0.4f), width * 0.75f, 1.6f, color.Darkened(0.3f), 0.6f, 1, 0, 10);
     }
 
-    private static void Eye(CanvasItem c, Vector2 at, float r, Color iris, bool enraged)
+    private static void Eye(Brush c, Vector2 at, float r, Color iris, bool enraged)
     {
         Paint.Circle(c, at, r, enraged ? new Color("#e0442e") : iris, 0.8f, 1);
         c.DrawCircle(at + V(0.3f, 0), r * 0.45f, Paint.A(new Color("#141414")));
         c.DrawCircle(at + V(-0.3f, -0.4f), r * 0.25f, Paint.A(Colors.White));
     }
 
-    private static void Wolf(CanvasItem c, Pose p)
+    private static void Wolf(Brush c, Pose p)
     {
         var fur = new Color("#7f8c79");
         var dark = new Color("#56604f");
@@ -713,7 +719,7 @@ public static class Figures
         Eye(c, V(18.2f, -30.8f) + o, 1.6f, new Color("#e0b040"), p.Enraged);
     }
 
-    private static void Boar(CanvasItem c, Pose p)
+    private static void Boar(Brush c, Pose p)
     {
         var fur = new Color("#6d4c3b");
         var dark = new Color("#4a3228");
@@ -739,7 +745,7 @@ public static class Figures
         Eye(c, V(17.5f, -22) + o, 1.4f, new Color("#2a1a14"), p.Enraged);
     }
 
-    private static void Snake(CanvasItem c, Pose p)
+    private static void Snake(Brush c, Pose p)
     {
         const int n = 14;
         var body = new Color("#4f8a7e");
@@ -768,7 +774,7 @@ public static class Figures
         }
     }
 
-    private static void Bee(CanvasItem c, Pose p)
+    private static void Bee(Brush c, Pose p)
     {
         var h = -24 + Mathf.Sin(p.Time * 5) * 2.2f;
         var flap = 0.35f + 0.65f * Mathf.Abs(Mathf.Sin(p.Time * 28));
@@ -789,7 +795,7 @@ public static class Figures
         Paint.Ellipse(c, V(1, -8.5f) + o, 7.5f, 4.2f * flap, new Color(1, 1, 1, 0.6f), 0.45f, 1, 0.3f);
     }
 
-    private static void Imp(CanvasItem c, Pose p)
+    private static void Imp(Brush c, Pose p)
     {
         var skin = new Color("#7f8457");
         var sw = Mathf.Sin(p.Walk) * 3.5f * p.Move;
@@ -808,7 +814,7 @@ public static class Figures
         Eye(c, V(7.5f, -30.5f), 1.6f, new Color("#e84a3a"), true);
     }
 
-    private static void Vine(CanvasItem c, Pose p)
+    private static void Vine(Brush c, Pose p)
     {
         var stem = new Color("#3e6b3c");
         var look = p.LookAt.LengthSquared() > 0.01f ? p.LookAt.Normalized() : V(0, 1);
@@ -839,7 +845,7 @@ public static class Figures
         Paint.Ellipse(c, V(look.X * 2.6f, -12 + look.Y * 1.6f), 1.6f, 4, new Color("#141414"), 0, 1, 0, 10);
     }
 
-    private static void HerbGuardian(CanvasItem c, Pose p, bool elder)
+    private static void HerbGuardian(Brush c, Pose p, bool elder)
     {
         var sw = Mathf.Sin(p.Walk) * 2.5f * p.Move;
         var slam = p.Attack > 0 ? Mathf.Sin(p.Attack * Mathf.Pi) : 0;
@@ -870,7 +876,7 @@ public static class Figures
         }
     }
 
-    private static void TreeSpirit(CanvasItem c, Pose p)
+    private static void TreeSpirit(Brush c, Pose p)
     {
         var h = -12 + Mathf.Sin(p.Time * 2.4f) * 3;
         var sway = Mathf.Sin(p.Time * 1.8f) * 3;
@@ -899,7 +905,7 @@ public static class Figures
         }
     }
 
-    private static void BarkGolem(CanvasItem c, Pose p)
+    private static void BarkGolem(Brush c, Pose p)
     {
         var bark = new Color("#6e5440");
         var dark = new Color("#4f3a2c");
@@ -926,7 +932,7 @@ public static class Figures
         Paint.Ellipse(c, V(3, -64), 3, 2, new Color("#6fa85e"), 0.6f, 1, 0.5f, 10);
     }
 
-    private static void TreeBoss(CanvasItem c, Pose p, bool spirit)
+    private static void TreeBoss(Brush c, Pose p, bool spirit)
     {
         var bark = new Color("#6a4e36");
         var dark = new Color("#4a3526");
@@ -981,7 +987,7 @@ public static class Figures
     }
 
     /// <summary>Black bear (hắc hùng): heavy, with the pale crescent on its chest; rears up to slam.</summary>
-    private static void Bear(CanvasItem c, Pose p)
+    private static void Bear(Brush c, Pose p)
     {
         var fur = new Color("#3a322d");
         var dark = new Color("#241f1c");
@@ -1017,7 +1023,7 @@ public static class Figures
     }
 
     /// <summary>Fire fox (hỏa hồ): slender, black-socked, two tails tipped with flame.</summary>
-    private static void Fox(CanvasItem c, Pose p)
+    private static void Fox(Brush c, Pose p)
     {
         var fur = new Color("#d8702c");
         var pale = new Color("#f3e3c8");
@@ -1054,7 +1060,7 @@ public static class Figures
     }
 
     /// <summary>Blood bat (huyết bức): a small dark body on wide membrane wings, hovering high.</summary>
-    private static void Bat(CanvasItem c, Pose p)
+    private static void Bat(Brush c, Pose p)
     {
         var h = -42 + Mathf.Sin(p.Time * 4) * 3;
         // 0.35 (wings swept down, nearly edge-on) … 1 (spread high).
@@ -1086,7 +1092,7 @@ public static class Figures
     }
 
     /// <summary>Wandering wraith (u hồn): a pale robe fraying into mist, long black hair, a will-o'-wisp circling.</summary>
-    private static void Wraith(CanvasItem c, Pose p)
+    private static void Wraith(Brush c, Pose p)
     {
         var h = -10 + Mathf.Sin(p.Time * 2) * 4;
         var sway = Mathf.Sin(p.Time * 1.6f) * 3;
@@ -1128,7 +1134,7 @@ public static class Figures
     }
 
     /// <summary>Azure-scale python (thanh lân mãng): long and thick, horned, with a dorsal ridge; lunges and sweeps.</summary>
-    private static void Python(CanvasItem c, Pose p)
+    private static void Python(Brush c, Pose p)
     {
         const int n = 22;
         var body = new Color("#3f7f86");
@@ -1167,7 +1173,7 @@ public static class Figures
         }
     }
 
-    private static void Blob(CanvasItem c, Pose p)
+    private static void Blob(Brush c, Pose p)
     {
         var bob = Mathf.Sin(p.Time * 3) * 1.5f;
         Paint.Poly(c, Paint.Blob(V(0, -14 + bob), 14, 12, 12, 0.12f, 7), new Color("#3a3342"));

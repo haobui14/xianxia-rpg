@@ -34,16 +34,17 @@ public partial class GroundFxLayer : Node2D
 
     public override void _Draw()
     {
+        using var ink = Brush.On(this);
         if (_f.Battle is { } battle)
         {
-            foreach (var g in battle.Fires) FxArt.GroundFire(this, g);
-            foreach (var t in battle.Telegraphs) FxArt.Telegraph(this, t);
+            foreach (var g in battle.Fires) FxArt.GroundFire(ink, g);
+            foreach (var t in battle.Telegraphs) FxArt.Telegraph(ink, t);
         }
         if (_f.Target is { } target)
         {
             var at = target.At();
             var pulse = 0.5f + 0.5f * Mathf.Sin((float)Time.GetTicksMsec() / 250f);
-            DrawArc(at, 26 + pulse * 3, 0, Mathf.Tau, 36, new Color(0.63f, 0.48f, 0.18f, 0.55f), 2, true);
+            ink.DrawArc(at, 26 + pulse * 3, 0, Mathf.Tau, 36, new Color(0.63f, 0.48f, 0.18f, 0.55f), 2, true);
         }
     }
 }
@@ -63,13 +64,14 @@ public partial class AirFxLayer : Node2D
 
     public override void _Draw()
     {
+        using var ink = Brush.On(this);
         if (_f.Battle is { } battle)
         {
-            foreach (var p in battle.Projectiles) FxArt.Projectile(this, p);
-            foreach (var o in battle.Orbits) FxArt.Orbit(this, o);
+            foreach (var p in battle.Projectiles) FxArt.Projectile(ink, p);
+            foreach (var o in battle.Orbits) FxArt.Orbit(ink, o);
         }
-        foreach (var s in _f.Fx.Swooshes) FxArt.Swoosh(this, s);
-        foreach (var p in _f.Fx.Particles) FxArt.Particle(this, p);
+        foreach (var s in _f.Fx.Swooshes) FxArt.Swoosh(ink, s);
+        foreach (var p in _f.Fx.Particles) FxArt.Particle(ink, p);
     }
 }
 
@@ -93,6 +95,7 @@ public partial class OverlayLayer : Node2D
 
     public override void _Draw()
     {
+        using var ink = Brush.On(this);
         var player = _f.PlayerBody.Pos;
         var mouse = GetGlobalMousePosition();
         foreach (var actor in _f.Actors)
@@ -102,13 +105,13 @@ public partial class OverlayLayer : Node2D
             var top = b.Pos + new Vector2(0, -(Figures.HeightOf(b.Kind) * b.Scale) - 12);
             if (b.InBattle && b.Active)
             {
-                Bar(top, b);
+                Bar(ink, top, b);
                 continue;
             }
             if (b.NpcId == null || !b.Alive) continue;
             var near = b.Pos.DistanceTo(player) < 230 || b.Pos.DistanceTo(mouse) < 40;
             if (!near) continue;
-            Paint.Label(this, b.Name, top + new Vector2(0, -2), 15, b.Hostile ? new Color("#9b2a26") : new Color("#1c2230"));
+            Paint.Label(ink, b.Name, top + new Vector2(0, -2), 15, b.Hostile ? new Color("#9b2a26") : new Color("#1c2230"));
         }
 
         if (_f.Target is { } target && _f.Battle == null)
@@ -121,36 +124,36 @@ public partial class OverlayLayer : Node2D
             var size = font.GetStringSize(text, HorizontalAlignment.Left, -1, 15);
             var lead = touch ? 22f : 0f;
             var box = new Rect2(at - new Vector2((size.X + lead) / 2 + 10, 14), new Vector2(size.X + lead + 20, 26));
-            DrawRect(box, new Color(0.11f, 0.13f, 0.19f, 0.86f));
-            DrawRect(box, new Color(0.63f, 0.48f, 0.18f, 0.9f), false, 1.5f);
-            if (touch) Icons.Draw(this, IconKind.Hand, box.Position + new Vector2(19, 13), 17, new Color("#e0c070"));
-            DrawString(font, new Vector2(box.Position.X + 10 + lead, box.Position.Y + 18), text, HorizontalAlignment.Left, -1, 15, new Color("#f1e9d2"));
+            ink.DrawRect(box, new Color(0.11f, 0.13f, 0.19f, 0.86f));
+            ink.DrawRect(box, new Color(0.63f, 0.48f, 0.18f, 0.9f), false, 1.5f);
+            if (touch) Icons.Draw(ink, IconKind.Hand, box.Position + new Vector2(19, 13), 17, new Color("#e0c070"));
+            ink.DrawString(font, new Vector2(box.Position.X + 10 + lead, box.Position.Y + 18), text, HorizontalAlignment.Left, -1, 15, new Color("#f1e9d2"));
         }
 
-        foreach (var f in _f.Fx.Floaters) FxArt.Floater(this, f);
+        foreach (var f in _f.Fx.Floaters) FxArt.Floater(ink, f);
 
         if (_f.Battle != null && !_f.Player.Autopilot)
         {
             var aim = _f.Player.AimPoint;
-            DrawArc(aim, 9, 0, Mathf.Tau, 20, new Color(0.11f, 0.13f, 0.19f, 0.5f), 1.5f, true);
-            DrawLine(aim - new Vector2(15, 0), aim - new Vector2(5, 0), new Color(0.11f, 0.13f, 0.19f, 0.5f), 1.5f);
-            DrawLine(aim + new Vector2(15, 0), aim + new Vector2(5, 0), new Color(0.11f, 0.13f, 0.19f, 0.5f), 1.5f);
+            ink.DrawArc(aim, 9, 0, Mathf.Tau, 20, new Color(0.11f, 0.13f, 0.19f, 0.5f), 1.5f, true);
+            ink.DrawLine(aim - new Vector2(15, 0), aim - new Vector2(5, 0), new Color(0.11f, 0.13f, 0.19f, 0.5f), 1.5f);
+            ink.DrawLine(aim + new Vector2(15, 0), aim + new Vector2(5, 0), new Color(0.11f, 0.13f, 0.19f, 0.5f), 1.5f);
         }
     }
 
-    private void Bar(Vector2 top, Fighter b)
+    private static void Bar(Brush ink, Vector2 top, Fighter b)
     {
         var w = Mathf.Max(44, b.Radius * 2.6f);
         var pos = top - new Vector2(w / 2, 0);
-        DrawRect(new Rect2(pos - new Vector2(1, 1), new Vector2(w + 2, 8)), new Color(0.11f, 0.13f, 0.19f, 0.6f));
-        DrawRect(new Rect2(pos, new Vector2(w, 6)), new Color("#d9c89c"));
-        DrawRect(new Rect2(pos, new Vector2(w * Mathf.Clamp(b.Hp / b.HpMax, 0, 1), 6)), new Color("#9b2a26"));
+        ink.DrawRect(new Rect2(pos - new Vector2(1, 1), new Vector2(w + 2, 8)), new Color(0.11f, 0.13f, 0.19f, 0.6f));
+        ink.DrawRect(new Rect2(pos, new Vector2(w, 6)), new Color("#d9c89c"));
+        ink.DrawRect(new Rect2(pos, new Vector2(w * Mathf.Clamp(b.Hp / b.HpMax, 0, 1), 6)), new Color("#9b2a26"));
         if (b.Mark is { } mark && (b.MarkTime > 1.5f || Mathf.PosMod(b.MarkTime, 0.3f) > 0.15f))
         {
             var mp = pos + new Vector2(w + 12, 3);
-            DrawCircle(mp, 10, new Color("#f7eed5"));
-            DrawArc(mp, 10, 0, Mathf.Tau, 20, Ui.Ink.Element(mark), 2, true);
-            Icons.Draw(this, Icons.ForElement(mark), mp, 13, Ui.Ink.Element(mark));
+            ink.DrawCircle(mp, 10, new Color("#f7eed5"));
+            ink.DrawArc(mp, 10, 0, Mathf.Tau, 20, Ui.Ink.Element(mark), 2, true);
+            Icons.Draw(ink, Icons.ForElement(mark), mp, 13, Ui.Ink.Element(mark));
         }
         var marks = new (bool on, IconKind icon, Color color)[]
         {
@@ -162,9 +165,9 @@ public partial class OverlayLayer : Node2D
         for (var i = 0; i < shown.Count; i++)
         {
             var at = top + new Vector2((i - (shown.Count - 1) / 2f) * 19, -12);
-            DrawCircle(at, 9, new Color(0.97f, 0.94f, 0.85f, 0.85f));
-            Icons.Draw(this, shown[i].icon, at, 13, shown[i].color);
+            ink.DrawCircle(at, 9, new Color(0.97f, 0.94f, 0.85f, 0.85f));
+            Icons.Draw(ink, shown[i].icon, at, 13, shown[i].color);
         }
-        if (b.Enraged) Paint.Label(this, T("Cuồng nộ", "Enraged"), top + new Vector2(0, -28), 13, new Color("#9b2a26"), Ui.Ink.UiFont, 3);
+        if (b.Enraged) Paint.Label(ink, T("Cuồng nộ", "Enraged"), top + new Vector2(0, -28), 13, new Color("#9b2a26"), Ui.Ink.UiFont, 3);
     }
 }

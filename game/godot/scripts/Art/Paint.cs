@@ -42,34 +42,34 @@ public static class Paint
     }
 
     /// <summary>A filled polygon with an ink contour (outline alpha 0 = no contour).</summary>
-    public static void Poly(CanvasItem ci, Vector2[] pts, Color fill, float outline = 0.85f, float width = Line)
+    public static void Poly(Brush ci, Vector2[] pts, Color fill, float outline = 0.85f, float width = Line)
     {
         if (pts.Length < 3) return;
         ci.DrawColoredPolygon(pts, A(fill));
         if (outline > 0) ci.DrawPolyline(Closed(pts), InkA(outline), width, true);
     }
 
-    public static void Ellipse(CanvasItem ci, Vector2 c, float rx, float ry, Color fill, float outline = 0.85f, float width = Line, float rot = 0, int n = 20) =>
+    public static void Ellipse(Brush ci, Vector2 c, float rx, float ry, Color fill, float outline = 0.85f, float width = Line, float rot = 0, int n = 20) =>
         Poly(ci, EllipsePts(c, rx, ry, n, rot), fill, outline, width);
 
-    public static void Circle(CanvasItem ci, Vector2 c, float r, Color fill, float outline = 0.85f, float width = Line)
+    public static void Circle(Brush ci, Vector2 c, float r, Color fill, float outline = 0.85f, float width = Line)
     {
         ci.DrawCircle(c, r, A(fill));
         if (outline > 0) ci.DrawArc(c, r, 0, Mathf.Tau, Math.Max(12, (int)(r * 1.6f)), InkA(outline), width, true);
     }
 
     /// <summary>The ink rim of a circle drawn a little larger — draw all rims first, then fills, for a clean silhouette.</summary>
-    public static void Rim(CanvasItem ci, Vector2 c, float r, float alpha = 0.85f, float width = Line) =>
+    public static void Rim(Brush ci, Vector2 c, float r, float alpha = 0.85f, float width = Line) =>
         ci.DrawCircle(c, r + width * 0.9f, InkA(alpha));
 
-    public static void Shadow(CanvasItem ci, Vector2 c, float rx, float ry, float alpha = 0.2f) =>
+    public static void Shadow(Brush ci, Vector2 c, float rx, float ry, float alpha = 0.2f) =>
         ci.DrawColoredPolygon(EllipsePts(c, rx, ry, 18), new Color(0.05f, 0.06f, 0.08f, alpha * Alpha));
 
-    public static void Line2(CanvasItem ci, Vector2 a, Vector2 b, Color color, float width) =>
+    public static void Line2(Brush ci, Vector2 a, Vector2 b, Color color, float width) =>
         ci.DrawLine(a, b, A(color), width, true);
 
     /// <summary>A thick stroke with an ink contour (staffs, blades, branches).</summary>
-    public static void Stroke(CanvasItem ci, Vector2 a, Vector2 b, Color color, float width, float outline = 0.85f)
+    public static void Stroke(Brush ci, Vector2 a, Vector2 b, Color color, float width, float outline = 0.85f)
     {
         if (outline > 0) ci.DrawLine(a, b, InkA(outline), width + Line * 1.6f, true);
         ci.DrawLine(a, b, A(color), width, true);
@@ -122,7 +122,7 @@ public static class Paint
     }
 
     /// <summary>A word centred on a point (painted signboards, stones).</summary>
-    public static void Caption(CanvasItem ci, string text, Vector2 center, int size, Color color, Font? font = null)
+    public static void Caption(Brush ci, string text, Vector2 center, int size, Color color, Font? font = null)
     {
         font ??= Ui.Ink.Serif;
         var s = font.GetStringSize(text, HorizontalAlignment.Left, -1, size);
@@ -130,7 +130,7 @@ public static class Paint
     }
 
     /// <summary>Text with a paper-coloured halo, readable over any ground.</summary>
-    public static void Label(CanvasItem ci, string text, Vector2 center, int size, Color color, Font? font = null, float halo = 4)
+    public static void Label(Brush ci, string text, Vector2 center, int size, Color color, Font? font = null, float halo = 4)
     {
         font ??= Ui.Ink.Serif;
         var s = font.GetStringSize(text, HorizontalAlignment.Left, -1, size);

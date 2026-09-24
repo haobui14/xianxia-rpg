@@ -73,7 +73,15 @@ public static class Icons
         _ => IconKind.Star,
     };
 
-    public static void Draw(CanvasItem ci, IconKind icon, Vector2 centre, float size, Color color)
+    /// <summary>An icon on a canvas item that draws without a brush: the icon is one batch of its own.</summary>
+    public static void Draw(CanvasItem canvas, IconKind icon, Vector2 centre, float size, Color color)
+    {
+        if (icon == IconKind.None || size < 2) return;
+        using var b = Brush.On(canvas);
+        Draw(b, icon, centre, size, color);
+    }
+
+    public static void Draw(Brush ci, IconKind icon, Vector2 centre, float size, Color color)
     {
         if (icon == IconKind.None || size < 2) return;
         var p = new Pen(ci, centre, size, color);
@@ -590,13 +598,13 @@ public static class Icons
     /// <summary>Draws in one colour, with coordinates in a −1…1 box around a centre.</summary>
     private readonly struct Pen
     {
-        private readonly CanvasItem _ci;
+        private readonly Brush _ci;
         private readonly Vector2 _c;
         private readonly float _h;
         private readonly Color _color, _shade;
         private readonly float _w;
 
-        public Pen(CanvasItem ci, Vector2 centre, float size, Color color)
+        public Pen(Brush ci, Vector2 centre, float size, Color color)
         {
             _ci = ci;
             _c = centre;

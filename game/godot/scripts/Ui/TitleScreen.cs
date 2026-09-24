@@ -113,6 +113,12 @@ public partial class TitleScreen : Control
     public override void _UnhandledInput(InputEvent e)
     {
         if (!e.IsActionPressed("pause")) return;
+        if (Main.Instance.Loading != null)
+        {
+            // Building the world: the back button waits.
+            GetViewport().SetInputAsHandled();
+            return;
+        }
         if (_creating)
         {
             GetViewport().SetInputAsHandled();
@@ -177,11 +183,8 @@ public partial class TitleScreen : Control
         return c;
     }
 
-    private void Continue()
-    {
-        if (Game.Instance.LoadGame()) Main.Instance.ShowWorld();
-        else Game.Instance.Toast("Không đọc được bản lưu.", "Could not read the save.");
-    }
+    private void Continue() =>
+        Main.Instance.EnterWorld(Game.Instance.LoadGame, failed: () => Game.Instance.Toast("Không đọc được bản lưu.", "Could not read the save."));
 
     private void BuildCreation()
     {
@@ -266,7 +269,11 @@ public partial class TitleScreen : Control
     private void Begin()
     {
         var name = string.IsNullOrWhiteSpace(_name) ? "Vô Danh" : _name.Trim();
-        Game.Instance.NewGame(name, _age, _root, _path, _seed);
-        Main.Instance.ShowWorld();
+        var (age, root, path, seed) = (_age, _root, _path, _seed);
+        Main.Instance.EnterWorld(() =>
+        {
+            Game.Instance.NewGame(name, age, root, path, seed);
+            return true;
+        });
     }
 }

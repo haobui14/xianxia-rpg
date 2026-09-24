@@ -127,6 +127,7 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
 - **No Chinese characters:** every sign and label is Vietnamese (or English), and every badge is an ink icon drawn in code. That covers panel seals, HUD and touch buttons, art icons (drawn by how each art is cast, coloured by its element), element and status marks, and map markers.
 - **Phones and tablets:** on-screen touch controls (above), and an interface drawn bigger to suit the screen. Auto picks 135% on a phone and 120% on a small tablet, or you choose 100–145%. Panels shrink to fit and scroll.
 - **Saves and language:** the game saves every month and after every fight, and Vietnamese/English can be switched anywhere.
+- **Loading screen:** a new life or Continue opens on "Đang kiến tạo thế giới…" ("Building the world…"). The bar follows the real work as the region is built a slice per frame: the land and rivers, the mountains, the forests, the village and the sect, then the scenery around you. It also shows a tip.
 
 The Linh Thức AI storyteller is **offline-only** in this slice. NPC lines, the chronicle and rumors come from templates built on the same facts the online `/api/story` endpoint will receive (§7.13).
 
@@ -151,6 +152,7 @@ dotnet test game/core/TuTien.Core.Tests
 #  - a phone: at 135% interface size, touch events pushed into the viewport drag the
 #    stick, press Interact, tap the ground to walk, pinch to zoom, and in a fight
 #    press an art, pause, and hold the martial art until the bear is beaten
+#  - the new life goes in through the loading screen, like the title's button
 # It exits 0 on success, 1 on failure.
 dotnet build game/TuTienLuc.sln
 godot --headless --fixed-fps 60 --path game/godot -- --smoke
@@ -161,6 +163,13 @@ xvfb-run -s "-screen 0 1600x900x24" godot --rendering-driver opengl3 --fixed-fps
 ```
 
 The smoke test writes to its own save slot (`user://saves/smoke.json`), so it never touches your real save. With `--shots` it also writes the five music loops as WAV files next to the screenshots.
+
+To see what the phone flow costs, run `--phone-start` at a phone's resolution. It uses touch controls and the 135% interface, taps through the title and character creation, then reports memory, GPU buffer memory, objects and draw calls each second in the world (add `--shots DIR` for pictures of the loading screen and the world):
+
+```bash
+xvfb-run -s "-screen 0 2400x1080x24" godot --rendering-driver opengl3_es --resolution 2400x1080 \
+  --path game/godot -- --phone-start
+```
 
 ## Android
 
@@ -206,6 +215,13 @@ base64 -w0 tutienluc.keystore   # → ANDROID_KEYSTORE_BASE64
 Then set `ANDROID_KEYSTORE_PASSWORD` (the password you chose) and `ANDROID_KEY_ALIAS` (`tutienluc`). Keep the keystore file itself safe and out of the repository.
 
 **A release build** needs your own keystore. Godot reads it from `GODOT_ANDROID_KEYSTORE_RELEASE_PATH`, `GODOT_ANDROID_KEYSTORE_RELEASE_USER` and `GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD`; then run `--export-release`. No keystore or password is kept in the repository.
+
+**Drawing for phones:** Godot's compatibility renderer gives every circle, arc, polyline and polygon its own GPU vertex and index buffers. The painted valley came to about 90,000 of them, and on Android the game closed the moment the world opened. Two rules keep it small:
+
+- All art draws through a `Brush` (`scripts/Art/Brush.cs`), never straight onto a `CanvasItem`. A brush gathers everything one `_Draw` paints into one triangle list, with Godot's own shapes and anti-aliasing. Use `using var b = Brush.On(this);` in `_Draw`.
+- A field paints only the scenery near the camera; props farther away let their buffers go.
+
+The world now holds a few hundred buffers and makes about 75 draw calls a frame, down from about 1,300.
 
 **On the phone:**
 
