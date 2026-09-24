@@ -4,6 +4,7 @@ using Godot;
 using TuTien.Core;
 using TuTien.Core.Content;
 using TuTien.Core.State;
+using TuTienLuc.Audio;
 using FileAccess = Godot.FileAccess;
 
 namespace TuTienLuc;
@@ -24,6 +25,13 @@ public partial class Game : Node
     /// <summary>One save slot for now; the smoke test points this elsewhere so it never touches a real save.</summary>
     public string SavePath { get; set; } = "user://saves/slot1.json";
 
+    // Settings (user://settings.json).
+    public float MasterVolume { get; set; } = 0.8f;
+    public float MusicVolume { get; set; } = 0.65f;
+    public float SfxVolume { get; set; } = 0.85f;
+    public bool Fullscreen { get; set; }
+    public bool ScreenShake { get; set; } = true;
+
     /// <summary>Raised after anything changes the game state, so HUDs can refresh.</summary>
     [Signal] public delegate void StateChangedEventHandler();
 
@@ -41,6 +49,32 @@ public partial class Game : Node
         GD.Print($"[content] loaded: {Content.Regions.Count} regions, {Content.Enemies.Count} enemies, {Content.Events.Count} events, {issues.Count} known content gaps");
         RegisterInput();
         LoadSettings();
+        AddChild(new SoundBoard());
+        ApplyDisplay();
+        // Closing the window goes through Quit too, so the sound stops before the engine does.
+        GetTree().AutoAcceptQuit = false;
+    }
+
+    public override void _Notification(int what)
+    {
+        if (what == NotificationWMCloseRequest) Quit();
+    }
+
+    private bool _quitting;
+
+    /// <summary>
+    /// Leave the game: silence the sound, then give the audio thread a moment of real time to let go of
+    /// the playbacks (frames alone aren't enough: headless with a fixed frame rate, they fly by).
+    /// </summary>
+    public async void Quit(int exitCode = 0)
+    {
+        if (_quitting) return;
+        _quitting = true;
+        SoundBoard.I?.Silence();
+        var start = Time.GetTicksMsec();
+        for (var frames = 0; frames < 4 || Time.GetTicksMsec() - start < 150; frames++)
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        GetTree().Quit(exitCode);
     }
 
     private static string? ReadContent(string file)
@@ -114,7 +148,9 @@ public partial class Game : Node
     /// <summary>Report events from a command as toasts, then refresh listeners.</summary>
     public void Notify(IEnumerable<GameEvent> events)
     {
-        foreach (var e in events) Say(e.Localized(Locale), e.Level);
+        var list = events as ICollection<GameEvent> ?? new List<GameEvent>(events);
+        foreach (var e in list) Say(e.Localized(Locale), e.Level);
+        SoundBoard.ForEvents(list);
         Changed();
     }
 
@@ -145,12 +181,35 @@ public partial class Game : Node
         if (f == null) return;
         var data = Json.ParseString(f.GetAsText()).AsGodotDictionary();
         if (data.TryGetValue("locale", out var loc)) Locale = loc.AsString() == "en" ? Locale.En : Locale.Vi;
+        float Volume(string key, float fallback) => data.TryGetValue(key, out var v) ? Mathf.Clamp((float)v.AsDouble(), 0, 1) : fallback;
+        MasterVolume = Volume("master_volume", MasterVolume);
+        MusicVolume = Volume("music_volume", MusicVolume);
+        SfxVolume = Volume("sfx_volume", SfxVolume);
+        if (data.TryGetValue("fullscreen", out var fs)) Fullscreen = fs.AsBool();
+        if (data.TryGetValue("screen_shake", out var shake)) ScreenShake = shake.AsBool();
     }
 
-    private void SaveSettings()
+    public void SaveSettings()
     {
         using var f = FileAccess.Open(SettingsPath, FileAccess.ModeFlags.Write);
-        f?.StoreString(Json.Stringify(new Godot.Collections.Dictionary { ["locale"] = Locale == Locale.En ? "en" : "vi" }));
+        f?.StoreString(Json.Stringify(new Godot.Collections.Dictionary
+        {
+            ["locale"] = Locale == Locale.En ? "en" : "vi",
+            ["master_volume"] = MasterVolume,
+            ["music_volume"] = MusicVolume,
+            ["sfx_volume"] = SfxVolume,
+            ["fullscreen"] = Fullscreen,
+            ["screen_shake"] = ScreenShake,
+        }));
+    }
+
+    /// <summary>Window mode from the settings (never in the headless smoke test).</summary>
+    public void ApplyDisplay()
+    {
+        if (DisplayServer.GetName() == "headless") return;
+        var want = Fullscreen ? DisplayServer.WindowMode.Fullscreen : DisplayServer.WindowMode.Windowed;
+        if (DisplayServer.WindowGetMode() != want && !(want == DisplayServer.WindowMode.Windowed && DisplayServer.WindowGetMode() == DisplayServer.WindowMode.Maximized))
+            DisplayServer.WindowSetMode(want);
     }
 
     // ------------------------------------------------------------------ input (design §8)
@@ -195,6 +254,7 @@ public partial class Game : Node
         Keys("pulse", Key.Tab);
         Pad("pulse", JoyButton.RightStick);
         Keys("open_map", Key.M);
+        Keys("fly", Key.V);
         Pad("open_map", JoyButton.Back);
         Keys("seclude", Key.B);
         Keys("open_character", Key.C);

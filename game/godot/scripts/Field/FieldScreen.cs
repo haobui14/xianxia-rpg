@@ -6,6 +6,7 @@ using TuTien.Core;
 using TuTien.Core.Combat;
 using TuTien.Core.State;
 using TuTienLuc.Art;
+using TuTienLuc.Audio;
 using TuTienLuc.Ui;
 using TuTienLuc.Ui.Panels;
 
@@ -40,6 +41,8 @@ public abstract partial class FieldScreen : Node2D
     /// <summary>The name of the place, for the HUD.</summary>
     public abstract string PlaceName { get; }
     public virtual string PlaceSub => "";
+    /// <summary>The music this place plays when nobody is fighting.</summary>
+    protected virtual string MusicMood => "explore";
 
     protected Node2D Objects { get; private set; } = null!;
     protected Camera2D Camera { get; private set; } = null!;
@@ -113,6 +116,8 @@ public abstract partial class FieldScreen : Node2D
 
         Game.Instance.StateChanged += OnStateChanged;
         AfterReady();
+        SoundBoard.Music(MusicMood);
+        SoundBoard.Prepare("battle");
         Callable.From(CheckPending).CallDeferred();
     }
 
@@ -218,7 +223,10 @@ public abstract partial class FieldScreen : Node2D
 
     public Rect2 View => _view;
 
-    public void Shake(float amount) => _shake = Mathf.Max(_shake, amount);
+    public void Shake(float amount)
+    {
+        if (Game.Instance.ScreenShake) _shake = Mathf.Max(_shake, amount);
+    }
 
     public void Hitstop(float seconds) => _hitstop = Mathf.Max(_hitstop, seconds);
 
@@ -226,6 +234,11 @@ public abstract partial class FieldScreen : Node2D
 
     /// <summary>How fast the ground here lets you walk (roads help, swamps don't).</summary>
     public virtual float TerrainSpeed(Vector2 pos) => 1;
+
+    /// <summary>A footstep landed here (dust, splashes).</summary>
+    public virtual void OnFootstep(Vector2 pos)
+    {
+    }
 
     // ================================================================ interactions
 
@@ -321,11 +334,13 @@ public abstract partial class FieldScreen : Node2D
         Player.MouseAttack = false;
         _panel = panel;
         _dim.Visible = true;
+        SoundBoard.Play("open", -4);
         panel.Closed += () =>
         {
             if (_panel != panel) return;
             _panel = null;
             _dim.Visible = false;
+            SoundBoard.Play("close", -6);
             Callable.From(CheckPending).CallDeferred();
         };
         _panelHost.AddChild(panel);
@@ -359,6 +374,7 @@ public abstract partial class FieldScreen : Node2D
         Action<CombatResolution, CombatOutcome>? after = null)
     {
         if (Battle != null) return null;
+        Player.Land(force: true);
         var list = E.BuildEnemies(enc);
         var battle = new Battle(this, enc, Player);
         var center = around ?? PlayerBody.Pos;
@@ -399,6 +415,8 @@ public abstract partial class FieldScreen : Node2D
             _ => battle.Title,
         };
         Hud.Banner(enc.NonLethal ? T("Tỉ thí!", "Spar!") : T("Chiến!", "Fight!"), subtitle, Ink.CinnabarDeep, 1.1f);
+        SoundBoard.Play("battle");
+        SoundBoard.Music("battle");
         Shake(5);
         Game.Instance.Changed();
         return battle;
@@ -467,6 +485,8 @@ public abstract partial class FieldScreen : Node2D
             if (outcome.Victory) Hud.Banner(T("Thắng!", "Victory!"), b.Title, Ink.JadeDeep, 1.6f);
             else if (outcome.Fled) Hud.Banner(T("Thoát thân!", "Escaped!"), "", Ink.InkSoft, 1f);
             else Hud.Banner(b.NonLethal ? T("Chịu thua", "You yield") : T("Gục ngã…", "Defeated…"), "", Ink.CinnabarDeep, 1.8f);
+            SoundBoard.Play(outcome.Victory ? "victory" : outcome.Fled ? "escape" : "defeat");
+            SoundBoard.Music(MusicMood);
             return;
         }
         _endTimer -= dt;

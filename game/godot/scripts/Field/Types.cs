@@ -64,6 +64,9 @@ public sealed class Fighter
     public Color CastColor = Colors.White;
     public bool Meditating;
     public float Time;
+    /// <summary>Riding a flying sword (Trúc Cơ and above), and how high the body currently floats.</summary>
+    public bool Flying;
+    public float Hover;
 
     // Ngũ Hành: an applied mark, and a cooldown on reacting against the creature's own phase.
     public Element? Mark;

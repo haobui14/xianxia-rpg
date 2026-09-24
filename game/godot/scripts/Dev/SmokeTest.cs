@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Godot;
 using TuTien.Core;
 using TuTien.Core.State;
+using TuTien.Core.World;
+using TuTienLuc.Audio;
 using TuTienLuc.Field;
 using TuTienLuc.Ui;
 using TuTienLuc.Ui.Panels;
@@ -53,22 +55,76 @@ public partial class SmokeTest : Node
             if (_shots != null) Directory.CreateDirectory(_shots);
             await Steps(game);
             Log("PASSED");
-            GetTree().Quit(0);
+            Game.Instance.Quit(0);
         }
         catch (Exception ex)
         {
             GD.PrintErr("[smoke] FAILED: " + ex);
-            GetTree().Quit(1);
+            Game.Instance.Quit(1);
         }
     }
 
     private static WorldScreen World => Main.Instance.World ?? throw new InvalidOperationException("no world screen");
 
+    /// <summary>
+    /// Every sound is synthesized: render them all and check the numbers (no NaN, sensible loudness,
+    /// loops that join without a click). With --shots, the music is also written out as WAV files.
+    /// </summary>
+    private void CheckAudio()
+    {
+        foreach (var (name, recipe) in SfxLibrary.Recipes)
+        {
+            var pcm = recipe();
+            var peak = pcm.Max(v => MathF.Abs(v));
+            if (pcm.Length == 0 || float.IsNaN(peak) || peak < 0.05f || peak > 1f)
+                throw new InvalidOperationException($"sound '{name}' renders badly (length {pcm.Length}, peak {peak})");
+        }
+        Log($"ok — {SfxLibrary.Recipes.Count} sound effects render cleanly");
+        foreach (var (mood, compose) in new (string, Func<float[]>)[]
+                 {
+                     ("title", Composer.Title), ("explore", Composer.Explore), ("battle", Composer.Battle), ("trial", Composer.Trial), ("realm", Composer.Realm),
+                 })
+        {
+            var pcm = compose();
+            var peak = pcm.Max(v => MathF.Abs(v));
+            var rms = MathF.Sqrt(pcm.Average(v => v * v));
+            // The seam: the jump from the last sample back to the first should look like any other step.
+            var typical = 0f;
+            for (var i = 1; i < pcm.Length; i += 97) typical = MathF.Max(typical, MathF.Abs(pcm[i] - pcm[i - 1]));
+            var seam = MathF.Abs(pcm[0] - pcm[^1]);
+            if (float.IsNaN(rms) || peak > 1f || rms < 0.02f || seam > typical * 1.5f + 0.01f)
+                throw new InvalidOperationException($"music '{mood}' renders badly (peak {peak:0.00}, rms {rms:0.000}, seam {seam:0.000} vs {typical:0.000})");
+            Log($"ok — music '{mood}': {pcm.Length / (float)Synth.Rate:0.0}s loop, peak {peak:0.00}, rms {rms:0.000}");
+            if (_shots != null) WriteWav(Path.Combine(_shots, $"audio_{mood}.wav"), pcm);
+        }
+    }
+
+    private static void WriteWav(string path, float[] pcm)
+    {
+        using var f = new FileStream(path, FileMode.Create);
+        using var w = new BinaryWriter(f);
+        w.Write("RIFF"u8.ToArray());
+        w.Write(36 + pcm.Length * 2);
+        w.Write("WAVEfmt "u8.ToArray());
+        w.Write(16);
+        w.Write((short)1);
+        w.Write((short)1);
+        w.Write(Synth.Rate);
+        w.Write(Synth.Rate * 2);
+        w.Write((short)2);
+        w.Write((short)16);
+        w.Write("data"u8.ToArray());
+        w.Write(pcm.Length * 2);
+        foreach (var v in pcm) w.Write((short)Math.Clamp((int)(v * 32767), short.MinValue, short.MaxValue));
+    }
+
     private async Task Steps(Game game)
     {
+        CheckAudio();
+
         // ---------------------------------------------------------------- title and creation
         Main.Instance.ShowTitle();
-        await Frames(4);
+        await Frames(30);
         await Shot("title");
         Main.Instance.GetChildren().OfType<TitleScreen>().FirstOrDefault()?.ShowCreation();
         await Frames(3);
@@ -86,13 +142,18 @@ public partial class SmokeTest : Node
         await Shot("world_village_wide");
         world.Zoom(1 / 0.72f);
 
+        // ---------------------------------------------------------------- real input: keys and the mouse
+        world = await DriveByHand(world);
+
         // ---------------------------------------------------------------- panels
-        foreach (var panel in new InkPanel[] { new CharacterPanel(), new InventoryPanel(), new JournalPanel(), new MapPanel(world) })
+        foreach (var panel in new InkPanel[] { new CharacterPanel(), new InventoryPanel(), new JournalPanel(), new MapPanel(world), new SettingsPanel() })
         {
             world.OpenPanel(panel);
             await Frames(3);
             await Shot(panel.GetType().Name);
         }
+        Check(world.CurrentPanel is SettingsPanel s && s.FindChildren("*", "HSlider", true, false).Count == 3,
+            "the settings panel offers master, music and effects volume");
         var village = E.Map.Def.Pois.First(p => p.Kind == "town");
         world.OpenPanel(new TownPanel(village, 1));
         await Frames(3);
@@ -107,8 +168,9 @@ public partial class SmokeTest : Node
         var footwork = E.Player.Footwork;
         var month = E.State.Calendar.MonthIndex;
         var start = world.Tile;
+        // DriveByHand left the body just below the bounty board, right in the way of the first waypoint.
         world = await Walk(world, 17, 22, "walk_road");
-        Check(world.Tile != start, "the body walks and the engine follows tile by tile");
+        Check(world.Tile == new Vector2I(17, 22) && world.Tile != start, "the route walks round the bounty board, the engine following tile by tile");
         Check(E.Player.Footwork < footwork || E.State.Calendar.MonthIndex > month, "crossing tiles spends footwork");
 
         // Run the month dry, then keep walking: the month turns on the road.
@@ -250,6 +312,9 @@ public partial class SmokeTest : Node
         await Frames(6);
         world = await Settle(world);
 
+        // ---------------------------------------------------------------- sword flight over the river
+        world = await SwordFlight(world);
+
         // ---------------------------------------------------------------- seclusion
         world.OpenPanel(new SeclusionPanel());
         await Frames(3);
@@ -278,24 +343,147 @@ public partial class SmokeTest : Node
         await Frames(2);
     }
 
-    /// <summary>Walk along the road to a tile (the planned path), fighting whatever jumps out on the way.</summary>
+    // ---------------------------------------------------------------- simulated hands
+
+    private static void KeyEvent(Key key, bool pressed) =>
+        Input.ParseInputEvent(new InputEventKey { Keycode = key, PhysicalKeycode = key, Pressed = pressed });
+
+    private async Task Tap(Key key)
+    {
+        KeyEvent(key, true);
+        await Frames(2);
+        KeyEvent(key, false);
+        await Frames(3);
+    }
+
+    private async Task Hold(Key key, int frames)
+    {
+        KeyEvent(key, true);
+        await Frames(frames);
+        KeyEvent(key, false);
+        await Frames(2);
+    }
+
+    private async Task Click(Vector2 screen)
+    {
+        Input.ParseInputEvent(new InputEventMouseMotion { Position = screen, GlobalPosition = screen });
+        Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = true, Position = screen, GlobalPosition = screen, ButtonMask = MouseButtonMask.Left });
+        await Frames(3);
+        Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = false, Position = screen, GlobalPosition = screen });
+        await Frames(3);
+    }
+
+    /// <summary>
+    /// The path a human takes, not the autopilot's: key and mouse events through Godot's input pipeline —
+    /// walking with WASD, E at the bounty board, Esc, M for the map, a click that swings the sword, N.
+    /// </summary>
+    private async Task<WorldScreen> DriveByHand(WorldScreen world)
+    {
+        var before = world.PlayerBody.Pos;
+        await Hold(Key.D, 30);
+        Check(world.PlayerBody.Pos.X > before.X + 40, "holding D walks the cultivator east");
+        before = world.PlayerBody.Pos;
+        await Hold(Key.W, 20);
+        Check(world.PlayerBody.Pos.Y < before.Y - 20, "holding W walks north");
+
+        world.DebugPlace(new Vector2(846, 3040));
+        await Frames(4);
+        await Tap(Key.E);
+        Check(world.CurrentPanel is TownPanel, "E at the bounty board opens the town");
+        await Tap(Key.Escape);
+        Check(!world.PanelOpen, "Esc closes the panel");
+        await Tap(Key.M);
+        Check(world.CurrentPanel is MapPanel, "M opens the map");
+        await Tap(Key.Escape);
+
+        var swings = world.Fx.Swooshes.Count;
+        await Click(GetViewport().GetVisibleRect().Size / 2 + new Vector2(120, 40));
+        Check(world.Fx.Swooshes.Count > swings || world.Battle != null, "a click in the world swings the sword");
+        await Frames(20);
+
+        var month = E.State.Calendar.MonthIndex;
+        await Tap(Key.N);
+        await Frames(4);
+        Check(E.State.Calendar.MonthIndex == month + 1, "N ends the month early");
+        return await Settle(World);
+    }
+
+    /// <summary>At Trúc Cơ the cultivator rides the sword across water that stops anyone on foot.</summary>
+    private async Task<WorldScreen> SwordFlight(WorldScreen world)
+    {
+        DevCheats.SetRealm(E, Realm.TrucCo);
+        DevCheats.Restore(E);
+        world.Player.SyncFromEngine();
+        // A bank with the river two tiles wide east of it (the river winds; find such a stretch).
+        var map = E.Map;
+        bool Ground(int x, int y) => map.At(x, y) is not (Terrain.Water or Terrain.Peak);
+        var bank = new Vector2I(-1, -1);
+        for (var y = map.Height / 2; y < map.Height - 2 && bank.X < 0; y++)
+            for (var x = 1; x < map.Width - 3 && bank.X < 0; x++)
+                if (Ground(x, y) && map.At(x + 1, y) == Terrain.Water && map.At(x + 2, y) == Terrain.Water && Ground(x + 3, y))
+                    bank = new Vector2I(x, y);
+        Check(bank.X >= 0, $"the river has a stretch two tiles wide (bank at {bank})");
+        world.DebugPlace(WorldScreen.TileCenter(bank.X, bank.Y));
+        await Frames(4);
+        await Hold(Key.D, 45);
+        Check(E.Player.X == bank.X && world.Tile.X == bank.X, "on foot, the river stops you");
+        await Tap(Key.V);
+        Check(world.PlayerBody.Flying, "V takes to the flying sword");
+        var sawWater = false;
+        KeyEvent(Key.D, true);
+        for (var i = 0; i < 100 && E.Player.X < bank.X + 3; i++)
+        {
+            await Frames(1);
+            sawWater |= map.At(E.Player.X, E.Player.Y) == Terrain.Water;
+            if (i == 20) await Shot("sword_flight");
+        }
+        await Frames(12);
+        KeyEvent(Key.D, false);
+        await Frames(2);
+        Check(sawWater && E.Player.X >= bank.X + 3, "flying crosses the river, tile by tile");
+        await Tap(Key.V);
+        Check(!world.PlayerBody.Flying && Ground(world.Tile.X, world.Tile.Y), "V lands again, on the far bank");
+
+        // Travel from the map: the way back crosses water, so the cultivator rides the sword and lands at the end.
+        world = await Settle(World);
+        var mapPanel = new MapPanel(world);
+        world.OpenPanel(mapPanel);
+        await Frames(2);
+        mapPanel.Pick(bank);
+        Check(mapPanel.Path is { Steps.Count: > 0 }, "the map plans a way back over the river");
+        mapPanel.SetOff();
+        await Frames(2);
+        Check(world.PlayerBody.Flying, "setting off over water takes to the sword");
+        await Until(() => world.Player.Route.Count == 0 || world.Battle != null, 60 * 10, "the flight back");
+        await Frames(2);
+        Check(world.Battle != null || (world.Tile == bank && !world.PlayerBody.Flying), "the sword sets you down where the way ends");
+        return await Settle(World);
+    }
+
+    /// <summary>
+    /// Walk to a tile the way the map's travel does (a route of tile centres), fighting whatever jumps out
+    /// and closing whatever opens on the way (both stop the route, so it's planned again after).
+    /// </summary>
     private async Task<WorldScreen> Walk(WorldScreen world, int x, int y, string? shot)
     {
         var path = E.PlanPath(x, y);
         if (path == null || path.Steps.Count == 0) return world;
-        foreach (var step in path.Steps) world.Player.Route.Enqueue(WorldScreen.TileCenter(step.X, step.Y));
+        static void Plan(WorldScreen w, int x, int y)
+        {
+            w.Player.Route.Clear();
+            foreach (var step in E.PlanPath(x, y)?.Steps ?? new()) w.Player.Route.Enqueue(WorldScreen.TileCenter(step.X, step.Y));
+        }
+        Plan(world, x, y);
         var shotAt = path.Steps.Count / 2;
         for (var i = 0; i < 60 * 40; i++)
         {
             await Frames(1);
             world = World;
-            if (world.Battle != null)
+            if (world.Battle != null || world.PanelOpen)
             {
-                world = await FightThrough(world);
-                world.Player.Route.Clear();
-                foreach (var step in E.PlanPath(x, y)?.Steps ?? new()) world.Player.Route.Enqueue(WorldScreen.TileCenter(step.X, step.Y));
+                world = await Settle(world);
+                Plan(world, x, y);
             }
-            if (world.PanelOpen) world = await Settle(world);
             if (shot != null && world.Player.Route.Count == shotAt)
             {
                 await Shot(shot);
@@ -381,7 +569,7 @@ public partial class SmokeTest : Node
         RenderingServer.RenderLoopEnabled = true;
         await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
         await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-        var image = GetViewport().GetTexture().GetImage();
+        using var image = GetViewport().GetTexture().GetImage();
         RenderingServer.RenderLoopEnabled = false;
         _shotIndex += 1;
         var path = Path.Combine(_shots!, $"{_shotIndex:00}_{name}.png");

@@ -3,6 +3,9 @@ using Godot;
 using TuTien.Core;
 using TuTien.Core.State;
 using TuTien.Core.World;
+using TuTienLuc.Audio;
+using TuTienLuc.Field;
+using TuTienLuc.Ui.Panels;
 
 namespace TuTienLuc.Ui;
 
@@ -21,16 +24,28 @@ public partial class TitleScreen : Control
 
     private VBoxContainer _left = null!;
     private VBoxContainer _right = null!;
+    private Control _ui = null!;
 
     private static string T(string vi, string en) => Game.Instance.T(vi, en);
 
     public override void _Ready()
     {
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        // The painted valley lives on its own layer behind the menu.
+        var backdrop = new CanvasLayer { Layer = -1 };
+        AddChild(backdrop);
+        // Plain paper under the painting (the ground quad sits at z −20, so the paper must go lower still).
+        backdrop.AddChild(new ColorRect { Color = Ink.Paper, Size = new Vector2(8000, 8000), Position = new Vector2(-4000, -4000), ZIndex = -100 });
+        backdrop.AddChild(new TitleScene());
+        _ui = new Control { MouseFilter = MouseFilterEnum.Ignore };
+        _ui.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        AddChild(_ui);
         NewSeed();
         _name = RandomName();
         Game.Instance.LocaleChanged += Build;
         Build();
+        SoundBoard.Music("title");
+        SoundBoard.Prepare("explore");
     }
 
     public override void _ExitTree() => Game.Instance.LocaleChanged -= Build;
@@ -53,23 +68,24 @@ public partial class TitleScreen : Control
 
     private void Build()
     {
-        UiKit.Clear(this);
-        var bg = new ColorRect { Color = Ink.Paper, MouseFilter = MouseFilterEnum.Ignore };
-        bg.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        AddChild(bg);
-
-        var mark = UiKit.Han("仙", 520, new Color(Ink.InkColor, 0.05f));
-        mark.MouseFilter = MouseFilterEnum.Ignore;
-        mark.AnchorLeft = mark.AnchorRight = 1;
-        mark.AnchorTop = mark.AnchorBottom = 0.5f;
-        mark.GrowHorizontal = GrowDirection.Begin;
-        mark.GrowVertical = GrowDirection.Both;
-        mark.OffsetLeft = mark.OffsetRight = -40;
-        AddChild(mark);
+        UiKit.Clear(_ui);
+        // A wash of paper on the left keeps the menu readable over the painting.
+        var gradient = new Gradient();
+        gradient.SetColor(0, new Color(Ink.Paper, 0.95f));
+        gradient.SetColor(1, new Color(Ink.Paper, 0f));
+        gradient.AddPoint(0.42f, new Color(Ink.Paper, 0.82f));
+        var wash = new TextureRect
+        {
+            Texture = new GradientTexture2D { Gradient = gradient, Width = 256, Height = 4, FillFrom = Vector2.Zero, FillTo = new Vector2(1, 0) },
+            StretchMode = TextureRect.StretchModeEnum.Scale, ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, MouseFilter = MouseFilterEnum.Ignore,
+        };
+        wash.AnchorRight = 0.62f;
+        wash.AnchorBottom = 1;
+        _ui.AddChild(wash);
 
         var center = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
         center.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        AddChild(center);
+        _ui.AddChild(center);
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 56);
         center.AddChild(row);
@@ -99,8 +115,8 @@ public partial class TitleScreen : Control
         _left.AddChild(seal);
         _left.AddChild(UiKit.Label("Tu Tiên Lục", 64, Ink.InkColor));
         _left.AddChild(UiKit.Han("修 仙 錄", 26, Ink.CinnabarDeep));
-        _left.AddChild(UiKit.Label(T("Một đời tu tiên giữa thế giới sống động — vùng Thanh Vân (bản greybox).",
-            "A cultivation life in a living world — the Thanh Vân region (greybox slice)."), 17, Ink.InkMute, wrap: true));
+        _left.AddChild(UiKit.Label(T("Một đời tu tiên giữa thế giới sống động — vùng Thanh Vân.",
+            "A cultivation life in a living world — the Thanh Vân region."), 18, Ink.InkSoft, wrap: true));
         _left.AddChild(UiKit.Spacer(10));
 
         if (Game.Instance.HasSave)
@@ -108,10 +124,33 @@ public partial class TitleScreen : Control
         _left.AddChild(Wide(UiKit.Button(T("Khởi đầu kiếp mới", "Begin a new life"), ShowCreation, primary: !Game.Instance.HasSave)));
         _left.AddChild(Wide(UiKit.Button(Game.Instance.Locale == Locale.Vi ? "English" : "Tiếng Việt",
             () => Game.Instance.SetLocale(Game.Instance.Locale == Locale.Vi ? Locale.En : Locale.Vi))));
-        _left.AddChild(Wide(UiKit.Button(T("Thoát", "Quit"), () => GetTree().Quit())));
+        _left.AddChild(Wide(UiKit.Button(T("Cài đặt", "Settings"), OpenSettings)));
+        _left.AddChild(Wide(UiKit.Button(T("Thoát", "Quit"), () => Game.Instance.Quit())));
         _left.AddChild(UiKit.Spacer(10));
-        _left.AddChild(UiKit.Label(T("Godot 4.7 + C# · quy tắc trong TuTien.Core · xem design/GAME_DESIGN.md",
-            "Godot 4.7 + C# · rules in TuTien.Core · see design/GAME_DESIGN.md"), 13, Ink.InkFaint, wrap: true));
+        _left.AddChild(UiKit.Label(T("Bản thử nghiệm dọc · Godot 4.7 + C# · xem design/GAME_DESIGN.md",
+            "Vertical slice · Godot 4.7 + C# · see design/GAME_DESIGN.md"), 13, Ink.InkMute, wrap: true));
+    }
+
+    private SettingsPanel? _settings;
+
+    /// <summary>Settings float over the title (no field to host a panel here).</summary>
+    private void OpenSettings()
+    {
+        if (_settings != null && IsInstanceValid(_settings)) return;
+        var center = new CenterContainer { MouseFilter = MouseFilterEnum.Stop };
+        center.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        var dim = new ColorRect { Color = new Color(0.08f, 0.09f, 0.13f, 0.4f), MouseFilter = MouseFilterEnum.Stop };
+        dim.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        AddChild(dim);
+        AddChild(center);
+        _settings = new SettingsPanel();
+        _settings.Closed += () =>
+        {
+            dim.QueueFree();
+            center.QueueFree();
+            _settings = null;
+        };
+        center.AddChild(_settings);
     }
 
     private static Control Wide(Control c)

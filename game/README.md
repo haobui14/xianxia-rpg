@@ -2,7 +2,7 @@
 
 This folder holds the controllable game described in [`design/GAME_DESIGN.md`](../design/GAME_DESIGN.md). It uses Tale of Immortal's structure (a region with a monthly footwork budget, real-time fights, a living NPC world and set-piece breakthroughs), plus our own pillars: the Linh Thức storyteller, Qi + Body cultivation, Ngũ Hành reactions, and karma.
 
-It is currently a **vertical slice** of the Thanh Vân region, played as a **2D top-down (¾ view) world**: you walk your cultivator with WASD through painted forests, rivers, the village and the sect, and **fights happen where you meet**. **Time flows as you travel**: every tile you cross spends footwork, and when it runs out the month turns by itself. All art is drawn procedurally in an ink-wash style (no sprite assets yet); there is no audio yet.
+It is currently a **vertical slice** of the Thanh Vân region, played as a **2D top-down (¾ view) world**: you walk your cultivator with WASD through painted forests, rivers, the village and the sect, and **fights happen where you meet**. **Time flows as you travel**: every tile you cross spends footwork, and when it runs out the month turns by itself. Everything you see and hear is made in code: the art is drawn procedurally in an ink-wash style, and the sound effects and the guzheng-style music are synthesized at start-up. There are no sprite or audio asset files yet.
 
 ## Layout
 
@@ -10,7 +10,7 @@ It is currently a **vertical slice** of the Thanh Vân region, played as a **2D 
 |---|---|
 | `core/TuTien.Core/` | All game rules, engine-free (`netstandard2.1`, no Godot references): RNG, content, calendar, cultivation, elements, karma, map and footwork, month tick, NPC sim, combat rules, loot, events, saves. `GameEngine` is the single entry point. |
 | `core/TuTien.Core.Tests/` | xUnit tests (93) that run the rules against the real content. |
-| `godot/` | The Godot project. `scripts/Field` is the top-down world: the region, secret-realm floors and the breakthrough trial are all *fields*, with collision, the player controller, fights (`Battle`, `EnemyAi`), the HUD and the map. `scripts/Art` draws people, creatures, scenery and effects in code. `shaders/` paints the ground, the clouds of unexplored land and swaying trees. `scripts/Ui` holds the title screen, theme and panels, and `scripts/Dev` holds the smoke test and F9 cheats. |
+| `godot/` | The Godot project. `scripts/Field` is the top-down world: the region, secret-realm floors and the breakthrough trial are all *fields*, with collision, the player controller, fights (`Battle`, `EnemyAi`), the HUD and the map. `scripts/Art` draws people, creatures, scenery and effects in code. `scripts/Audio` synthesizes every sound effect and composes the music. `shaders/` paints the ground, the clouds of unexplored land and swaying trees. `scripts/Ui` holds the title screen, theme, panels and settings, and `scripts/Dev` holds the smoke test and F9 cheats. |
 | `godot/content/` | Game data as JSON. Most of it is exported from the web game's TypeScript; enemies, skills, items, towns, NPC names and the map are hand-authored. |
 
 ## Requirements
@@ -35,13 +35,14 @@ You can also build from the command line with `dotnet build game/TuTienLuc.sln` 
 | WASD / arrows | Walk (roads are quicker; forest, swamp and mountains slower) |
 | E | Interact with what the prompt shows: the inn, stall or bounty board, the sect hall, a cave, a spirit vein, a herb patch, a person, a 奇 adventure |
 | Left click | Strike. Hitting a beast starts the fight with its pack |
-| M | Map: click a place you've seen to plan the way, then set off |
+| M | Map: click a place you've seen to plan the way, then set off (from Trúc Cơ, a way over water is flown) |
 | N | End the month early (it also turns by itself when footwork runs out) |
 | B | Seclusion (bế quan): several months at ×1.6 cultivation |
 | Tab | Sense pulse (thần thức): spend 10 Qi to see further |
+| V | Sword flight (ngự kiếm), from Trúc Cơ: fly over rivers and peaks; V again to land |
 | C / I / J | Character / Inventory / Journal (the journal has a how-to-play tab) |
 | Mouse wheel | Zoom |
-| Esc | System menu |
+| Esc | System menu (save, settings, keys) |
 | F9 | Dev cheats |
 
 **Fighting** (on the same field, wherever it starts)
@@ -70,6 +71,10 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
 - **Secret realm floors:** walled gardens where the guardians wait; clear the floor to open its chests and the gate down.
 - **Breakthrough trial:** *Dẫn khí nhập thể* (Mortal → Luyện Khí) is played on a mountaintop bagua platform, not rolled. Gather qi motes and cut down heart demons; the success threshold depends on your preparation. Success awakens your root's first spirit art.
 - **Karma:** gifts leave ân (a debt of gratitude) and killings leave oán (a grudge). Grudges come back as ambushes.
+- **Sword flight (ngự kiếm):** from Trúc Cơ, press V to ride your sword over the river and peaks, twice as fast as walking and out of reach of beasts. Land with V, which doesn't work over water. Set off on the map across water and the sword takes you there and sets you down.
+- **Sound, all synthesized:** about 40 effects (swishes, hits, casts, coins, the month gong, and more), positional in the world. Five pieces of music are generated in pentatonic modes for the title, exploring, fights, the breakthrough trial and secret realms. The zither plays with glissandi, grace notes and tremolo over flute, bells and drone; fights get taiko drums. The music crossfades as you move between them.
+- **The seasons in the air:** blossom petals, summer fluff and butterflies, autumn leaves and snow drift across the screen. Footsteps raise dust on roads, ripples in the swamp and puffs of snow.
+- **A painted title screen** that moves (mist, falling petals, a slow pan), and a **settings** screen: volumes, fullscreen, screen shake, language.
 - **Saves and language:** the game saves every month and after every fight, and Vietnamese/English can be switched anywhere.
 
 The Linh Thức AI storyteller is **offline-only** in this slice. NPC lines, the chronicle and rumors come from templates built on the same facts the online `/api/story` endpoint will receive (§7.13).
@@ -80,10 +85,17 @@ The Linh Thức AI storyteller is **offline-only** in this slice. NPC lines, the
 # Rules (fast, no Godot needed)
 dotnet test game/core/TuTien.Core.Tests
 
-# Godot headless smoke test. It plays the slice end to end: the world and its panels,
-# walking the road until the month turns on the way, a fight on the field, striking a
-# roaming pack, the breakthrough trial, a spirit-art fight, the sect trial, a secret
-# realm floor, seclusion, and a save/load round trip. It exits 0 on success, 1 on failure.
+# Godot headless smoke test. It plays the slice end to end:
+#  - every sound effect and piece of music is rendered and checked (no NaN, sane
+#    loudness, loops that join without a click)
+#  - real key and mouse events go through Godot's input pipeline: walk with WASD, E at
+#    the bounty board, Esc, M, a click that swings the sword, N
+#  - the rest of the slice: the world and its panels, map travel that walks round
+#    props until the month turns on the road, a fight on the field, striking a roaming
+#    pack, the breakthrough trial, a spirit-art fight, the sect trial, a secret realm
+#    floor, sword flight across the river (by key and by map), seclusion, and a
+#    save/load round trip
+# It exits 0 on success, 1 on failure.
 dotnet build game/TuTienLuc.sln
 godot --headless --fixed-fps 60 --path game/godot -- --smoke
 
@@ -92,7 +104,7 @@ xvfb-run -s "-screen 0 1600x900x24" godot --rendering-driver opengl3 --fixed-fps
   --resolution 1600x900 --path game/godot -- --smoke --shots /tmp/tutien-shots
 ```
 
-The smoke test writes to its own save slot (`user://saves/smoke.json`), so it never touches your real save.
+The smoke test writes to its own save slot (`user://saves/smoke.json`), so it never touches your real save. With `--shots` it also writes the five music loops as WAV files next to the screenshots.
 
 ## Re-export content from the web game
 
@@ -104,4 +116,4 @@ This rewrites `regions`, `dungeons`, `events`, `sects`, `loot`, `sect_missions` 
 
 ## Next
 
-See design doc §11. The rest of M1 covers audio, a settings screen, more enemies and arts, sword flight (Trúc Cơ) over water, and a 60-minute playtest. M2 brings the online storyteller and sect missions.
+See design doc §11. The rest of M1 covers more enemies and arts, key remapping, text-size and telegraph-colour options, and a 60-minute playtest. M2 brings the online storyteller and sect missions.

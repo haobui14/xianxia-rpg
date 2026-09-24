@@ -9,7 +9,7 @@ namespace TuTienLuc.Field;
 /// <summary>
 /// M: the region map. Click a place you have seen to plan the way there — the cheapest path in
 /// footwork — then set off; the body walks it (crossing tiles still costs footwork, and the month may
-/// turn on the road). Moving yourself cancels the walk.
+/// turn on the road). Moving yourself cancels the walk. From Trúc Cơ a way over the river is flown.
 /// </summary>
 public partial class MapPanel : InkPanel
 {
@@ -57,11 +57,10 @@ public partial class MapPanel : InkPanel
     public Vector2I? Goal => _goal;
     public PathResult? Path => _path;
 
-    private void SetOff()
+    public void SetOff()
     {
         if (_path == null) return;
-        _w.Player.Route.Clear();
-        foreach (var step in _path.Steps) _w.Player.Route.Enqueue(WorldScreen.TileCenter(step.X, step.Y));
+        _w.Player.Travel(_path.Steps.Select(step => WorldScreen.TileCenter(step.X, step.Y)));
         Close();
     }
 

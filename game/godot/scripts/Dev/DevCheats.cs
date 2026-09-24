@@ -47,6 +47,14 @@ public static class DevCheats
         fog.SaveTo(e.Player, e.Map);
     }
 
+    /// <summary>Jump to a major realm (tests of realm-gated things like sword flight).</summary>
+    public static void SetRealm(GameEngine e, Realm realm)
+    {
+        e.Player.Realm = realm;
+        e.Player.Stage = 1;
+        e.Player.PendingMajorBreakthrough = false;
+    }
+
     public static void RevealMap(GameEngine e)
     {
         var fog = e.Fog();

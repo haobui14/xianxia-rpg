@@ -5,7 +5,9 @@ using Godot;
 using TuTien.Core;
 using TuTien.Core.Content;
 using TuTien.Core.Rules;
+using TuTien.Core.World;
 using TuTienLuc.Art;
+using TuTienLuc.Audio;
 using TuTienLuc.Ui;
 
 namespace TuTienLuc.Field;
@@ -16,7 +18,7 @@ public struct Controls
     public Vector2 Move;
     /// <summary>Where the player aims, as a direction (zero = keep facing).</summary>
     public Vector2 Aim;
-    public bool Attack, Dash, Ultimate, Pill;
+    public bool Attack, Dash, Ultimate, Pill, Fly;
     public int Slot;
 
     public static Controls None => new() { Slot = -1 };
@@ -56,6 +58,14 @@ public sealed class PlayerController
     private readonly HashSet<Fighter> _dashHits = new();
     private float _warnCd;
     private float _dustCd;
+    private float _stepCd;
+    // Route following: the waypoint being walked to, a way round what's in front of it, and patience.
+    private Vector2? _routeHead;
+    private readonly List<Vector2> _detour = new();
+    private bool _detoured;
+    private float _routeClock;
+    private float _replanCd;
+    private bool _landAtEnd;
 
     public PlayerController(FieldScreen field, Vector2 pos)
     {
@@ -176,6 +186,7 @@ public sealed class PlayerController
         c.Dash = Input.IsActionJustPressed("dash");
         c.Ultimate = Input.IsActionJustPressed("ultimate");
         c.Pill = Input.IsActionJustPressed("pill");
+        c.Fly = Input.IsActionJustPressed("fly");
         c.Slot = MouseSkill || Input.IsActionJustPressed("skill_1") ? 0
             : Input.IsActionJustPressed("skill_2") ? 1
             : Input.IsActionJustPressed("skill_3") ? 2
@@ -204,11 +215,14 @@ public sealed class PlayerController
 
         // Travel along a route unless the player takes the wheel.
         if (c.Move.LengthSquared() > 0.01f && !Autopilot) Route.Clear();
-        if (c.Move.LengthSquared() <= 0.01f && Route.Count > 0 && Battle == null)
+        if (Route.Count == 0)
         {
-            var to = Route.Peek() - p.Pos;
-            if (to.Length() < 14) Route.Dequeue();
-            else c.Move = to.Normalized();
+            _routeHead = null;
+            _landAtEnd = false;
+        }
+        else if (c.Move.LengthSquared() <= 0.01f && Battle == null)
+        {
+            c.Move = FollowRoute(dt);
         }
 
         // Facing: in a fight the body turns to the aim; exploring, it looks where it walks.
@@ -227,12 +241,25 @@ public sealed class PlayerController
             return;
         }
         if (p.Stun > 0) return;
+        if (c.Fly) ToggleFlight();
+        if (p.Flying)
+        {
+            Fly(c, dt);
+            return;
+        }
 
         var speed = p.Speed * p.SpeedFactor * (CastLock > 0 ? 0.45f : 1f) * F.TerrainSpeed(p.Pos);
         if (c.Move.LengthSquared() > 1) c.Move = c.Move.Normalized();
         if (c.Move.LengthSquared() > 0.01f)
         {
             p.Pos = F.Walls.Move(p.Pos, p.Radius, c.Move * speed * dt);
+            _stepCd -= dt;
+            if (_stepCd <= 0)
+            {
+                _stepCd = 0.36f * 260f / Mathf.Max(120f, speed);
+                SoundBoard.PlayAt("step", p.Pos, -14, 1, 0.18f, 60);
+                F.OnFootstep(p.Pos);
+            }
             if (_dustCd <= 0 && Battle != null)
             {
                 _dustCd = 0.22f;
@@ -245,6 +272,151 @@ public sealed class PlayerController
         else if (c.Slot >= 0) TrySlot(c.Slot, c);
         else if (c.Pill) TryPill();
         else if (c.Attack && CastLock <= 0) Cast(Basic, c);
+    }
+
+    // ================================================================ routes
+
+    /// <summary>
+    /// Set off along a route (the map's travel). A way over ground no foot can cross — the river, a peak —
+    /// is flown when the cultivator can ride the sword, and the sword sets down where the way ends.
+    /// </summary>
+    public void Travel(IEnumerable<Vector2> points)
+    {
+        var list = points.ToList();
+        var overWater = list.Any(pt => F.Walls.CellOf(pt) is var c && F.Walls.SolidCell(c.X, c.Y));
+        var takeOff = overWater && CanFly && !Body.Flying && Battle == null;
+        if (takeOff) ToggleFlight();
+        Route.Clear();
+        foreach (var pt in list) Route.Enqueue(pt);
+        _routeHead = null;
+        _landAtEnd = takeOff;
+    }
+
+    /// <summary>
+    /// Head for the next waypoint. When something stands in the way (a notice board, a well, a house on the
+    /// tile's centre), walk the way round that <see cref="CollisionWorld.FindPath"/> finds. A waypoint no body
+    /// can stand on is done once you're as near as you can get; one you can't reach at all is given up.
+    /// </summary>
+    private Vector2 FollowRoute(float dt)
+    {
+        var p = Body;
+        _replanCd -= dt;
+        while (Route.Count > 0)
+        {
+            var wp = Route.Peek();
+            if (_routeHead != wp) StartLeg(wp);
+            if (p.Pos.DistanceTo(wp) >= 14 && _routeClock > 0) break;
+            Route.Dequeue();
+            _routeHead = null;
+        }
+        if (Route.Count == 0)
+        {
+            if (_landAtEnd && p.Flying) Land(force: false);
+            _landAtEnd = false;
+            return Vector2.Zero;
+        }
+        _routeClock -= dt;
+        var target = Route.Peek();
+        if (p.Flying) return (target - p.Pos).Normalized();
+
+        while (_detour.Count > 0 && p.Pos.DistanceTo(_detour[0]) < 8) _detour.RemoveAt(0);
+        if (_detour.Count == 0 && _detoured && !F.Walls.Free(target, p.Radius))
+        {
+            // As near as a body gets to a waypoint inside something.
+            _routeClock = 0;
+            return Vector2.Zero;
+        }
+        var toward = _detour.Count > 0 ? _detour[0] : target;
+        var heading = (toward - p.Pos).Normalized();
+        // A step that gets somewhere (sliding along a slanting wall counts) needs no new way round.
+        var reach = Mathf.Min(16, p.Pos.DistanceTo(toward));
+        if ((F.Walls.Move(p.Pos, p.Radius, heading * reach) - p.Pos).Dot(heading) > reach * 0.5f || _replanCd > 0) return heading;
+        _replanCd = 0.4f;
+        _detour.Clear();
+        if (F.Walls.FindPath(p.Pos, target, p.Radius) is not { } way) return heading;
+        _detour.AddRange(way);
+        _detoured = true;
+        while (_detour.Count > 0 && p.Pos.DistanceTo(_detour[0]) < 8) _detour.RemoveAt(0);
+        return _detour.Count > 0 ? (_detour[0] - p.Pos).Normalized() : Vector2.Zero;
+    }
+
+    private void StartLeg(Vector2 wp)
+    {
+        _routeHead = wp;
+        _detour.Clear();
+        _detoured = false;
+        _routeClock = 3 + 3 * Body.Pos.DistanceTo(wp) / Mathf.Max(60, Body.Speed);
+    }
+
+    // ================================================================ sword flight (ngự kiếm)
+
+    /// <summary>From Trúc Cơ a cultivator can ride their sword over rivers and cliffs (design §7.2).</summary>
+    public bool CanFly => MapGrid.HasSwordFlight(E.Player) && F is WorldScreen;
+
+    public void ToggleFlight()
+    {
+        if (Body.Flying)
+        {
+            Land(force: false);
+            return;
+        }
+        if (!CanFly)
+        {
+            Warn(T("Cần Trúc Cơ mới ngự kiếm phi hành được", "Sword flight needs Foundation Establishment"));
+            return;
+        }
+        if (Battle != null)
+        {
+            Warn(T("Không thể ngự kiếm khi đang giao chiến", "You can't take to the sword mid-fight"));
+            return;
+        }
+        Body.Flying = true;
+        Route.Clear();
+        SoundBoard.Play("portal", -4);
+        F.Fx.Ring(Body.Pos, 46, new Color(0.55f, 0.85f, 0.95f, 0.9f), 0.4f);
+        F.Fx.Dust(Body.Pos, 6);
+    }
+
+    /// <summary>Come down. Over water or a cliff you can't, unless forced (then to the nearest ground).</summary>
+    public bool Land(bool force)
+    {
+        if (!Body.Flying) return true;
+        var spot = Body.Pos;
+        if (!F.Walls.Free(spot, Body.Radius))
+        {
+            var near = F.Walls.NearestFree(spot, Body.Radius, force ? 900 : 90);
+            if (!F.Walls.Free(near, Body.Radius))
+            {
+                Warn(T("Không có chỗ hạ xuống", "Nowhere to land here"));
+                return false;
+            }
+            spot = near;
+        }
+        Body.Pos = spot;
+        Body.Flying = false;
+        SoundBoard.Play("dash", -6, 0.8f);
+        F.Fx.Dust(spot, 6);
+        return true;
+    }
+
+    private void Fly(in Controls c, float dt)
+    {
+        var p = Body;
+        var move = c.Move.LengthSquared() > 1 ? c.Move.Normalized() : c.Move;
+        if (move.LengthSquared() > 0.01f)
+        {
+            p.Pos = F.Walls.Move(p.Pos, p.Radius, move * p.Speed * 1.8f * dt, flying: true);
+            if (_dustCd <= 0)
+            {
+                _dustCd = 0.05f;
+                F.Fx.Particles.Add(new Particle
+                {
+                    Pos = p.Pos + new Vector2(-move.X * 30, -p.Hover + 2), Vel = -move * 60, Life = 0.35f, MaxLife = 0.35f, Size = 3,
+                    Color = new Color(0.55f, 0.85f, 0.95f, 0.6f), Kind = ParticleKind.Spark, Drag = 3,
+                });
+            }
+        }
+        if (c.Attack || c.Slot >= 0 || c.Ultimate || c.Dash) Warn(T("Hạ xuống (V) để ra tay", "Land (V) to fight"));
     }
 
     /// <summary>Outside a fight the battle doesn't tick the player's timers; do the few that matter.</summary>
@@ -295,6 +467,7 @@ public sealed class PlayerController
         StaminaDelay = 0.6f;
         DashCd = 0.35f;
         StartDash(dir, 210, 0.16f, null, 0);
+        SoundBoard.Play("dash", -3);
     }
 
     private void StartDash(Vector2 dir, float distance, float seconds, SkillDef? skill, float mult)
@@ -362,6 +535,7 @@ public sealed class PlayerController
             SyncFromEngine();
         }
         PillCd = 5;
+        SoundBoard.Play("heal", -2);
         F.Fx.Say(Body.Pos + new Vector2(0, -80), $"+{heal:0}", Ink.Jade, 22);
         F.Fx.Ring(Body.Pos + new Vector2(0, -24), 40, Ink.Jade);
         F.Fx.Rise(Body.Pos, new Color("#88ad9b"), 8, 18);
@@ -406,6 +580,7 @@ public sealed class PlayerController
                 }
                 Cooldowns[skill.Id] = (float)skill.Cooldown;
                 Swing(skill, dir, skill.Element != null ? Ink.Element(skill.Element.Value) : Ink.InkColor);
+                SoundBoard.Play("swing", -2, jitter: 0.08f);
                 F.OnPlayerSlash(p.Pos + new Vector2(0, -10), dir, (float)skill.Cast.Arc, (float)skill.Cast.Range + 10);
                 return true;
             }
@@ -425,6 +600,7 @@ public sealed class PlayerController
                 // A swing at the air: no cost, just the motion.
                 Cooldowns[skill.Id] = (float)skill.Cooldown;
                 Swing(skill, dir, Ink.InkColor);
+                SoundBoard.Play("swing", -6, jitter: 0.08f);
                 F.OnPlayerSlash(p.Pos + new Vector2(0, -10), dir, (float)skill.Cast.Arc, (float)skill.Cast.Range + 10);
                 return true;
             }
@@ -449,6 +625,7 @@ public sealed class PlayerController
         var color = skill.Element != null ? Ink.Element(skill.Element.Value) : Ink.InkColor;
         CastLock = (float)cast.Windup + 0.1f;
         p.Face(dir);
+        CastSound(skill);
 
         switch (cast.Shape)
         {
@@ -521,6 +698,35 @@ public sealed class PlayerController
             }
         }
         return true;
+    }
+
+    private static void CastSound(SkillDef skill)
+    {
+        switch (skill.Cast.Shape)
+        {
+            case "melee_arc":
+                SoundBoard.Play(skill.Cast.Arc >= 300 ? "swing_big" : "swing", skill.Cast.Arc >= 300 ? 0 : -2, jitter: 0.08f);
+                break;
+            case "projectile":
+                SoundBoard.Play(skill.Element == Element.Hoa ? "fire" : "cast", -2);
+                break;
+            case "nova":
+                SoundBoard.Play("swing_big");
+                SoundBoard.Play("cast", -2);
+                break;
+            case "dash_strike":
+                SoundBoard.Play("dash");
+                break;
+            case "self_buff":
+                SoundBoard.Play("shield");
+                break;
+            case "heal":
+                SoundBoard.Play("heal");
+                break;
+            default:
+                SoundBoard.Play("cast", -2);
+                break;
+        }
     }
 
     /// <summary>The visible swing: the arm moves and a brush crescent sweeps the arc.</summary>

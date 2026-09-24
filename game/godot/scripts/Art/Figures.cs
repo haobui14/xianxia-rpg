@@ -23,6 +23,8 @@ public struct Pose
     public float Side;
     public bool Enraged;
     public Vector2 LookAt;
+    /// <summary>Height above the ground (riding a flying sword); the shadow stays on the ground.</summary>
+    public float Lift;
 }
 
 /// <summary>
@@ -85,14 +87,14 @@ public static class Figures
     private static void Profile(CanvasItem ci, in Pose p, float scale, float shadow, Action<CanvasItem, Pose> body)
     {
         Paint.Shadow(ci, Vector2.Zero, shadow * scale, shadow * 0.32f * scale);
-        ci.DrawSetTransform(Vector2.Zero, 0, new Vector2((p.Side < 0 ? -1 : 1) * scale, scale));
+        ci.DrawSetTransform(new Vector2(0, -p.Lift), 0, new Vector2((p.Side < 0 ? -1 : 1) * scale, scale));
         body(ci, p);
     }
 
     private static void Front(CanvasItem ci, in Pose p, float scale, float shadow, Action<CanvasItem, Pose> body)
     {
         Paint.Shadow(ci, Vector2.Zero, shadow * scale, shadow * 0.32f * scale);
-        ci.DrawSetTransform(Vector2.Zero, 0, new Vector2(scale, scale));
+        ci.DrawSetTransform(new Vector2(0, -p.Lift), 0, new Vector2(scale, scale));
         body(ci, p);
     }
 
@@ -108,7 +110,7 @@ public static class Figures
         var s = k.Height * scale;
         Paint.Shadow(ci, Vector2.Zero, 13 * scale * k.Bulk, 4.6f * scale, 0.22f);
         var side = p.Dir == Facing4.Left && !p.Meditate ? -1f : 1f;
-        ci.DrawSetTransform(Vector2.Zero, 0, new Vector2(side * s, s));
+        ci.DrawSetTransform(new Vector2(0, -p.Lift), 0, new Vector2(side * s, s));
         var rig = new Rig(ci, k, p, side);
         if (p.Meditate) rig.Meditate();
         else if (p.Dir == Facing4.Down) rig.Front();

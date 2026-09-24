@@ -64,6 +64,7 @@ public static class UiKit
             b.AddThemeColorOverride("font_color", Ink.Paper);
             b.AddThemeColorOverride("font_hover_color", Ink.Paper);
         }
+        b.Pressed += () => TuTienLuc.Audio.SoundBoard.Play("click", -8);
         b.Pressed += onPressed;
         return b;
     }

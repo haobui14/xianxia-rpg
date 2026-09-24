@@ -8,6 +8,7 @@ using TuTien.Core.Rules;
 using TuTien.Core.State;
 using TuTien.Core.World;
 using TuTienLuc.Art;
+using TuTienLuc.Audio;
 using TuTienLuc.Ui;
 using TuTienLuc.Ui.Panels;
 
@@ -112,6 +113,7 @@ public partial class WorldScreen : FieldScreen
             ["fog_tex"] = _fogTex, ["noise_tex"] = noise, ["map_cells"] = cells, ["cell_px"] = Cell, ["strength"] = 1f,
         });
         AddChild(new ShaderQuad(area, fogMat, 20));
+        AddChild(new Ambience(this, () => Season));
 
         WorldScenery.Build(this);
     }
@@ -232,6 +234,35 @@ public partial class WorldScreen : FieldScreen
         }
     }
 
+    /// <summary>What a footstep kicks up: dust on dirt roads, a splash in the swamp, a puff of snow.</summary>
+    public override void OnFootstep(Vector2 pos)
+    {
+        var c = Walls.CellOf(pos);
+        if (!E.Map.InBounds(c.X, c.Y)) return;
+        var t = E.Map.At(c.X, c.Y);
+        if (Season == Season.Winter && t is not (Terrain.Road or Terrain.Town or Terrain.Sect or Terrain.Bridge))
+        {
+            Fx.Particles.Add(new Particle
+            {
+                Pos = pos + new Vector2(GD.Randf() * 8 - 4, 0), Vel = new Vector2(GD.Randf() * 30 - 15, -20), Life = 0.45f, MaxLife = 0.45f,
+                Size = 4, Color = new Color(1, 1, 1, 0.7f), Kind = ParticleKind.Mist, Drag = 3,
+            });
+            return;
+        }
+        switch (t)
+        {
+            case Terrain.Road or Terrain.Town:
+                Fx.Dust(pos, 1);
+                break;
+            case Terrain.Swamp:
+                Fx.Ring(pos + new Vector2(0, 2), 9, new Color(0.35f, 0.45f, 0.42f, 0.8f), 0.4f);
+                break;
+            case Terrain.Forest or Terrain.DenseForest when GD.Randf() < 0.12f:
+                Fx.Leaves(pos + new Vector2(0, -6), Season == Season.Autumn ? new Color("#c0602f") : new Color("#6f9a55"), 1);
+                break;
+        }
+    }
+
     public override float TerrainSpeed(Vector2 pos)
     {
         var c = Walls.CellOf(pos);
@@ -319,6 +350,7 @@ public partial class WorldScreen : FieldScreen
         var report = _monthPending!;
         _monthPending = null;
         Hud.ShowMonth(report);
+        SoundBoard.Play("month", -2);
         Game.Instance.Remember(report.Events);
         ApplySeason();
         SyncActors();
@@ -345,6 +377,7 @@ public partial class WorldScreen : FieldScreen
         if (E.Pulse())
         {
             Game.Instance.Toast("Thần thức quét rộng — mọi động tĩnh quanh ngươi hiện rõ.", "Your spiritual sense sweeps outward.");
+            SoundBoard.Play("pulse");
             Fx.Ring(PlayerBody.Pos, E.SenseRadius * Cell, Ink.Jade, 1.1f);
             RefreshFog();
             UpdateVisibility();
@@ -617,7 +650,8 @@ public partial class WorldScreen : FieldScreen
     /// <summary>Aggressive packs that see you come running; the first to reach you starts the fight.</summary>
     private void UpdateAggro(float dt)
     {
-        if (Battle != null || E.ZoneHere?.IsSafe == true)
+        // Nothing on foot can reach a cultivator riding a sword overhead.
+        if (Battle != null || E.ZoneHere?.IsSafe == true || PlayerBody.Flying)
         {
             _hunting.Clear();
             return;
@@ -652,7 +686,10 @@ public partial class WorldScreen : FieldScreen
             foreach (var b in alive)
             {
                 if (_hunting.Add(b))
+                {
                     Fx.Say(b.Pos + new Vector2(0, -Figures.HeightOf(b.Kind) * b.Scale - 16), "!", Ink.Cinnabar, 30, 0.9f);
+                    SoundBoard.PlayAt("notice", b.Pos, 0, 1, 0.05f, 250);
+                }
                 if (b.Speed <= 0) continue;
                 var dir = (PlayerBody.Pos - b.Pos).Normalized();
                 b.Pos = Walls.Move(b.Pos, b.Radius, dir * b.Speed * 0.85f * dt);

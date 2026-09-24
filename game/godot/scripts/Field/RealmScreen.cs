@@ -7,6 +7,7 @@ using TuTien.Core.Combat;
 using TuTien.Core.Content;
 using TuTien.Core.State;
 using TuTienLuc.Art;
+using TuTienLuc.Audio;
 using TuTienLuc.Ui;
 using TuTienLuc.Ui.Panels;
 
@@ -32,6 +33,8 @@ public partial class RealmScreen : FieldScreen
     private bool _leaving;
 
     public RealmScreen(PoiDef poi) => _poi = poi;
+
+    protected override string MusicMood => "realm";
 
     public override string PlaceName => T(_dungeon.Name, _dungeon.NameEn);
     public override string PlaceSub => T($"Tầng {_floor.FloorNumber}/{_dungeon.Floors.Count}: {_floor.Name}", $"Floor {_floor.FloorNumber}/{_dungeon.Floors.Count}: {_floor.NameEn}");
@@ -89,6 +92,7 @@ public partial class RealmScreen : FieldScreen
             ["tint"] = Theme == 3 ? new Color(0.94f, 0.9f, 0.98f) : new Color(0.97f, 1f, 0.97f),
         });
         AddChild(new ShaderQuad(new Rect2(-256, -256, W * Cell + 512, H * Cell + 512), mat, -20));
+        AddChild(new Ambience(this, () => Theme == 3 ? Season.Autumn : Season.Spring, Theme == 3 ? 0.6f : 1.4f));
         var sway = ShaderQuad.MakeMaterial("res://shaders/sway.gdshader", new Dictionary<string, Variant> { ["strength"] = 1f });
 
         // Walls of rock all around; low along the bottom so they never hide you.
@@ -247,6 +251,7 @@ public partial class RealmScreen : FieldScreen
         if (enc == null) return;
         _pending = null;
         foreach (var g in _guards) Fx.Say(g.Pos + new Vector2(0, -Figures.HeightOf(g.Kind) * g.Scale - 16), "!", Ink.Cinnabar, 28, 0.8f);
+        SoundBoard.Play("notice");
         StartBattle(enc, _guards.Where(g => g.Alive).ToList());
     }
 
@@ -277,6 +282,7 @@ public partial class RealmScreen : FieldScreen
         var roll = E.OpenFloorChest();
         if (roll == null) return;
         var chest = _chests.FirstOrDefault(c => c.Index == Run!.ChestsOpened - 1);
+        SoundBoard.Play("chest");
         if (chest.Prop != null)
         {
             chest.Prop.Redraw();
@@ -290,6 +296,7 @@ public partial class RealmScreen : FieldScreen
     {
         if (_leaving || !Cleared) return;
         _leaving = true;
+        SoundBoard.Play("portal");
         var events = E.AdvanceRealm();
         Game.Instance.Notify(events);
         Game.Instance.SaveGame();
@@ -301,6 +308,7 @@ public partial class RealmScreen : FieldScreen
     {
         if (_leaving) return;
         _leaving = true;
+        SoundBoard.Play("portal", -2);
         if (_pending != null && E.ActiveEncounter == _pending) E.AbandonEncounter();
         _pending = null;
         E.LeaveRealm();

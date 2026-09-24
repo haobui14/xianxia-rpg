@@ -142,7 +142,9 @@ public partial class FieldHud : Control
         b.AddThemeColorOverride("font_color", Ink.InkColor);
         b.Pressed += () =>
         {
-            if (_f.Battle == null && !_f.Frozen) act();
+            if (_f.Battle != null || _f.Frozen) return;
+            Audio.SoundBoard.Play("click", -8);
+            act();
         };
         _icons.AddChild(b);
     }
@@ -495,9 +497,12 @@ public partial class FieldHud : Control
         else if (_f.Battle != null)
             hint = T("WASD · chuột ngắm & chém · chuột phải/1/2/3 linh kỹ · Space lướt · R tuyệt kỹ · Q đan dược · chạy thật xa để thoát",
                 "WASD · mouse aims & strikes · RMB/1/2/3 arts · Space dash · R ultimate · Q pill · run far away to escape");
+        else if (_f.PlayerBody.Flying)
+            hint = T("Đang ngự kiếm — bay qua sông núi · V hạ xuống", "Riding the sword — cross rivers and cliffs · V to land");
         else
             hint = T("WASD đi · E tương tác · chém yêu thú để giao chiến · M bản đồ · N qua tháng sớm · cuộn chuột phóng to",
-                "WASD walk · E interact · strike a beast to fight · M map · N end month early · wheel zooms");
+                "WASD walk · E interact · strike a beast to fight · M map · N end month early · wheel zooms")
+                + (_f.Player.CanFly ? T(" · V ngự kiếm", " · V sword flight") : "");
         // Bottom right, clear of the log (left) and the skill bar (centre); two lines when it's long.
         var parts = hint.Split(" · ");
         var half = (parts.Length + 1) / 2;

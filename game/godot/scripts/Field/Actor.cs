@@ -31,6 +31,8 @@ public partial class Actor : Node2D
         var speed = dt > 0 ? moved / dt : 0;
         b.Moving = Mathf.MoveToward(b.Moving, speed > 10 ? 1 : 0, dt * 7);
         b.WalkPhase += dt * Mathf.Clamp(speed / 26f, 0, 4.5f) * 3.1f;
+        var hover = b.Flying ? 30 + Mathf.Sin(b.Time * 2.4f) * 4 : 0;
+        b.Hover = Mathf.MoveToward(b.Hover, hover, dt * (b.Flying ? 90 : 140));
         if (b.AttackAnim > 0) b.AttackAnim = Mathf.Max(0, b.AttackAnim - dt * 4.2f);
         if (b.CastAnim > 0) b.CastAnim = Mathf.Max(0, b.CastAnim - dt * 2.2f);
         if (!b.Alive) b.DeathFade -= dt;
@@ -68,9 +70,31 @@ public partial class Actor : Node2D
             Side = b.Side,
             Enraged = b.Enraged,
             LookAt = _field.PlayerBody.Pos - b.Pos,
+            Lift = b.Hover,
         };
+        if (b.Hover > 0.5f) FlyingSword(b);
         Figures.Draw(this, b.Kind, b.Look, pose, b.Scale);
-        if (b.Shield > 0) DrawArc(new Vector2(0, -26), 30, 0, Mathf.Tau, 40, new Color(0.53f, 0.79f, 0.66f, 0.7f * Paint.Alpha), 3, true);
+        if (b.Shield > 0) DrawArc(new Vector2(0, -26 - b.Hover), 30, 0, Mathf.Tau, 40, new Color(0.53f, 0.79f, 0.66f, 0.7f * Paint.Alpha), 3, true);
         Paint.Alpha = 1;
+    }
+
+    /// <summary>The sword under the feet when riding it (ngự kiếm): a long blade with a trail of qi.</summary>
+    private void FlyingSword(Fighter b)
+    {
+        var k = Mathf.Clamp(b.Hover / 30f, 0, 1);
+        var dir = Mathf.Abs(b.Facing.X) > 0.2f ? Mathf.Sign(b.Facing.X) : b.Side;
+        var y = -b.Hover + 2;
+        var tip = new Vector2(dir * 40, y);
+        var tail = new Vector2(-dir * 34, y);
+        DrawColoredPolygon(Paint.EllipsePts(new Vector2(0, y + 1), 44, 7, 16), new Color(0.55f, 0.85f, 0.95f, 0.18f * k));
+        var blade = new[] { tip, new Vector2(dir * 26, y - 3), new Vector2(-dir * 22, y - 3), new Vector2(-dir * 22, y + 3), new Vector2(dir * 26, y + 3) };
+        DrawColoredPolygon(blade, new Color(0.86f, 0.9f, 0.94f, k));
+        DrawPolyline(new[] { blade[0], blade[1], blade[2], blade[3], blade[4], blade[0] }, new Color(0.11f, 0.13f, 0.19f, 0.8f * k), 1.2f, true);
+        DrawLine(new Vector2(-dir * 22, y - 6), new Vector2(-dir * 22, y + 6), new Color(0.63f, 0.48f, 0.18f, k), 3, true);
+        DrawLine(new Vector2(-dir * 22, y), tail, new Color(0.35f, 0.25f, 0.2f, k), 3, true);
+        DrawLine(tip, new Vector2(-dir * 18, y), new Color(1, 1, 1, 0.8f * k), 1, true);
+        if (b.Moving > 0.3f)
+            for (var i = 1; i <= 3; i++)
+                DrawLine(tail + new Vector2(-dir * i * 9, 0), tail + new Vector2(-dir * (i * 9 + 14), 0), new Color(0.55f, 0.85f, 0.95f, 0.45f * k / i), 2, true);
     }
 }

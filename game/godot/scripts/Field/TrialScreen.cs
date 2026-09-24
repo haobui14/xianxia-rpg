@@ -4,6 +4,7 @@ using Godot;
 using TuTien.Core;
 using TuTien.Core.Rules;
 using TuTienLuc.Art;
+using TuTienLuc.Audio;
 using TuTienLuc.Ui;
 using TuTienLuc.Ui.Panels;
 
@@ -59,6 +60,7 @@ public partial class TrialScreen : FieldScreen
     private double _performance;
 
     public override bool FreeStrikes => true;
+    protected override string MusicMood => "trial";
     public override string PlaceName => T($"Đột phá: {Names.Display(E.Player.Realm + 1, Locale.Vi)}", $"Breakthrough: {Names.Display(E.Player.Realm + 1, Locale.En)}");
     public override string PlaceSub => T("Thu linh khí, tránh tâm ma", "Gather qi, avoid heart demons");
     public override string FleeLabel => T("Dừng đột phá (tính là thất bại)", "Abort (counts as a failure)");
@@ -144,7 +146,11 @@ public partial class TrialScreen : FieldScreen
             // Settle into meditation before the storm of qi begins.
             _calm -= dt;
             PlayerBody.Pos = SpawnPoint();
-            if (_calm <= 0) PlayerBody.Meditating = false;
+            if (_calm <= 0)
+            {
+                PlayerBody.Meditating = false;
+                SoundBoard.Play("gong", -3);
+            }
             return;
         }
         Time += dt;
@@ -201,6 +207,7 @@ public partial class TrialScreen : FieldScreen
             m.Dead = true;
             var gain = _root.Contains(m.Element) ? 3 : 1;
             Score += gain;
+            SoundBoard.Play("mote", gain > 1 ? 0 : -5, MotePitch(m.Element) * (gain > 1 ? 2f : 1), 0.01f, 20);
             Fx.Say(m.Pos + new Vector2(0, -18), "+" + gain, Ink.Element(m.Element), gain > 1 ? 22 : 17, 0.7f);
             Fx.Burst(m.Pos, Ink.Element(m.Element).Lightened(0.3f), 6, 90, ParticleKind.Spark, 2);
         }
@@ -218,6 +225,7 @@ public partial class TrialScreen : FieldScreen
                 continue;
             }
             d.Dead = true;
+            SoundBoard.Play("demon");
             Score = Mathf.Max(0, Score - 4);
             p.Stun = Mathf.Max(p.Stun, 0.35f);
             p.HitFlash = 0.15f;
@@ -231,9 +239,20 @@ public partial class TrialScreen : FieldScreen
         if (Time >= Duration) EndTrial(Performance);
     }
 
+    /// <summary>Each phase rings its own note of the pentatonic scale.</summary>
+    private static float MotePitch(Element e) => e switch
+    {
+        Element.Kim => 1.3348f,
+        Element.Thuy => 1.1225f,
+        Element.Moc => 1f,
+        Element.Hoa => 0.8409f,
+        _ => 0.7492f,
+    };
+
     private void Cut(Demon d)
     {
         d.Dead = true;
+        SoundBoard.PlayAt("kill", d.Pos, -3);
         Score += 1;
         Fx.Say(d.Pos + V(0, -30), T("Trảm!", "Cut!"), Ink.JadeDeep, 20);
         Fx.Ring(d.Pos + V(0, -18), 26, Ink.Violet);
@@ -264,6 +283,8 @@ public partial class TrialScreen : FieldScreen
         Motes.Clear();
         Demons.Clear();
         var passed = performance >= Threshold;
+        SoundBoard.Play(passed ? "breakthrough" : "defeat");
+        SoundBoard.Music("");
         Hud.Banner(passed ? T("Linh khí quy nguyên!", "The qi settles!") : T("Linh khí tán loạn…", "The qi scatters…"),
             T($"Thành tích {performance * 100:0}% · cần {Threshold * 100:0}%", $"Performance {performance * 100:0}% · needed {Threshold * 100:0}%"),
             passed ? Ink.JadeDeep : Ink.CinnabarDeep, 2.4f);

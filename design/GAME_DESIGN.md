@@ -1,10 +1,12 @@
-# Tu Tiên Lục — Game Design Document (v0.2)
+# Tu Tiên Lục — Game Design Document (v0.3)
 
 > **Status:** draft for review · **Date:** 2026-09-24
 > **Locked decisions:** Godot 4.7 + C# · PC / Steam first · Tale of Immortal–style sandbox · **a real 2D top-down (¾ view) world**
 > **Our pillars on top of ToI:** AI storyteller (Linh Thức) · Qi + Body cultivation · Ngũ Hành elemental combat · Karma & sect wars
 >
 > **v0.2 changes:** the world is no longer a token on a tile map. You walk your cultivator through a painted top-down world with WASD. **Fights happen where you meet** (no separate arena screen), and **time flows as you travel**: crossing ground spends footwork, and when the month's footwork runs out the month turns by itself while you keep walking. See §7.1–7.3 and §9.3.
+>
+> **v0.3 changes:** sound and music are made in code (synthesized effects, generated guzheng-style music that follows the situation); a settings screen; **sword flight** (*Ngự kiếm*, **V**) from Trúc Cơ over rivers and peaks; the seasons in the air (petals, butterflies, leaves, snow) and underfoot; a painted, living title screen. See §7.2, §8 and §9.3.
 
 ---
 
@@ -35,6 +37,7 @@ The good news: **most of ToI's systems already exist in this repo** as data and 
 | Combat | **Real-time, seamless**: fights happen on the field where you meet (ToI-style kit) | "Control the character" is the goal. Turn-based menus are what we're replacing, and a separate arena screen breaks the feeling of one world. |
 | Time | **Time flows as you travel** | Crossing a tile spends its footwork; an empty budget turns the month automatically. The strategic clock stays monthly and deterministic. |
 | Art direction | **Ink wash & jade** (existing design system), drawn procedurally in-engine for now | Brush-outlined figures, trees and buildings plus painted-ground shaders cost no asset pipeline and keep one style; commissioned sprites can replace them piece by piece. |
+| Audio | **Synthesized in code** for now: effects, and music generated in Chinese pentatonic modes on a plucked-zither voice | Same reasoning as the art: no asset pipeline and one voice throughout. A composer's recordings can replace any piece behind the same `SoundBoard` calls. |
 
 ---
 
@@ -195,7 +198,9 @@ A full run from mortal to peak Nguyên Anh targets **~360 in-game months (~30 ye
 | Hills | 2 | |
 | Dense forest, swamp | 3 | |
 | Mountain | 3 | Mortals can't cross peaks |
-| River / sea | — | Bridges and ferries only, until **Ngự kiếm phi hành** (sword flight) at Trúc Cơ: every walkable tile costs 1 and water becomes crossable |
+| River / sea | — | Bridges and ferries only, until **Ngự kiếm phi hành** (sword flight) at Trúc Cơ: every tile costs 1 and water becomes crossable |
+
+- **Ngự kiếm phi hành (sword flight):** from Trúc Cơ, **V** puts you on your flying sword. You float over rivers, peaks and cliffs at about twice walking speed, and beasts on the ground can't reach you. You can't strike from the sword (land with V first; you can't land on water). A fight that finds you anyway brings you down to the nearest ground. The **M** map's travel takes to the sword by itself when the way crosses water and sets you down at the end.
 
 - **Points of interest** are places you walk up to and press **E** at (the prompt floats over them):
 
@@ -214,7 +219,7 @@ A full run from mortal to peak Nguyên Anh targets **~360 in-game months (~30 ye
 - **Fog of war and Thần thức (spiritual sense):**
   - Your sense radius is `3 + ⌊PER/4⌋ + realm index`. It permanently reveals terrain and shows live tokens (beasts, NPCs, adventures) within range.
   - Hidden POIs (hidden caves, secret chests) need a higher radius or a **Thần thức pulse** (spend Qi to scan a wider area once).
-- **Clouds (*mây mù*)** cover what you haven't explored; they drift and part as your sense radius reveals tiles. The minimap and the **M** map show only what you have seen. Clicking a seen place on the M map plans the cheapest way there and your character walks it.
+- **Clouds (*mây mù*)** cover what you haven't explored; they drift and part as your sense radius reveals tiles. The minimap and the **M** map show only what you have seen. Clicking a seen place on the M map plans the cheapest way there and your character walks it, stepping round whatever stands in the way (a fine-grained local path search around wells, boards and houses).
 - **Encounters:**
   - Aggressive packs (chargers and swarms) notice you within about 3 tiles (more in dangerous zones), show a "!" and run at you; the first one to reach you starts the fight. They lose interest if you outrun them. Passive creatures only fight if you strike first. Nothing hunts you in a safe zone.
   - At month end, aggressive beasts within 3 tiles may move onto you (an ambush), with a chance to dodge based on PER. The ambushers step out of the trees around you and the fight starts at once.
@@ -480,12 +485,23 @@ The existing `cultivation_path: "qi" | "body" | "dual"`, the body realms (Phàm 
 
 | Context | Keyboard + mouse | Gamepad / Steam Deck |
 |---|---|---|
-| Exploring | WASD / arrows: walk · **E**: interact with what's in front of you · LMB: strike (starts a fight with a beast) · **M**: map, click to travel · **N**: end the month early · **Tab**: Thần thức pulse · B: seclusion · wheel: zoom | Left stick: walk · Y: interact · RT: strike · Back: map · L3: end month · R3: pulse |
+| Exploring | WASD / arrows: walk · **E**: interact with what's in front of you · LMB: strike (starts a fight with a beast) · **M**: map, click to travel · **N**: end the month early · **Tab**: Thần thức pulse · **V**: sword flight (Trúc Cơ+) · B: seclusion · wheel: zoom | Left stick: walk · Y: interact · RT: strike · Back: map · L3: end month · R3: pulse |
 | Fighting (same field) | WASD: move · mouse: aim · LMB: martial art · RMB/1–3: spirit arts · **Space**: dash · R: ultimate · F: artifact · Q: pill · run far away: flee · Esc: pause | Left stick: move · right stick: aim (soft lock-on) · RT/RB/LB/LT/X · A: dash · Y: ultimate |
 | Menus | C character · I inventory · J journal (chronicle + arcs) · K arts · O sect · L relations · Esc system | Start/Select + shoulder tabs |
 
 - **Main screen:** the world fills the screen, with a thin HUD: the cultivator card (realm, HP, Qi, cultivation; stamina and killing intent appear in a fight), the date card with the footwork bar ("day N of the month"), a minimap with icon buttons, the skill bar, and a log with the latest rumor. Month turns and fight results appear as cards that fade by themselves, so walking never stops. Panels open over the paused world. The old narrative card lives on as the **Journal** (the Linh Thức chronicle).
 - **Keys are fully remappable** (Godot `InputMap`). There's pause everywhere, and text size and colorblind-safe telegraph options.
+- **Settings** (from the title screen, or Esc → Settings): master, music and effects volume, fullscreen, screen shake, and language. They're saved to `user://settings.json`. Remapping, text size and telegraph colors come next.
+- **Sound, all made in code:**
+  - About 40 effects, each built from a recipe: blade swishes, hits and crits, a dash, element casts, a shield, pills, coins, herbs, a portal, and the month gong. Sounds in the world are positional, so a fight to the left is heard on the left.
+  - Music is generated at start-up in the Chinese pentatonic modes (宮 Gong, 商 Shang, 羽 Yu), in five moods that crossfade as the situation changes:
+    - **title** and **explore**: plucked zither (*đàn tranh*) phrases with the instrument's ornaments (glissando sweeps, grace notes, tremolo), a bamboo flute, bells and a drone
+    - **battle**: taiko drums and a driving ostinato
+    - **trial**: gong, heartbeat and breath for the breakthrough
+    - **realm**: a slower, darker mode for secret realms
+  - Short stingers mark victory, defeat, escape and breakthroughs.
+- **The seasons in the air:** petals in spring, seed fluff and butterflies in summer, falling leaves in autumn, and snow in winter, with footsteps that raise road dust, swamp ripples, forest leaves or puffs of snow.
+- **Title screen:** a living painted landscape (peaks, a river and bridge, a pagoda, blossom trees, lanterns) with mist and petals drifting past, and a cultivator on the road looking out over it.
 - **Theme:** Godot `Theme` resources built from the existing tokens (`--paper`, `--ink`, `--jade`, `--cinnabar`, `--gold`, rarity and realm colors). All the fonts are SIL OFL (Cormorant Garamond, Spectral, Inter, Noto Serif SC), so we can bundle them.
 - **Steam Deck Verified** is an explicit PC-first goal: 1280×800 layouts and full controller support.
 
@@ -527,7 +543,13 @@ xianxia-rpg/
 - **Autoloads:**
   - `Game` holds the Engine and state and re-emits domain events as signals.
   - `ContentDb`, `SaveService` (`user://saves`, autosave each month, cloud sync) and `Storyteller` (HTTP client with offline fallback).
-  - `Settings` / `InputRemap` and `Audio`.
+  - Settings live on `Game` for now (`InputRemap` comes later).
+  - `SoundBoard` (`scripts/Audio`, a child of `Game`) plays everything. It has a small pool of flat and positional players, `Music`, `SFX` and `Master` buses (reverb on the first two, a limiter on the last), and a crossfade between two music players.
+  - The sound itself is generated in code:
+    - `Synth` holds the building blocks: Karplus–Strong plucked strings tuned by decay time, bells and gongs from inharmonic partials, drums, filtered-noise whooshes, a flute, and mastering.
+    - `SfxLibrary` has one recipe per effect.
+    - `Composer` writes the seamless music loops.
+    - All of it renders on background threads, so nothing is loaded from disk.
 - **Fields** (`scripts/Field`): every place you walk is a `FieldScreen`: the region (`WorldScreen`), a secret-realm floor (`RealmScreen`), and the breakthrough platform (`TrialScreen`). A field holds:
   - the ground (`terrain.gdshader` on one quad, fed a texture of terrain ids and water depth) and the clouds of unexplored land (`fog.gdshader`)
   - a Y-sorted layer of props (scenery drawn once and cached; trees sway in `sway.gdshader`) and actors (people and creatures)
@@ -560,7 +582,7 @@ xianxia-rpg/
 
 - **Tests:**
   - xUnit on the core: formulas, month tick and seeded golden runs, save migrations.
-  - Godot headless smoke runs in CI: import, build, then run an automated script that walks the map, fights and ends a month.
+  - Godot headless smoke runs in CI: import and build, then play the slice end to end. Part of the run uses real key and mouse events sent through Godot's input pipeline (walk, interact, open the map, strike, end the month, take to the sword and cross the river). It walks the map, fights, passes a breakthrough, clears a secret-realm floor, and checks that every sound and piece of music renders cleanly and loops without a click.
 - **Performance budgets:** 60 fps on integrated GPUs, ≤200 live projectiles, NPC tick under 50 ms for 200 NPCs, cold start under 3 s.
 
 ---
@@ -591,7 +613,7 @@ Port each rule module **with tests that pin the TypeScript behavior** (golden va
 | Milestone | Scope | Exit criteria |
 |---|---|---|
 | **M0 — Foundations** *(done in this branch)* | Monorepo scaffold; core library (RNG, content, calendar, cultivation, elements, karma, map & footwork, month tick, NPC sim v0, combat rules, loot, events); content export; a playable greybox slice | `dotnet test` green; Godot headless smoke passes |
-| **M1 — Vertical slice: Thanh Vân** (4–6 wks; *playable top-down in this branch, see `game/README.md`*) | Hand-built Thanh Vân map with 4 zones; village + Thanh Vân Kiếm Phái gate + Linh Thảo Bí Cảnh (3 floors); 6 enemies across 4 archetypes; full kit (martial art, 3 spirit arts, dash, ultimate); element marks and reactions; month tick with ~30 NPCs + rumors; Bế quan; *Dẫn khí nhập thể* breakthrough; saves; settings | A 60-minute playtest is fun without the AI; 60 fps on an integrated GPU |
+| **M1 — Vertical slice: Thanh Vân** (4–6 wks; *playable top-down in this branch, see `game/README.md`*) | Hand-built Thanh Vân map with 4 zones; village + Thanh Vân Kiếm Phái gate + Linh Thảo Bí Cảnh (3 floors); 6 enemies across 4 archetypes; full kit (martial art, 3 spirit arts, dash, ultimate); element marks and reactions; month tick with ~30 NPCs + rumors; Bế quan; *Dẫn khí nhập thể* breakthrough; saves; settings; procedural sound and music; sword flight | A 60-minute playtest is fun without the AI; 60 fps on an integrated GPU |
 | **M2 — Living world & storyteller** (4–6 wks) | NPC interactions, relations and karma ledger; `/api/story` dialogue + chronicle + rumors; sect joining and missions on the map; bounty board; auction | NPC stories emerge unprompted in a 3-hour run |
 | **M3 — Cultivation depth** (4 wks) | Trúc Cơ set piece, body path trials and body arts, Tâm pháp passives, alchemy v1 | Qi, body and kiêm tu builds feel distinct |
 | **M4 — World breadth** (8–10 wks) | Regions 2–5, 71-enemy catalog, 5 secret realms, events for all pools, sect war territory, Kết Đan tribulation, Nguyên Anh heart demon, ascension ending | Mortal → ascension is completable |

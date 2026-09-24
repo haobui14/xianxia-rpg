@@ -2,6 +2,7 @@ using Godot;
 using TuTien.Core.Content;
 using TuTien.Core.Rules;
 using TuTienLuc.Art;
+using TuTienLuc.Audio;
 using TuTienLuc.Ui;
 
 namespace TuTienLuc.Field;
@@ -54,6 +55,7 @@ public static class EnemyAi
             f.Enraged = true;
             b.F.Fx.Say(f.Pos + new Vector2(0, -Figures.HeightOf(f.Kind) * f.Scale - 36), T("Cuồng nộ!", "Enraged!"), Ink.Cinnabar, 26, 1.4f);
             b.F.Fx.Burst(f.Pos + new Vector2(0, -40), Ink.Cinnabar, 20, 240, ParticleKind.Ember, 3);
+            SoundBoard.PlayAt("gong", f.Pos, -6);
             b.F.Shake(8);
         }
 
@@ -124,6 +126,7 @@ public static class EnemyAi
                         {
                             f.State = "charge";
                             f.StateTime = 0;
+                            SoundBoard.PlayAt("dash", f.Pos, -4);
                         },
                     });
                 }
@@ -233,6 +236,7 @@ public static class EnemyAi
             {
                 f.AttackAnim = 1;
                 f.AttackDir = dir;
+                SoundBoard.PlayAt("swing", origin, -7, 0.8f);
                 b.F.Fx.Slash(origin + new Vector2(0, -12), dir, arc, reach + b.Player.Radius, Ink.CinnabarDeep);
                 if (FieldMath.InArc(origin, dir, arc, reach, b.Player.Pos, b.Player.Radius))
                     b.HitPlayer(f, mult, DamageKind.Physical, null, null);
@@ -255,6 +259,7 @@ public static class EnemyAi
             Fire = () =>
             {
                 f.AttackAnim = 1;
+                SoundBoard.PlayAt("slam", origin);
                 b.F.Fx.Ring(origin, radius, Ink.Ochre);
                 b.F.Fx.Dust(origin, 10);
                 b.F.Shake(7);

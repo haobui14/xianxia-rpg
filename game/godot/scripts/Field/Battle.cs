@@ -8,6 +8,7 @@ using TuTien.Core.Content;
 using TuTien.Core.Rules;
 using TuTien.Core.State;
 using TuTienLuc.Art;
+using TuTienLuc.Audio;
 using TuTienLuc.Ui;
 
 namespace TuTienLuc.Field;
@@ -166,11 +167,13 @@ public sealed class Battle
         var r = CombatRules.Compute(kind, mult, element, in attacker, target.Defending(), mark, Rng);
 
         Damage(target, r.Amount, r.Crit, from);
+        SoundBoard.PlayAt(r.Crit ? "crit" : "hit", target.Pos);
         if (r.Reaction != Reaction.None)
         {
             if (target.Mark == null) target.InnateCd = 5;
             else target.Mark = null;
             React(target, r.Reaction, r.Amount);
+            SoundBoard.PlayAt("reaction", target.Pos, 2);
         }
         else if (r.AppliesMark && element != null)
         {
@@ -197,6 +200,7 @@ public sealed class Battle
         if (p.Invuln > 0)
         {
             Fx.Say(p.Pos + new Vector2(0, -76), T("Né!", "Dodge!"), Ink.Jade, 18);
+            SoundBoard.Play("dodge", -4);
             return;
         }
         if (source.Blind > 0 && Rng.Chance(0.5))
@@ -215,6 +219,7 @@ public sealed class Battle
             if (soaked > 0) Fx.Say(p.Pos + new Vector2(24, -66), $"({soaked:0})", Ink.JadeSoft, 15);
         }
         if (amount > 0) Damage(p, (int)Mathf.Round(amount), r.Crit, source.Pos);
+        SoundBoard.Play(amount > 0 ? "hurt" : "shield", amount > 0 ? 0 : -6);
         F.Shake(r.Crit ? 11 : 6);
         Pc.Intent = Mathf.Min(100, Pc.Intent + amount / p.HpMax * 90);
 
@@ -261,6 +266,7 @@ public sealed class Battle
             target.Yielded = true;
             target.Hp = Mathf.Max(1, target.Hp);
             _defeated.Add(target.Def.Id);
+            SoundBoard.PlayAt("chime", target.Pos, -2);
             Fx.Say(target.Pos + new Vector2(0, -head - 26), T("Chịu thua!", "Yields!"), Ink.JadeDeep, 22);
             Telegraphs.RemoveAll(t => t.Owner == target);
         }
@@ -269,6 +275,7 @@ public sealed class Battle
             target.Alive = false;
             target.DeathFade = 0.8f;
             _defeated.Add(target.Def.Id);
+            SoundBoard.PlayAt("kill", target.Pos, 1);
             Pc.Intent = Mathf.Min(100, Pc.Intent + 10);
             F.Hitstop(0.07f);
             Fx.Ring(target.Pos + new Vector2(0, -head * 0.4f), target.Radius * 2.2f, Ink.InkColor, 0.4f);
@@ -402,6 +409,7 @@ public sealed class Battle
         var color = skill.Element != null ? Ink.Element(skill.Element.Value).Darkened(0.15f) : Ink.CinnabarDeep;
         owner.CastAnim = 1;
         owner.CastColor = color;
+        SoundBoard.PlayAt("shoot", owner.Pos, -3);
         Shoot(owner, skill, dir, (float)skill.DamageMultiplier * (owner.Enraged ? 1.15f : 1f),
             skill.Damage == "physical" ? DamageKind.Physical : DamageKind.Spirit, color);
     }
@@ -450,6 +458,7 @@ public sealed class Battle
     {
         Fx.Ring(proj.Pos, proj.Burst, proj.Color, 0.35f);
         Fx.Burst(proj.Pos, new Color("#f5a04a"), 16, 220, ParticleKind.Ember, 3);
+        SoundBoard.PlayAt("explode", proj.Pos, -2);
         F.Shake(4);
         var ground = Ground(proj);
         foreach (var enemy in Enemies.Where(x => x != direct && x.Active && x.InBattle && x.Pos.DistanceTo(ground) <= proj.Burst + x.Radius).ToList())
