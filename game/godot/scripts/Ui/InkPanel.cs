@@ -46,10 +46,13 @@ public abstract partial class InkPanel : PanelContainer
         root.AddChild(header);
         root.AddChild(UiKit.Rule());
 
+        // A finger has to travel a little before it scrolls: with no dead zone every tap that wobbles a
+        // pixel would turn into a scroll and cancel the button under it.
         var scroll = new ScrollContainer
         {
             SizeFlagsVertical = SizeFlags.ExpandFill,
             HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            ScrollDeadzone = 14,
         };
         root.AddChild(scroll);
         Body = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
@@ -58,7 +61,9 @@ public abstract partial class InkPanel : PanelContainer
 
         Game.Instance.StateChanged += RequestRefresh;
         Game.Instance.LocaleChanged += RequestRefresh;
+        CrashLog.Note($"open {GetType().Name}");
         Build();
+        LetDragsScroll(Body);
     }
 
     public override void _ExitTree()
@@ -97,6 +102,21 @@ public abstract partial class InkPanel : PanelContainer
         _close.Visible = Closable;
         UiKit.Clear(Body);
         Build();
+        LetDragsScroll(Body);
+    }
+
+    /// <summary>
+    /// On a touchscreen the body scrolls under a dragging finger, even one that lands on a button: buttons
+    /// pass the press on to the scroll container, which cancels the button once the drag becomes a scroll.
+    /// (Buttons stop the press by default, so a panel full of them could hardly be scrolled.)
+    /// </summary>
+    private static void LetDragsScroll(Node node)
+    {
+        foreach (var child in node.GetChildren())
+        {
+            if (child is BaseButton button) button.MouseFilter = MouseFilterEnum.Pass;
+            LetDragsScroll(child);
+        }
     }
 
     public virtual void Close()
@@ -140,7 +160,9 @@ public abstract partial class InkPanel : PanelContainer
             var index = i;
             row.AddChild(UiKit.Button(names[i], () =>
             {
+                if (Tab == index) return;
                 Tab = index;
+                CrashLog.Note($"{GetType().Name} tab {index}");
                 RequestRefresh();
             }, primary: i == Tab));
         }

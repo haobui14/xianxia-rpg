@@ -128,7 +128,8 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
   - In English, realms, arts, places and signs are translated (Qi Condensation, Azure Cloud Village, "Inn"), and people's names are written without Vietnamese marks (Lâm Bá is Lam Ba), the way English xianxia writes Chinese names.
   - The language is a setting, not part of a save: a save made in one language opens in the other.
 - **No Chinese characters:** every sign and label is English or Vietnamese, and every badge is an ink icon drawn in code. That covers panel seals, HUD and touch buttons, art icons (drawn by how each art is cast, coloured by its element), element and status marks, and map markers.
-- **Phones and tablets:** on-screen touch controls (above), and an interface drawn bigger to suit the screen. Auto picks 135% on a phone and 120% on a small tablet, or you choose 100–145%. Panels shrink to fit and scroll.
+- **Phones and tablets:** on-screen touch controls (above), and an interface drawn bigger to suit the screen. Auto picks 135% on a phone and 120% on a small tablet, or you choose 100–145%. Panels shrink to fit and scroll under a finger, even one that lands on a button (a tap still presses it; a drag scrolls instead).
+- **Art slots:** Character → Arts shows the four slots as cards (each art's icon and name), and every art you know carries a row of slot buttons: tap one to put the art there (it swaps with whatever was in it), tap the lit one to take it out. With touch controls the slots are numbered 1–4 the way they ring the sword button; with a keyboard they're named by their keys.
 - **Saves:** the game saves every month and after every fight.
 - **Loading screen:** a new life or Continue opens on "Đang kiến tạo thế giới…" ("Building the world…"). The bar follows the real work as the region is built a slice per frame: the land and rivers, the mountains, the forests, the village and the sect, then the scenery around you. It also shows a tip.
 
@@ -152,9 +153,12 @@ dotnet test game/core/TuTien.Core.Tests
 #    realm floor, the Trúc Cơ meridian storm (it must lay a foundation), a fight with
 #    each of the five new creatures using a different second-tier art, sword flight
 #    across the river (by key and by map), seclusion, and a save/load round trip
+#  - Character → Arts by mouse: an art's slot button moves it into that slot, a second
+#    click takes it out, and no panel opens a drop-down picker
 #  - a phone: at 135% interface size, touch events pushed into the viewport drag the
-#    stick, press Interact, tap the ground to walk, pinch to zoom, and in a fight
-#    press an art, pause, and hold the martial art until the bear is beaten
+#    stick, press Interact, tap an art's slot button, tap the ground to walk, pinch to
+#    zoom, and in a fight press an art, pause, and hold the martial art until the bear
+#    is beaten
 #  - the new life goes in through the loading screen, like the title's button
 #  - one language at a time: at every step it reads each visible label and button and
 #    every word painted on the field (signs, names, the HUD). In English no Vietnamese
@@ -177,6 +181,13 @@ To see what the phone flow costs, run `--phone-start` at a phone's resolution. I
 ```bash
 xvfb-run -s "-screen 0 2400x1080x24" godot --rendering-driver opengl3_es --resolution 2400x1080 \
   --path game/godot -- --phone-start
+```
+
+`--arts-stress [rounds] [log] [shots dir]` plays a phone's way through Character → Arts over and over, with a real window. It taps slot buttons (each tap must do what it should), drags from them (the page must scroll and no slot may change), switches tabs and presses the back button. Every action goes to the log file first, so a crash leaves a trail. `--capture out.png [frames]` starts the game as usual and saves what its own window shows after a moment.
+
+```bash
+godot --path game/godot --resolution 1600x720 -- --arts-stress 300 arts.log shots/
+godot --path game/godot --resolution 1600x900 -- --capture title.png 120
 ```
 
 ## Android
@@ -236,6 +247,15 @@ The world now holds a few hundred buffers and makes about 75 draw calls a frame,
 - Saves go to the app's own storage.
 - The back button works like Esc.
 - The package name is `com.tutienluc.game`; change it in the preset before publishing.
+
+**If the game closes by itself:** a phone shows nothing when an app crashes, so the game leaves itself a trail.
+
+- It writes a line for everything it's about to do (screens, panels and their tabs, fights, month turns, the back button) to `user://logs/trail.txt`, straight to disk. A marker file exists only while it runs in the foreground. Leaving the app for the home screen isn't a crash, since the phone may end a backgrounded app at any time.
+- If the marker is still there at the next start, the title screen says the game closed unexpectedly and offers **Copy the crash report**. Settings → Problems has the same button.
+- The report holds the last session's trail, the end of Godot's own log (file logging is on for phones too) and the device model. Paste it into a message.
+- `adb logcat` on the debug APK still gives the fullest picture.
+
+On Android the app sometimes closed on the character sheet's Arts tab. Its slots were drop-down pickers, the only popup windows in the game's panels (each carries a viewport of its own), and a thumb scrolling the page opened them and changed slots by accident. The same taps, drags and back presses on a desktop never crashed, so the cause couldn't be pinned down. The pickers are buttons now (see *Art slots* above), and the trail will show if anything still goes wrong.
 
 ## Re-export content from the web game
 

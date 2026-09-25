@@ -50,6 +50,7 @@ public partial class Game : Node
 
     public override void _Ready()
     {
+        CrashLog.Start();
         Content = ContentDb.Load(ReadContent);
         var issues = Content.Validate();
         GD.Print($"[content] loaded: {Content.Regions.Count} regions, {Content.Enemies.Count} enemies, {Content.Events.Count} events, {issues.Count} known content gaps");
@@ -66,7 +67,14 @@ public partial class Game : Node
     {
         if (what == NotificationWMCloseRequest) Quit();
         // Android's back button (or gesture) is Esc: it closes a panel, pauses a fight, or opens the menu.
-        else if (what == NotificationWMGoBackRequest) Press("pause");
+        else if (what == NotificationWMGoBackRequest)
+        {
+            CrashLog.Note("back button");
+            Press("pause");
+        }
+        // A phone may end a backgrounded app whenever it likes; that isn't a crash.
+        else if (what == NotificationApplicationPaused) CrashLog.Paused();
+        else if (what == NotificationApplicationResumed) CrashLog.Resumed();
     }
 
     /// <summary>Press and let go of an input action, as if its key had been tapped (touch buttons, the back button).</summary>
@@ -86,6 +94,7 @@ public partial class Game : Node
     {
         if (_quitting) return;
         _quitting = true;
+        CrashLog.Stop();
         SoundBoard.I?.Silence();
         var start = Time.GetTicksMsec();
         for (var frames = 0; frames < 4 || Time.GetTicksMsec() - start < 150; frames++)
@@ -152,6 +161,7 @@ public partial class Game : Node
         catch (Exception ex)
         {
             GD.PushError($"Could not load save: {ex.Message}");
+            CrashLog.Note($"could not load the save: {ex}");
             return false;
         }
     }

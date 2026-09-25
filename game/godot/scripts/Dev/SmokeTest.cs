@@ -294,6 +294,7 @@ public partial class SmokeTest : Node
         world = await FightThrough(world);
         Check(usedArt, "the autopilot cast its spirit art");
         world = await Settle(world);
+        world = await ArtSlotsByHand(world);
 
         // ---------------------------------------------------------------- the sect trial
         DevCheats.Restore(E);
@@ -519,6 +520,35 @@ public partial class SmokeTest : Node
         return await Settle(World);
     }
 
+    /// <summary>
+    /// Character → Arts with the mouse: the slot buttons under an art put it in a slot (swapping with what was
+    /// there), and a second click on the lit one takes it out. No drop-down pickers anywhere in the panels.
+    /// </summary>
+    private async Task<WorldScreen> ArtSlotsByHand(WorldScreen world)
+    {
+        var art = E.Player.SkillSlots[0];
+        Check(art.Length > 0, "the first slot holds the awakened art");
+        world.OpenPanel(new CharacterPanel());
+        await Frames(3);
+        await ClickGui(PanelButton(world, "Võ học", "Arts"));
+        var move = world.CurrentPanel!.FindChild($"slot_{art}_2", true, false) as Button;
+        Check(move is { Disabled: false }, "the Arts tab lists each art with its slot buttons");
+        await ClickGui(move!);
+        Check(E.Player.SkillSlots[2] == art && E.Player.SkillSlots[0] == "", "clicking an art's slot 3 button moves it there");
+        await Shot("character_arts");
+        await ClickGui((Button)world.CurrentPanel!.FindChild($"slot_{art}_2", true, false)!);
+        Check(E.Player.SkillSlots[2] == "", "clicking the lit slot button takes the art out");
+        await ClickGui((Button)world.CurrentPanel!.FindChild($"slot_{art}_0", true, false)!);
+        Check(E.Player.SkillSlots[0] == art, "and it goes back into the first slot");
+        Check(world.CurrentPanel!.FindChildren("*", "OptionButton", true, false).Count == 0, "the Arts tab opens no drop-down pickers (popup windows)");
+        return await Settle(world);
+    }
+
+    /// <summary>A button in the open panel with this text (in either language).</summary>
+    private static Button PanelButton(WorldScreen world, string vi, string en) =>
+        world.CurrentPanel!.FindChildren("*", "Button", true, false).OfType<Button>().FirstOrDefault(b => (b.Text == vi || b.Text == en) && b.IsVisibleInTree())
+        ?? throw new InvalidOperationException($"no button '{en}' in the {world.CurrentPanel.GetType().Name}");
+
     /// <summary>Luyện Khí 9 → Trúc Cơ through the meridian storm, played by the autopilot; the foundation gets a grade.</summary>
     private async Task<WorldScreen> FoundationBreakthrough(WorldScreen world)
     {
@@ -688,6 +718,33 @@ public partial class SmokeTest : Node
         Check(new Rect2(Vector2.Zero, screen).Grow(1).Encloses(panelRect), $"the town panel fits the scaled screen ({panelRect.Size.X:0}×{panelRect.Size.Y:0})");
         await Shot("touch_panel");
         world.ClosePanel();
+        await Frames(3);
+
+        // Character → Arts with a finger: an art's slot button moves it, a second touch takes it out.
+        var slotsBefore = E.Player.SkillSlots.ToList();
+        world.OpenPanel(new CharacterPanel());
+        await Frames(3);
+        await TapScreen(0, PanelButton(world, "Võ học", "Arts").GetGlobalRect().GetCenter());
+        var first = E.Player.Skills[0].Id;
+        Button SlotButton(int slot)
+        {
+            var b = (Button)world.CurrentPanel!.FindChild($"slot_{first}_{slot}", true, false)!;
+            world.CurrentPanel.FindChildren("*", "ScrollContainer", true, false).OfType<ScrollContainer>().First().EnsureControlVisible(b);
+            return b;
+        }
+        // A slot the art isn't in yet (earlier steps moved the arts around).
+        var slot = Enumerable.Range(0, 4).Last(i => E.Player.SkillSlots[i] != first);
+        SlotButton(slot);
+        await Frames(2);
+        await TapScreen(0, SlotButton(slot).GetGlobalRect().GetCenter());
+        Check(E.Player.SkillSlots[slot] == first, $"a finger on {first}'s slot {slot + 1} button puts it there");
+        await Shot("touch_arts");
+        await TapScreen(0, SlotButton(slot).GetGlobalRect().GetCenter());
+        Check(E.Player.SkillSlots[slot] == "", "a second touch on the lit button takes it out");
+        for (var i = 0; i < slotsBefore.Count; i++) E.SetSkillSlot(i, slotsBefore[i]);
+        Check(E.Player.SkillSlots.SequenceEqual(slotsBefore), "the slots are as they were");
+        world.ClosePanel();
+        world.Player.SyncFromEngine();
         await Frames(3);
 
         // The stick: a thumb in the lower left, dragged right, walks east; letting go stops.
