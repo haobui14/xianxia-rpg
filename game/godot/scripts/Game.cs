@@ -37,6 +37,10 @@ public partial class Game : Node
     public TouchMode Touch { get; set; } = TouchMode.Auto;
     /// <summary>How big the interface is drawn; 0 picks for the screen (bigger on a phone).</summary>
     public float UiScale { get; set; }
+    /// <summary>The new player guide was finished or skipped (it shows at the start of a first life until then).</summary>
+    public bool TutorialDone { get; set; }
+    /// <summary>The guide's step while it runs, so a world rebuilt after a trial or a realm picks it up again (−1: not running).</summary>
+    public int TutorialStep { get; set; } = -1;
 
     /// <summary>Raised after anything changes the game state, so HUDs can refresh.</summary>
     [Signal] public delegate void StateChangedEventHandler();
@@ -131,6 +135,8 @@ public partial class Game : Node
     {
         Engine = GameEngine.NewGame(Content, seed, name, age, root, path, Locale);
         Log.Clear();
+        // A first life on a keyboard and mouse opens with the new player guide.
+        TutorialStep = TutorialDone || TouchUi.Active ? -1 : 0;
         SaveGame();
         Changed();
     }
@@ -228,6 +234,7 @@ public partial class Game : Node
         if (data.TryGetValue("touch", out var touch))
             Touch = touch.AsString() switch { "on" => TouchMode.On, "off" => TouchMode.Off, _ => TouchMode.Auto };
         if (data.TryGetValue("ui_scale", out var scale)) UiScale = Mathf.Clamp((float)scale.AsDouble(), 0, 2);
+        if (data.TryGetValue("tutorial_done", out var tutorial)) TutorialDone = tutorial.AsBool();
     }
 
     /// <summary>Off while the smoke test runs, so testing never rewrites the player's own settings.</summary>
@@ -248,6 +255,7 @@ public partial class Game : Node
             ["keys"] = KeyMap.Save(),
             ["touch"] = Touch switch { TouchMode.On => "on", TouchMode.Off => "off", _ => "auto" },
             ["ui_scale"] = UiScale,
+            ["tutorial_done"] = TutorialDone,
         }));
     }
 

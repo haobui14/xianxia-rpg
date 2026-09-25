@@ -90,6 +90,16 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
 
 ### What the slice has
 
+- **A new player guide:** a first life on a keyboard and mouse opens with a card at the left of the screen that teaches the controls one step at a time, and each step waits for you to do it:
+  1. Walk.
+  2. Press interact by a person or a place.
+  3. Close the panel.
+  4. Swing the sword.
+  5. Dash.
+  6. Open the map.
+  7. Open the character sheet.
+
+  Three more steps explain time and months, fights, and what else there is to do, and wait for Next. The prompts name your own keys, so a rebound key shows as rebound. Skip ends the guide, and the journal's How to play tab replays it. It shows once: finishing or skipping is remembered in the settings.
 - **Character creation:** name, age, a spirit root roll with 3 rerolls, and a path (Qi, Body, or Kiêm tu).
 - **Thanh Vân as a top-down world (48×30 tiles, 128 px each):** painted ground with river banks, bridges and roads; forests, bamboo groves, hills and snow peaks; drifting clouds over unexplored land; seasons that recolour the grass and trees. The village has houses, an inn, a market stall, a bounty board, a forge and a well; the Thanh Vân Kiếm Phái sits behind its gate between cliffs; the Linh Thảo Bí Cảnh opens from a glowing cave; there are two spirit veins and herb patches.
 - **A living field:** 25 NPCs stroll where the month's simulation put them (talk to them with E), beast packs prowl their patch and aggressive ones chase you, adventures glow as pillars of light under a gold star, and a rumor feed runs in the corner. Trees and roofs in front of you turn see-through.
@@ -218,6 +228,8 @@ dotnet test game/core/TuTien.Core.Tests
 #    zoom, and in a fight press an art, pause, and hold the martial art until the bear
 #    is beaten
 #  - the new life goes in through the loading screen, like the title's button
+#  - the new player guide: a first life opens it and Skip ends it; later the journal's Replay
+#    starts it again and it is played by hand, key by key, each step ticking off only once done
 #  - one language at a time: at every step it reads each visible label and button and
 #    every word painted on the field (signs, names, the HUD). In English no Vietnamese
 #    letter may show, and in Vietnamese no English word. At the end it switches language
@@ -247,6 +259,30 @@ xvfb-run -s "-screen 0 2400x1080x24" godot --rendering-driver opengl3_es --resol
 godot --path game/godot --resolution 1600x720 -- --arts-stress 300 arts.log shots/
 godot --path game/godot --resolution 1600x900 -- --capture title.png 120
 ```
+
+## Sharing a playtest build
+
+Every push to `main` or this branch that touches `game/` builds the game for Windows and Android on GitHub Actions (`.github/workflows/android.yml`), and the newest builds replace the ones on the **playtest** release:
+
+**https://github.com/haobui14/xianxia-rpg/releases/tag/playtest**
+
+That is the one link to give testers. It never changes, it needs no GitHub account (the repository is public), and it always holds the latest build. Anyone with the link can download the game.
+
+- **Windows 10 and 11 (64-bit):** `TuTienLuc-windows.zip`. Testers unzip the whole folder and run `TuTienLuc.exe`; the .NET runtime is inside, so there is nothing to install. The zip carries a `READ-ME-FIRST.txt`.
+  - Windows says *Windows protected your PC* because the game isn't code-signed: **More info → Run anyway**.
+  - The game uses the OpenGL compatibility renderer (with Godot's automatic Direct3D fallback), so it runs on most laptops, integrated graphics included.
+- **Android:** `TuTienLuc-debug.apk` and `TuTienLuc.apk` (see *Android* below for signing).
+- Saves and logs on Windows are in `%APPDATA%\Godot\app_userdata\Tu Tiên Lục`. When something goes wrong, `logs\trail.txt` shows what the game was doing just before.
+
+Each run also keeps its builds as artifacts for 30 days (`tu-tien-luc-windows-<run>` and `tu-tien-luc-android-<run>`), but those need a GitHub login, so the release is the way to share.
+
+To build for Windows yourself, install the Windows export templates (Editor → Manage Export Templates), then:
+
+```bash
+godot --headless --path game/godot --export-release "Windows Desktop" export/windows/TuTienLuc.exe
+```
+
+Keep `TuTienLuc.exe` together with `data_TuTienLuc_windows_x86_64/` (the .NET assemblies) and zip the folder. The smoke test runs on the exported game too: `TuTienLuc.exe --headless --fixed-fps 60 -- --smoke`.
 
 ## Android
 

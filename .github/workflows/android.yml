@@ -1,8 +1,10 @@
-name: Android APK
+name: Android and Windows builds
 
-# Builds Tu Tiên Lục for Android phones and tablets (64-bit ARM) with Godot 4.7.2 .NET and attaches the
-# APKs to the run as an artifact: TuTienLuc.apk (release, for playing) and TuTienLuc-debug.apk (debug,
-# writes its log to logcat). See game/README.md → Android.
+# Builds Tu Tiên Lục with Godot 4.7.2 .NET for Android phones and tablets (64-bit ARM) and for Windows (64-bit),
+# and attaches them to the run as artifacts: TuTienLuc.apk (release), TuTienLuc-debug.apk (debug, writes its log
+# to logcat) and TuTienLuc-windows.zip. After a push, the playtest job puts the newest builds on the "playtest"
+# release, one download page for testers: https://github.com/haobui14/xianxia-rpg/releases/tag/playtest
+# See game/README.md → Android, and → Sharing a playtest build.
 #
 # Signing: set the repository secrets ANDROID_KEYSTORE_BASE64 (the keystore file, base64), ANDROID_KEYSTORE_PASSWORD
 # and ANDROID_KEY_ALIAS to sign every build with the same key, so a new build installs over the old one and
@@ -17,7 +19,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: android-${{ github.ref }}
+  group: builds-${{ github.ref }}
   cancel-in-progress: true
 
 defaults:
@@ -181,3 +183,131 @@ jobs:
             echo
             echo "To install it, allow installing unknown apps for your file manager or browser, then open the APK, or run \`adb install -r TuTienLuc.apk\`."
           } >> "$GITHUB_STEP_SUMMARY"
+
+  windows:
+    name: Build for Windows
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Cache Godot and its Windows templates
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable.mono
+          key: godot-${{ env.GODOT_VERSION }}-mono-windows-v1
+
+      - name: Download Godot and its export templates
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          fetch() {
+            for repo in godot godot-builds; do
+              if curl -fsSL --retry 3 -o "$2" "https://github.com/godotengine/$repo/releases/download/${GODOT_VERSION}-stable/$1"; then
+                return 0
+              fi
+            done
+            echo "::error::Could not download $1"
+            return 1
+          }
+          fetch "Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64.zip" "$RUNNER_TEMP/godot.zip"
+          mkdir -p ~/godot
+          unzip -q "$RUNNER_TEMP/godot.zip" -d ~/godot
+          fetch "Godot_v${GODOT_VERSION}-stable_mono_export_templates.tpz" "$RUNNER_TEMP/templates.tpz"
+          unzip -q "$RUNNER_TEMP/templates.tpz" -d "$RUNNER_TEMP/templates"
+          # Only the 64-bit Windows templates are kept.
+          dest=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono
+          mkdir -p "$dest"
+          cp "$RUNNER_TEMP"/templates/templates/windows_*_x86_64* "$RUNNER_TEMP"/templates/templates/version.txt "$dest"/
+          rm -rf "$RUNNER_TEMP/godot.zip" "$RUNNER_TEMP/templates.tpz" "$RUNNER_TEMP/templates"
+          ls -la "$dest"
+
+      - name: Configure Godot and the version
+        run: |
+          godot=$(find ~/godot -type f -name "Godot_v*_mono_linux.x86_64" | head -1)
+          chmod +x "$godot"
+          echo "GODOT=$godot" >> "$GITHUB_ENV"
+          # The exe's file properties show the build number, the same as the Android build's.
+          sed -i -e "s/^application\/file_version=.*/application\/file_version=\"0.4.${{ github.run_number }}.0\"/" \
+                 -e "s/^application\/product_version=.*/application\/product_version=\"0.4.${{ github.run_number }}.0\"/" \
+                 game/godot/export_presets.cfg
+          grep -E "^application/(file|product)_version" game/godot/export_presets.cfg
+
+      - name: Import the project
+        run: |
+          dotnet build game/godot/TuTienLuc.csproj
+          "$GODOT" --headless --path game/godot --import
+
+      - name: Export for Windows
+        run: |
+          mkdir -p game/godot/export/windows
+          "$GODOT" --headless --path game/godot --export-release "Windows Desktop" export/windows/TuTienLuc.exe
+          test -s game/godot/export/windows/TuTienLuc.exe
+          test -d game/godot/export/windows/data_TuTienLuc_windows_x86_64
+          cat > game/godot/export/windows/READ-ME-FIRST.txt <<'EOF'
+          Tu Tien Luc: playtest build for Windows 10 and 11 (64-bit)
+
+          1. Unzip this whole folder anywhere (for example your Desktop). Keep TuTienLuc.exe next to the
+             data_TuTienLuc_windows_x86_64 folder: the game needs both.
+          2. Run TuTienLuc.exe. Nothing else to install.
+          3. Windows may say "Windows protected your PC" because the game isn't code-signed.
+             Click "More info", then "Run anyway".
+
+          A first game opens with a short guide to the controls (the journal can replay it).
+
+          Saves and logs live in %APPDATA%\Godot\app_userdata\Tu Tiên Lục
+          If something goes wrong, please send the file logs\trail.txt from there.
+          EOF
+          (cd game/godot/export/windows && zip -qr9 ../TuTienLuc-windows.zip .)
+          ls -la game/godot/export game/godot/export/windows
+
+      - name: Upload the Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: tu-tien-luc-windows-${{ github.run_number }}
+          path: game/godot/export/TuTienLuc-windows.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  playtest:
+    name: Publish the playtest downloads
+    # After a push, the newest builds replace the ones on the "playtest" release: one link for testers that never changes.
+    needs: [apk, windows]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Fetch this run's builds
+        uses: actions/download-artifact@v4
+        with:
+          pattern: tu-tien-luc-*-${{ github.run_number }}
+          path: builds
+          merge-multiple: true
+
+      - name: Replace the playtest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          ls -la builds
+          cat > notes.md <<EOF
+          The newest playtest build of Tu Tiên Lục: build ${{ github.run_number }}, from commit ${GITHUB_SHA::7} on ${GITHUB_REF_NAME}.
+
+          **Windows 10 and 11 (64-bit):** download **TuTienLuc-windows.zip**, unzip the whole folder and run **TuTienLuc.exe**. Nothing else to install. Windows may say *Windows protected your PC* because the game isn't code-signed: click **More info**, then **Run anyway**.
+
+          **Android (64-bit phones and tablets):** **TuTienLuc-debug.apk**. Uninstall an older build first; each build is signed with a new key.
+
+          A first game opens with a short guide to the controls, and the journal can replay it. Saves and logs are in \`%APPDATA%\\Godot\\app_userdata\\Tu Tiên Lục\` on Windows. If something goes wrong, please send \`logs\\trail.txt\` from there.
+          EOF
+          gh release delete playtest --yes --cleanup-tag || true
+          gh release create playtest builds/TuTienLuc-windows.zip builds/TuTienLuc-debug.apk builds/TuTienLuc.apk \
+            --target "$GITHUB_SHA" --prerelease --title "Playtest build ${{ github.run_number }}" --notes-file notes.md
+          echo "### Playtest downloads: https://github.com/${{ github.repository }}/releases/tag/playtest" >> "$GITHUB_STEP_SUMMARY"

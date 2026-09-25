@@ -162,6 +162,8 @@ public partial class SmokeTest : Node
         await Frames(3);
         await Shot("creation");
 
+        // A first life, as if nobody had played before: the new player guide opens.
+        game.TutorialDone = false;
         // Into the world the way the title's button goes: behind the loading screen, built a slice per frame.
         var root = new SpiritRootState { Elements = { Element.Hoa }, Grade = RootGrade.Kha };
         Main.Instance.EnterWorld(() =>
@@ -177,6 +179,12 @@ public partial class SmokeTest : Node
         var world = World;
         Check(world.Actors.Count > 1 && world.Interactions.Count > 3, "the world stands when the loading screen goes");
         await Frames(40);
+        // The guide starts with the first life; Skip ends it for good (the journal brings it back later).
+        Check(world.Tutorial is { Index: 0, Finished: false }, "a first life opens the new player guide");
+        await Shot("tutorial_start");
+        await ClickGui((Button)world.Tutorial!.FindChild("tutorial_skip", true, false)!);
+        await Frames(2);
+        Check(world.Tutorial == null && game.TutorialDone, "Skip ends the guide");
         Check(E.Player.Realm == Realm.PhamNhan && E.Player.Footwork > 0, "new life starts as a mortal with footwork");
         Check(world.Actors.Count > 1, "people and beasts stand on the field");
         await Shot("world_village");
@@ -188,6 +196,7 @@ public partial class SmokeTest : Node
         // ---------------------------------------------------------------- real input: keys and the mouse
         world = await DriveByHand(world);
         world = await RebindByHand(world);
+        world = await TutorialByHand(world);
 
         // ---------------------------------------------------------------- panels
         foreach (var panel in new InkPanel[] { new CharacterPanel(), new InventoryPanel(), new JournalPanel(), new MapPanel(world), new SettingsPanel() })
@@ -508,6 +517,71 @@ public partial class SmokeTest : Node
         await Tap(Key.N);
         await Frames(4);
         Check(E.State.Calendar.MonthIndex == month + 1, "N ends the month early");
+        return await Settle(World);
+    }
+
+    /// <summary>
+    /// The new player guide by hand, replayed from the journal: walk with the keys, E at the bounty board, Esc, a click
+    /// that swings the sword, Space to dash, M, then Esc and C, then Next through the explaining steps. Each step ticks
+    /// off only once it's done, an explaining step waits for Next, and the prompts name the player's own keys.
+    /// </summary>
+    private async Task<WorldScreen> TutorialByHand(WorldScreen world)
+    {
+        world = await Settle(world);
+        // Stand on the open road east of the village first: the guide measures the walk from where it starts.
+        world.DebugPlace(WorldScreen.TileCenter(12, 22));
+        await Frames(6);
+        world.OpenPanel(new JournalPanel());
+        await Frames(3);
+        await ClickGui(PanelButton(world, "Cách chơi", "How to play"));
+        await Frames(3);
+        await ClickGui(await Reveal(world, "tutorial_replay"));
+        await Frames(3);
+        var guide = world.Tutorial;
+        Check(guide is { Index: 0, Finished: false } && !world.PanelOpen, "the journal's Replay starts the guide from the top");
+        Check(guide!.Text.Contains(KeyMap.MoveKeys), $"the guide names the walking keys ({KeyMap.MoveKeys})");
+        await Shot("tutorial_walk");
+
+        await Frames(30);
+        Check(guide.Index == 0, "a step waits until it is done");
+        await Hold(Key.D, 70);
+        await Until(() => guide.Index == 1, 60 * 3, "walking ticks off the first step");
+
+        Check(guide.Text.Contains(KeyMap.Label("interact")), "the guide names the interact key");
+        world.DebugPlace(new Vector2(846, 3040));
+        await Frames(4);
+        await Tap(Key.E);
+        await Until(() => guide.Index == 2, 60 * 3, "E at the bounty board ticks off interacting");
+        await Shot("tutorial_close");
+        await Tap(Key.Escape);
+        await Until(() => guide.Index == 3, 60 * 3, "Esc ticks off closing the panel");
+
+        await Click(GetViewport().GetVisibleRect().Size / 2 + new Vector2(120, 40));
+        await Until(() => guide.Index == 4, 60 * 3, "a click that swings the sword ticks off the sword");
+
+        KeyEvent(Key.D, true);
+        await Frames(3);
+        await Tap(Key.Space);
+        KeyEvent(Key.D, false);
+        await Until(() => guide.Index == 5, 60 * 3, "Space ticks off dashing");
+
+        await Tap(Key.M);
+        await Until(() => guide.Index == 6, 60 * 3, "M ticks off the map");
+        await Tap(Key.Escape);
+        await Tap(Key.C);
+        await Until(() => guide.Index == 7, 60 * 3, "Esc then C ticks off the character sheet");
+        await Tap(Key.Escape);
+        await Shot("tutorial_explain");
+
+        for (var i = 0; i < 3; i++)
+        {
+            var at = guide.Index;
+            await Frames(40);
+            Check(guide.Index == at, $"explaining step {at + 1} waits for Next");
+            await ClickGui((Button)guide.FindChild("tutorial_next", true, false)!);
+            await Frames(2);
+        }
+        Check(guide.Finished && world.Tutorial == null && Game.Instance.TutorialDone, "Next on the last step finishes the guide");
         return await Settle(World);
     }
 
@@ -1213,6 +1287,10 @@ public partial class SmokeTest : Node
         Check(world.Frozen && !pad.Visible, "the pause button pauses the fight (the controls step aside)");
         world.SetPaused(false);
         await Frames(2);
+        // The palisade (or a house) can leave the bear walking into a wall: stand it within reach, since the sword
+        // button is what's being tried here, not the bear's way round the village.
+        if (world.Battle?.Enemies.FirstOrDefault(f => f.Alive) is { } bear)
+            bear.Pos = world.Walls.NearestFree(world.PlayerBody.Pos + new Vector2(70, 0), bear.Radius, 200);
         var basic = world.Player.Basic.Id;
         var attack = pad.CentreOf("attack")!.Value;
         TouchAt(2, attack, true);

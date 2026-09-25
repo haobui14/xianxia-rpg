@@ -61,6 +61,10 @@ public partial class WorldScreen : FieldScreen
     }
 
     private readonly Dictionary<string, Vein> _veins = new();
+    private CanvasLayer? _guideLayer;
+
+    /// <summary>The new player guide, while it shows.</summary>
+    public Tutorial? Tutorial { get; private set; }
     private readonly Dictionary<string, (Prop Prop, Interaction Open)> _hoards = new();
     private bool _syncDirty;
     private float _syncTimer;
@@ -193,6 +197,31 @@ public partial class WorldScreen : FieldScreen
         if (cell != _tile) CrossInto(cell);
         RefreshFog();
         SyncActors();
+        if (Game.Instance.TutorialStep >= 0) ShowTutorial(Game.Instance.TutorialStep);
+    }
+
+    /// <summary>Start the new player guide from its first step (a first life, or Replay in the journal).</summary>
+    public void StartTutorial() => ShowTutorial(0);
+
+    private void ShowTutorial(int from)
+    {
+        Tutorial?.QueueFree();
+        // Above the panels (layer 20) and their dimming, so it can say how to close one.
+        _guideLayer ??= new CanvasLayer { Layer = 21 };
+        if (_guideLayer.GetParent() == null) AddChild(_guideLayer);
+        Tutorial = new Tutorial(this, from);
+        Tutorial.AnchorLeft = Tutorial.AnchorRight = 0;
+        Tutorial.AnchorTop = Tutorial.AnchorBottom = 0;
+        Tutorial.OffsetLeft = 16;
+        Tutorial.OffsetTop = 150;
+        _guideLayer.AddChild(Tutorial);
+    }
+
+    /// <summary>The guide was finished or skipped.</summary>
+    public void TutorialEnded()
+    {
+        Tutorial?.QueueFree();
+        Tutorial = null;
     }
 
     public override void _ExitTree()

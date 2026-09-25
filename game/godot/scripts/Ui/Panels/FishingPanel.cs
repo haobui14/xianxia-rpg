@@ -384,9 +384,8 @@ public partial class FishingStage : VBoxContainer
     // ------------------------------------------------------------------ the picture
 
     /// <summary>Draws the pond: water and reeds, the line and float; while reeling, the track, the net, the fish and the meter.</summary>
-    public void DrawWater(Control c)
+    public void DrawWater(Brush c, Vector2 size)
     {
-        var size = c.Size;
         if (size.X < 10) return;
         var water = new Color("#5f8fa3");
         c.DrawRect(new Rect2(Vector2.Zero, size), water);
@@ -471,5 +470,9 @@ public partial class WaterView : Control
         AcceptEvent();
     }
 
-    public override void _Draw() => _stage.DrawWater(this);
+    public override void _Draw()
+    {
+        using var b = Brush.On(this);
+        _stage.DrawWater(b, Size);
+    }
 }

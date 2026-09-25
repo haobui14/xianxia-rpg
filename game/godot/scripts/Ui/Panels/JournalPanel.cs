@@ -84,6 +84,16 @@ public partial class JournalPanel : InkPanel
     private void HowToPlay()
     {
         static string K(string action) => KeyMap.Label(action);
+        if (Field is TuTienLuc.Field.WorldScreen world)
+        {
+            var replay = UiKit.Button(T("Xem lại hướng dẫn tân thủ", "Replay the new player guide"), () =>
+            {
+                Close();
+                world.StartTutorial();
+            }, primary: true);
+            replay.Name = "tutorial_replay";
+            Buttons(replay);
+        }
         Section(T("Vòng lặp", "The loop"));
         Para(T($"Mỗi tháng ngươi có một lượng cước lực. Mỗi ô đất bước qua tốn cước lực theo địa hình; hết cước lực thì tháng tự qua ngay trên đường: tu vi tăng, thế giới chuyển động (tu sĩ tu luyện, kết thù, tọa hóa), yêu thú di chuyển, kỳ ngộ mới xuất hiện. Muốn qua tháng sớm thì bấm {K("end_month")}.",
             $"Each month you have footwork. Every tile you cross spends some, more on rough ground; when it runs out the month turns right there on the road: you cultivate, the world moves (cultivators train, feud, pass away), beasts roam, new encounters appear. {K("end_month")} ends the month early."), 15);

@@ -351,9 +351,8 @@ public partial class FurnaceStage : VBoxContainer
 
     // ------------------------------------------------------------------ the picture
 
-    public void DrawFurnace(Control c)
+    public void DrawFurnace(Brush c, Vector2 size)
     {
-        var size = c.Size;
         if (size.X < 10) return;
         c.DrawRect(new Rect2(Vector2.Zero, size), new Color("#3a2f2a"));
         c.DrawRect(new Rect2(0, size.Y - 24, size.X, 24), new Color("#5a4a3e"));
@@ -440,5 +439,9 @@ public partial class FurnaceView : Control
         }
     }
 
-    public override void _Draw() => _stage.DrawFurnace(this);
+    public override void _Draw()
+    {
+        using var b = Brush.On(this);
+        _stage.DrawFurnace(b, Size);
+    }
 }
