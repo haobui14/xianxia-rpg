@@ -1,0 +1,23 @@
+{
+  "$source": "hand-authored — what each sect keeps for its own (design §7.9): the treasury (Tàng Bảo Các), where contribution buys pills, manuals and gear by rank, and the spirit-gathering chamber, where disciples of rank seclude on spirit stones. Rank ids are the web game's SectRank values.",
+  "data": [
+    {
+      "sect_id": "thanh_van_kiem",
+      "treasury": [
+        { "item_id": "hoi_huyet_tan", "price": 6 },
+        { "item_id": "healing_pill", "price": 12 },
+        { "item_id": "qi_gathering_pill", "price": 50 },
+        { "item_id": "manual_ho_the", "price": 70 },
+        { "item_id": "qi_condensation_manual", "price": 90 },
+        { "item_id": "manual_kim_quang", "price": 160, "min_rank": "NộiMôn" },
+        { "item_id": "foundation_pill", "price": 220, "min_rank": "NộiMôn" },
+        { "item_id": "thanh_van_kiem_kinh", "price": 260, "min_rank": "NộiMôn" },
+        { "item_id": "spirit_sword", "price": 380, "min_rank": "ChânTruyền" }
+      ],
+      "chamber": {
+        "name": "Tụ Linh Thất", "name_en": "Spirit-Gathering Chamber",
+        "qi_density": 30, "stones_per_month": 2, "min_rank": "NộiMôn"
+      }
+    }
+  ]
+}

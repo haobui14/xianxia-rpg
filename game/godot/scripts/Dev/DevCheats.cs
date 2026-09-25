@@ -67,6 +67,20 @@ public static class DevCheats
         fog.SaveTo(e.Player, e.Map);
     }
 
+    /// <summary>Finish every sect mission in hand, as if its fights, herbs or months were done (it still has to be reported).</summary>
+    public static List<GameEvent> FinishMissions(GameEngine e)
+    {
+        foreach (var m in e.Player.Missions) m.Progress = m.Goal;
+        return SectMissions.Announce(e.State, e.Content);
+    }
+
+    /// <summary>Contribution and the merit that comes with it, as missions would pay.</summary>
+    public static void Contribution(GameEngine e, int amount)
+    {
+        e.Player.Contribution += amount;
+        e.Player.Merit += amount;
+    }
+
     public static List<GameEvent> PassMonths(GameEngine e, int months)
     {
         var events = new List<GameEvent>();

@@ -89,11 +89,13 @@ namespace TuTien.Core.Rules
             return true;
         }
 
+        /// <summary>Loot, a gathered herb, a chest: into the bag (and it counts for a gathering mission).</summary>
         public static void Apply(GameState state, ContentDb content, LootRoll roll)
         {
             state.Player.Silver += roll.Silver;
             state.Player.SpiritStones += roll.SpiritStones;
             foreach (var s in roll.Items) Add(state.Player, s);
+            SectMissions.Gathered(state, roll.Items);
         }
 
         /// <summary>Medicine, manuals (Book) and effect-bearing materials can be used; gear is equipped instead.</summary>

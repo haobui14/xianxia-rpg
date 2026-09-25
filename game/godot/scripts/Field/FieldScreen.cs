@@ -653,6 +653,7 @@ public abstract partial class FieldScreen : Node2D
 
         var groups = battle.Enemies.GroupBy(x => x.Name).Select(g => g.Count() > 1 ? $"{g.Key} ×{g.Count()}" : g.Key);
         battle.Title = string.Join(", ", groups);
+        CrashLog.Note($"fight ({enc.Source}): {string.Join(", ", enc.EnemyIds)}");
         Battle = battle;
         _afterBattle = after;
         _endTimer = -1;
@@ -751,6 +752,7 @@ public abstract partial class FieldScreen : Node2D
         var b = Battle!;
         var outcome = b.Outcome!;
         _endTimer = -1;
+        CrashLog.Note($"fight over: {(outcome.Victory ? "won" : outcome.Fled ? "fled" : "lost")}");
         var resolution = E.ResolveCombat(outcome);
         Battle = null;
         Player.EndBattle();

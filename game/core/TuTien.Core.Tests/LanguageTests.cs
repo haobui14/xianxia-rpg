@@ -56,7 +56,7 @@ public class LanguageTests
     private static readonly HashSet<string> NotShown = new()
     {
         "$source", "realm", "element", "elements", "unlock_realm", "recommended_realm", "realm_requirement", "type",
-        "sect_types", "unique_resources", "surnames", "given_male", "given_female", "denylist",
+        "sect_types", "unique_resources", "surnames", "given_male", "given_female", "denylist", "min_rank",
     };
 
     [Fact]

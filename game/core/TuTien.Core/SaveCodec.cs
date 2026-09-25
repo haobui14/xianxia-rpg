@@ -7,7 +7,7 @@ namespace TuTien.Core
     /// <summary>Versioned save files. Bump <see cref="CurrentVersion"/> and add a migration step for every format change.</summary>
     public static class SaveCodec
     {
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 3;
 
         public static string Serialize(GameState state, bool indented = false)
         {
@@ -31,6 +31,9 @@ namespace TuTien.Core
             // v2: Trúc Cơ carries a foundation grade. Whoever got there before it existed laid a plain one.
             if (state.Version < 2 && state.Player.Realm >= Realm.TrucCo && state.Player.Foundation == FoundationGrade.None)
                 state.Player.Foundation = FoundationGrade.Ha;
+            // v3: sects keep merit (all contribution ever earned) for promotions. Before, nothing spent contribution,
+            // so what a disciple holds is what they earned.
+            if (state.Version < 3 && state.Player.SectId != null) state.Player.Merit = Math.Max(state.Player.Merit, state.Player.Contribution);
             state.Version = CurrentVersion;
         }
     }

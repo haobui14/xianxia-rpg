@@ -294,6 +294,7 @@ public partial class SmokeTest : Node
         world = await FightThrough(world);
         Check(usedArt, "the autopilot cast its spirit art");
         world = await Settle(world);
+        world = await ArtSlotsByHand(world);
 
         // ---------------------------------------------------------------- the sect trial
         DevCheats.Restore(E);
@@ -358,6 +359,9 @@ public partial class SmokeTest : Node
 
         // ---------------------------------------------------------------- Trúc Cơ: the meridian storm
         world = await FoundationBreakthrough(world);
+
+        // ---------------------------------------------------------------- a disciple's life: missions, ranks, the treasury
+        world = await SectLife(world);
 
         // ---------------------------------------------------------------- new beasts, new arts
         world = await NewBeastsAndArts(world);
@@ -518,6 +522,110 @@ public partial class SmokeTest : Node
         Check(KeyMap.IsDefault && KeyMap.Label("interact") == "E", "restoring the defaults puts Interact back on E");
         return await Settle(World);
     }
+
+    /// <summary>
+    /// Character → Arts with the mouse: the slot buttons under an art put it in a slot (swapping with what was
+    /// there), and a second click on the lit one takes it out. No drop-down pickers anywhere in the panels.
+    /// </summary>
+    private async Task<WorldScreen> ArtSlotsByHand(WorldScreen world)
+    {
+        var art = E.Player.SkillSlots[0];
+        Check(art.Length > 0, "the first slot holds the awakened art");
+        world.OpenPanel(new CharacterPanel());
+        await Frames(3);
+        await ClickGui(PanelButton(world, "Võ học", "Arts"));
+        var move = world.CurrentPanel!.FindChild($"slot_{art}_2", true, false) as Button;
+        Check(move is { Disabled: false }, "the Arts tab lists each art with its slot buttons");
+        await ClickGui(move!);
+        Check(E.Player.SkillSlots[2] == art && E.Player.SkillSlots[0] == "", "clicking an art's slot 3 button moves it there");
+        await Shot("character_arts");
+        await ClickGui((Button)world.CurrentPanel!.FindChild($"slot_{art}_2", true, false)!);
+        Check(E.Player.SkillSlots[2] == "", "clicking the lit slot button takes the art out");
+        await ClickGui((Button)world.CurrentPanel!.FindChild($"slot_{art}_0", true, false)!);
+        Check(E.Player.SkillSlots[0] == art, "and it goes back into the first slot");
+        Check(world.CurrentPanel!.FindChildren("*", "OptionButton", true, false).Count == 0, "the Arts tab opens no drop-down pickers (popup windows)");
+        return await Settle(world);
+    }
+
+    /// <summary>
+    /// A disciple's life at the gate, by mouse: take a mission from the hall's board, do it, report it for
+    /// contribution and merit; rise to inner disciple; take the sect's technique from the treasury; open
+    /// the spirit-gathering chamber that the new rank unlocks.
+    /// </summary>
+    private async Task<WorldScreen> SectLife(WorldScreen world)
+    {
+        var game = Game.Instance;
+        // The entrance trial is a real spar and can be lost; this step needs a disciple.
+        if (E.Player.SectId == null) game.Notify(E.JoinSect("thanh_van_kiem"));
+        Check(E.Player.SectId == "thanh_van_kiem" && E.Player.SectRank == "NgoạiMôn", "an outer disciple of the Azure Cloud Sword Sect");
+        var gate = E.Map.Def.Pois.First(p => p.Kind == "sect");
+        world.OpenPanel(new SectPanel(gate));
+        await Frames(3);
+        await Shot("sect_standing");
+
+        await ClickGui(PanelButton(world, "Nhiệm Vụ Đường", "Mission hall"));
+        var board = E.MissionBoard();
+        Check(board.Count > 0 && board.All(t => t.SectTypes.Contains("Kiếm")), $"the mission hall posts missions for a sword sect ({string.Join(", ", board.Select(t => t.Id))})");
+        var offer = board[0];
+        await ClickPanel(world, "take_" + offer.Id);
+        var held = E.Player.Missions.FirstOrDefault(m => m.TemplateId == offer.Id);
+        Check(held != null && E.MissionBoard().All(t => t.Id != offer.Id), $"Take puts {offer.Id} in hand and off the board");
+        await Shot("sect_missions");
+        // The dev shortcut stands in for the fights, herbs or months it asks for; the rules tests play those.
+        game.Notify(DevCheats.FinishMissions(E));
+        await Frames(3);
+        var (contribution, merit, reward) = (E.Player.Contribution, E.Player.Merit, held!.RewardContribution);
+        await ClickPanel(world, "report_missions");
+        Check(E.Player.Missions.Count == 0 && E.Player.Contribution == contribution + reward && E.Player.Merit == merit + reward,
+            $"reporting at the hall pays {reward} contribution and as much merit");
+
+        // Up the ranks: at Trúc Cơ, 200 merit makes an inner disciple.
+        DevCheats.Contribution(E, Math.Max(0, 200 - E.Player.Merit) + 300);
+        game.Changed();
+        await Frames(2);
+        await ClickGui(PanelButton(world, "Thân phận", "Standing"));
+        await ClickPanel(world, "promote");
+        Check(E.Player.SectRank == "NộiMôn", "Rise: the merit and the realm make an inner disciple");
+        await Shot("sect_promoted");
+
+        // The treasury keeps the sect's own technique for inner disciples.
+        await ClickGui(PanelButton(world, "Tàng Bảo Các", "Treasury"));
+        var before = E.Player.Contribution;
+        await ClickPanel(world, "exchange_thanh_van_kiem_kinh");
+        Check(TuTien.Core.Rules.Inventory.Count(E.Player, "thanh_van_kiem_kinh") == 1 && E.Player.Contribution == before - 260,
+            "the treasury gives the Azure Cloud Sword Canon for 260 contribution");
+        await Shot("sect_treasury");
+
+        // The new rank opens the spirit-gathering chamber: seclusion there runs on spirit stones.
+        await ClickGui(PanelButton(world, "Thân phận", "Standing"));
+        E.Player.SpiritStones += 10;
+        game.Changed();
+        await Frames(2);
+        await ClickPanel(world, "chamber");
+        Check(world.CurrentPanel is SeclusionPanel, "the chamber opens a seclusion in it");
+        await Shot("sect_chamber");
+        var stones = E.Player.SpiritStones;
+        var chamber = E.Chamber!;
+        var report = E.Seclude(1, chamber.QiDensity, stonesPerMonth: chamber.StonesPerMonth);
+        Check(report.Months == 1 && E.Player.SpiritStones == stones - chamber.StonesPerMonth + 1, "a month in the chamber costs its stones (the stipend brings one back)");
+        return await Settle(world);
+    }
+
+    /// <summary>Scroll a named button of the open panel into view, then click it.</summary>
+    private async Task ClickPanel(WorldScreen world, string name)
+    {
+        var button = world.CurrentPanel!.FindChild(name, true, false) as Button
+                     ?? throw new InvalidOperationException($"no button '{name}' in the {world.CurrentPanel.GetType().Name}");
+        world.CurrentPanel.FindChildren("*", "ScrollContainer", true, false).OfType<ScrollContainer>().First().EnsureControlVisible(button);
+        await Frames(2);
+        Check(!button.Disabled, $"'{name}' can be pressed");
+        await ClickGui(button);
+    }
+
+    /// <summary>A button in the open panel with this text (in either language).</summary>
+    private static Button PanelButton(WorldScreen world, string vi, string en) =>
+        world.CurrentPanel!.FindChildren("*", "Button", true, false).OfType<Button>().FirstOrDefault(b => (b.Text == vi || b.Text == en) && b.IsVisibleInTree())
+        ?? throw new InvalidOperationException($"no button '{en}' in the {world.CurrentPanel.GetType().Name}");
 
     /// <summary>Luyện Khí 9 → Trúc Cơ through the meridian storm, played by the autopilot; the foundation gets a grade.</summary>
     private async Task<WorldScreen> FoundationBreakthrough(WorldScreen world)
@@ -688,6 +796,33 @@ public partial class SmokeTest : Node
         Check(new Rect2(Vector2.Zero, screen).Grow(1).Encloses(panelRect), $"the town panel fits the scaled screen ({panelRect.Size.X:0}×{panelRect.Size.Y:0})");
         await Shot("touch_panel");
         world.ClosePanel();
+        await Frames(3);
+
+        // Character → Arts with a finger: an art's slot button moves it, a second touch takes it out.
+        var slotsBefore = E.Player.SkillSlots.ToList();
+        world.OpenPanel(new CharacterPanel());
+        await Frames(3);
+        await TapScreen(0, PanelButton(world, "Võ học", "Arts").GetGlobalRect().GetCenter());
+        var first = E.Player.Skills[0].Id;
+        Button SlotButton(int slot)
+        {
+            var b = (Button)world.CurrentPanel!.FindChild($"slot_{first}_{slot}", true, false)!;
+            world.CurrentPanel.FindChildren("*", "ScrollContainer", true, false).OfType<ScrollContainer>().First().EnsureControlVisible(b);
+            return b;
+        }
+        // A slot the art isn't in yet (earlier steps moved the arts around).
+        var slot = Enumerable.Range(0, 4).Last(i => E.Player.SkillSlots[i] != first);
+        SlotButton(slot);
+        await Frames(2);
+        await TapScreen(0, SlotButton(slot).GetGlobalRect().GetCenter());
+        Check(E.Player.SkillSlots[slot] == first, $"a finger on {first}'s slot {slot + 1} button puts it there");
+        await Shot("touch_arts");
+        await TapScreen(0, SlotButton(slot).GetGlobalRect().GetCenter());
+        Check(E.Player.SkillSlots[slot] == "", "a second touch on the lit button takes it out");
+        for (var i = 0; i < slotsBefore.Count; i++) E.SetSkillSlot(i, slotsBefore[i]);
+        Check(E.Player.SkillSlots.SequenceEqual(slotsBefore), "the slots are as they were");
+        world.ClosePanel();
+        world.Player.SyncFromEngine();
         await Frames(3);
 
         // The stick: a thumb in the lower left, dragged right, walks east; letting go stops.

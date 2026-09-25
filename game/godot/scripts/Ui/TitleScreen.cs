@@ -22,6 +22,7 @@ public partial class TitleScreen : Control
     private string _name = "";
     private int _age = 16;
     private bool _creating;
+    private bool _reportCopied;
 
     private VBoxContainer _left = null!;
     private VBoxContainer _right = null!;
@@ -155,6 +156,21 @@ public partial class TitleScreen : Control
             () => Game.Instance.SetLocale(Game.Instance.Locale == Locale.Vi ? Locale.En : Locale.Vi))));
         _left.AddChild(Wide(UiKit.Button(T("Cài đặt", "Settings"), OpenSettings)));
         _left.AddChild(Wide(UiKit.Button(T("Thoát", "Quit"), () => Game.Instance.Quit())));
+        if (CrashLog.PreviousCrashed)
+        {
+            // A crash on a phone leaves nothing to see; this is how it reaches whoever can fix it.
+            _left.AddChild(UiKit.Spacer(6));
+            _left.AddChild(UiKit.Label(_reportCopied
+                    ? T("Đã sao chép bản ghi — dán vào tin nhắn gửi người làm game.", "Report copied — paste it into a message to the developer.")
+                    : T("Lần trước trò chơi đã tắt đột ngột.", "The game closed unexpectedly last time."),
+                14, _reportCopied ? Ink.JadeDeep : Ink.CinnabarDeep, wrap: true));
+            _left.AddChild(Wide(UiKit.Button(T("Sao chép bản ghi sự cố", "Copy the crash report"), () =>
+            {
+                DisplayServer.ClipboardSet(CrashLog.Report());
+                _reportCopied = true;
+                Build();
+            })));
+        }
         _left.AddChild(UiKit.Spacer(10));
         _left.AddChild(UiKit.Label(T("Bản thử nghiệm dọc · Godot 4.7 + C# · xem design/GAME_DESIGN.md",
             "Vertical slice · Godot 4.7 + C# · see design/GAME_DESIGN.md"), 13, Ink.InkMute, wrap: true));

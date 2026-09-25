@@ -353,6 +353,7 @@ public partial class WorldScreen : FieldScreen
     {
         var report = _monthPending!;
         _monthPending = null;
+        CrashLog.Note($"month {E.State.Calendar.MonthIndex} ({report.Events.Count} events)");
         Hud.ShowMonth(report);
         SoundBoard.Play("month", -2);
         Game.Instance.Remember(report.Events);

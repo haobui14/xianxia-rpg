@@ -25,6 +25,8 @@ namespace TuTien.Core.Content
         public Dictionary<string, SkillDef> Skills { get; } = new Dictionary<string, SkillDef>();
         public Dictionary<string, MapDef> Maps { get; } = new Dictionary<string, MapDef>();
         public Dictionary<string, TownDef> Towns { get; } = new Dictionary<string, TownDef>();
+        /// <summary>Treasuries and chambers, by sect id.</summary>
+        public Dictionary<string, SectHallDef> Halls { get; } = new Dictionary<string, SectHallDef>();
         public NpcNamesDef NpcNames { get; private set; } = new NpcNamesDef();
 
         /// <summary>Map files to load (relative to the content root).</summary>
@@ -85,6 +87,8 @@ namespace TuTien.Core.Content
                 db.Items[item.Id] = item;
             foreach (var town in GameJson.ReadEnvelope<List<TownDef>>(Require("towns.json"), "towns.json"))
                 db.Towns[town.AreaId] = town;
+            foreach (var hall in GameJson.ReadEnvelope<List<SectHallDef>>(Require("sect_halls.json"), "sect_halls.json"))
+                db.Halls[hall.SectId] = hall;
             db.NpcNames = GameJson.ReadEnvelope<NpcNamesDef>(Require("npc_names.json"), "npc_names.json");
 
             foreach (var file in MapFiles)
@@ -171,6 +175,14 @@ namespace TuTien.Core.Content
             foreach (var town in Towns.Values)
                 foreach (var entry in town.Shop.Where(e => !Items.ContainsKey(e.ItemId)))
                     issues.Add($"town {town.AreaId}: shop item '{entry.ItemId}' does not exist");
+            foreach (var hall in Halls.Values)
+            {
+                if (!Sects.ContainsKey(hall.SectId)) issues.Add($"hall {hall.SectId}: no such sect");
+                foreach (var entry in hall.Treasury.Where(e => !Items.ContainsKey(e.ItemId)))
+                    issues.Add($"hall {hall.SectId}: treasury item '{entry.ItemId}' does not exist");
+                foreach (var rank in hall.Treasury.Select(e => e.MinRank).Append(hall.Chamber?.MinRank).Where(r => r != null && Rules.SectRanks.IndexOf(r) < 0))
+                    issues.Add($"hall {hall.SectId}: no such rank '{rank}'");
+            }
             return issues;
         }
     }

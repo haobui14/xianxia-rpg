@@ -203,18 +203,19 @@ public partial class SoundBoard : Node
         {
             var (sound, r) = e.Kind switch
             {
-                "realm_up" or "body_up" => ("breakthrough", 9),
+                "realm_up" or "body_up" or "sect_promotion" => ("breakthrough", 9),
                 "death" => ("defeat", 9),
-                "sect_join" or "realm_clear" or "bounty_done" => ("victory", 8),
+                "sect_join" or "realm_clear" or "bounty_done" or "mission_done" => ("victory", 8),
                 "breakthrough_failed" or "defeated" => ("defeat", 8),
                 "skill_learned" or "technique_learned" or "qi_awakened" => ("cast", 7),
-                "stage_up" or "skill_level" or "breakthrough_ready" => ("chime", 6),
+                "stage_up" or "skill_level" or "breakthrough_ready" or "mission_ready" => ("chime", 6),
+                "mission_failed" or "mission_abandoned" => ("warn", 6),
                 "item_gained" => ("gather", 5),
-                "bought" or "sold" or "silver" => ("coin", 5),
+                "bought" or "sold" or "silver" or "treasury" or "stipend" => ("coin", 5),
                 "rested" or "healed" or "item_used" => ("heal", 5),
                 "gift" or "gratitude" => ("open", 4),
                 "fled" => ("escape", 4),
-                "equipped" or "bounty_taken" => ("click", 3),
+                "equipped" or "bounty_taken" or "mission_taken" => ("click", 3),
                 _ => e.Level switch
                 {
                     EventLevel.Major => ("chime", 2),

@@ -13,6 +13,8 @@ public partial class SettingsPanel : InkPanel
     protected override string TitleText => T("Cài đặt", "Settings");
     protected override Vector2 PanelSize => new(620, 640);
 
+    private bool _reportCopied;
+
     protected override void Build()
     {
         var g = Game.Instance;
@@ -60,6 +62,20 @@ public partial class SettingsPanel : InkPanel
         Buttons(
             UiKit.Button("Tiếng Việt", () => g.SetLocale(Locale.Vi), primary: g.Locale == Locale.Vi),
             UiKit.Button("English", () => g.SetLocale(Locale.En), primary: g.Locale == Locale.En));
+
+        Section(T("Sự cố", "Problems"));
+        Para(CrashLog.PreviousCrashed
+                ? T("Lần trước trò chơi đã tắt đột ngột. Bản ghi cho biết nó đang làm gì ngay trước đó: sao chép rồi dán vào tin nhắn gửi người làm game.",
+                    "The game closed unexpectedly last time. The report says what it was doing just before: copy it and paste it into a message to the developer.")
+                : T("Nếu trò chơi tắt đột ngột, lần mở sau bản ghi sự cố sẽ có ở đây (và ở màn hình chính).",
+                    "If the game ever closes unexpectedly, a crash report will be here (and on the title screen) the next time you open it."),
+            13, CrashLog.PreviousCrashed ? Ink.CinnabarDeep : Ink.InkMute);
+        Buttons(UiKit.Button(_reportCopied ? T("Đã sao chép ✓", "Copied ✓") : T("Sao chép bản ghi", "Copy the report"), () =>
+        {
+            DisplayServer.ClipboardSet(CrashLog.Report());
+            _reportCopied = true;
+            RequestRefresh();
+        }));
 
         Body.AddChild(UiKit.Spacer(8));
         Buttons(UiKit.Button(T("Xong", "Done"), Close, primary: true));

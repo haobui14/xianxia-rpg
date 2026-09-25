@@ -36,6 +36,15 @@ public partial class DebugPanel : InkPanel
             Say(DevCheats.PassMonths(E, 12));
             Game.Instance.SaveGame();
         });
+        if (E.Player.SectId != null)
+        {
+            Add(T("+100 cống hiến và công trạng", "+100 contribution and merit"), () =>
+            {
+                DevCheats.Contribution(E, 100);
+                Game.Instance.Changed();
+            });
+            Add(T("Hoàn thành các nhiệm vụ tông môn", "Finish the sect missions in hand"), () => Say(DevCheats.FinishMissions(E)));
+        }
         Section(T("Đánh thử", "Test fights"));
         foreach (var (id, vi, en) in new[]
                  {

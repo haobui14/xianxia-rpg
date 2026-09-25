@@ -9,7 +9,7 @@ It is currently a **vertical slice** of the Thanh Vân region, played as a **2D 
 | Path | What it is |
 |---|---|
 | `core/TuTien.Core/` | All game rules, engine-free (`netstandard2.1`, no Godot references): RNG, content, calendar, cultivation, elements, karma, map and footwork, month tick, NPC sim, combat rules, loot, events, saves. `GameEngine` is the single entry point. |
-| `core/TuTien.Core.Tests/` | xUnit tests (106) that run the rules against the real content. |
+| `core/TuTien.Core.Tests/` | xUnit tests (135) that run the rules against the real content. |
 | `godot/` | The Godot project. `scripts/Field` is the top-down world: the region, secret-realm floors and the breakthrough trial are all *fields*, with collision, the player controller, fights (`Battle`, `EnemyAi`), the HUD and the map. `scripts/Art` draws people, creatures, scenery and effects in code. `scripts/Audio` synthesizes every sound effect and composes the music. `shaders/` paints the ground, the clouds of unexplored land and swaying trees. `scripts/Ui` holds the title screen, theme, panels and settings, and `scripts/Dev` holds the smoke test and F9 cheats. |
 | `godot/content/` | Game data as JSON. Most of it is exported from the web game's TypeScript; enemies, skills, items, towns, NPC names and the map are hand-authored. |
 
@@ -120,6 +120,14 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
     - In the last phase, find the gaps in the shockwaves the forming foundation sends out.
   - **Foundation grades:** how well you did sets the foundation's grade, Hạ / Trung / Thượng / Thiên phẩm. The grade multiplies the breakthrough's gains (×1 / ×1.25 / ×1.5 / ×2) and adds to your power for good (+0 / 5 / 10 / 20%). It is shown on the character sheet.
 - **Karma:** gifts leave ân (a debt of gratitude) and killings leave oán (a grudge). Grudges come back as ambushes.
+- **Sect life** (win the entrance trial at the Thanh Vân gate, then talk to the gate again):
+  - **Mission hall (Nhiệm Vụ Đường):** a board of three missions for a sword sect, drawn from the web game's templates and rolled again every three months: win fights, gather herbs or materials, cultivate, or beat disciples of the rival Blood Killing Demonic Sect. The rival hunt is posted only while enough of them are alive. You carry two missions at most.
+    - Progress counts itself as you fight, gather and cultivate. When a mission is done, report it at the hall for contribution, silver and spirit stones.
+    - A missed deadline, or giving a mission up, costs a quarter of its contribution.
+  - **Ranks:** contribution is spent, while merit (all contribution ever earned) is what promotion looks at. Outer to inner disciple takes 200 merit and Qi Condensation 5, inner to true takes 500 and Foundation 1, and true to elder takes 1500 and Golden Core 1. Each rank raises the sect's cultivation bonus and its monthly stipend of silver and spirit stones.
+  - **Treasury (Tàng Bảo Các):** pills, art manuals, the Foundation Pill, gear, and the sect's own technique, the Azure Cloud Sword Canon (+18% cultivation), for contribution. The best are kept for higher ranks.
+  - **Spirit-gathering chamber:** inner disciples can seclude in it for +30% qi, paying 2 spirit stones a month. It's the first thing in the game that spends spirit stones.
+  - The journal's Tasks tab tracks missions and bounties together.
 - **Sword flight (ngự kiếm):** from Trúc Cơ, press V to ride your sword over the river and peaks, twice as fast as walking and out of reach of beasts. Land with V, which doesn't work over water. Set off on the map across water and the sword takes you there and sets you down.
 - **Sound, all synthesized:** about 40 effects (swishes, hits, casts, coins, the month gong, and more), positional in the world. Five pieces of music are generated in pentatonic modes for the title, exploring, fights, the breakthrough trial and secret realms. The zither plays with glissandi, grace notes and tremolo over flute, bells and drone; fights get taiko drums. The music crossfades as you move between them.
 - **The seasons in the air:** blossom petals, summer fluff and butterflies, autumn leaves and snow drift across the screen. Footsteps raise dust on roads, ripples in the swamp and puffs of snow.
@@ -128,7 +136,8 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
   - In English, realms, arts, places and signs are translated (Qi Condensation, Azure Cloud Village, "Inn"), and people's names are written without Vietnamese marks (Lâm Bá is Lam Ba), the way English xianxia writes Chinese names.
   - The language is a setting, not part of a save: a save made in one language opens in the other.
 - **No Chinese characters:** every sign and label is English or Vietnamese, and every badge is an ink icon drawn in code. That covers panel seals, HUD and touch buttons, art icons (drawn by how each art is cast, coloured by its element), element and status marks, and map markers.
-- **Phones and tablets:** on-screen touch controls (above), and an interface drawn bigger to suit the screen. Auto picks 135% on a phone and 120% on a small tablet, or you choose 100–145%. Panels shrink to fit and scroll.
+- **Phones and tablets:** on-screen touch controls (above), and an interface drawn bigger to suit the screen. Auto picks 135% on a phone and 120% on a small tablet, or you choose 100–145%. Panels shrink to fit and scroll under a finger, even one that lands on a button (a tap still presses it; a drag scrolls instead).
+- **Art slots:** Character → Arts shows the four slots as cards (each art's icon and name), and every art you know carries a row of slot buttons: tap one to put the art there (it swaps with whatever was in it), tap the lit one to take it out. With touch controls the slots are numbered 1–4 the way they ring the sword button; with a keyboard they're named by their keys.
 - **Saves:** the game saves every month and after every fight.
 - **Loading screen:** a new life or Continue opens on "Đang kiến tạo thế giới…" ("Building the world…"). The bar follows the real work as the region is built a slice per frame: the land and rivers, the mountains, the forests, the village and the sect, then the scenery around you. It also shows a tip.
 
@@ -152,9 +161,12 @@ dotnet test game/core/TuTien.Core.Tests
 #    realm floor, the Trúc Cơ meridian storm (it must lay a foundation), a fight with
 #    each of the five new creatures using a different second-tier art, sword flight
 #    across the river (by key and by map), seclusion, and a save/load round trip
+#  - Character → Arts by mouse: an art's slot button moves it into that slot, a second
+#    click takes it out, and no panel opens a drop-down picker
 #  - a phone: at 135% interface size, touch events pushed into the viewport drag the
-#    stick, press Interact, tap the ground to walk, pinch to zoom, and in a fight
-#    press an art, pause, and hold the martial art until the bear is beaten
+#    stick, press Interact, tap an art's slot button, tap the ground to walk, pinch to
+#    zoom, and in a fight press an art, pause, and hold the martial art until the bear
+#    is beaten
 #  - the new life goes in through the loading screen, like the title's button
 #  - one language at a time: at every step it reads each visible label and button and
 #    every word painted on the field (signs, names, the HUD). In English no Vietnamese
@@ -177,6 +189,13 @@ To see what the phone flow costs, run `--phone-start` at a phone's resolution. I
 ```bash
 xvfb-run -s "-screen 0 2400x1080x24" godot --rendering-driver opengl3_es --resolution 2400x1080 \
   --path game/godot -- --phone-start
+```
+
+`--arts-stress [rounds] [log] [shots dir]` plays a phone's way through Character → Arts over and over, with a real window. It taps slot buttons (each tap must do what it should), drags from them (the page must scroll and no slot may change), switches tabs and presses the back button. Every action goes to the log file first, so a crash leaves a trail. `--capture out.png [frames]` starts the game as usual and saves what its own window shows after a moment.
+
+```bash
+godot --path game/godot --resolution 1600x720 -- --arts-stress 300 arts.log shots/
+godot --path game/godot --resolution 1600x900 -- --capture title.png 120
 ```
 
 ## Android
@@ -237,6 +256,15 @@ The world now holds a few hundred buffers and makes about 75 draw calls a frame,
 - The back button works like Esc.
 - The package name is `com.tutienluc.game`; change it in the preset before publishing.
 - The launcher icon is adaptive: a cultivator riding a flying sword across a cinnabar sun, over ink mountains in mist. The background, foreground and a monochrome silhouette for Android 13's themed icons are separate layers, so any launcher shape (Samsung's squircle, circles) crops only the sky. `node scripts/make-game-icons.mjs` rewrites them (`godot/art/icon/`) and `godot/icon.svg` from one description.
+
+**If the game closes by itself:** a phone shows nothing when an app crashes, so the game leaves itself a trail.
+
+- It writes a line for everything it's about to do (screens, panels and their tabs, fights, month turns, the back button) to `user://logs/trail.txt`, straight to disk. A marker file exists only while it runs in the foreground. Leaving the app for the home screen isn't a crash, since the phone may end a backgrounded app at any time.
+- If the marker is still there at the next start, the title screen says the game closed unexpectedly and offers **Copy the crash report**. Settings → Problems has the same button.
+- The report holds the last session's trail, the end of Godot's own log (file logging is on for phones too) and the device model. Paste it into a message.
+- `adb logcat` on the debug APK still gives the fullest picture.
+
+On Android the app sometimes closed on the character sheet's Arts tab. Its slots were drop-down pickers, the only popup windows in the game's panels (each carries a viewport of its own), and a thumb scrolling the page opened them and changed slots by accident. The same taps, drags and back presses on a desktop never crashed, so the cause couldn't be pinned down. The pickers are buttons now (see *Art slots* above), and the trail will show if anything still goes wrong.
 
 ## Re-export content from the web game
 

@@ -1,6 +1,6 @@
-using System.Linq;
 using Godot;
 using TuTien.Core;
+using TuTien.Core.Content;
 using TuTien.Core.Rules;
 using TuTienLuc.Art;
 
@@ -86,30 +86,29 @@ public partial class CharacterPanel : InkPanel
             $"Record: {p.Counters.Kills} kills · {p.Counters.Fights} fights · {p.Counters.Defeats} defeats · {p.Counters.AdventuresResolved} adventures"), 15, Ink.InkMute);
     }
 
+    /// <summary>
+    /// The four spirit-art slots and the arts learned. Every art carries its own row of slot buttons: tap one
+    /// to put the art there, tap it again to take the art out. (Drop-down pickers opened a popup window on
+    /// every touch that landed on them, including a thumb scrolling the page, and were the one place in the
+    /// panels that did.)
+    /// </summary>
     private void Arts()
     {
         var p = E.Player;
         var content = E.Content;
-        Section(T("Ô linh kỹ (chuột phải · 1 · 2 · 3)", "Art slots (right click · 1 · 2 · 3)"));
-        string[] keys = { T("Chuột phải", "Right click"), "1", "2", "3" };
+        Section(T("Ô linh kỹ", "Art slots"));
+        var grid = new GridContainer { Columns = 2 };
+        grid.AddThemeConstantOverride("h_separation", 8);
+        grid.AddThemeConstantOverride("v_separation", 8);
         for (var i = 0; i < 4; i++)
-        {
-            var slot = i;
-            var current = i < p.SkillSlots.Count ? p.SkillSlots[i] : "";
-            var picker = new OptionButton { FocusMode = FocusModeEnum.None, CustomMinimumSize = new Vector2(300, 0) };
-            picker.AddItem(T("(trống)", "(empty)"));
-            var ids = p.Skills.Select(s => s.Id).Where(id => content.Skill(id) != null).ToList();
-            foreach (var id in ids) picker.AddItem(Text.Name(content.Skill(id)!));
-            picker.Selected = current.Length == 0 ? 0 : ids.IndexOf(current) + 1;
-            picker.ItemSelected += index =>
-            {
-                E.SetSkillSlot(slot, index == 0 ? "" : ids[(int)index - 1]);
-                Game.Instance.Changed();
-            };
-            Row(UiKit.Label(keys[i], 16, Ink.InkSoft), picker);
-        }
-        Para(T("Chuột trái luôn là võ kỹ cơ bản; R là tuyệt kỹ khi sát ý đầy; Space là thân pháp; Q uống đan dược.",
-            "Left click is always your basic martial art; R is the ultimate once killing intent is full; Space dodges; Q takes a pill."), 14, Ink.InkMute);
+            grid.AddChild(SlotCard(SlotName(i), content.Skill(i < p.SkillSlots.Count ? p.SkillSlots[i] : null)));
+        Body.AddChild(grid);
+        Para(TouchUi.Active
+                ? T("Trong trận, bốn nút linh kỹ vây quanh nút kiếm: ô 1 bên trái, ô 4 trên cùng. Nút kiếm luôn là võ kỹ cơ bản; hình sao là tuyệt kỹ khi sát ý đầy.",
+                    "In a fight the four art buttons ring the sword button: slot 1 on the left, slot 4 at the top. The sword is always your basic martial art; the starburst is the ultimate once killing intent is full.")
+                : T($"Chuột trái luôn là võ kỹ cơ bản; {KeyMap.Label("ultimate")} là tuyệt kỹ khi sát ý đầy; {KeyMap.Label("dash")} là thân pháp; {KeyMap.Label("pill")} uống đan dược.",
+                    $"Left click is always your basic martial art; {KeyMap.Label("ultimate")} is the ultimate once killing intent is full; {KeyMap.Label("dash")} dodges; {KeyMap.Label("pill")} takes a pill."),
+            14, Ink.InkMute);
 
         Section(T("Linh kỹ đã lĩnh ngộ", "Arts learned"));
         if (p.Skills.Count == 0)
@@ -118,10 +117,19 @@ public partial class CharacterPanel : InkPanel
         {
             var def = content.Skill(s.Id);
             if (def == null) continue;
-            var element = def.Element is { } e ? T($" · hệ {Names.Display(e, Locale.Vi)}", $" · {Names.Display(e, Locale.En)}") : "";
+            var color = def.Element is { } e ? Ink.Element(e) : Ink.InkColor;
+            var element = def.Element is { } el ? T($" · hệ {Names.Display(el, Locale.Vi)}", $" · {Names.Display(el, Locale.En)}") : "";
+            var head = new HBoxContainer();
+            head.AddThemeConstantOverride("separation", 10);
+            head.AddChild(new IconView(Icons.ForSkill(def), color, 0.86f) { CustomMinimumSize = new Vector2(32, 32) });
+            var title = UiKit.Label($"{Text.Name(def)} — {T("cấp", "lv")} {s.Level} ({s.Exp}/{s.Level * 100}){element}", 17, color.Darkened(0.2f), wrap: true);
+            title.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            title.VerticalAlignment = VerticalAlignment.Center;
+            head.AddChild(title);
+            Body.AddChild(head);
             var cost = CombatRules.QiCost(def, p.Root.Elements);
-            Para($"{Text.Name(def)} — {T("cấp", "lv")} {s.Level} ({s.Exp}/{s.Level * 100}){element}", 17, def.Element != null ? Ink.Element(def.Element.Value).Darkened(0.2f) : Ink.InkColor);
-            Para($"    {Text.Desc(def)}  ·  {T("linh lực", "Qi")} {cost} · {T("hồi", "cooldown")} {def.Cooldown:0.#}s · ×{def.DamageMultiplier * Skills.LevelMultiplier(p, s.Id):0.##}", 14, Ink.InkMute);
+            Para($"{Text.Desc(def)}  ·  {T("linh lực", "Qi")} {cost} · {T("hồi", "cooldown")} {def.Cooldown:0.#}s · ×{def.DamageMultiplier * Skills.LevelMultiplier(p, s.Id):0.##}", 14, Ink.InkMute);
+            Body.AddChild(SlotButtons(s.Id));
         }
 
         Section(T("Công pháp", "Techniques"));
@@ -133,6 +141,58 @@ public partial class CharacterPanel : InkPanel
             Para($"{T(t.Name, t.NameEn)} · {t.Grade} · {T("tu luyện", "cultivation")} +{t.SpeedBonus}% · {T("hợp linh căn", "root fit")} {Text.Signed(fit * 100)}%", 16, Ink.JadeDeep);
         }
         Para(T($"Tổng hệ số công pháp: ×{Cultivation.TechniqueMultiplier(p):0.00}", $"Total technique multiplier: ×{Cultivation.TechniqueMultiplier(p):0.00}"), 15, Ink.InkSoft);
+    }
+
+    /// <summary>A slot as the player knows it: its key, or with touch controls its place on the ring (1 to 4).</summary>
+    private static string SlotName(int slot) => TouchUi.Active
+        ? T($"Ô {slot + 1}", $"Slot {slot + 1}")
+        : slot == 0 ? T("Chuột phải", "Right click") : T($"Phím {KeyMap.Label($"skill_{slot + 1}")}", $"Key {KeyMap.Label($"skill_{slot + 1}")}");
+
+    /// <summary>The same on a small button.</summary>
+    private static string SlotShort(int slot) => TouchUi.Active
+        ? (slot + 1).ToString()
+        : slot == 0 ? T("Phải", "RMB") : KeyMap.Label($"skill_{slot + 1}");
+
+    private static PanelContainer SlotCard(string caption, SkillDef? art)
+    {
+        var color = art?.Element is { } e ? Ink.Element(e) : Ink.InkColor;
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 10);
+        row.AddChild(new IconView(art != null ? Icons.ForSkill(art) : IconKind.None, color, 0.86f) { CustomMinimumSize = new Vector2(34, 34) });
+        var text = UiKit.Column(0);
+        text.AddChild(UiKit.Caption(caption));
+        text.AddChild(UiKit.Label(art != null ? Text.Name(art) : T("(trống)", "(empty)"), 16, art != null ? color.Darkened(0.2f) : Ink.InkFaint));
+        row.AddChild(text);
+        var card = UiKit.Card(row, 8);
+        card.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        return card;
+    }
+
+    /// <summary>An art's slot buttons: the slot it sits in is lit; tap another to move it, tap the lit one to take it out.</summary>
+    private HBoxContainer SlotButtons(string skillId)
+    {
+        var p = E.Player;
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 6);
+        row.AddChild(new Control { CustomMinimumSize = new Vector2(34, 0) });
+        var label = UiKit.Label(T("Đặt vào ô", "Slot"), 14, Ink.InkSoft);
+        label.VerticalAlignment = VerticalAlignment.Center;
+        row.AddChild(label);
+        for (var i = 0; i < 4; i++)
+        {
+            var slot = i;
+            var here = i < p.SkillSlots.Count && p.SkillSlots[i] == skillId;
+            var button = UiKit.Button(SlotShort(i), () =>
+            {
+                CrashLog.Note(here ? $"slot {slot} emptied" : $"slot {slot} ← {skillId}");
+                E.SetSkillSlot(slot, here ? "" : skillId);
+                Game.Instance.Changed();
+            }, primary: here);
+            button.Name = $"slot_{skillId}_{slot}";
+            button.CustomMinimumSize = TouchUi.Active ? new Vector2(58, 42) : new Vector2(46, 0);
+            row.AddChild(button);
+        }
+        return row;
     }
 
     private void Path()

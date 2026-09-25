@@ -127,6 +127,7 @@ namespace TuTien.Core.Rules
             var p = state.Player;
             p.Exp += Math.Max(0, qiExp);
             p.BodyExp += Math.Max(0, bodyExp);
+            SectMissions.Cultivated(state, Math.Max(0, qiExp) + Math.Max(0, bodyExp));
 
             for (var guard = 0; guard < 20; guard++)
             {
@@ -207,7 +208,7 @@ namespace TuTien.Core.Rules
                     p.Qi = p.QiMax;
                     events.Add(GameEvent.Major("foundation",
                         $"Trúc cơ {Foundation.Name(grade, Locale.Vi)}! Uy lực +{(Foundation.PowerMultiplier(grade) - 1) * 100:0}% vĩnh viễn.",
-                        $"A {Foundation.Name(grade, Locale.En)} foundation! +{(Foundation.PowerMultiplier(grade) - 1) * 100:0}% power for good."));
+                        $"{(Foundation.Name(grade, Locale.En).StartsWith("u") ? "An" : "A")} {Foundation.Name(grade, Locale.En)} foundation! +{(Foundation.PowerMultiplier(grade) - 1) * 100:0}% power for good."));
                 }
                 p.Exp = carry;
                 return events;

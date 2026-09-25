@@ -48,7 +48,18 @@ public partial class Main : Node
             AddChild(new PhoneStart(shotsAt >= 0 && shotsAt + 1 < args.Length ? args[shotsAt + 1] : null));
             return;
         }
+        if (args.Contains("--arts-stress"))
+        {
+            var at = Array.IndexOf(args, "--arts-stress");
+            var rounds = at + 1 < args.Length && int.TryParse(args[at + 1], out var n) ? n : 300;
+            var log = at + 2 < args.Length ? args[at + 2] : ProjectSettings.GlobalizePath("user://arts_stress.log");
+            AddChild(new ArtsStress(rounds, log, at + 3 < args.Length ? args[at + 3] : null));
+            return;
+        }
         ShowTitle();
+        var capture = Array.IndexOf(args, "--capture");
+        if (capture >= 0 && capture + 1 < args.Length)
+            AddChild(new Capture(args[capture + 1], capture + 2 < args.Length && int.TryParse(args[capture + 2], out var f) ? f : 90));
     }
 
     /// <summary>
@@ -57,6 +68,7 @@ public partial class Main : Node
     /// </summary>
     private void Swap(Node next)
     {
+        CrashLog.Note($"screen {next.GetType().Name}");
         GetTree().Paused = false;
         if (_screen != null && IsInstanceValid(_screen))
         {
@@ -141,6 +153,7 @@ public partial class Main : Node
         catch (Exception ex)
         {
             GD.PushError($"[world] could not enter the world: {ex}");
+            CrashLog.Note($"could not enter the world: {ex}");
             // A world that never made it on screen is nobody's child: let it go.
             if (world != null && IsInstanceValid(world) && !world.IsInsideTree()) world.Free();
             Game.Instance.Toast("Không dựng được thế giới.", "Could not build the world.", EventLevel.Warning);
