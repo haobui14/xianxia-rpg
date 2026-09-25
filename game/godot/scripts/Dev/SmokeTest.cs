@@ -369,6 +369,9 @@ public partial class SmokeTest : Node
         // ---------------------------------------------------------------- the month's wares, a night at the inn
         world = await WaresAndNights(world);
 
+        // ---------------------------------------------------------------- a cultivator fights with all they know
+        world = await CultivatorFights(world);
+
         // ---------------------------------------------------------------- new beasts, new arts
         world = await NewBeastsAndArts(world);
 
@@ -724,6 +727,50 @@ public partial class SmokeTest : Node
         await Shot("inn_night");
         world.ClosePanel();
         return await Settle(world);
+    }
+
+    /// <summary>
+    /// A cultivator fights with everything they know, not one bolt. One NPC per element, each a Qi Condensation 6
+    /// disciple of the Azure Cloud Sword Sect, carries their root's first art, its second and the sect's sword
+    /// dash (maybe a guard or a heal too). Sparred while the player only stands and takes it, each must use at
+    /// least two different arts, and together they must show every kind of cast: bolts, needles, the cleave, the
+    /// spikes, the beam, the leaves, the wave, burning ground, pillars and the dash.
+    /// </summary>
+    private async Task<WorldScreen> CultivatorFights(WorldScreen world)
+    {
+        var npc = E.State.World.Npcs.First(n => n.Alive && !n.Anchor);
+        var seen = new HashSet<string>();
+        foreach (var element in new[] { Element.Kim, Element.Moc, Element.Thuy, Element.Hoa, Element.Tho })
+        {
+            npc.Realm = Realm.LuyenKhi;
+            npc.Stage = 6;
+            npc.Elements = new List<Element> { element };
+            npc.SectId = "thanh_van_kiem";
+            npc.Alive = true;
+            npc.InjuredMonths = 0;
+            var kit = TuTien.Core.Rules.Skills.NpcKit(npc, E.Content);
+            Check(kit.Count >= 3, $"a {element} disciple at Qi Condensation 6 knows {kit.Count} arts ({string.Join(", ", kit)})");
+            DevCheats.Restore(E);
+            world.Player.SyncFromEngine();
+            var enc = E.ChallengeNpc(npc.Id, lethal: false);
+            Check(enc?.ArtsOverride != null && enc.ArtsOverride.SequenceEqual(kit), "a spar gives the NPC their own arts");
+            world.Fight(enc!);
+            await Frames(3);
+            var battle = world.Battle ?? throw new InvalidOperationException("the spar never started");
+            for (var i = 0; i < 60 * 14 && world.Battle == battle; i++)
+            {
+                if (i % 20 == 0) world.PlayerBody.Hp = world.PlayerBody.HpMax;
+                if (i == 60 * 6 && element == Element.Thuy) await Shot("npc_arts");
+                await Frames(1);
+            }
+            Check(battle.EnemyArtUses.Count >= 2,
+                $"the {element} disciple used {battle.EnemyArtUses.Count} different arts ({string.Join(", ", battle.EnemyArtUses.Select(kv => $"{kv.Key} ×{kv.Value}"))})");
+            seen.UnionWith(battle.EnemyArtUses.Keys);
+            if (world.Battle == battle) await FightIn(world);
+            world = await Settle(World);
+        }
+        Check(seen.Count >= 9, $"between them the disciples cast {seen.Count} different arts ({string.Join(", ", seen.OrderBy(s => s))})");
+        return world;
     }
 
     /// <summary>The panel's button called <paramref name="name"/>, scrolled into view so a click lands on it.</summary>

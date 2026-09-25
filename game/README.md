@@ -9,7 +9,7 @@ It is currently a **vertical slice** of the Thanh Vân region, played as a **2D 
 | Path | What it is |
 |---|---|
 | `core/TuTien.Core/` | All game rules, engine-free (`netstandard2.1`, no Godot references): RNG, content, calendar, cultivation, elements, karma, map and footwork, month tick, NPC sim, combat rules, loot, events, saves. `GameEngine` is the single entry point. |
-| `core/TuTien.Core.Tests/` | xUnit tests (155) that run the rules against the real content. |
+| `core/TuTien.Core.Tests/` | xUnit tests (161) that run the rules against the real content. |
 | `godot/` | The Godot project. `scripts/Field` is the top-down world: the region, secret-realm floors and the breakthrough trial are all *fields*, with collision, the player controller, fights (`Battle`, `EnemyAi`), the HUD and the map. `scripts/Art` draws people, creatures, scenery and effects in code. `scripts/Audio` synthesizes every sound effect and composes the music. `shaders/` paints the ground, the clouds of unexplored land and swaying trees. `scripts/Ui` holds the title screen, theme, panels and settings, and `scripts/Dev` holds the smoke test and F9 cheats. |
 | `godot/content/` | Game data as JSON. Most of it is exported from the web game's TypeScript; enemies, skills, items, towns, NPC names and the map are hand-authored. |
 
@@ -95,6 +95,13 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
 - **A living field:** 25 NPCs stroll where the month's simulation put them (talk to them with E), beast packs prowl their patch and aggressive ones chase you, adventures glow as pillars of light under a gold star, and a rumor feed runs in the corner. Trees and roofs in front of you turn see-through.
 - **Time flows as you travel:** each tile crossed spends its footwork (the HUD shows "day N of the month"). When it runs out the month turns (cultivation, world tick, autosave) and a card sums it up while you keep walking.
 - **Real-time combat where you meet:** eleven enemy archetypes, each with a readable telegraph, fighting on real terrain: charger, swarm, ranged, tank, caster and boss, plus the five below. Every hit goes through the core's `CombatRules`. Element marks trigger the 10 Ngũ Hành reactions, and every creature reacts to its own element on a cooldown (for example, Fireball on a wood vine triggers *Liệt Diễm*). Spars end at 15% health; escape by running away.
+- **Cultivators fight with everything they know:** an NPC you spar, fight or are ambushed by uses their own arts, by the player's rules:
+  - Their root's first art, and a second root's from Qi Condensation 3.
+  - Their root's second art from Qi Condensation 5.
+  - Their sect's sword dash.
+  - For some, a guard or a heal.
+  - The fight picks the art for the moment: a heal when hurt, a guard when pressed, a dash from afar, a cleave or a wave up close, beams and bolts at range. Each art has its own cooldown, and every cast is telegraphed.
+  - The NPC panel lists their arts. Outer disciples, rogue cultivators and bandit leaders know two or three arts each.
 - **The Ancient Tree Hollow's creatures** (Cổ Thụ Động, the deep forest):
   - **Hắc Hùng** (Black Bear), a brute: lumbers in, rears up and crashes down on a wide arc in front of it, stunning whoever it catches.
   - **Hỏa Hồ** (Fire Fox), a trickster: keeps its distance and throws volleys of three fox-fires. Get close and it vanishes, reappears somewhere else and throws fire at once.
@@ -176,6 +183,8 @@ dotnet test game/core/TuTien.Core.Tests
 #  - gear by mouse: buy armour and put it on from the bag, buy a stone and enhance the
 #    slot at the forge, change a spirit stone for silver, train an art, deepen a technique
 #  - the month's wares bought by mouse, and nights at the inn until one brings an event
+#  - a spar with a disciple of each element: each must use two or more of their arts, and
+#    between them every kind of cast (bolts, the cleave, the beam, leaves, wave, fire, pillars, dash)
 #  - Character → Arts by mouse: an art's slot button moves it into that slot, a second
 #    click takes it out, and no panel opens a drop-down picker
 #  - a phone: at 135% interface size, touch events pushed into the viewport drag the

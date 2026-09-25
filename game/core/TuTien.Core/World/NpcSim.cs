@@ -389,7 +389,7 @@ namespace TuTien.Core.World
                     var zone = map.ZoneAt(player.X, player.Y);
                     if (zone == null) continue;
                     PlaceInZone(npc, zone, state, map, rng);
-                    state.World.PendingAmbush = new Encounter
+                    state.World.PendingAmbush = Skills.WithNpcKit(new Encounter
                     {
                         Id = state.NewId("enc"),
                         Source = "ambush",
@@ -400,7 +400,7 @@ namespace TuTien.Core.World
                         RealmOverride = npc.Realm,
                         StageOverride = npc.Stage,
                         DisplayName = npc.Name,
-                    };
+                    }, npc, content);
                     AddRumor(state, rumors, "revenge", npc.Id,
                         $"Nghe nói {npc.Name} đang truy tìm {player.Name} để báo thù.",
                         $"Word is that {npc.Name} is hunting {player.Name} for revenge.");

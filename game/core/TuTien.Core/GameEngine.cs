@@ -426,13 +426,13 @@ namespace TuTien.Core
         {
             var npc = State.World.Npcs.FirstOrDefault(n => n.Id == npcId && n.Alive);
             if (npc == null || ActiveEncounter != null) return null;
-            return BeginEncounter(new Encounter
+            return BeginEncounter(Skills.WithNpcKit(new Encounter
             {
                 Id = State.NewId("enc"), Source = lethal ? "npc" : "spar", SourceId = npc.Id,
                 EnemyIds = { npc.SectId == "thanh_van_kiem" ? "sect_disciple" : "rogue_cultivator" },
                 Zone = npc.Zone, Danger = 1, NonLethal = !lethal,
                 RealmOverride = npc.Realm, StageOverride = npc.Stage, DisplayName = npc.Name,
-            });
+            }, npc, Content));
         }
 
         public Encounter? StartSectTrial(string sectId)

@@ -22,6 +22,8 @@ namespace TuTien.Core.Combat
         public Realm Realm { get; set; }
         public int Stage { get; set; }
         public Element? Element { get; set; }
+        /// <summary>Every art this foe can use (the template's skills, or an NPC's own kit); the brain picks among them.</summary>
+        public List<string> Arts { get; set; } = new List<string>();
 
         public Combatant ToCombatant() => new Combatant
         {
@@ -93,7 +95,8 @@ namespace TuTien.Core.Combat
                     Speed = def.Speed,
                     Realm = def.Realm,
                     Stage = def.Stage,
-                    Element = def.Element,
+                    Element = encounter.ElementOverride ?? def.Element,
+                    Arts = (encounter.ArtsOverride ?? def.Skills).ToList(),
                 };
 
                 if (encounter.RealmOverride != null)

@@ -397,5 +397,8 @@ namespace TuTien.Core.State
         public Realm? RealmOverride { get; set; }
         public int StageOverride { get; set; }
         public string? DisplayName { get; set; }
+        /// <summary>For NPC fights: the arts the NPC knows and their root's element, in place of the template's.</summary>
+        public List<string>? ArtsOverride { get; set; }
+        public Element? ElementOverride { get; set; }
     }
 }

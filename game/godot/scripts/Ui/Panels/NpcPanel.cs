@@ -48,6 +48,9 @@ public partial class NpcPanel : InkPanel
         var traits = string.Join(", ", npc.Traits.Select(t => NpcSim.TraitName(content, t, locale)));
         var leaning = npc.Alignment >= 30 ? T("chính phái", "righteous") : npc.Alignment <= -30 ? T("tà đạo", "wicked") : T("trung lập", "neutral");
         Para(T($"Tính cách: {traits} · thiên hướng {leaning}", $"Temperament: {traits} · {leaning}"), 14, Ink.InkMute);
+        // What they fight with: their root's arts, their sect's, perhaps a guard or a heal.
+        var arts = Skills.NpcKit(npc, content).Select(id => content.Skill(id)).Where(s => s != null).Select(s => Text.Name(s!)).ToList();
+        if (arts.Count > 0) Para(T("Võ học: ", "Arts: ") + string.Join(", ", arts), 14, Ink.InkMute);
 
         var favor = npc.RelationTo(NpcSim.PlayerKey);
         var meter = new Meter(T("Hảo cảm", "Favor"), favor >= 0 ? Ink.Jade : Ink.Cinnabar, 320);
