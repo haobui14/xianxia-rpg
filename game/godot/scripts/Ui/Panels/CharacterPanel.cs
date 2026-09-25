@@ -68,8 +68,15 @@ public partial class CharacterPanel : InkPanel
         };
         foreach (var (vi, en, value) in rows)
             Row(UiKit.Label(T(vi, en), 16, Ink.InkSoft), UiKit.Label(value, 16, Ink.InkColor));
-        var weapon = content.Item(p.WeaponId);
-        Row(UiKit.Label(T("Binh khí", "Weapon"), 16, Ink.InkSoft), UiKit.Label(weapon != null ? Text.Name(weapon) + " · " + Text.Effects(weapon) : T("tay không", "bare hands"), 16, Ink.InkColor));
+        foreach (var slot in Equipment.Slots)
+        {
+            var g = p.Gear.TryGetValue(slot, out var worn) ? worn : new TuTien.Core.State.GearSlot();
+            var info = UiKit.Column(0);
+            info.AddChild(UiKit.Label(Text.Slot(slot, g.Level), 14, Ink.InkSoft));
+            info.AddChild(UiKit.Label(g.ItemId != null ? Text.Worn(content, slot, g) : slot == Equipment.Weapon ? T("tay không", "bare hands") : T("(trống)", "(empty)"),
+                16, g.ItemId != null ? Ink.InkColor : Ink.InkFaint, wrap: true));
+            Body.AddChild(info);
+        }
         if (p.Foundation != FoundationGrade.None)
         {
             var bonus = (TuTien.Core.Rules.Foundation.PowerMultiplier(p.Foundation) - 1) * 100;
@@ -130,6 +137,14 @@ public partial class CharacterPanel : InkPanel
             var cost = CombatRules.QiCost(def, p.Root.Elements);
             Para($"{Text.Desc(def)}  ·  {T("linh lực", "Qi")} {cost} · {T("hồi", "cooldown")} {def.Cooldown:0.#}s · ×{def.DamageMultiplier * Skills.LevelMultiplier(p, s.Id):0.##}", 14, Ink.InkMute);
             Body.AddChild(SlotButtons(s.Id));
+            if (Mastery.SkillCost(s) is { } price)
+            {
+                var id = s.Id;
+                var train = UiKit.Button(T($"Khổ luyện lên cấp {s.Level + 1} ({price} bạc)", $"Train to level {s.Level + 1} ({price} silver)"),
+                    () => Say(E.TrainSkill(id)), enabled: p.Silver >= price);
+                train.Name = $"train_{s.Id}";
+                Buttons(train);
+            }
         }
 
         Section(T("Công pháp", "Techniques"));
@@ -138,7 +153,17 @@ public partial class CharacterPanel : InkPanel
         foreach (var t in p.Techniques)
         {
             var fit = t.Elements.Count == 0 ? 0.2 : Elements.TechniqueCompatibility(p.Root.Elements, t.Elements);
-            Para($"{T(t.Name, t.NameEn)} · {t.Grade} · {T("tu luyện", "cultivation")} +{t.SpeedBonus}% · {T("hợp linh căn", "root fit")} {Text.Signed(fit * 100)}%", 16, Ink.JadeDeep);
+            var effective = t.SpeedBonus * (1 + 0.1 * (System.Math.Max(1, t.Level) - 1));
+            Para(T($"{t.Name} · {Mastery.GradeName(t.Grade, Locale.Vi)} · tầng {t.Level}/{Mastery.TechniqueMaxLevel} · tu luyện +{effective:0.#}% · hợp linh căn {Text.Signed(fit * 100)}%",
+                $"{t.NameEn} · {Mastery.GradeName(t.Grade, Locale.En)} · level {t.Level}/{Mastery.TechniqueMaxLevel} · cultivation +{effective:0.#}% · root fit {Text.Signed(fit * 100)}%"), 16, Ink.JadeDeep);
+            if (Mastery.TechniqueCost(t) is { } stones)
+            {
+                var id = t.Id;
+                var deepen = UiKit.Button(T($"Lĩnh ngộ tầng {t.Level + 1} ({stones} linh thạch)", $"Deepen to level {t.Level + 1} ({stones} spirit stones)"),
+                    () => Say(E.DeepenTechnique(id)), enabled: p.SpiritStones >= stones);
+                deepen.Name = $"deepen_{t.Id}";
+                Buttons(deepen);
+            }
         }
         Para(T($"Tổng hệ số công pháp: ×{Cultivation.TechniqueMultiplier(p):0.00}", $"Total technique multiplier: ×{Cultivation.TechniqueMultiplier(p):0.00}"), 15, Ink.InkSoft);
     }

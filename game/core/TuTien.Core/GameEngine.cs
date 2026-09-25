@@ -698,13 +698,34 @@ namespace TuTien.Core
 
         public SectDef? SectFor(PoiDef poi) => poi.Ref != null && Content.Sects.TryGetValue(poi.Ref, out var s) ? s : null;
 
-        public List<GameEvent> Equip(string itemId)
+        // ================================================================ gear and mastery
+
+        /// <summary>Wear an item from the bag in its slot (weapon, armour, accessory).</summary>
+        public List<GameEvent> Equip(string itemId) => Equipment.Equip(Content, Player, itemId);
+
+        public List<GameEvent> Unequip(string slot) => Equipment.Unequip(Content, Player, slot);
+
+        /// <summary>At the forge: try to take a gear slot one level higher.</summary>
+        public List<GameEvent> Enhance(string slot) => Equipment.Enhance(Content, Player, slot, Rng("forge:" + slot + ":" + State.NewId("forge")));
+
+        public List<GameEvent> BuyStone(string stoneId) => Equipment.BuyStone(Content, Player, stoneId);
+
+        public List<GameEvent> DeepenTechnique(string techniqueId) => Mastery.DeepenTechnique(Player, techniqueId);
+
+        public List<GameEvent> TrainSkill(string skillId) => Mastery.TrainSkill(Content, Player, skillId);
+
+        /// <summary>The money changer's rate: one spirit stone for this much silver (the web game's market exchange).</summary>
+        public const int SpiritStoneRate = 100;
+
+        public List<GameEvent> ExchangeStones(int stones)
         {
             var events = new List<GameEvent>();
-            var def = Content.Item(itemId);
-            if (def == null || def.EquipmentSlot != "Weapon" || Inventory.Count(Player, itemId) <= 0) return events;
-            Player.WeaponId = itemId;
-            events.Add(GameEvent.Info("equipped", $"Trang bị {def.Name}.", $"Equipped {def.NameEn}."));
+            stones = Math.Min(stones, Player.SpiritStones);
+            if (stones <= 0) return events;
+            Player.SpiritStones -= stones;
+            Player.Silver += stones * SpiritStoneRate;
+            events.Add(GameEvent.Info("silver", $"Đổi {stones} linh thạch lấy {stones * SpiritStoneRate} bạc.",
+                $"Exchanged {stones} spirit stones for {stones * SpiritStoneRate} silver."));
             return events;
         }
 
@@ -758,7 +779,7 @@ namespace TuTien.Core
         {
             var events = new List<GameEvent>();
             var stack = Player.Items.FirstOrDefault(i => i.Id == itemId);
-            if (stack == null || itemId == Player.WeaponId && stack.Qty <= 1) return events;
+            if (stack == null || Equipment.IsWorn(Player, itemId) && stack.Qty <= 1) return events;
             var price = SellPrice(stack.Rarity);
             Inventory.Remove(Player, itemId);
             Player.Silver += price;
@@ -895,6 +916,8 @@ namespace TuTien.Core
             if (Player.Realm != before)
             {
                 Player.FootworkMax = WorldTick.FootworkMax(Player);
+                // A mortal had no Qi to hold; the gear's Qi flows in now.
+                Equipment.RefreshAll(Content, Player);
                 if (before == Realm.PhamNhan)
                 {
                     var starter = StarterArt(Player.Root.Elements.FirstOrDefault());

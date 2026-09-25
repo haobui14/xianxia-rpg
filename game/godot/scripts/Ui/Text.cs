@@ -111,11 +111,11 @@ public static class Text
             {
                 parts.Add(kv.Key switch
                 {
-                    "hp_restore" => T($"hồi {kv.Value} HP", $"restores {kv.Value} HP"),
+                    "hp_restore" => T($"hồi {kv.Value} khí huyết", $"restores {kv.Value} HP"),
                     "qi_restore" => T($"hồi {kv.Value} linh lực", $"restores {kv.Value} Qi"),
                     "stamina_restore" => T($"hồi {kv.Value} thể lực", $"restores {kv.Value} stamina"),
                     "cultivation_exp" => T($"+{kv.Value} tu vi", $"+{kv.Value} cultivation"),
-                    "permanent_hp" => T($"+{kv.Value} HP tối đa", $"+{kv.Value} max HP"),
+                    "permanent_hp" => T($"+{kv.Value} khí huyết tối đa", $"+{kv.Value} max HP"),
                     "permanent_qi" => T($"+{kv.Value} linh lực tối đa", $"+{kv.Value} max Qi"),
                     "permanent_str" => T($"+{kv.Value} lực", $"+{kv.Value} STR"),
                     "permanent_agi" => T($"+{kv.Value} thân pháp", $"+{kv.Value} AGI"),
@@ -139,13 +139,34 @@ public static class Text
     {
         "atk" => T("công", "ATK"),
         "def" => T("thủ", "DEF"),
+        "res" => T("kháng", "RES"),
         "str" => T("lực", "STR"),
         "agi" => T("thân pháp", "AGI"),
         "int" => T("ngộ tính", "INT"),
         "perception" => T("cảm tri", "PER"),
         "luck" => T("vận khí", "LUCK"),
-        "hp" => "HP",
+        "hp" => T("khí huyết", "HP"),
         "qi" => T("linh lực", "Qi"),
         _ => key,
     };
+
+    // ------------------------------------------------------------------ gear
+
+    public static string SlotName(string slot) => Equipment.SlotName(slot, L);
+
+    /// <summary>A slot and how far it is enhanced: "Weapon +3".</summary>
+    public static string Slot(string slot, int level) => level > 0 ? $"{SlotName(slot)} +{level}" : SlotName(slot);
+
+    /// <summary>Bonuses in one line: "ATK +6 · STR +3".</summary>
+    public static string Bonuses(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, double>> bonuses) =>
+        string.Join(" · ", bonuses.Select(kv => $"{Stat(kv.Key)} {Signed(kv.Value)}"));
+
+    /// <summary>What the item worn in a slot gives now: "Wooden Sword · ATK +6".</summary>
+    public static string Worn(TuTien.Core.Content.ContentDb content, string slot, GearSlot g)
+    {
+        var def = content.Item(g.ItemId);
+        if (def == null) return T("(trống)", "(empty)");
+        var bonuses = Bonuses(Equipment.SlotBonuses(content, slot, g));
+        return bonuses.Length > 0 ? $"{Name(def)} · {bonuses}" : Name(def);
+    }
 }

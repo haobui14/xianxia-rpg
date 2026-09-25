@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 using TuTien.Core;
+using TuTien.Core.Rules;
 using TuTien.Core.State;
 using TuTien.Core.Story;
 using TuTien.Core.World;
@@ -74,7 +75,7 @@ public partial class NpcPanel : InkPanel
         if (_gifting)
         {
             Section(T("Chọn quà", "Choose a gift"));
-            var giftable = E.Player.Items.Where(i => !(i.Id == E.Player.WeaponId && i.Qty <= 1)).ToList();
+            var giftable = E.Player.Items.Where(i => !(Equipment.IsWorn(E.Player, i.Id) && i.Qty <= 1)).ToList();
             if (giftable.Count == 0) Para(T("Ngươi chẳng có gì để tặng.", "You have nothing to give."));
             foreach (var item in giftable)
             {

@@ -85,7 +85,12 @@ namespace TuTien.Core.Rules
             var stack = p.Items.FirstOrDefault(i => i.Id == id);
             if (stack == null || stack.Qty < qty) return false;
             stack.Qty -= qty;
-            if (stack.Qty <= 0) p.Items.Remove(stack);
+            if (stack.Qty <= 0)
+            {
+                p.Items.Remove(stack);
+                // Gear worn from this stack goes with it.
+                if (Count(p, id) == 0 && Equipment.IsWorn(p, id)) Equipment.Lost(p, id);
+            }
             return true;
         }
 

@@ -2,13 +2,17 @@ using System.Linq;
 using Godot;
 using TuTien.Core;
 using TuTien.Core.Content;
+using TuTien.Core.Rules;
+using TuTien.Core.State;
 using TuTienLuc.Art;
 
 namespace TuTienLuc.Ui.Panels;
 
-/// <summary>A town (design §7.10): the inn, the market, and the bounty board.</summary>
+/// <summary>A town (design §7.10): the inn, the market, the bounty board and the forge.</summary>
 public partial class TownPanel : InkPanel
 {
+    public const int InnTab = 0, MarketTab = 1, BoardTab = 2, ForgeTab = 3;
+
     private readonly PoiDef _poi;
 
     public TownPanel(PoiDef poi, int tab = 0)
@@ -32,18 +36,22 @@ public partial class TownPanel : InkPanel
             return;
         }
         var p = E.Player;
-        Para(T($"Ngươi có {p.Silver} bạc · cước lực {p.Footwork}/{p.FootworkMax}.", $"You have {p.Silver} silver · footwork {p.Footwork}/{p.FootworkMax}."), 15, Ink.InkColor);
-        Tabs(T("Khách điếm", "Inn"), T("Chợ", "Market"), T("Bảng cáo thị", "Bounty board"));
+        Para(T($"Ngươi có {p.Silver} bạc · {p.SpiritStones} linh thạch · cước lực {p.Footwork}/{p.FootworkMax}.",
+            $"You have {p.Silver} silver · {p.SpiritStones} spirit stones · footwork {p.Footwork}/{p.FootworkMax}."), 15, Ink.InkColor);
+        Tabs(T("Khách điếm", "Inn"), T("Chợ", "Market"), T("Bảng cáo thị", "Bounty board"), T("Lò rèn", "Forge"));
         switch (Tab)
         {
-            case 0:
+            case InnTab:
                 Inn(town);
                 break;
-            case 1:
+            case MarketTab:
                 Market(town);
                 break;
-            default:
+            case BoardTab:
                 Board(town);
+                break;
+            default:
+                Forge();
                 break;
         }
     }
@@ -85,8 +93,14 @@ public partial class TownPanel : InkPanel
                 UiKit.Button(T("Mua", "Buy"), () => Say(E.Buy(town, itemId)), enabled: p.Silver >= entry.Price));
         }
 
+        Section(T("Đổi linh thạch", "Money changer"));
+        Row(UiKit.Label(T($"Một linh thạch đổi {GameEngine.SpiritStoneRate} bạc. Ngươi có {p.SpiritStones} linh thạch.",
+                $"One spirit stone buys {GameEngine.SpiritStoneRate} silver. You have {p.SpiritStones} spirit stones."), 16, Ink.InkSoft, wrap: true),
+            Named(UiKit.Button(T("Đổi 1", "Exchange 1"), () => Say(E.ExchangeStones(1)), enabled: p.SpiritStones >= 1), "exchange_1"),
+            Named(UiKit.Button(T("Đổi 10", "Exchange 10"), () => Say(E.ExchangeStones(10)), enabled: p.SpiritStones >= 10), "exchange_10"));
+
         Section(T("Bán", "Sell"));
-        var sellable = p.Items.Where(s => !(s.Id == p.WeaponId && s.Qty <= 1)).ToList();
+        var sellable = p.Items.Where(s => !(Equipment.IsWorn(p, s.Id) && s.Qty <= 1)).ToList();
         if (sellable.Count == 0) Para(T("Hành trang không có gì để bán.", "Nothing to sell."));
         foreach (var stack in sellable)
         {
@@ -121,5 +135,54 @@ public partial class TownPanel : InkPanel
         var done = p.Bounties.Count(b => b.Progress >= b.Count);
         Body.AddChild(UiKit.Spacer(6));
         Buttons(UiKit.Button(T($"Nhận thưởng ({done})", $"Claim rewards ({done})"), () => Say(E.ClaimBounties()), primary: done > 0, enabled: done > 0));
+    }
+
+    /// <summary>The forge (the web game's cường hóa): enhance a gear slot, buy enhancement stones.</summary>
+    private void Forge()
+    {
+        var p = E.Player;
+        var content = E.Content;
+        Para(T("Thợ rèn khắc trận lên ô trang bị. Mỗi cấp, món mặc ở ô đó mạnh thêm 10%, và ô tự thêm công, thủ hoặc kháng. Cấp gắn với ô, nên đổi món tốt hơn vẫn giữ. Thất bại thì mất bạc và đá, nhưng ô không tụt cấp.",
+            "The smith engraves formations into your gear slots. Each level makes what you wear there 10% stronger, and the slot adds attack, defense or resistance of its own. The level stays with the slot, so a better find keeps it. A failure costs the silver and stones, never a level."), 14, Ink.InkMute);
+        foreach (var slot in Equipment.Slots)
+        {
+            var g = p.Gear.TryGetValue(slot, out var worn) ? worn : new GearSlot();
+            var step = Equipment.Next(g.Level);
+            var info = UiKit.Column(0);
+            info.AddChild(UiKit.Label($"{Text.Slot(slot, g.Level)} · {Text.Worn(content, slot, g)}", 17, g.ItemId != null ? Ink.InkColor : Ink.InkFaint, wrap: true));
+            var have = step != null ? Inventory.Count(p, step.StoneId) : 0;
+            if (step == null)
+                info.AddChild(UiKit.Label(T("Đã cường hóa tối đa.", "Fully enhanced."), 13, Ink.GoldDeep));
+            else
+            {
+                var stone = content.Item(step.StoneId);
+                var stoneName = stone != null ? Text.Name(stone) : step.StoneId;
+                info.AddChild(UiKit.Label(T($"Lên +{g.Level + 1}: {step.Silver} bạc, {step.Stones} × {stoneName} (có {have}) · thành công {step.Chance * 100:0}%",
+                    $"To +{g.Level + 1}: {step.Silver} silver, {step.Stones} × {stoneName} (you have {have}) · {step.Chance * 100:0}% success"), 13, Ink.InkMute, wrap: true));
+                if (g.ItemId != null)
+                    info.AddChild(UiKit.Label(T("Sau khi lên: ", "Then: ") + Text.Bonuses(Equipment.SlotBonuses(content, slot, g, g.Level + 1)), 13, Ink.JadeDeep, wrap: true));
+            }
+            var s = slot;
+            Row(info, Named(UiKit.Button(T("Cường hóa", "Enhance"), () => Say(E.Enhance(s)),
+                enabled: step != null && g.ItemId != null && p.Silver >= step.Silver && have >= step.Stones), $"enhance_{slot}"));
+        }
+
+        Section(T("Đá cường hóa", "Enhancement stones"));
+        foreach (var (stoneId, silver, stones) in Equipment.ForgeStock)
+        {
+            var def = content.Item(stoneId);
+            if (def == null) continue;
+            var price = stones > 0 ? T($"{stones} linh thạch", $"{stones} spirit stones") : T($"{silver} bạc", $"{silver} silver");
+            var id = stoneId;
+            Row(UiKit.Label($"{Text.Name(def)}  ·  {T("có", "have")} {Inventory.Count(p, stoneId)}", 16, Ink.Rarity(def.Rarity).Darkened(0.15f)),
+                UiKit.Label(price, 16, Ink.GoldDeep),
+                Named(UiKit.Button(T("Mua", "Buy"), () => Say(E.BuyStone(id)), enabled: p.Silver >= silver && p.SpiritStones >= stones), $"buy_{stoneId}"));
+        }
+    }
+
+    private static Button Named(Button button, string name)
+    {
+        button.Name = name;
+        return button;
     }
 }

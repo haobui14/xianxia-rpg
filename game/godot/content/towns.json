@@ -11,6 +11,8 @@
         { "item_id": "spirit_rice_cake", "price": 8 },
         { "item_id": "iron_sword", "price": 120 },
         { "item_id": "azure_bamboo_sword", "price": 260 },
+        { "item_id": "leather_armor", "price": 90 },
+        { "item_id": "jade_pendant", "price": 320 },
         { "item_id": "qi_condensation_manual", "price": 220 },
         { "item_id": "manual_ho_the", "price": 180 },
         { "item_id": "manual_hoi_xuan", "price": 200 },

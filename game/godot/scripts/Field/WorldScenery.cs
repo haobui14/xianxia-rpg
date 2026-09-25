@@ -264,6 +264,17 @@ public static class WorldScenery
             Label = () => T("Bảng cáo thị — treo thưởng", "Bounty board"),
             Act = () => w.OpenPanel(new TownPanel(poi, 2)),
         });
+
+        // The forge, at the east end of the square: enhance the gear slots, buy stones.
+        w.AddScenery(V(1296, 3004), (c, time) => PropArt.Forge(c, time), animated: true, occludes: true, extent: V(70, 90));
+        Box(w, 1244, 2994, 54, 12);
+        w.Walls.Add(Obstacle.Circle(V(1338, 2996), 14));
+        w.Interactions.Add(new Interaction
+        {
+            At = () => V(1300, 3030), Reach = 74, Height = 96,
+            Label = () => T("Lò rèn — cường hóa trang bị", "The forge — enhance your gear"),
+            Act = () => w.OpenPanel(new TownPanel(poi, TownPanel.ForgeTab)),
+        });
     }
 
     // ================================================================ the sect

@@ -429,6 +429,36 @@ public static class PropArt
         Paint.Stroke(c, V(-length / 2, -7), V(length / 2, -7), new Color("#8a6a48"), 2, 0.5f);
     }
 
+    /// <summary>The village forge: a brick hearth with its coals glowing under a lean-to, and an anvil on a stump.</summary>
+    public static void Forge(Brush c, float time)
+    {
+        Paint.Shadow(c, V(4, 2), 64, 12, 0.2f);
+        // The lean-to's posts.
+        foreach (var x in new[] { -56f, 12 }) Paint.Stroke(c, V(x, -2), V(x, -70), new Color("#6b4a32"), 4, 0.7f);
+        // The hearth: brick courses, a chimney, the mouth and its coals.
+        Paint.Poly(c, new[] { V(-50, 0), V(2, 0), V(-2, -44), V(-46, -44) }, new Color("#8a5a44"));
+        for (var row = 1; row <= 3; row++)
+            Paint.Line2(c, V(-49 + row, -row * 11), V(1 - row, -row * 11), new Color(Paint.Ink, 0.25f), 1);
+        Paint.Poly(c, new[] { V(-32, -44), V(-18, -44), V(-19, -86), V(-31, -86) }, new Color("#5d5550"));
+        Paint.Poly(c, new[] { V(-36, -5), V(-10, -5), V(-13, -27), V(-33, -27) }, new Color("#2a1a14"), 0.6f, 1);
+        var glow = 0.72f + 0.28f * Mathf.Sin(time * 5.3f) * Mathf.Sin(time * 2.1f + 1);
+        Paint.Ellipse(c, V(-23, -11), 11, 6, new Color(1f, 0.55f, 0.18f, glow), 0, 0);
+        Paint.Ellipse(c, V(-23, -12), 5, 3, new Color(1f, 0.86f, 0.46f, glow), 0, 0);
+        Roof(c, -60, 16, -68, -84, new Color("#4a5566"), 5);
+        // The anvil on its stump, a hammer resting on it.
+        Paint.Poly(c, new[] { V(30, 0), V(54, 0), V(52, -18), V(32, -18) }, new Color("#7a5638"));
+        Paint.Ellipse(c, V(42, -18), 11, 4, new Color("#9a7a52"), 0.7f, 1);
+        Paint.Poly(c, new[] { V(24, -20), V(58, -20), V(66, -26), V(62, -30), V(22, -30), V(28, -26) }, new Color("#3a3f48"));
+        Paint.Poly(c, new[] { V(36, -30), V(52, -30), V(50, -35), V(38, -35) }, new Color("#4a505a"), 0.6f, 1);
+        Paint.Stroke(c, V(42, -38), V(60, -46), new Color("#6b4a32"), 2.5f, 0.6f);
+        Paint.Poly(c, new[] { V(35, -43), V(45, -40), V(43, -34), V(33, -37) }, new Color("#3a3f48"), 0.7f, 1);
+        // The signboard under the eave.
+        Paint.Line2(c, V(-2, -68), V(-2, -62), new Color("#3a2a1e"), 1);
+        Paint.Line2(c, V(34, -68), V(34, -62), new Color("#3a2a1e"), 1);
+        Paint.Poly(c, new[] { V(-6, -62), V(38, -62), V(38, -48), V(-6, -48) }, new Color("#2c2a33"), 0.9f, 1.2f);
+        Paint.Caption(c, T("Lò rèn", "Forge"), V(16, -55), 10, new Color("#e0c070"), maxWidth: 40);
+    }
+
     public static void Crates(Brush c, int seed)
     {
         Paint.Shadow(c, V(4, 2), 22, 6, 0.16f);

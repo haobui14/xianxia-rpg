@@ -82,7 +82,14 @@ namespace TuTien.Core.State
         public int Silver { get; set; }
         public int SpiritStones { get; set; }
         public List<ItemStack> Items { get; set; } = new List<ItemStack>();
-        public string? WeaponId { get; set; }
+        /// <summary>What is worn in each gear slot ("Weapon", "Chest", "Accessory"), and how far each slot is enhanced.</summary>
+        public Dictionary<string, GearSlot> Gear { get; set; } = new Dictionary<string, GearSlot>();
+        /// <summary>The weapon in hand: the Weapon slot's item.</summary>
+        [JsonIgnore]
+        public string? WeaponId => Gear.TryGetValue("Weapon", out var slot) ? slot.ItemId : null;
+        /// <summary>Saves before v4 kept only a weapon, here; <see cref="SaveCodec"/> moves it into <see cref="Gear"/>.</summary>
+        [JsonPropertyName("weapon_id")]
+        public string? LegacyWeaponId { get; set; }
         public List<SkillState> Skills { get; set; } = new List<SkillState>();
         /// <summary>Four spirit-art slots (RMB, 1, 2, 3). Empty string = empty slot.</summary>
         public List<string> SkillSlots { get; set; } = new List<string> { "", "", "", "" };
@@ -134,6 +141,17 @@ namespace TuTien.Core.State
         public int HerbsGathered { get; set; }
         public int MissionsCompleted { get; set; }
         public Dictionary<string, int> KillsByEnemy { get; set; } = new Dictionary<string, int>();
+    }
+
+    /// <summary>A gear slot: what is worn there (an item in the bag), and how far the slot is enhanced.</summary>
+    public sealed class GearSlot
+    {
+        public string? ItemId { get; set; }
+        /// <summary>Enhancement, 0–10: whatever is worn here gains 10% of its bonuses per level.</summary>
+        public int Level { get; set; }
+        /// <summary>The max health and Qi this slot added, so taking the item off removes exactly that.</summary>
+        public int AppliedHp { get; set; }
+        public int AppliedQi { get; set; }
     }
 
     public sealed class ItemStack

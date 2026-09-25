@@ -9,7 +9,7 @@ It is currently a **vertical slice** of the Thanh Vân region, played as a **2D 
 | Path | What it is |
 |---|---|
 | `core/TuTien.Core/` | All game rules, engine-free (`netstandard2.1`, no Godot references): RNG, content, calendar, cultivation, elements, karma, map and footwork, month tick, NPC sim, combat rules, loot, events, saves. `GameEngine` is the single entry point. |
-| `core/TuTien.Core.Tests/` | xUnit tests (135) that run the rules against the real content. |
+| `core/TuTien.Core.Tests/` | xUnit tests (147) that run the rules against the real content. |
 | `godot/` | The Godot project. `scripts/Field` is the top-down world: the region, secret-realm floors and the breakthrough trial are all *fields*, with collision, the player controller, fights (`Battle`, `EnemyAi`), the HUD and the map. `scripts/Art` draws people, creatures, scenery and effects in code. `scripts/Audio` synthesizes every sound effect and composes the music. `shaders/` paints the ground, the clouds of unexplored land and swaying trees. `scripts/Ui` holds the title screen, theme, panels and settings, and `scripts/Dev` holds the smoke test and F9 cheats. |
 | `godot/content/` | Game data as JSON. Most of it is exported from the web game's TypeScript; enemies, skills, items, towns, NPC names and the map are hand-authored. |
 
@@ -91,7 +91,7 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
 ### What the slice has
 
 - **Character creation:** name, age, a spirit root roll with 3 rerolls, and a path (Qi, Body, or Kiêm tu).
-- **Thanh Vân as a top-down world (48×30 tiles, 128 px each):** painted ground with river banks, bridges and roads; forests, bamboo groves, hills and snow peaks; drifting clouds over unexplored land; seasons that recolour the grass and trees. The village has houses, an inn, a market stall, a bounty board and a well; the Thanh Vân Kiếm Phái sits behind its gate between cliffs; the Linh Thảo Bí Cảnh opens from a glowing cave; there are two spirit veins and herb patches.
+- **Thanh Vân as a top-down world (48×30 tiles, 128 px each):** painted ground with river banks, bridges and roads; forests, bamboo groves, hills and snow peaks; drifting clouds over unexplored land; seasons that recolour the grass and trees. The village has houses, an inn, a market stall, a bounty board, a forge and a well; the Thanh Vân Kiếm Phái sits behind its gate between cliffs; the Linh Thảo Bí Cảnh opens from a glowing cave; there are two spirit veins and herb patches.
 - **A living field:** 25 NPCs stroll where the month's simulation put them (talk to them with E), beast packs prowl their patch and aggressive ones chase you, adventures glow as pillars of light under a gold star, and a rumor feed runs in the corner. Trees and roofs in front of you turn see-through.
 - **Time flows as you travel:** each tile crossed spends its footwork (the HUD shows "day N of the month"). When it runs out the month turns (cultivation, world tick, autosave) and a card sums it up while you keep walking.
 - **Real-time combat where you meet:** eleven enemy archetypes, each with a readable telegraph, fighting on real terrain: charger, swarm, ranged, tank, caster and boss, plus the five below. Every hit goes through the core's `CombatRules`. Element marks trigger the 10 Ngũ Hành reactions, and every creature reacts to its own element on a cooldown (for example, Fireball on a wood vine triggers *Liệt Diễm*). Spars end at 15% health; escape by running away.
@@ -128,6 +128,12 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
   - **Treasury (Tàng Bảo Các):** pills, art manuals, the Foundation Pill, gear, and the sect's own technique, the Azure Cloud Sword Canon (+18% cultivation), for contribution. The best are kept for higher ranks.
   - **Spirit-gathering chamber:** inner disciples can seclude in it for +30% qi, paying 2 spirit stones a month. It's the first thing in the game that spends spirit stones.
   - The journal's Tasks tab tracks missions and bounties together.
+- **Gear and the forge** (from the web game's equipment and cường hóa):
+  - Three slots, a weapon, armour and an accessory, each worn from the bag (Inventory → Equip). Everything worn counts in combat, and armour's health and robes' Qi raise your maximums (Qi from gear waits for Qi Condensation). The village stall now sells leather armour and a jade pendant.
+  - **The forge** at the east end of the village square enhances a slot from +1 to +10 for silver and enhancement stones: 100 silver and a common stone for +1, up to 20,000 silver and an epic stone for +10. The odds fall from 100% to 35%.
+  - Each level makes whatever is worn in the slot 10% stronger, and the slot adds 2 attack, defense or resistance of its own. The level belongs to the slot, so a better find keeps it. A failed attempt spends the silver and stones but never drops a level.
+  - The forge sells common stones for silver and the rarer ones for spirit stones. The market's money changer turns a spirit stone into 100 silver.
+- **Mastery:** on Character → Arts, train an art one level for 150 silver × its level, and deepen a technique for spirit stones (5, 10 or 20 × its level by grade, up to level 10). Each technique level adds 10% to its cultivation bonus.
 - **Sword flight (ngự kiếm):** from Trúc Cơ, press V to ride your sword over the river and peaks, twice as fast as walking and out of reach of beasts. Land with V, which doesn't work over water. Set off on the map across water and the sword takes you there and sets you down.
 - **Sound, all synthesized:** about 40 effects (swishes, hits, casts, coins, the month gong, and more), positional in the world. Five pieces of music are generated in pentatonic modes for the title, exploring, fights, the breakthrough trial and secret realms. The zither plays with glissandi, grace notes and tremolo over flute, bells and drone; fights get taiko drums. The music crossfades as you move between them.
 - **The seasons in the air:** blossom petals, summer fluff and butterflies, autumn leaves and snow drift across the screen. Footsteps raise dust on roads, ripples in the swamp and puffs of snow.
@@ -161,6 +167,8 @@ dotnet test game/core/TuTien.Core.Tests
 #    realm floor, the Trúc Cơ meridian storm (it must lay a foundation), a fight with
 #    each of the five new creatures using a different second-tier art, sword flight
 #    across the river (by key and by map), seclusion, and a save/load round trip
+#  - gear by mouse: buy armour and put it on from the bag, buy a stone and enhance the
+#    slot at the forge, change a spirit stone for silver, train an art, deepen a technique
 #  - Character → Arts by mouse: an art's slot button moves it into that slot, a second
 #    click takes it out, and no panel opens a drop-down picker
 #  - a phone: at 135% interface size, touch events pushed into the viewport drag the

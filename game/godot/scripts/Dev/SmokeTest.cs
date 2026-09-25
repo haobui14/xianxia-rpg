@@ -363,6 +363,9 @@ public partial class SmokeTest : Node
         // ---------------------------------------------------------------- a disciple's life: missions, ranks, the treasury
         world = await SectLife(world);
 
+        // ---------------------------------------------------------------- gear, the forge, mastery
+        world = await GearAndMastery(world);
+
         // ---------------------------------------------------------------- new beasts, new arts
         world = await NewBeastsAndArts(world);
 
@@ -623,6 +626,84 @@ public partial class SmokeTest : Node
     }
 
     /// <summary>A button in the open panel with this text (in either language).</summary>
+    /// <summary>
+    /// Gear and what money grows, by mouse: buy armour at the stall and put it on from the bag; at the forge buy
+    /// a stone and enhance the armour's slot; change a spirit stone for silver; on the character sheet train an
+    /// art with silver and deepen the sect's technique with spirit stones.
+    /// </summary>
+    private async Task<WorldScreen> GearAndMastery(WorldScreen world)
+    {
+        var game = Game.Instance;
+        var village = E.Map.Def.Pois.First(p => p.Kind == "town");
+        E.Player.Silver += 2000;
+        E.Player.SpiritStones += 60;
+        game.Notify(E.Buy(E.TownFor(village)!, "leather_armor"));
+
+        world.OpenPanel(new InventoryPanel());
+        await Frames(3);
+        var hpMax = E.Player.HpMax;
+        await ClickGui(await Reveal(world, "equip_leather_armor"));
+        Check(E.Player.Gear[TuTien.Core.Rules.Equipment.Chest].ItemId == "leather_armor" && E.Player.HpMax == hpMax + 20,
+            "the bag's Equip puts the leather armour on (+20 max health)");
+        await Shot("inventory_gear");
+
+        world.OpenPanel(new TownPanel(village, TownPanel.ForgeTab));
+        await Frames(3);
+        var common = TuTien.Core.Rules.Equipment.StoneCommon;
+        var stones = TuTien.Core.Rules.Inventory.Count(E.Player, common);
+        await ClickGui(await Reveal(world, "buy_" + common));
+        Check(TuTien.Core.Rules.Inventory.Count(E.Player, common) == stones + 1, "the forge sells a common stone for silver");
+        var silver = E.Player.Silver;
+        var slot = E.Player.Gear[TuTien.Core.Rules.Equipment.Chest];
+        await ClickGui(await Reveal(world, "enhance_" + TuTien.Core.Rules.Equipment.Chest));
+        Check(slot.Level == 1 && E.Player.Silver == silver - 100 && E.Player.HpMax == hpMax + 22,
+            "enhancing the armour's slot to +1 costs 100 silver and a stone, and the armour gives 10% more health");
+        await Shot("forge");
+
+        world.OpenPanel(new TownPanel(village, TownPanel.MarketTab));
+        await Frames(3);
+        silver = E.Player.Silver;
+        var spirit = E.Player.SpiritStones;
+        await ClickGui(await Reveal(world, "exchange_1"));
+        Check(E.Player.SpiritStones == spirit - 1 && E.Player.Silver == silver + GameEngine.SpiritStoneRate, "the money changer turns a spirit stone into 100 silver");
+
+        world.OpenPanel(new CharacterPanel());
+        await Frames(3);
+        await ClickGui(PanelButton(world, "Võ học", "Arts"));
+        var art = E.Player.Skills[0];
+        var level = art.Level;
+        await ClickGui(await Reveal(world, "train_" + art.Id));
+        Check(art.Level == level + 1, $"training {art.Id} with silver raises it a level ({level} → {art.Level})");
+        // A technique to deepen: the stall's Qi Condensation Manual, read.
+        game.Notify(E.Buy(E.TownFor(village)!, "qi_condensation_manual"));
+        game.Notify(E.UseItem("qi_condensation_manual"));
+        await Frames(3);
+        var technique = E.Player.Techniques.FirstOrDefault();
+        Check(technique != null, "reading the Qi Condensation Manual teaches its technique");
+        var depth = technique!.Level;
+        await ClickGui(await Reveal(world, "deepen_" + technique.Id));
+        Check(technique.Level == depth + 1, $"deepening {technique.Id} with spirit stones raises its level ({depth} → {technique.Level})");
+        await Shot("character_mastery");
+        world.ClosePanel();
+        return await Settle(world);
+    }
+
+    /// <summary>The panel's button called <paramref name="name"/>, scrolled into view so a click lands on it.</summary>
+    private async Task<Button> Reveal(WorldScreen world, string name)
+    {
+        var button = world.CurrentPanel!.FindChild(name, true, false) as Button
+                     ?? throw new InvalidOperationException($"no button '{name}' in the {world.CurrentPanel.GetType().Name}");
+        for (Node? n = button.GetParent(); n != null; n = n.GetParent())
+        {
+            if (n is not ScrollContainer scroll) continue;
+            scroll.EnsureControlVisible(button);
+            break;
+        }
+        await Frames(2);
+        Check(!button.Disabled, $"'{name}' can be pressed");
+        return button;
+    }
+
     private static Button PanelButton(WorldScreen world, string vi, string en) =>
         world.CurrentPanel!.FindChildren("*", "Button", true, false).OfType<Button>().FirstOrDefault(b => (b.Text == vi || b.Text == en) && b.IsVisibleInTree())
         ?? throw new InvalidOperationException($"no button '{en}' in the {world.CurrentPanel.GetType().Name}");
