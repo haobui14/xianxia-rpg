@@ -400,5 +400,19 @@ namespace TuTien.Core.State
         /// <summary>For NPC fights: the arts the NPC knows and their root's element, in place of the template's.</summary>
         public List<string>? ArtsOverride { get; set; }
         public Element? ElementOverride { get; set; }
+        /// <summary>For NPC fights: the NPC's own stats (see NpcCombat.Stats), in place of the template's.</summary>
+        public CultivatorStats? Stats { get; set; }
+    }
+
+    /// <summary>A cultivator's fighting numbers, made the way the player's are (design Appendix A).</summary>
+    public sealed class CultivatorStats
+    {
+        public int HpMax { get; set; }
+        public double Physical { get; set; }
+        public double Spirit { get; set; }
+        public double Defense { get; set; }
+        public double Resistance { get; set; }
+        public double Perception { get; set; }
+        public double Luck { get; set; }
     }
 }

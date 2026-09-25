@@ -389,7 +389,7 @@ namespace TuTien.Core.World
                     var zone = map.ZoneAt(player.X, player.Y);
                     if (zone == null) continue;
                     PlaceInZone(npc, zone, state, map, rng);
-                    state.World.PendingAmbush = Skills.WithNpcKit(new Encounter
+                    state.World.PendingAmbush = NpcCombat.Prepare(new Encounter
                     {
                         Id = state.NewId("enc"),
                         Source = "ambush",

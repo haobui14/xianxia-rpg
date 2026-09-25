@@ -192,42 +192,6 @@ namespace TuTien.Core.Rules
 
         public static bool Knows(PlayerState p, string skillId) => p.Skills.Any(s => s.Id == skillId);
 
-        /// <summary>
-        /// The arts an NPC cultivator fights with, from who they are, by the player's own rules: their root's first
-        /// art (and a second root's too, from Luyện Khí 3), its second-tier art from Luyện Khí 5, their sect's
-        /// art, and for about a third of them a guarding art (a healing one if kind-hearted). A mortal only has
-        /// fists. The same NPC always has the same kit.
-        /// </summary>
-        public static List<string> NpcKit(NpcState npc, ContentDb content)
-        {
-            var kit = new List<string>();
-            if (npc.Realm == Realm.PhamNhan)
-            {
-                kit.Add("vo_ky_kiem");
-                return kit;
-            }
-            var first = NpcElement(npc);
-            kit.Add(StarterArt(first));
-            var progressed = npc.Realm > Realm.LuyenKhi || npc.Stage >= SecondArtStage;
-            if (npc.Elements.Count > 1 && (npc.Realm > Realm.LuyenKhi || npc.Stage >= 3)) kit.Add(StarterArt(npc.Elements[1]));
-            if (progressed) kit.Add(SecondArt(first));
-            if (npc.SectId == "thanh_van_kiem") kit.Add("thanh_van_kiem_quyet");
-            var rng = Seeds.Stream(Seeds.Hash(npc.Id), "npc-kit");
-            if (rng.Chance(1 / 3.0)) kit.Add(npc.Alignment >= 30 || npc.Traits.Contains("kind") ? "hoi_xuan_quyet" : "ho_the_cuong_khi");
-            return kit.Where(id => content.Skill(id) != null).Distinct().ToList();
-        }
-
-        /// <summary>The element an NPC fights in: their root's first.</summary>
-        public static Element NpcElement(NpcState npc) => npc.Elements.Count > 0 ? npc.Elements[0] : Element.Kim;
-
-        /// <summary>Give an NPC encounter (a challenge, a spar, an ambush) the NPC's own arts and element.</summary>
-        public static Encounter WithNpcKit(Encounter encounter, NpcState npc, ContentDb content)
-        {
-            encounter.ArtsOverride = NpcKit(npc, content);
-            encounter.ElementOverride = npc.Realm == Realm.PhamNhan ? (Element?)null : NpcElement(npc);
-            return encounter;
-        }
-
         /// <summary>Learn an art and slot it into the first free spirit-art slot.</summary>
         public static List<GameEvent> Learn(GameState state, ContentDb content, string skillId)
         {

@@ -16,8 +16,12 @@ namespace TuTien.Core.Combat
         public string NameEn { get; set; } = "";
         public int HpMax { get; set; }
         public double Attack { get; set; }
+        /// <summary>Spirit power when it differs from the physical (a cultivator's); a beast's is its attack.</summary>
+        public double? SpiritAttack { get; set; }
         public double Defense { get; set; }
         public double Resistance { get; set; }
+        public double Perception { get; set; } = 5;
+        public double Luck { get; set; } = 5;
         public double Speed { get; set; }
         public Realm Realm { get; set; }
         public int Stage { get; set; }
@@ -28,11 +32,11 @@ namespace TuTien.Core.Combat
         public Combatant ToCombatant() => new Combatant
         {
             PhysicalPower = Attack,
-            SpiritPower = Attack,
+            SpiritPower = SpiritAttack ?? Attack,
             Def = Defense,
             Res = Resistance,
-            Per = 5,
-            Luck = 5,
+            Per = Perception,
+            Luck = Luck,
             RealmValue = Progression.RealmValue(Realm, Stage),
             Element = Element,
             Root = Element != null ? new[] { Element.Value } : Array.Empty<Element>(),
@@ -99,7 +103,20 @@ namespace TuTien.Core.Combat
                     Arts = (encounter.ArtsOverride ?? def.Skills).ToList(),
                 };
 
-                if (encounter.RealmOverride != null)
+                if (encounter.Stats is { } own)
+                {
+                    // An NPC cultivator fights with their own stats (NpcCombat.Stats), grown like the player's.
+                    inst.Realm = encounter.RealmOverride ?? def.Realm;
+                    inst.Stage = encounter.StageOverride;
+                    inst.HpMax = own.HpMax;
+                    inst.Attack = own.Physical;
+                    inst.SpiritAttack = own.Spirit;
+                    inst.Defense = own.Defense;
+                    inst.Resistance = own.Resistance;
+                    inst.Perception = own.Perception;
+                    inst.Luck = own.Luck;
+                }
+                else if (encounter.RealmOverride != null)
                 {
                     // NPC cultivators fight at their own realm: the catalog entry is a template,
                     // scaled by how far their realm is above the template's.

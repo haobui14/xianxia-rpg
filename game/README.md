@@ -9,7 +9,7 @@ It is currently a **vertical slice** of the Thanh Vân region, played as a **2D 
 | Path | What it is |
 |---|---|
 | `core/TuTien.Core/` | All game rules, engine-free (`netstandard2.1`, no Godot references): RNG, content, calendar, cultivation, elements, karma, map and footwork, month tick, NPC sim, combat rules, loot, events, saves. `GameEngine` is the single entry point. |
-| `core/TuTien.Core.Tests/` | xUnit tests (161) that run the rules against the real content. |
+| `core/TuTien.Core.Tests/` | xUnit tests (172) that run the rules against the real content. |
 | `godot/` | The Godot project. `scripts/Field` is the top-down world: the region, secret-realm floors and the breakthrough trial are all *fields*, with collision, the player controller, fights (`Battle`, `EnemyAi`), the HUD and the map. `scripts/Art` draws people, creatures, scenery and effects in code. `scripts/Audio` synthesizes every sound effect and composes the music. `shaders/` paints the ground, the clouds of unexplored land and swaying trees. `scripts/Ui` holds the title screen, theme, panels and settings, and `scripts/Dev` holds the smoke test and F9 cheats. |
 | `godot/content/` | Game data as JSON. Most of it is exported from the web game's TypeScript; enemies, skills, items, towns, NPC names and the map are hand-authored. |
 
@@ -102,6 +102,9 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
   - For some, a guard or a heal.
   - The fight picks the art for the moment: a heal when hurt, a guard when pressed, a dash from afar, a cleave or a wave up close, beams and bolts at range. Each art has its own cooldown, and every cast is telegraphed.
   - The NPC panel lists their arts. Outer disciples, rogue cultivators and bandit leaders know two or three arts each.
+- **Every cultivator has their own numbers:** an NPC grows by the same realm and stage gains as you, so a same-realm duel is a fair fight and a realm above is a wall. A new character needs about a dozen sword strikes to down a mortal, and a Qi Condensation 1 cultivator takes twice that while downing you in six or seven.
+  - On top of the shared tables: a weapon fit for their realm, the foundation their root would lay at Trúc Cơ, a little more for a talented root, their temperament (the belligerent hit harder and guard worse, the timid the other way), a few percent of their own, and less health while injured.
+  - The NPC panel shows their health, physical and spirit power, defense and resistance, and sizes them up against you: weaker, an even match, stronger, or far beyond you.
 - **The Ancient Tree Hollow's creatures** (Cổ Thụ Động, the deep forest):
   - **Hắc Hùng** (Black Bear), a brute: lumbers in, rears up and crashes down on a wide arc in front of it, stunning whoever it catches.
   - **Hỏa Hồ** (Fire Fox), a trickster: keeps its distance and throws volleys of three fox-fires. Get close and it vanishes, reappears somewhere else and throws fire at once.

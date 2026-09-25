@@ -426,7 +426,7 @@ namespace TuTien.Core
         {
             var npc = State.World.Npcs.FirstOrDefault(n => n.Id == npcId && n.Alive);
             if (npc == null || ActiveEncounter != null) return null;
-            return BeginEncounter(Skills.WithNpcKit(new Encounter
+            return BeginEncounter(NpcCombat.Prepare(new Encounter
             {
                 Id = State.NewId("enc"), Source = lethal ? "npc" : "spar", SourceId = npc.Id,
                 EnemyIds = { npc.SectId == "thanh_van_kiem" ? "sect_disciple" : "rogue_cultivator" },

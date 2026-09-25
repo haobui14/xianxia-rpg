@@ -317,6 +317,10 @@ public partial class SmokeTest : Node
             await Frames(10);
             world.OpenPanel(new NpcPanel(npc.NpcId!));
             await Frames(3);
+            var lines = world.CurrentPanel!.FindChildren("*", "Label", true, false).OfType<Label>().Select(l => l.Text).ToList();
+            var stats = TuTien.Core.Rules.NpcCombat.Stats(E.Npc(npc.NpcId!)!, E.Content);
+            Check(lines.Any(t => t.Contains(stats.HpMax.ToString()) && t.Contains(_locale == Locale.En ? "Health" : "Khí huyết")), $"the NPC panel shows their own numbers (health {stats.HpMax})");
+            Check(lines.Any(t => t.StartsWith(_locale == Locale.En ? "You sense: " : "Cảm nhận: ")), "the NPC panel sizes them up against you");
             await Shot("npc");
             world = await Settle(world);
         }
@@ -748,7 +752,7 @@ public partial class SmokeTest : Node
             npc.SectId = "thanh_van_kiem";
             npc.Alive = true;
             npc.InjuredMonths = 0;
-            var kit = TuTien.Core.Rules.Skills.NpcKit(npc, E.Content);
+            var kit = TuTien.Core.Rules.NpcCombat.Kit(npc, E.Content);
             Check(kit.Count >= 3, $"a {element} disciple at Qi Condensation 6 knows {kit.Count} arts ({string.Join(", ", kit)})");
             DevCheats.Restore(E);
             world.Player.SyncFromEngine();
