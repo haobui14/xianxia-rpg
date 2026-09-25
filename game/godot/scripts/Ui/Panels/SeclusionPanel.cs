@@ -73,10 +73,12 @@ public partial class SeclusionPanel : InkPanel
             $"Cơ sở ({Names.Display(p.Path == CultivationPath.Body ? (Realm)(int)p.BodyRealm : p.Realm, Locale.Vi)}): {b.Base}\n"
             + $"× linh căn {b.RootMultiplier:0.##} · × công pháp {b.TechniqueMultiplier:0.##} · × tông môn {b.SectMultiplier:0.##}\n"
             + $"+ linh khí {b.QiDensity}% · mùa {b.SeasonBonus}% · {(b.SpecialBonus > 0 ? b.SpecialReason + " " + b.SpecialBonus + "% · " : "")}trăng tròn {b.FullMoonBonus}%\n"
+            + (b.BlessingBonus != 0 ? $"+ quẻ Thổ Địa {b.BlessingBonus}%\n" : "")
             + $"× bế quan {b.ActivityMultiplier:0.#}" + (b.InjuryMultiplier < 1 ? $" · × thương thế {b.InjuryMultiplier:0.##}" : ""),
             $"Base ({Names.Display(p.Path == CultivationPath.Body ? (Realm)(int)p.BodyRealm : p.Realm, Locale.En)}): {b.Base}\n"
             + $"× root {b.RootMultiplier:0.##} · × technique {b.TechniqueMultiplier:0.##} · × sect {b.SectMultiplier:0.##}\n"
             + $"+ qi density {b.QiDensity}% · season {b.SeasonBonus}% · {(b.SpecialBonus > 0 ? b.SpecialReasonEn + " " + b.SpecialBonus + "% · " : "")}full moon {b.FullMoonBonus}%\n"
+            + (b.BlessingBonus != 0 ? $"+ the Earth God's stick {b.BlessingBonus}%\n" : "")
             + $"× seclusion {b.ActivityMultiplier:0.#}" + (b.InjuryMultiplier < 1 ? $" · × injury {b.InjuryMultiplier:0.##}" : ""));
         Para(lines, 15, Ink.InkSoft);
         var split = p.Path == CultivationPath.Kiem

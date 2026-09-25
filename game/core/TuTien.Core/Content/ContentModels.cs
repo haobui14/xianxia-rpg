@@ -453,17 +453,19 @@ namespace TuTien.Core.Content
     public sealed class PoiDef
     {
         public string Id { get; set; } = "";
-        /// <summary>town | sect | secret_realm | spirit_vein | herb | pass</summary>
+        /// <summary>town | sect | secret_realm | spirit_vein | herb | pass | fishing | ore | shrine | camp</summary>
         public string Kind { get; set; } = "";
         public int X { get; set; }
         public int Y { get; set; }
         public string? Ref { get; set; }
-        /// <summary>The picture that marks it: town | sect | realm | vein | spring | herb | pass.</summary>
+        /// <summary>The picture that marks it: town | sect | realm | vein | spring | herb | pass | fish | ore | shrine | camp.</summary>
         public string Icon { get; set; } = "";
         public string Name { get; set; } = "";
         public string NameEn { get; set; } = "";
         public int QiBonus { get; set; }
         public string? LootTable { get; set; }
+        /// <summary>An ore vein: sword strikes it takes to break (0: the usual).</summary>
+        public int Hardness { get; set; }
     }
 
     public sealed class PointDef
@@ -499,6 +501,123 @@ namespace TuTien.Core.Content
         public int SeclusionCostPerMonth { get; set; } = 20;
         public List<ShopEntryDef> Shop { get; set; } = new List<ShopEntryDef>();
         public List<BountyDef> Bounties { get; set; } = new List<BountyDef>();
+        /// <summary>What the villagers ask for on the bounty board, a few at a time.</summary>
+        public List<RequestDef> Requests { get; set; } = new List<RequestDef>();
+    }
+
+    /// <summary>A villager's request: bring this many of an item for silver, karma and perhaps something more.</summary>
+    public sealed class RequestDef
+    {
+        public string Id { get; set; } = "";
+        public string Giver { get; set; } = "";
+        public string GiverEn { get; set; } = "";
+        public string Item { get; set; } = "";
+        public int Qty { get; set; } = 1;
+        public int Silver { get; set; }
+        public int Karma { get; set; }
+        public string? RewardItem { get; set; }
+        public string Text { get; set; } = "";
+        public string TextEn { get; set; } = "";
+    }
+
+    // ---------------------------------------------------------------- activities (activities.json)
+
+    /// <summary>What there is to do on the map besides fighting (hand-authored).</summary>
+    public sealed class ActivitiesDef
+    {
+        public List<LootTableDef> LootTables { get; set; } = new List<LootTableDef>();
+        public FishingDef Fishing { get; set; } = new FishingDef();
+        public List<RecipeDef> Recipes { get; set; } = new List<RecipeDef>();
+        public List<FortuneDef> Fortunes { get; set; } = new List<FortuneDef>();
+        public List<CampDef> Camps { get; set; } = new List<CampDef>();
+    }
+
+    public sealed class FishingDef
+    {
+        public List<FishDef> Fish { get; set; } = new List<FishDef>();
+        public List<FishSpotDef> Spots { get; set; } = new List<FishSpotDef>();
+    }
+
+    /// <summary>How a catch fights on the line (0–1), and what letting it go is worth.</summary>
+    public sealed class FishDef
+    {
+        public string Item { get; set; } = "";
+        public double Difficulty { get; set; } = 0.3;
+        /// <summary>How often it darts away (0–1).</summary>
+        public double Dart { get; set; } = 0.3;
+        public int ReleaseKarma { get; set; }
+        /// <summary>Years of lifespan for setting it free (a spirit turtle's blessing).</summary>
+        public int ReleaseLifespan { get; set; }
+    }
+
+    public sealed class FishSpotDef
+    {
+        public string Poi { get; set; } = "";
+        public List<CatchDef> Catches { get; set; } = new List<CatchDef>();
+    }
+
+    /// <summary>One thing a spot can give: a fish (item), or something sunken (a loot table).</summary>
+    public sealed class CatchDef
+    {
+        public string? Item { get; set; }
+        public string? Loot { get; set; }
+        public double Weight { get; set; } = 1;
+        /// <summary>Only in these seasons (null: all year).</summary>
+        public List<Season>? Seasons { get; set; }
+    }
+
+    /// <summary>A pill recipe at the alchemy furnace.</summary>
+    public sealed class RecipeDef
+    {
+        public string Id { get; set; } = "";
+        public string Output { get; set; } = "";
+        public List<IngredientDef> Ingredients { get; set; } = new List<IngredientDef>();
+        /// <summary>0–1: how narrow the furnace's heat band is and how fast it wanders.</summary>
+        public double Difficulty { get; set; } = 0.3;
+        /// <summary>Charcoal and the apothecary's fee.</summary>
+        public int Silver { get; set; }
+        /// <summary>The realm (and stage within it) the brewer needs.</summary>
+        public Realm? Realm { get; set; }
+        public int Stage { get; set; }
+    }
+
+    public sealed class IngredientDef
+    {
+        public string Item { get; set; } = "";
+        public int Qty { get; set; } = 1;
+    }
+
+    /// <summary>A fortune stick at the Earth God shrine: a verse, and what it means for the month.</summary>
+    public sealed class FortuneDef
+    {
+        public string Id { get; set; } = "";
+        public int Number { get; set; }
+        /// <summary>great | good | fair | ill</summary>
+        public string Grade { get; set; } = "fair";
+        public double Weight { get; set; } = 1;
+        public string Verse { get; set; } = "";
+        public string VerseEn { get; set; } = "";
+        /// <summary>Percent on this month's cultivation (negative for an ill omen).</summary>
+        public int Cultivation { get; set; }
+        /// <summary>Rare fish bite twice as often this month.</summary>
+        public bool LuckyCatch { get; set; }
+        /// <summary>Every ore vein gives one more piece this month.</summary>
+        public bool RichVein { get; set; }
+        /// <summary>The stick points to a chance meeting on the map.</summary>
+        public bool Guidance { get; set; }
+    }
+
+    /// <summary>A bandit camp: who holds it, how soon they come back, and the hoard they guard.</summary>
+    public sealed class CampDef
+    {
+        public string Poi { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string NameEn { get; set; } = "";
+        public List<string> Garrison { get; set; } = new List<string>();
+        public int RespawnMonths { get; set; } = 4;
+        public string Hoard { get; set; } = "";
+        /// <summary>The chance someone is held captive there when it falls.</summary>
+        public double CaptiveChance { get; set; }
     }
 
     public sealed class ShopEntryDef

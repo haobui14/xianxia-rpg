@@ -61,6 +61,19 @@ public partial class JournalPanel : InkPanel
                 if (state.Player.Bounties.Count == 0) Para(T("Chưa nhận cáo thị nào — xem bảng cáo thị ở thôn.", "No bounties taken — check the village board."));
                 foreach (var b in state.Player.Bounties)
                     Para($"{T(b.Name, b.NameEn)}: {b.Progress}/{b.Count} · {b.RewardSilver} {T("bạc", "silver")}", 16, b.Progress >= b.Count ? Ink.JadeDeep : Ink.InkColor);
+                Section(T("Thôn dân nhờ vả", "Villagers' requests"));
+                if (E.Map.Def.Pois.FirstOrDefault(p => p.Kind == "town") is { } village && E.TownFor(village) is { } town)
+                {
+                    foreach (var r in E.RequestsFor(town))
+                    {
+                        var item = E.Content.Item(r.Item);
+                        var done = E.RequestDone(town, r.Id);
+                        var have = TuTien.Core.Rules.Inventory.Count(state.Player, r.Item);
+                        Para($"{T(r.Giver, r.GiverEn)}: {(item != null ? Text.Name(item) : r.Item)} {System.Math.Min(have, r.Qty)}/{r.Qty}" + (done ? T(" · đã giao", " · handed over") : ""),
+                            16, done ? Ink.JadeDeep : have >= r.Qty ? Ink.GoldDeep : Ink.InkColor);
+                    }
+                    Para(T("Giao đồ ở bảng cáo thị trong thôn.", "Hand them over at the village bounty board."), 13, Ink.InkFaint);
+                }
                 break;
             default:
                 HowToPlay();
@@ -80,6 +93,9 @@ public partial class JournalPanel : InkPanel
         Para(KeysText.World(), 15);
         Para(T($"Yêu thú lang thang quanh ổ; bầy hung hãn thấy ngươi sẽ đuổi theo (dấu «!»). Người tu hành đi lại trong vùng — tới gần bấm {K("interact")} để gặp. Cột sáng vàng có ngôi sao là kỳ ngộ. Chỉ thấy chúng khi mây mù trong tầm thần thức đã tan. Trên bản đồ ({K("open_map")}), nhấp nơi đã thấy để tự đi tới; từ Trúc Cơ, đường qua sông sẽ bay.",
             $"Beasts prowl around their lair; aggressive packs that spot you give chase (a “!”). Cultivators walk the region — go up to one and press {K("interact")} to meet them. Gold pillars of light under a star are encounters. You only see things where the clouds of your sense have cleared. On the map ({K("open_map")}), click somewhere you've seen and you'll walk there; from Foundation, a way over the river is flown."), 15);
+        Section(T("Việc khác ngoài chiến đấu", "Besides fighting"));
+        Para(T("Câu cá ở các bến sông và đầm lầy (chờ phao chìm hẳn mới giật; khi kéo thì giữ để nâng lưới, thả để hạ). Vung kiếm bổ mạch khoáng trên đồi và núi, rồi đem quặng tới lò rèn luyện thành đá cường hóa. Luyện đan ở Bách Thảo Đường phía tây làng. Mỗi tháng xin một quẻ ở miếu Thổ Địa bên đường cái. Dẹp Hắc Phong Trại trong rừng rậm phía nam đường cái để lấy kho tang. Thôn dân nhờ gì thì mang tới bảng cáo thị.",
+            "Fish at the river landings and the marsh (wait for the float to go right under before you strike; when reeling, hold to lift the net and let go to drop it). Strike ore veins in the hills and mountains with your sword, and take the ore to the forge to smelt into enhancement stones. Brew pills at the apothecary west of the village. Draw a fortune stick each month at the Earth God shrine by the high road. Break the Black Wind Camp in the dense forest south of the high road for its hoard. Bring the villagers what they ask for at the bounty board."), 15);
         Section(T("Chiến đấu", "Combat"));
         Para(KeysText.Fight(), 15);
         Para(T("Ngũ Hành: đòn có hệ để lại ấn (Kim, Mộc, Thủy, Hỏa, Thổ) trên địch, hiện thành biểu tượng cạnh thanh máu. Đòn kế tiếp khắc ấn đó thì phá ấn (chảy máu, phá giáp, trói chân…); đòn được ấn sinh ra thì cộng hưởng ×1.5. Vùng đỏ là đòn sắp giáng — hãy lướt ra.",

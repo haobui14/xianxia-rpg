@@ -186,6 +186,22 @@ public sealed class Look
             Robe = new Color("#23262e"), Trim = new Color("#3a3f48"), Sash = new Color("#6b1f1c"), Hat = Headwear.StrawHat,
             HatColor = new Color("#3a3326"), Weapon = Weapon.Saber, HairStyle = HairStyle.Ponytail, Bulk = 0.92f,
         },
+        // The Black Wind Camp: thugs in dun rags and red headbands, a knife thrower in dark cloth, and their chief in black.
+        "bandit_thug" => new Look
+        {
+            Robe = new Color("#5e5448"), Trim = new Color("#2f2a24"), Sash = new Color("#6b2a22"), Hat = Headwear.Headband,
+            HatColor = new Color("#7a2a22"), Weapon = Weapon.Saber, HairStyle = HairStyle.Topknot, Bulk = 1.08f,
+        },
+        "bandit_knifer" => new Look
+        {
+            Robe = new Color("#3e4048"), Trim = new Color("#2a2b30"), Sash = new Color("#8e6a2a"), Weapon = Weapon.None,
+            HairStyle = HairStyle.Ponytail, Bulk = 0.94f,
+        },
+        "black_wind_chief" => new Look
+        {
+            Robe = new Color("#23262e"), Trim = new Color("#6b1f1c"), Sash = new Color("#6b1f1c"), Hat = Headwear.Headband,
+            HatColor = new Color("#15161a"), Weapon = Weapon.Saber, Beard = true, Bulk = 1.22f, Height = 1.08f, HairStyle = HairStyle.Long,
+        },
         _ => new Look { Robe = new Color("#6f6a60"), Trim = new Color("#3f3a33"), Sash = new Color("#3f3a33"), Weapon = Weapon.Saber },
     };
 }

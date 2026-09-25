@@ -143,9 +143,11 @@ public partial class MapPanel : InkPanel
             {
                 if (!_panel._w.Explored(poi.X, poi.Y)) continue;
                 var p = At(poi.X + 0.5f, poi.Y + 0.5f);
-                if (poi.Kind == "herb")
+                if (poi.Kind is "herb" or "fishing" or "ore")
                 {
-                    DrawCircle(p, 4, Ink.JadeDeep);
+                    // Small places: a dot in their colour (a fish or a pick on the larger ones).
+                    DrawCircle(p, poi.Kind == "herb" ? 4 : 7, MapImage.PoiColor(poi.Kind));
+                    if (poi.Kind != "herb") Icons.Draw(this, Icons.Named(poi.Icon), p, 10, Ink.Card);
                     continue;
                 }
                 var r = new Rect2(p - new Vector2(10, 10), new Vector2(20, 20));
@@ -157,6 +159,10 @@ public partial class MapPanel : InkPanel
                 DrawRect(label, new Color(Ink.Card, 0.9f));
                 DrawString(Ink.Serif, label.Position + new Vector2(4, 13), name, HorizontalAlignment.Left, -1, 13, Ink.InkColor);
             }
+
+            // A chance meeting a fortune stick pointed to shows from afar.
+            foreach (var adv in e.State.World.Adventures.Where(a => a.Revealed && _panel._w.Explored(a.X, a.Y)))
+                Icons.Draw(this, IconKind.Star, At(adv.X + 0.5f, adv.Y + 0.5f), 18, Ink.Gold);
 
             var me = At(_panel._w.PlayerBody.Pos.X / WorldScreen.Cell, _panel._w.PlayerBody.Pos.Y / WorldScreen.Cell);
             DrawRect(new Rect2(me - new Vector2(8, 8), new Vector2(16, 16)), Ink.Cinnabar);

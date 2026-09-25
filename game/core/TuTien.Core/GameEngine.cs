@@ -22,6 +22,10 @@ namespace TuTien.Core
         Adventure,
         Npc,
         Beast,
+        Fishing,
+        Ore,
+        Shrine,
+        Camp,
     }
 
     /// <summary>Something on the map the player can see or act on.</summary>
@@ -84,6 +88,8 @@ namespace TuTien.Core
             State = state;
             Map = new MapGrid(content.MapForRegion(state.Player.Region)
                               ?? throw new KeyNotFoundException($"No map for region {state.Player.Region}"));
+            // A save from before the camps: the bandits move in now.
+            Camps.Fill(State, Content, Map);
             if (Player.FootworkMax <= 0)
             {
                 Player.FootworkMax = WorldTick.FootworkMax(Player);
@@ -126,7 +132,7 @@ namespace TuTien.Core
                 yield return FromPack(pack);
             foreach (var npc in State.World.Npcs.Where(n => n.Alive && n.Zone.Length > 0 && Senses(n.X, n.Y)))
                 yield return FromNpc(npc);
-            foreach (var adv in State.World.Adventures.Where(a => Senses(a.X, a.Y) && (!a.Hidden || Player.SensePulse || Player.Attrs.Per >= 12)))
+            foreach (var adv in State.World.Adventures.Where(a => (Senses(a.X, a.Y) || a.Revealed) && (!a.Hidden || Player.SensePulse || Player.Attrs.Per >= 12)))
                 yield return FromAdventure(adv);
         }
 
@@ -149,12 +155,21 @@ namespace TuTien.Core
                 "secret_realm" => InteractKind.SecretRealm,
                 "spirit_vein" => InteractKind.SpiritVein,
                 "herb" => InteractKind.Herb,
+                "fishing" => InteractKind.Fishing,
+                "ore" => InteractKind.Ore,
+                "shrine" => InteractKind.Shrine,
+                "camp" => InteractKind.Camp,
                 _ => InteractKind.Pass,
             };
             return new Interactable
             {
                 Kind = kind, Id = poi.Id, Name = poi.Name, NameEn = poi.NameEn, Icon = poi.Icon, X = poi.X, Y = poi.Y,
-                Ready = kind != InteractKind.Herb || Spawns.NodeReady(State, poi.Id),
+                Ready = kind switch
+                {
+                    InteractKind.Herb or InteractKind.Ore => Spawns.NodeReady(State, poi.Id),
+                    InteractKind.Camp => State.World.Camps.TryGetValue(poi.Id, out var camp) && camp.HoardReady,
+                    _ => true,
+                },
             };
         }
 
@@ -506,8 +521,10 @@ namespace TuTien.Core
 
             // ---------------- victory
             var defeatedDefs = outcome.Defeated.Select(id => Content.Enemy(id) ?? Encounters.Fallback(id)).ToList();
+            var campId = enc.Source == "beast" ? State.World.Beasts.FirstOrDefault(b => b.Id == enc.SourceId)?.CampId : null;
             if (enc.Source == "beast" || (enc.Source == "ambush" && npc == null))
                 State.World.Beasts.RemoveAll(b => b.Id == enc.SourceId);
+            if (campId != null) result.Events.AddRange(Camps.Fallen(State, Content, campId, rng));
 
             foreach (var def in defeatedDefs)
             {
@@ -670,6 +687,128 @@ namespace TuTien.Core
             events.AddRange(SectMissions.Announce(State, Content));
             return events;
         }
+
+        // ================================================================ fishing, mining, alchemy, the shrine, camps
+
+        /// <summary>A place of this kind on the player's tile or the next one.</summary>
+        private PoiDef? PoiWithinReach(string poiId, string kind)
+        {
+            var poi = Poi(poiId);
+            return poi != null && poi.Kind == kind && Math.Abs(poi.X - Player.X) + Math.Abs(poi.Y - Player.Y) <= 1 ? poi : null;
+        }
+
+        /// <summary>What is on the line right now (the host plays the strike and the reel), if anything.</summary>
+        public Bite? PendingBite { get; private set; }
+
+        /// <summary>Cast at a fishing spot: a footwork spent (the month may turn), and something bites.</summary>
+        public Bite? CastLine(string poiId)
+        {
+            PendingBite = null;
+            if (Player.Dead || ActiveEncounter != null) return null;
+            if (PoiWithinReach(poiId, "fishing") == null || !Content.FishSpots.TryGetValue(poiId, out var spot)) return null;
+            SpendFootwork(Fishing.CastFootwork);
+            if (Player.Dead) return null;
+            PendingBite = Fishing.Roll(State, Content, spot, Rng("fish:" + poiId + ":" + State.NewId("cast")));
+            return PendingBite;
+        }
+
+        /// <summary>The reel is won: keep the catch, or (for the few that may be let go) release it.</summary>
+        public List<GameEvent> LandCatch(bool release = false)
+        {
+            var bite = PendingBite;
+            PendingBite = null;
+            if (bite == null) return new List<GameEvent>();
+            var events = Fishing.Land(State, Content, bite, release, Rng("landed:" + bite.SpotId + ":" + State.NewId("catch")));
+            events.AddRange(SectMissions.Announce(State, Content));
+            return events;
+        }
+
+        /// <summary>It got away: struck too early, too late, or the line went slack.</summary>
+        public void LoseCatch() => PendingBite = null;
+
+        public bool OreReady(string poiId) => Spawns.NodeReady(State, poiId);
+
+        /// <summary>A vein broke under the sword (the host counts the strikes): its ore, for a footwork.</summary>
+        public List<GameEvent> Mine(string poiId)
+        {
+            var events = new List<GameEvent>();
+            var poi = PoiWithinReach(poiId, "ore");
+            if (poi == null || Player.Dead || ActiveEncounter != null) return events;
+            if (!Spawns.NodeReady(State, poiId))
+            {
+                events.Add(GameEvent.Info("ore_empty", "Mạch khoáng đã bị đào cạn, chờ vài tháng nữa.", "This vein is worked out; give it a few months."));
+                return events;
+            }
+            SpendFootwork(Mining.Footwork);
+            if (Player.Dead) return events;
+            events.AddRange(Mining.Mine(State, Content, poi, Rng("mine:" + poiId)));
+            events.AddRange(SectMissions.Announce(State, Content));
+            return events;
+        }
+
+        /// <summary>At the forge: ore into an enhancement stone.</summary>
+        public List<GameEvent> Smelt(string oreId) => Mining.Smelt(Content, Player, oreId);
+
+        /// <summary>The recipe in the furnace (the host plays the fire), if any.</summary>
+        public RecipeDef? PendingBrew { get; private set; }
+
+        /// <summary>Light the furnace: the herbs, the fee and two footwork go in.</summary>
+        public List<GameEvent> StartBrew(string recipeId)
+        {
+            var events = new List<GameEvent>();
+            var recipe = Content.Recipe(recipeId);
+            if (recipe == null || PendingBrew != null || Player.Dead || ActiveEncounter != null) return events;
+            if (Alchemy.Blocked(Content, Player, recipe) is { } why)
+            {
+                events.Add(GameEvent.Info("brew_blocked", why.Vi, why.En));
+                return events;
+            }
+            SpendFootwork(Alchemy.Footwork);
+            if (Player.Dead) return events;
+            events.AddRange(Alchemy.Start(Content, Player, recipe));
+            PendingBrew = recipe;
+            return events;
+        }
+
+        /// <summary>The fire is out: <paramref name="purity"/> (0–1) from the furnace, and whether it blew.</summary>
+        public List<GameEvent> FinishBrew(double purity, bool exploded)
+        {
+            var recipe = PendingBrew;
+            PendingBrew = null;
+            return recipe == null ? new List<GameEvent>() : Alchemy.Finish(State, Content, recipe, purity, exploded);
+        }
+
+        /// <summary>This month's fortune stick, if one was drawn.</summary>
+        public FortuneDef? Fortune => Shrine.Current(State, Content);
+
+        public List<GameEvent> DrawFortune() => Shrine.Draw(State, Content, Map, Rng("fortune:" + State.NewId("stick")));
+
+        public List<GameEvent> DispelFortune() => Shrine.Dispel(State, Content);
+
+        public List<GameEvent> MakeOffering() => Shrine.Offer(State);
+
+        public CampState Camp(string poiId) => Camps.Of(State, poiId);
+
+        public CampDef? CampFor(string poiId) => Content.Camps.TryGetValue(poiId, out var c) ? c : null;
+
+        /// <summary>Open a fallen camp's hoard (standing in the camp).</summary>
+        public List<GameEvent> OpenHoard(string poiId)
+        {
+            var poi = PoiWithinReach(poiId, "camp");
+            if (poi == null || ActiveEncounter != null) return new List<GameEvent>();
+            var events = Camps.OpenHoard(State, Content, poi, Rng("hoard:" + poiId + ":" + State.NewId("hoard")));
+            events.AddRange(SectMissions.Announce(State, Content));
+            return events;
+        }
+
+        /// <summary>The villagers' requests on a town's board right now (put up again every two months).</summary>
+        public List<RequestDef> RequestsFor(TownDef town) =>
+            Rules.Requests.Offers(Rules.Requests.Board(State, town, Rng("requests:" + town.AreaId)), town);
+
+        public bool RequestDone(TownDef town, string requestId) =>
+            State.World.Requests.TryGetValue(town.AreaId, out var board) && board.Done.Contains(requestId);
+
+        public List<GameEvent> FulfilRequest(TownDef town, string requestId) => Rules.Requests.Fulfil(State, Content, town, requestId);
 
         public List<GameEvent> UseItem(string itemId)
         {

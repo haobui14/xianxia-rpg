@@ -64,6 +64,7 @@ namespace TuTien.Core.World
             var rng = Seeds.Stream(seed, "worldgen");
             state.World.Npcs.AddRange(NpcSim.Generate(state, content, map, RandomNpcCount, rng));
             Spawns.FillBeasts(state, content, map, rng);
+            Camps.Fill(state, content, map);
             Spawns.RefreshAdventures(state, content, map, rng);
 
             var region = content.Region(StartRegion);

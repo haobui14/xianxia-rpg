@@ -9,7 +9,7 @@ It is currently a **vertical slice** of the Thanh Vân region, played as a **2D 
 | Path | What it is |
 |---|---|
 | `core/TuTien.Core/` | All game rules, engine-free (`netstandard2.1`, no Godot references): RNG, content, calendar, cultivation, elements, karma, map and footwork, month tick, NPC sim, combat rules, loot, events, saves. `GameEngine` is the single entry point. |
-| `core/TuTien.Core.Tests/` | xUnit tests (172) that run the rules against the real content. |
+| `core/TuTien.Core.Tests/` | xUnit tests (211) that run the rules against the real content. |
 | `godot/` | The Godot project. `scripts/Field` is the top-down world: the region, secret-realm floors and the breakthrough trial are all *fields*, with collision, the player controller, fights (`Battle`, `EnemyAi`), the HUD and the map. `scripts/Art` draws people, creatures, scenery and effects in code. `scripts/Audio` synthesizes every sound effect and composes the music. `shaders/` paints the ground, the clouds of unexplored land and swaying trees. `scripts/Ui` holds the title screen, theme, panels and settings, and `scripts/Dev` holds the smoke test and F9 cheats. |
 | `godot/content/` | Game data as JSON. Most of it is exported from the web game's TypeScript; enemies, skills, items, towns, NPC names and the map are hand-authored. |
 
@@ -150,6 +150,25 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
   - A night at the inn sometimes brings a dream or a visitor.
   - Holding back a breakthrough feeling makes the next breakthrough 8% easier. Facing down an inner demon makes every one 3% easier.
   - Effects that set Qi (to full, or to nothing) work, and a "spirit stone" reward pays spirit stones.
+- **Things to do on the first map** besides fighting:
+  - **Fishing** at four landings: by the village bridge, in the reed beds near the spirit spring, at the cold headwaters in the north, and in the Blackwater Marsh inside the Ancient Tree Hollow. A cast costs 1 footwork.
+    - Wait for the float to go right under before you strike: a strike at a nibble scares the fish off, and a slow one loses the bait.
+    - Then reel: holding the button, a finger on the water or Space lifts the net, and letting go drops it. Keep the fish inside the net until the catch meter fills.
+    - Ten catches, each fighting its own way: crucian and river carp, grass carp in summer and autumn, catfish, eels and snakeheads in the marsh, the blue-green azure-scale spirit fish, the silver-thread fish of the cold headwaters (not in summer), the rare golden carp and the spirit turtle. The line sometimes snags an old clay jar with silver inside.
+    - The golden carp and the spirit turtle may be let go for karma; a freed turtle adds a year of lifespan. Fish you haven't caught yet show as unknown in the spot's list, and every eight fish landed make the net a little wider.
+  - **Mining:** four ore veins in the hills and mountains. Strike one with your sword (or press interact beside it) until it breaks: four strokes, or seven for the cold-iron seam in the mountain beside the sect road.
+    - A vein gives one to three pieces of iron ore, cold iron, raw jade, spirit stone fragments or enhancement stones, then needs three months to be worth mining again.
+    - The forge smelts 5 iron ore and 20 silver into a common enhancement stone, or 3 cold iron and 60 silver into an uncommon one.
+  - **Alchemy** at the Hundred Herbs Hall (Bách Thảo Đường), west of the village square. Six recipes turn herbs, fish, beast cores and spirit stone fragments into healing pills, low-grade qi pills, Qi-mending powder, Origin-Nourishing Pills, Qi Gathering Pills and the Foundation Pill; the stronger ones need Qi Condensation 1, 3 or 7. A brew costs 2 footwork and a small fee.
+    - The furnace is played: keep the heat inside the green band through three stages (warm the furnace, melt the herbs, condense the pill) by working the bellows, since the fire cools by itself and sometimes flares. Add the herbs when the furnace calls. Too hot for too long and it blows.
+    - Purity sets the grade: ash, or a low, middle or high grade brew of 1, 2 or 3 pills.
+  - **The Earth God shrine** (Miếu Thổ Địa) by the east road: burn incense (5 silver) and draw one of twelve fortune sticks a month. Each has a verse in both languages and a meaning for the month:
+    - cultivation from +15% to −5%, rare fish biting twice as often, every ore vein giving one more piece, or the incense smoke pointing to a chance meeting, which then shows on the map from anywhere.
+    - The shrine keeper lifts an ill omen for 20 silver, and an offering of 50 silver earns karma once a month.
+  - **The Black Wind Camp** (Hắc Phong Trại), in a clearing in the dense forest south of the high road. Two mountain bandits, a knife thrower and their chief hold it, and they come for anyone who walks in. The chief is Qi Condensation 3 and fights with a dashing cleave, blade qi and a qi shield.
+    - Break the garrison and the hoard waits by the chief's tent: silver, spirit stones and whatever they took from the road. Sometimes a captive merchant is freed too, for karma.
+    - The bandits come back four months later and take any hoard left unopened. The bounty board pays 260 silver for the chief.
+  - **Villagers' requests** on the bounty board, three at a time and new every two months: the innkeeper wants fish, the smith ore, the apothecary herbs and spirit fish, Elder Lam Ba a healing pill or raw jade, and a little girl a golden carp. They pay silver and karma, sometimes with an enhancement stone.
 - **Sword flight (ngự kiếm):** from Trúc Cơ, press V to ride your sword over the river and peaks, twice as fast as walking and out of reach of beasts. Land with V, which doesn't work over water. Set off on the map across water and the sword takes you there and sets you down.
 - **Sound, all synthesized:** about 40 effects (swishes, hits, casts, coins, the month gong, and more), positional in the world. Five pieces of music are generated in pentatonic modes for the title, exploring, fights, the breakthrough trial and secret realms. The zither plays with glissandi, grace notes and tremolo over flute, bells and drone; fights get taiko drums. The music crossfades as you move between them.
 - **The seasons in the air:** blossom petals, summer fluff and butterflies, autumn leaves and snow drift across the screen. Footsteps raise dust on roads, ripples in the swamp and puffs of snow.
@@ -186,6 +205,10 @@ dotnet test game/core/TuTien.Core.Tests
 #  - gear by mouse: buy armour and put it on from the bag, buy a stone and enhance the
 #    slot at the forge, change a spirit stone for silver, train an art, deepen a technique
 #  - the month's wares bought by mouse, and nights at the inn until one brings an event
+#  - the first map's activities: a strike at a nibble loses the fish, then the autopilot fishes
+#    until a catch is landed; sword strokes break an ore vein; the forge smelts ore; a villager's
+#    request is answered; the autopilot brews at the furnace; a fortune stick at the shrine; the
+#    bandit camp is stormed and its hoard opened
 #  - a spar with a disciple of each element: each must use two or more of their arts, and
 #    between them every kind of cast (bolts, the cleave, the beam, leaves, wave, fire, pillars, dash)
 #  - Character → Arts by mouse: an art's slot button moves it into that slot, a second

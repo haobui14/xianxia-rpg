@@ -96,6 +96,7 @@ namespace TuTien.Core.World
             var rng = Seeds.Stream(state.Seed, "spawns", state.Calendar.MonthIndex);
             Spawns.MoveBeasts(state, content, map, rng, report.Events);
             Spawns.FillBeasts(state, content, map, rng);
+            Camps.Fill(state, content, map);
             Spawns.RefreshAdventures(state, content, map, rng);
             report.Ambushed = state.World.PendingAmbush != null;
 

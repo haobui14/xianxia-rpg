@@ -34,8 +34,9 @@ namespace TuTien.Core.Rules
                 if (idx < 0) break;
                 var entry = table.Entries[idx];
                 var existing = roll.Items.FirstOrDefault(s => s.Id == entry.Id);
+                // A hand-authored table's entry only names its item; the item's own entry says what it is.
                 if (existing != null) existing.Qty += 1;
-                else roll.Items.Add(Inventory.StackOf(entry, 1));
+                else roll.Items.Add(Inventory.StackOf(content.Item(entry.Id) ?? entry, 1));
             }
             return roll;
         }

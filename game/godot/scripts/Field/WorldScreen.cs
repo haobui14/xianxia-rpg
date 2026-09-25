@@ -51,6 +51,17 @@ public partial class WorldScreen : FieldScreen
     private readonly HashSet<Fighter> _hunting = new();
     private readonly Dictionary<string, (Prop Prop, Interaction Talk)> _adventures = new();
     private readonly Dictionary<string, Prop> _herbs = new();
+
+    /// <summary>An ore vein on the field: its picture, where it stands, and the strikes it has taken so far.</summary>
+    private sealed class Vein
+    {
+        public Prop Prop = null!;
+        public Vector2 At;
+        public int Hits;
+    }
+
+    private readonly Dictionary<string, Vein> _veins = new();
+    private readonly Dictionary<string, (Prop Prop, Interaction Open)> _hoards = new();
     private bool _syncDirty;
     private float _syncTimer;
     private float _visTimer;
@@ -459,13 +470,18 @@ public partial class WorldScreen : FieldScreen
             var poi = E.Poi(id);
             prop.Visible = poi != null && Explored(poi.X, poi.Y);
         }
+        foreach (var (id, vein) in _veins)
+        {
+            var poi = E.Poi(id);
+            vein.Prop.Visible = poi != null && Explored(poi.X, poi.Y);
+        }
     }
 
     private bool AdventureVisible(string id)
     {
         var adv = E.Adventure(id);
         if (adv == null || !Explored(adv.X, adv.Y)) return false;
-        return E.Senses(adv.X, adv.Y) && (!adv.Hidden || E.Player.SensePulse || E.Player.Attrs.Per >= 12);
+        return (E.Senses(adv.X, adv.Y) || adv.Revealed) && (!adv.Hidden || E.Player.SensePulse || E.Player.Attrs.Per >= 12);
     }
 
     /// <summary>Trees, cliffs and roofs in front of the player turn see-through so you never lose yourself.</summary>
@@ -658,7 +674,131 @@ public partial class WorldScreen : FieldScreen
                 Visible = () => Explored(poi.X, poi.Y),
             });
         }
+
+        SyncVeins();
+        SyncHoards();
         UpdateVisibility();
+    }
+
+    // ================================================================ ore veins and camp hoards
+
+    /// <summary>Ore veins: rock with ore running through it until it breaks, then rubble until it is worth mining again.</summary>
+    private void SyncVeins()
+    {
+        foreach (var poi in E.Map.Def.Pois.Where(p => p.Kind == "ore"))
+        {
+            if (_veins.TryGetValue(poi.Id, out var existing))
+            {
+                if (!E.OreReady(poi.Id)) existing.Hits = 0;
+                existing.Prop.Redraw();
+                continue;
+            }
+            var id = poi.Id;
+            var need = Mining.Strikes(poi);
+            var cold = poi.LootTable == "thanh_van_deep_ore";
+            var seed = (int)(Seeds.Hash(poi.Id) & 0xffff);
+            var vein = new Vein { At = Walls.NearestFree(TileCenter(poi.X, poi.Y) + new Vector2(0, 12), 38, 80) };
+            vein.Prop = AddProp(vein.At, (c, time) => PropArt.OreVein(c, seed, vein.Hits / (float)need, !E.OreReady(id), cold, time), animated: true);
+            Walls.Add(Obstacle.Circle(vein.At + new Vector2(0, -18), 36));
+            _veins[id] = vein;
+            Interactions.Add(new Interaction
+            {
+                At = () => vein.At + new Vector2(0, 34), Reach = 90, Height = 76,
+                Label = () => E.OreReady(id)
+                    ? T($"{poi.Name} — vung kiếm bổ vào ({vein.Hits}/{need})", $"{poi.NameEn} — strike it with your sword ({vein.Hits}/{need})")
+                    : T("Mạch khoáng đã cạn — vài tháng nữa hãy quay lại", "Worked out — come back in a few months"),
+                Act = () =>
+                {
+                    if (!E.OreReady(id))
+                    {
+                        Game.Instance.Toast("Mạch khoáng đã cạn, chờ vài tháng.", "This vein is worked out; give it a few months.");
+                        return;
+                    }
+                    // Interact swings the sword at the vein, the same as striking it by hand. (An aim longer than 1 is a
+                    // pointer offset; the controller turns it into the swing's direction.)
+                    Player.Cast(Player.Basic, new Controls { Aim = (vein.At + new Vector2(0, -20) - PlayerBody.Pos) * 4, Slot = -1 });
+                },
+                Visible = () => Explored(poi.X, poi.Y),
+            });
+        }
+    }
+
+    /// <summary>A sword stroke that reaches an ore vein chips it; enough strokes break it open.</summary>
+    public override void OnPlayerSlash(Vector2 origin, Vector2 dir, float arc, float reach)
+    {
+        foreach (var (id, vein) in _veins)
+        {
+            if (!E.OreReady(id) || !FieldMath.InArc(origin, dir, arc, reach + 18, vein.At + new Vector2(0, -24), 36)) continue;
+            StrikeVein(id);
+            return;
+        }
+    }
+
+    private void StrikeVein(string id)
+    {
+        if (!_veins.TryGetValue(id, out var vein) || E.Poi(id) is not { } poi || !E.OreReady(id)) return;
+        var need = Mining.Strikes(poi);
+        vein.Hits += 1;
+        var sparks = poi.LootTable == "thanh_van_deep_ore" ? new Color("#bfe0f0") : new Color("#ffd08a");
+        Fx.Burst(vein.At + new Vector2(0, -30), sparks, 7, 170, ParticleKind.Spark, 3);
+        SoundBoard.PlayAt("hit", vein.At, -3, 0.7f);
+        Shake(2);
+        if (vein.Hits < need)
+        {
+            Fx.Say(vein.At + new Vector2(0, -70), $"{vein.Hits}/{need}", Ink.InkSoft, 16, 0.5f);
+            vein.Prop.Redraw();
+            return;
+        }
+        vein.Hits = 0;
+        var events = E.Mine(id);
+        if (events.Any(e => e.Kind == "ore_mined"))
+        {
+            Fx.Burst(vein.At + new Vector2(0, -24), new Color("#9d968a"), 16, 220, ParticleKind.Dot, 5);
+            Fx.Dust(vein.At, 8);
+            SoundBoard.PlayAt("slam", vein.At, -2);
+            Shake(5);
+        }
+        Game.Instance.Notify(events);
+        vein.Prop.Redraw();
+    }
+
+    /// <summary>A fallen camp's hoard: a strongbox in front of the chief's tent until it is opened (or the bandits return).</summary>
+    private void SyncHoards()
+    {
+        foreach (var poi in E.Map.Def.Pois.Where(p => p.Kind == "camp"))
+        {
+            var ready = E.State.World.Camps.TryGetValue(poi.Id, out var camp) && camp.HoardReady;
+            if (_hoards.TryGetValue(poi.Id, out var shown))
+            {
+                if (ready) continue;
+                shown.Prop.QueueFree();
+                Interactions.Remove(shown.Open);
+                _hoards.Remove(poi.Id);
+                continue;
+            }
+            if (!ready) continue;
+            var id = poi.Id;
+            var at = Walls.NearestFree(TileCenter(poi.X, poi.Y) + new Vector2(112, 4), 20, 120);
+            var prop = AddProp(at, (c, time) => PropArt.Chest(c, false, time), animated: true);
+            var open = new Interaction
+            {
+                At = () => at, Reach = 74, Height = 50,
+                Label = () => T("Mở kho tang của sơn tặc", "Open the bandits' hoard"),
+                Act = () =>
+                {
+                    EnterTile(poi.X, poi.Y, at + new Vector2(0, 40));
+                    var events = E.OpenHoard(id);
+                    if (events.Count > 0)
+                    {
+                        SoundBoard.PlayAt("chest", at);
+                        Fx.Burst(at + new Vector2(0, -20), Ink.Gold, 14, 160, ParticleKind.Spark, 3);
+                    }
+                    Game.Instance.Notify(events);
+                },
+            };
+            Interactions.Add(open);
+            _hoards[id] = (prop, open);
+        }
     }
 
     // ================================================================ beasts and fights

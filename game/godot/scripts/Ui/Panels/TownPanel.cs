@@ -127,6 +127,30 @@ public partial class TownPanel : InkPanel
     private void Board(TownDef town)
     {
         var p = E.Player;
+        // What the villagers ask for: fish, ore, herbs, a pill. New requests go up every two months.
+        Section(T("Thôn dân nhờ vả", "Villagers' requests"));
+        Para(T("Mang đủ món người ta cần tới đây để nhận thưởng. Cứ hai tháng lại có lời nhờ mới.", "Bring what they ask for here to be paid. New requests go up every two months."), 14, Ink.InkMute);
+        var requests = E.RequestsFor(town);
+        for (var i = 0; i < requests.Count; i++)
+        {
+            var r = requests[i];
+            var item = E.Content.Item(r.Item);
+            var itemName = item != null ? Text.Name(item) : r.Item;
+            var have = Inventory.Count(p, r.Item);
+            var answered = E.RequestDone(town, r.Id);
+            var extra = r.RewardItem != null && E.Content.Item(r.RewardItem) is { } gift ? ", " + Text.Name(gift) : "";
+            var info = UiKit.Column(0);
+            info.AddChild(UiKit.Label($"{T(r.Giver, r.GiverEn)}: “{T(r.Text, r.TextEn)}”", 15, Ink.InkColor, wrap: true));
+            info.AddChild(UiKit.Label(T($"Cần {itemName} ×{r.Qty} (có {have}) · thưởng {r.Silver} bạc{extra}, nhân quả +{r.Karma}",
+                $"Wants {itemName} ×{r.Qty} (you have {have}) · pays {r.Silver} silver{extra}, karma +{r.Karma}"), 13, Ink.InkMute, wrap: true));
+            var id = r.Id;
+            Control right = answered
+                ? UiKit.Label(T("Xong ✓", "Done ✓"), 16, Ink.JadeDeep)
+                : Named(UiKit.Button(T("Giao", "Hand over"), () => Say(E.FulfilRequest(town, id)), enabled: have >= r.Qty), $"request_{i}");
+            Row(info, right);
+        }
+
+        Section(T("Treo thưởng diệt yêu thú", "Bounties"));
         Para(T("Thôn dân treo thưởng cho ai dẹp yêu thú quanh vùng. Tiêu diệt đủ số rồi quay về nhận thưởng.",
             "Villagers pay whoever clears the beasts nearby. Kill enough, then come back to claim."), 15, Ink.InkMute);
         foreach (var bounty in town.Bounties)
@@ -177,6 +201,20 @@ public partial class TownPanel : InkPanel
             var s = slot;
             Row(info, Named(UiKit.Button(T("Cường hóa", "Enhance"), () => Say(E.Enhance(s)),
                 enabled: step != null && g.ItemId != null && p.Silver >= step.Silver && have >= step.Stones), $"enhance_{slot}"));
+        }
+
+        Section(T("Luyện quặng", "Smelt ore"));
+        Para(T("Quặng đào ở đồi và núi quanh làng: thợ rèn luyện thành đá cường hóa.", "Ore from the hills and mountains around the village: the smith smelts it into enhancement stones."), 14, Ink.InkMute);
+        foreach (var (ore, qty, stoneId, cost) in Mining.Smelts)
+        {
+            var oreDef = content.Item(ore);
+            var stoneDef = content.Item(stoneId);
+            if (oreDef == null || stoneDef == null) continue;
+            var have = Inventory.Count(p, ore);
+            var oreId = ore;
+            Row(UiKit.Label(T($"{qty} {Text.Name(oreDef)} + {cost} bạc → 1 {Text.Name(stoneDef)}  ·  có {have}",
+                    $"{qty} {Text.Name(oreDef)} + {cost} silver → 1 {Text.Name(stoneDef)}  ·  have {have}"), 15, Ink.InkSoft, wrap: true),
+                Named(UiKit.Button(T("Luyện", "Smelt"), () => Say(E.Smelt(oreId)), enabled: have >= qty && p.Silver >= cost), $"smelt_{ore}"));
         }
 
         Section(T("Đá cường hóa", "Enhancement stones"));

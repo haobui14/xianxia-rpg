@@ -60,6 +60,15 @@ public static class WorldScenery
                 case "pass":
                     Pass(w, poi);
                     break;
+                case "fishing":
+                    FishingSpot(w, poi);
+                    break;
+                case "shrine":
+                    Shrine(w, poi);
+                    break;
+                case "camp":
+                    Camp(w, poi);
+                    break;
             }
             yield return new BuildStep(0.8f + 0.2f * (i + 1) / pois.Count, "Dựng làng mạc, tông môn", "Raising the village and the sect");
         }
@@ -72,6 +81,15 @@ public static class WorldScenery
     private static bool IsWater(MapGrid map, int x, int y) => map.InBounds(x, y) && map.At(x, y) == Terrain.Water;
 
     private static bool HasPoi(MapGrid map, int x, int y) => map.Def.Pois.Any(p => p.X == x && p.Y == y);
+
+    /// <summary>
+    /// Open ground a place builds on, kept clear of chance trees and rocks: the bandit camp's clearing and the trail
+    /// into it, and the apothecary's yard west of the village square.
+    /// </summary>
+    private static bool Reserved(MapGrid map, int x, int y) =>
+        map.At(x, y) == Terrain.Plains
+        && ((map.Def.Id == "thanh_van" && x is 2 or 3 && y is 22 or 23)
+            || map.Def.Pois.Any(p => p.Kind == "camp" && Math.Abs(p.X - x) <= 1 && Math.Abs(p.Y - y) <= 2));
 
     private static void Dress(WorldScreen w, MapGrid map, int x, int y)
     {
@@ -94,7 +112,7 @@ public static class WorldScenery
             return;
         }
 
-        if (poiHere) return;
+        if (poiHere || Reserved(map, x, y)) return;
         var n = H(x, y, 7);
         switch (t)
         {
@@ -275,6 +293,20 @@ public static class WorldScenery
             Label = () => T("Lò rèn — cường hóa trang bị", "The forge — enhance your gear"),
             Act = () => w.OpenPanel(new TownPanel(poi, TownPanel.ForgeTab)),
         });
+
+        // The Hundred Herbs Hall, west of the square: the apothecary's house and her furnace in the yard.
+        w.AddScenery(V(330, 2990), (c, _) => PropArt.Apothecary(c), occludes: true, extent: V(92, 112));
+        Box(w, 255, 2938, 150, 52);
+        w.AddScenery(V(440, 3046), (c, time) => PropArt.Furnace(c, time), animated: true);
+        w.Walls.Add(Obstacle.Circle(V(440, 3034), 24));
+        w.AddScenery(V(262, 3052), (c, _) => PropArt.Crates(c, 4));
+        w.Walls.Add(Obstacle.Circle(V(259, 3044), 14));
+        w.Interactions.Add(new Interaction
+        {
+            At = () => V(440, 3072), Reach = 80, Height = 80,
+            Label = () => T("Bách Thảo Đường — luyện đan", "Apothecary — brew pills"),
+            Act = () => w.OpenPanel(new AlchemyPanel()),
+        });
     }
 
     // ================================================================ the sect
@@ -366,6 +398,86 @@ public static class WorldScenery
                 w.EnterTile(poi.X, poi.Y, spot);
                 w.OpenPanel(new SeclusionPanel());
             },
+        });
+    }
+
+    // ================================================================ things to do
+
+    /// <summary>A fishing landing out over the water (the marsh's over its mud to a pool).</summary>
+    private static void FishingSpot(WorldScreen w, PoiDef poi)
+    {
+        var map = w.E.Map;
+        var c0 = Center(poi);
+        var toWater = IsWater(map, poi.X + 1, poi.Y) ? 1f : IsWater(map, poi.X - 1, poi.Y) ? -1f : 1f;
+        var marsh = map.At(poi.X, poi.Y) == Terrain.Swamp;
+        var at = c0 + V(toWater * 4, 26);
+        var seed = Seed(poi.X, poi.Y);
+        w.AddScenery(at, (c, time) => PropArt.Landing(c, seed, toWater, time, marsh), animated: true);
+        var stand = c0 + V(-toWater * 14, 36);
+        w.Interactions.Add(new Interaction
+        {
+            At = () => stand, Reach = 84, Height = 56,
+            Label = () => T($"Câu cá — {poi.Name}", $"Go fishing — {poi.NameEn}"),
+            Act = () =>
+            {
+                w.EnterTile(poi.X, poi.Y, stand);
+                w.OpenPanel(new FishingPanel(poi));
+            },
+            Visible = () => w.Explored(poi.X, poi.Y),
+        });
+    }
+
+    /// <summary>The Earth God's shrine by the road, an old tree leaning over it.</summary>
+    private static void Shrine(WorldScreen w, PoiDef poi)
+    {
+        var c0 = Center(poi);
+        var at = c0 + V(0, -4);
+        w.AddScenery(at, (c, time) => PropArt.Shrine(c, time), animated: true, occludes: true, extent: V(50, 96));
+        Box(w, at.X - 40, at.Y - 44, 80, 40);
+        Tree(w, c0 + V(-62, -34), TreeKind.Broadleaf, Seed(poi.X, poi.Y, 5), 1.25f);
+        w.Interactions.Add(new Interaction
+        {
+            At = () => at + V(0, 24), Reach = 78, Height = 96,
+            Label = () => T($"{poi.Name} — thắp hương, xin xăm", $"{poi.NameEn} — burn incense, draw a fortune stick"),
+            Act = () => w.OpenPanel(new ShrinePanel(poi)),
+        });
+    }
+
+    /// <summary>The bandits' camp in its clearing: tents round a fire, a black banner, stakes on the forest side.</summary>
+    private static void Camp(WorldScreen w, PoiDef poi)
+    {
+        var c0 = Center(poi);
+        void TentAt(Vector2 at, float width, int seed)
+        {
+            w.AddScenery(at, (c, _) => PropArt.Tent(c, seed, width), occludes: true, extent: V(width / 2 + 10, width * 0.7f));
+            w.Walls.Add(Obstacle.Box(new Rect2(at.X - width * 0.4f, at.Y - 22, width * 0.8f, 20)));
+        }
+        void StakesAt(Vector2 at, float length, int seed)
+        {
+            w.AddScenery(at, (c, _) => PropArt.Palisade(c, length, seed));
+            w.Walls.Add(Obstacle.Box(new Rect2(at.X - length / 2, at.Y - 10, length, 10)));
+        }
+        TentAt(c0 + V(104, -44), 104, 2);
+        TentAt(c0 + V(-110, -40), 84, 1);
+        w.AddScenery(c0, (c, time) => PropArt.Campfire(c, time), animated: true);
+        w.Walls.Add(Obstacle.Circle(c0 + V(0, -3), 16));
+        w.AddScenery(c0 + V(44, -112), (c, time) => PropArt.BanditFlag(c, time), animated: true, occludes: true, extent: V(28, 118));
+        w.Walls.Add(Obstacle.Circle(c0 + V(44, -114), 5));
+        w.AddScenery(c0 + V(168, 14), (c, _) => PropArt.Crates(c, 7));
+        w.Walls.Add(Obstacle.Circle(c0 + V(165, 6), 14));
+        StakesAt(c0 + V(-40, 58), 220, 3);
+        StakesAt(c0 + V(170, -104), 96, 4);
+        // When the camp stands empty, the ashes say how long until the bandits are back.
+        w.Interactions.Add(new Interaction
+        {
+            At = () => c0 + V(0, 22), Reach = 70, Height = 40,
+            Label = () =>
+            {
+                var months = Math.Max(1, w.E.Camp(poi.Id).ReturnMonth - w.E.State.Calendar.MonthIndex);
+                return T($"{poi.Name} bỏ trống — sơn tặc sẽ quay lại sau khoảng {months} tháng", $"The {poi.NameEn} stands empty; the bandits will be back in about {months} month{(months > 1 ? "s" : "")}");
+            },
+            Act = () => { },
+            Visible = () => w.Explored(poi.X, poi.Y) && Camps.Garrison(w.E.State, poi.Id) == null && !w.E.Camp(poi.Id).HoardReady,
         });
     }
 

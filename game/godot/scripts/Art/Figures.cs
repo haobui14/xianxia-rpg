@@ -34,7 +34,11 @@ public struct Pose
 /// </summary>
 public static class Figures
 {
-    private static readonly HashSet<string> HumanEnemies = new() { "bandit_leader", "sect_disciple", "rogue_cultivator", "wounded_cultivator_revenge", "mysterious_assassin" };
+    private static readonly HashSet<string> HumanEnemies = new()
+    {
+        "bandit_leader", "sect_disciple", "rogue_cultivator", "wounded_cultivator_revenge", "mysterious_assassin",
+        "bandit_thug", "bandit_knifer", "black_wind_chief",
+    };
 
     public static bool IsHuman(string kind) => kind == "human" || HumanEnemies.Contains(kind);
 

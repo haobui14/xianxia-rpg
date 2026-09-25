@@ -129,6 +129,11 @@ namespace TuTien.Core.State
         /// <summary>A Thần thức pulse widens the sense radius until the month ends.</summary>
         public bool SensePulse { get; set; }
 
+        /// <summary>The fortune stick drawn at the Earth God shrine, and the month it speaks for.</summary>
+        public FortuneState? Fortune { get; set; }
+        /// <summary>The month of the last offering at the shrine (−1: never).</summary>
+        public int ShrineOfferingMonth { get; set; } = -1;
+
         public PlayerCounters Counters { get; set; } = new PlayerCounters();
     }
 
@@ -141,6 +146,21 @@ namespace TuTien.Core.State
         public int HerbsGathered { get; set; }
         public int MissionsCompleted { get; set; }
         public Dictionary<string, int> KillsByEnemy { get; set; } = new Dictionary<string, int>();
+        public int FishCaught { get; set; }
+        /// <summary>Every kind of fish (and turtle) ever landed, and how many.</summary>
+        public Dictionary<string, int> Catches { get; set; } = new Dictionary<string, int>();
+        public int OreMined { get; set; }
+        public int PillsBrewed { get; set; }
+        public int CampsCleared { get; set; }
+        public int RequestsDone { get; set; }
+    }
+
+    public sealed class FortuneState
+    {
+        public string Id { get; set; } = "";
+        public int Month { get; set; }
+        /// <summary>An ill omen the shrine keeper has lifted.</summary>
+        public bool Dispelled { get; set; }
     }
 
     /// <summary>A gear slot: what is worn there (an item in the bag), and how far the slot is enhanced.</summary>
@@ -282,6 +302,28 @@ namespace TuTien.Core.State
         public SecretRealmRun? Run { get; set; }
         /// <summary>A fight the world forced on you (e.g. an ambush during the month tick).</summary>
         public Encounter? PendingAmbush { get; set; }
+        /// <summary>Bandit camps, by their place id: when the garrison returns, and whether the hoard waits.</summary>
+        public Dictionary<string, CampState> Camps { get; set; } = new Dictionary<string, CampState>();
+        /// <summary>The villagers' requests on each town's board, by the town's area id.</summary>
+        public Dictionary<string, RequestBoardState> Requests { get; set; } = new Dictionary<string, RequestBoardState>();
+    }
+
+    public sealed class CampState
+    {
+        /// <summary>The month index the garrison is back (0: it holds the camp now).</summary>
+        public int ReturnMonth { get; set; }
+        /// <summary>The camp has fallen and its hoard waits to be opened.</summary>
+        public bool HoardReady { get; set; }
+        public int TimesCleared { get; set; }
+    }
+
+    public sealed class RequestBoardState
+    {
+        /// <summary>The month index the requests were last put up (−1: never).</summary>
+        public int RolledMonth { get; set; } = -1;
+        public List<string> Offers { get; set; } = new List<string>();
+        /// <summary>Requests already answered since they went up.</summary>
+        public List<string> Done { get; set; } = new List<string>();
     }
 
     public sealed class NpcState
@@ -326,6 +368,8 @@ namespace TuTien.Core.State
         public int X { get; set; }
         public int Y { get; set; }
         public bool Aggressive { get; set; }
+        /// <summary>A camp's garrison (the camp's place id): it holds its ground instead of roaming.</summary>
+        public string? CampId { get; set; }
     }
 
     public sealed class AdventureSpot
@@ -338,6 +382,8 @@ namespace TuTien.Core.State
         public int ExpiresMonth { get; set; }
         /// <summary>Hidden spots need a Thần thức pulse or high perception to see.</summary>
         public bool Hidden { get; set; }
+        /// <summary>A fortune stick pointed here: it shows on the map from afar.</summary>
+        public bool Revealed { get; set; }
     }
 
     public sealed class NodeState

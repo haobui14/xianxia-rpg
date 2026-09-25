@@ -31,9 +31,9 @@
    "^...TTTTTT......h.=ff.f.ffff~ff.........f.fffff^",
    "^...TTTTTT.......h=fffff.fff~~f....f.f....f.ff.^",
    "^...TTTTTT==================##==========....f.f^",
-   "^...TTTTTT.....hhh..ffffFFf.f~~....f..f..f.....^",
-   "^...TTTTTT.....hhh.f.ffFFFFFf~~.f.f............^",
-   "^...............hf...fFFFFFF~~f.f..f........f..^",
+   "^...TTTTTT.....hhh..ffff.Ff.f~~....f..f..f.....^",
+   "^...TTTTTT.....hhh.f.ff...FFf~~.f.f............^",
+   "^...............hf...fF...FF~~f.f..f........f..^",
    "^...............hhff.f.FFFFF~~f.f.f.f...f......^",
    "^...............hhffffffFFf.~ff.........f....ff^",
    "^..............h.h.ff.f.f.ff~~ff.......f..ff..f^",
@@ -207,6 +207,101 @@
     "icon": "pass",
     "name": "Đông Quan — tới Huyền Thủy",
     "name_en": "East Pass — to Mystic Waters"
+   },
+   {
+    "id": "poi_fish_bridge",
+    "kind": "fishing",
+    "x": 27,
+    "y": 21,
+    "icon": "fish",
+    "name": "Bến câu cầu làng",
+    "name_en": "Bridge fishing spot"
+   },
+   {
+    "id": "poi_fish_reeds",
+    "kind": "fishing",
+    "x": 29,
+    "y": 17,
+    "icon": "fish",
+    "name": "Bãi lau câu cá",
+    "name_en": "Reed-bed fishing spot"
+   },
+   {
+    "id": "poi_fish_upper",
+    "kind": "fishing",
+    "x": 29,
+    "y": 3,
+    "icon": "fish",
+    "name": "Đầu nguồn nước lạnh",
+    "name_en": "Cold headwaters"
+   },
+   {
+    "id": "poi_fish_marsh",
+    "kind": "fishing",
+    "x": 36,
+    "y": 9,
+    "icon": "fish",
+    "name": "Đầm Hắc Thủy",
+    "name_en": "Blackwater Marsh"
+   },
+   {
+    "id": "poi_ore_village",
+    "kind": "ore",
+    "x": 16,
+    "y": 24,
+    "icon": "ore",
+    "name": "Mạch quặng đồi làng",
+    "name_en": "Village hill ore vein",
+    "loot_table": "thanh_van_ore"
+   },
+   {
+    "id": "poi_ore_north",
+    "kind": "ore",
+    "x": 16,
+    "y": 9,
+    "icon": "ore",
+    "name": "Mạch quặng đồi bắc",
+    "name_en": "North ridge ore vein",
+    "loot_table": "thanh_van_ore"
+   },
+   {
+    "id": "poi_ore_south",
+    "kind": "ore",
+    "x": 17,
+    "y": 27,
+    "icon": "ore",
+    "name": "Mạch quặng đồi nam",
+    "name_en": "South ridge ore vein",
+    "loot_table": "thanh_van_ore"
+   },
+   {
+    "id": "poi_ore_mountain",
+    "kind": "ore",
+    "x": 9,
+    "y": 9,
+    "icon": "ore",
+    "name": "Mạch Hàn Thiết",
+    "name_en": "Cold iron seam",
+    "loot_table": "thanh_van_deep_ore",
+    "hardness": 7
+   },
+   {
+    "id": "poi_shrine",
+    "kind": "shrine",
+    "x": 12,
+    "y": 21,
+    "icon": "shrine",
+    "name": "Miếu Thổ Địa",
+    "name_en": "Earth God Shrine"
+   },
+   {
+    "id": "poi_camp_black_wind",
+    "kind": "camp",
+    "x": 24,
+    "y": 25,
+    "icon": "camp",
+    "name": "Hắc Phong Trại",
+    "name_en": "Black Wind Camp"
    }
   ],
   "start": {

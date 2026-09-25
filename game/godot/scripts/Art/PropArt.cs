@@ -725,4 +725,255 @@ public static class PropArt
         c.DrawCircle(V(0, -8), 12, Paint.A(new Color(color, 0.5f)));
         c.DrawCircle(V(0, -8), 5, Paint.A(new Color(1, 1, 1, 0.8f)));
     }
+
+    // ------------------------------------------------------------------ things to do on the map
+
+    /// <summary>
+    /// A fishing landing: planks out over the water on the <paramref name="toWater"/> side (−1 left, 1 right), a stool,
+    /// a creel, and a rod on its forked rest with the float bobbing off the end. In the marsh the planks cross mud to a pool.
+    /// </summary>
+    public static void Landing(Brush c, int seed, float toWater, float time, bool marsh)
+    {
+        var s = toWater;
+        if (marsh)
+        {
+            Paint.Ellipse(c, V(118 * s, 0), 46, 16, new Color("#3d4a44"), 0.6f, 1.2f);
+            c.DrawColoredPolygon(Paint.EllipsePts(V(110 * s, -2), 26, 7, 16), Paint.A(new Color(1, 1, 1, 0.08f)));
+            Reeds(c, seed + 3);
+        }
+        Paint.Shadow(c, V(46 * s, 3), 54, 8, 0.15f);
+        foreach (var x in new[] { 14f, 50f, 86f })
+            Paint.Stroke(c, V(x * s, 5), V(x * s, -8), new Color("#5b3d2b"), 4, 0.7f);
+        Paint.Poly(c, new[] { V(-6 * s, -6), V(98 * s, -6), V(98 * s, -17), V(-6 * s, -17) }, new Color("#9a7a52"), 0.85f, 1.4f);
+        for (var i = 1; i < 7; i++)
+        {
+            var x = (-6 + i * 14.8f) * s;
+            Paint.Line2(c, V(x, -6), V(x, -17), new Color("#6b4a32"), 1);
+        }
+        // A stool and a covered creel.
+        Paint.Poly(c, new[] { V(2 * s, -17), V(16 * s, -17), V(15 * s, -28), V(3 * s, -28) }, new Color("#7a5a3e"), 0.7f, 1);
+        Paint.Ellipse(c, V(30 * s, -24), 8, 8, new Color("#b89a62"), 0.75f, 1.1f);
+        Paint.Line2(c, V(23 * s, -24), V(37 * s, -24), new Color("#7a5a3e"), 1);
+        // The rod on its forked rest, the line out to the float.
+        Paint.Stroke(c, V(76 * s, -17), V(76 * s, -32), new Color("#6b4a32"), 2, 0.6f);
+        Paint.Line2(c, V(76 * s, -32), V(71 * s, -38), new Color("#6b4a32"), 1.2f);
+        Paint.Line2(c, V(76 * s, -32), V(81 * s, -38), new Color("#6b4a32"), 1.2f);
+        var tip = V(126 * s, -56);
+        Paint.Stroke(c, V(44 * s, -20), tip, new Color("#8a6a3a"), 2, 0.6f);
+        var bob = Mathf.Sin(time * 2.3f + seed * 0.1f) * 1.8f;
+        var floatAt = V(138 * s, 4 + bob);
+        Paint.Line2(c, tip, floatAt + V(0, -5), new Color(0.92f, 0.92f, 0.88f, 0.75f), 0.8f);
+        c.DrawArc(floatAt + V(0, 2), 5 + Mathf.Abs(bob) * 1.5f, 0, Mathf.Tau, 20, Paint.A(new Color(1, 1, 1, 0.35f)), 1, true);
+        Paint.Ellipse(c, floatAt, 2.4f, 4.4f, new Color("#c0392b"), 0.7f, 1);
+        c.DrawCircle(floatAt + V(0, -3), 1.4f, Paint.A(new Color("#f4f0e6")));
+    }
+
+    /// <summary>
+    /// An outcrop with ore running through it, glinting (cold iron shows blue). Cracks spread with every strike
+    /// (<paramref name="damage"/> 0–1); a worked-out vein is only rubble until it is worth mining again.
+    /// </summary>
+    public static void OreVein(Brush c, int seed, float damage, bool spent, bool cold, float time)
+    {
+        var ore = cold ? new Color("#8fb7d0") : new Color("#c07a3a");
+        if (spent)
+        {
+            Paint.Shadow(c, V(4, 1), 34, 8, 0.14f);
+            for (var i = 0; i < 6; i++)
+            {
+                var at = V(-26 + H(seed, i) * 52, -2 - H(seed, i + 10) * 8);
+                Paint.Poly(c, Paint.Blob(at, 7 + H(seed, i + 20) * 5, 4 + H(seed, i + 30) * 3, 7, 0.2f, seed + i), new Color("#8a8374"), 0.7f, 1);
+            }
+            return;
+        }
+        // A faint glow says there is ore in it, from a little way off.
+        var pulse = 0.5f + 0.5f * Mathf.Sin(time * 1.6f + seed);
+        c.DrawCircle(V(0, -30), 58 + pulse * 5, Paint.A(new Color(ore, 0.07f)));
+        Paint.Shadow(c, V(8, 2), 52, 13, 0.18f);
+        Paint.Poly(c, Paint.Blob(V(0, -32), 50, 34, 13, 0.14f, seed), new Color("#7f786c"), 0.9f, 2);
+        c.DrawColoredPolygon(Paint.Blob(V(-13, -47), 27, 13, 9, 0.12f, seed + 3), Paint.A(new Color("#a39c8e")));
+        for (var i = 0; i < 5; i++)
+        {
+            var a = V(-36 + i * 15 + H(seed, i + 40) * 6, -14 - H(seed, i + 50) * 26);
+            var b = a + V(10 + H(seed, i + 60) * 12, -7 - H(seed, i + 70) * 12);
+            Paint.Line2(c, a, b, ore, 4);
+            Paint.Line2(c, a, b, ore.Lightened(0.45f), 1.4f);
+            var glint = 0.5f + 0.5f * Mathf.Sin(time * 2.2f + i * 1.7f + seed);
+            c.DrawCircle(b, 2.4f + glint * 2.6f, Paint.A(new Color(ore.Lightened(0.6f), 0.3f + 0.55f * glint)));
+        }
+        var cracks = (int)Mathf.Ceil(Mathf.Clamp(damage, 0, 1) * 5);
+        for (var i = 0; i < cracks; i++)
+        {
+            var from = V(-26 + H(seed, i + 80) * 52, -58 + H(seed, i + 90) * 12);
+            var mid = from + V((H(seed, i + 100) - 0.5f) * 20, 13);
+            var to = mid + V((H(seed, i + 110) - 0.5f) * 20, 15);
+            Paint.Line2(c, from, mid, new Color(Paint.Ink, 0.85f), 1.5f);
+            Paint.Line2(c, mid, to, new Color(Paint.Ink, 0.7f), 1.2f);
+        }
+    }
+
+    /// <summary>The Earth God's roadside shrine: red walls under a tiled roof, the old god seated inside, incense smoking in front.</summary>
+    public static void Shrine(Brush c, float time)
+    {
+        Paint.Shadow(c, V(8, 3), 54, 11, 0.2f);
+        Paint.Poly(c, new[] { V(-44, 0), V(44, 0), V(40, -12), V(-40, -12) }, new Color("#a8a294"));
+        Paint.Line2(c, V(-36, -6), V(36, -6), new Color(Paint.Ink, 0.25f), 1);
+        Paint.Poly(c, new[] { V(-32, -12), V(32, -12), V(32, -62), V(-32, -62) }, new Color("#b0413a"));
+        Paint.Poly(c, new[] { V(-16, -14), V(16, -14), V(16, -46), V(-16, -46) }, new Color("#2a1a14"), 0.7f, 1.2f);
+        // The Earth God: seated in yellow, white-bearded, a staff at his side.
+        Paint.Ellipse(c, V(0, -22), 8, 7, new Color("#c9a54a"), 0.6f, 1);
+        Paint.Circle(c, V(0, -33), 4.5f, new Color("#e8cfa8"), 0.6f, 1);
+        Paint.Poly(c, new[] { V(-3, -31), V(3, -31), V(0, -24) }, new Color("#f4f0e6"), 0.4f, 0.8f);
+        Paint.Line2(c, V(7, -18), V(9, -40), new Color("#6b4a32"), 1.2f);
+        // Plain red strips either side of the niche, and the signboard above it.
+        foreach (var x in new[] { -27f, 21f })
+            Paint.Poly(c, new[] { V(x, -50), V(x + 6, -50), V(x + 6, -18), V(x, -18) }, new Color("#d8453b"), 0.5f, 0.8f);
+        Paint.Poly(c, new[] { V(-24, -61), V(24, -61), V(24, -50), V(-24, -50) }, new Color("#2c2a33"), 0.8f, 1);
+        Paint.Caption(c, T("Thổ Địa", "Earth God"), V(0, -55.5f), 9, new Color("#e0c070"), maxWidth: 44);
+        Roof(c, -34, 34, -60, -86, new Color("#7a3e30"), 7);
+        // The incense pot on the step, smoking.
+        Paint.Ellipse(c, V(0, -9), 9, 4.5f, new Color("#8a6a3a"), 0.7f, 1);
+        foreach (var x in new[] { -3f, 0f, 3f }) Paint.Line2(c, V(x, -11), V(x * 1.4f, -20), new Color("#8a3a2a"), 1);
+        for (var i = 0; i < 3; i++)
+        {
+            var t = (time * 0.35f + i / 3f) % 1f;
+            var at = V(Mathf.Sin(time * 0.9f + i * 2.1f) * 5 * t, -22 - t * 56);
+            c.DrawCircle(at, 3 + t * 7, Paint.A(new Color(0.88f, 0.88f, 0.86f, 0.32f * (1 - t))));
+        }
+    }
+
+    /// <summary>A bandits' tent of patched cloth, its doorway dark.</summary>
+    public static void Tent(Brush c, int seed, float w)
+    {
+        Paint.Shadow(c, V(10, 3), w * 0.55f, 11, 0.18f);
+        var cloth = H(seed, 1) < 0.5f ? new Color("#7a6a52") : new Color("#6a6250");
+        var apex = V(0, -w * 0.62f);
+        Paint.Poly(c, new[] { V(-w / 2, 0), apex, V(w / 2, 0) }, cloth, 0.9f, 1.6f);
+        c.DrawColoredPolygon(new[] { apex, V(w / 2, 0), V(w * 0.1f, 0) }, Paint.A(new Color(0, 0, 0, 0.14f)));
+        Paint.Poly(c, new[] { V(-w * 0.13f, 0), V(0, -w * 0.34f), V(w * 0.13f, 0) }, new Color("#2a1f18"), 0.7f, 1);
+        var patch = V(-w * 0.26f, -w * 0.22f);
+        Paint.Poly(c, new[] { patch, patch + V(10, -2), patch + V(11, 8), patch + V(1, 9) }, cloth.Lightened(0.18f), 0.5f, 0.8f);
+        foreach (var side in new[] { -1f, 1f })
+        {
+            Paint.Line2(c, apex, V(side * w * 0.72f, 3), new Color("#8a7a5a"), 1);
+            Paint.Stroke(c, V(side * w * 0.72f, 5), V(side * w * 0.72f, -3), new Color("#5b3d2b"), 2, 0.5f);
+        }
+        Paint.Stroke(c, apex, apex + V(0, -10), new Color("#5b3d2b"), 2.2f, 0.6f);
+    }
+
+    /// <summary>A row of sharpened stakes lashed together.</summary>
+    public static void Palisade(Brush c, float length, int seed)
+    {
+        var n = Mathf.Max(3, (int)(length / 12));
+        for (var i = 0; i < n; i++)
+        {
+            var x = -length / 2 + length * i / (n - 1);
+            var h = 34 + H(seed, i) * 10;
+            Paint.Poly(c, new[] { V(x - 5, 0), V(x + 5, 0), V(x + 5, -h + 8), V(x, -h), V(x - 5, -h + 8) }, new Color("#7a5a3e"), 0.8f, 1.1f);
+        }
+        Paint.Stroke(c, V(-length / 2, -13), V(length / 2, -13), new Color("#5b3d2b"), 2.4f, 0.6f);
+        Paint.Stroke(c, V(-length / 2, -25), V(length / 2, -25), new Color("#5b3d2b"), 2.4f, 0.6f);
+    }
+
+    public static void Campfire(Brush c, float time)
+    {
+        Paint.Shadow(c, V(2, 1), 24, 6, 0.18f);
+        var glow = 0.7f + 0.3f * Mathf.Sin(time * 5.1f) * Mathf.Sin(time * 2.3f + 1);
+        c.DrawCircle(V(0, -8), 30 + glow * 6, Paint.A(new Color(1f, 0.6f, 0.25f, 0.08f)));
+        for (var i = 0; i < 8; i++)
+        {
+            var a = Mathf.Tau * i / 8;
+            Paint.Circle(c, V(Mathf.Cos(a) * 18, -4 + Mathf.Sin(a) * 7), 4.2f, new Color("#8c8474"), 0.6f, 1);
+        }
+        Paint.Stroke(c, V(-12, -2), V(10, -8), new Color("#5b3d2b"), 4, 0.7f);
+        Paint.Stroke(c, V(12, -2), V(-9, -9), new Color("#4a3222"), 4, 0.7f);
+        for (var i = 0; i < 3; i++)
+        {
+            var sway = Mathf.Sin(time * (6 + i) + i * 2) * 3;
+            var h = (16 + i * 5) * (0.85f + 0.15f * Mathf.Sin(time * 9 + i));
+            var x = (i - 1) * 6;
+            c.DrawColoredPolygon(new[] { V(x - 6, -6), V(x + 6, -6), V(x + sway * 0.6f + 2, -6 - h * 0.6f), V(x + sway, -6 - h), V(x + sway * 0.6f - 3, -6 - h * 0.55f) },
+                Paint.A(i == 1 ? new Color(1f, 0.82f, 0.35f, 0.9f) : new Color(0.95f, 0.45f, 0.15f, 0.85f)));
+        }
+    }
+
+    /// <summary>The Black Wind's banner: black cloth snapping on a pole, three pale streaks of wind across it.</summary>
+    public static void BanditFlag(Brush c, float time)
+    {
+        Paint.Shadow(c, V(3, 1), 10, 4, 0.16f);
+        Paint.Stroke(c, V(0, 0), V(0, -112), new Color("#4a3a2a"), 3, 0.7f);
+        var wave = Mathf.Sin(time * 3.1f);
+        var pts = new[] { V(1, -110), V(42, -106 + wave * 3), V(46, -88 + wave * 2), V(44, -72 + wave * 3), V(1, -76) };
+        Paint.Poly(c, pts, new Color("#23262e"), 0.9f, 1.3f);
+        for (var i = 0; i < 3; i++)
+        {
+            var streak = new Vector2[9];
+            for (var k = 0; k < streak.Length; k++)
+                streak[k] = V(7 + k * 4 + i * 2, -100 + i * 8 + wave * (0.6f + 0.25f * k / 8f) + Mathf.Sin(k * 1.2f + time * 4 + i) * 1.5f);
+            c.DrawPolyline(streak, Paint.A(new Color("#c8c2b0")), 1.8f, true);
+        }
+    }
+
+    /// <summary>The Hundred Herbs Hall: the apothecary's house, bundles of herbs drying under the eave, a signboard over the door.</summary>
+    public static void Apothecary(Brush c)
+    {
+        const float w = 150;
+        Paint.Shadow(c, V(14, 4), w * 0.6f, 14, 0.2f);
+        Paint.Poly(c, new[] { V(-w / 2, -54), V(w / 2, -54), V(w / 2, 0), V(-w / 2, 0) }, new Color("#ece3cc"));
+        Paint.Poly(c, new[] { V(-w / 2, -7), V(w / 2, -7), V(w / 2, 0), V(-w / 2, 0) }, new Color("#9a9385"), 0.6f, 1);
+        foreach (var x in new[] { -w / 2 + 3, w / 2 - 3 }) Paint.Stroke(c, V(x, -54), V(x, -7), new Color("#6b4a32"), 4, 0.6f);
+        Paint.Poly(c, new[] { V(-12, -38), V(12, -38), V(12, -7), V(-12, -7) }, new Color("#5a3c28"), 0.8f, 1.3f);
+        Paint.Line2(c, V(0, -38), V(0, -7), new Color("#3a2a1e"), 1);
+        // The window: a wall of little drawers, as apothecaries keep.
+        Paint.Poly(c, new[] { V(28, -44), V(60, -44), V(60, -18), V(28, -18) }, new Color("#7a5638"), 0.8f, 1.2f);
+        for (var r = 0; r < 3; r++)
+            for (var k = 0; k < 4; k++)
+            {
+                var at = V(30 + k * 7.5f, -42 + r * 8.2f);
+                Paint.Poly(c, new[] { at, at + V(6, 0), at + V(6, 6.4f), at + V(0, 6.4f) }, new Color("#a07a4a"), 0.4f, 0.6f);
+                c.DrawCircle(at + V(3, 3.2f), 0.8f, Paint.A(new Color("#e0c070")));
+            }
+        Window(c, -58, -44, 22, 18);
+        Paint.Poly(c, new[] { V(-w / 2, -54), V(w / 2, -54), V(w / 2, -47), V(-w / 2, -47) }, new Color(0, 0, 0, 0.18f), 0);
+        // Herbs hung to dry under the eave.
+        var herbs = new[] { "#6f9a55", "#8aa05a", "#b0a060", "#5f8f53", "#9a8a50" };
+        for (var i = 0; i < 6; i++)
+        {
+            var x = -66 + i * 12 + (i >= 3 ? 64 : 0);
+            if (x > 64) continue;
+            Paint.Line2(c, V(x, -54), V(x, -48), new Color("#8a7a5a"), 0.8f);
+            Paint.Poly(c, new[] { V(x - 3, -48), V(x + 3, -48), V(x + 1.5f, -36), V(x - 1.5f, -36) }, new Color(herbs[i % herbs.Length]), 0.5f, 0.8f);
+        }
+        Roof(c, -w / 2, w / 2, -52, -102, new Color("#4a5566"));
+        Paint.Poly(c, new[] { V(-34, -68), V(34, -68), V(34, -54), V(-34, -54) }, new Color("#2c2a33"), 0.9f, 1.2f);
+        Paint.Caption(c, T("Bách Thảo Đường", "Apothecary"), V(0, -61), 10, new Color("#e0c070"), maxWidth: 64);
+    }
+
+    /// <summary>The alchemy furnace (đan lô): a bronze tripod cauldron on a stone base, coals glowing under it, steam rising.</summary>
+    public static void Furnace(Brush c, float time)
+    {
+        Paint.Shadow(c, V(4, 2), 34, 8, 0.2f);
+        Paint.Poly(c, new[] { V(-30, 0), V(30, 0), V(26, -12), V(-26, -12) }, new Color("#8c8474"), 0.8f, 1.4f);
+        var glow = 0.65f + 0.35f * Mathf.Sin(time * 4.7f) * Mathf.Sin(time * 1.9f + 0.6f);
+        c.DrawCircle(V(0, -14), 22 + glow * 4, Paint.A(new Color(1f, 0.55f, 0.2f, 0.1f)));
+        Paint.Ellipse(c, V(0, -13), 16, 4.5f, new Color(1f, 0.5f, 0.15f, 0.55f + 0.3f * glow), 0, 0);
+        foreach (var x in new[] { -17f, 0f, 17f }) Paint.Stroke(c, V(x, -11), V(x * 0.85f, -26), new Color("#6f5a2a"), 4, 0.7f);
+        Paint.Ellipse(c, V(0, -38), 27, 16, new Color("#9a7a3a"), 0.9f, 1.6f);
+        c.DrawColoredPolygon(Paint.EllipsePts(V(-8, -44), 12, 6, 14), Paint.A(new Color(1, 1, 1, 0.12f)));
+        Paint.Line2(c, V(-22, -36), V(22, -36), new Color(Paint.Ink, 0.35f), 1.2f);
+        for (var i = 0; i < 5; i++) c.DrawCircle(V(-16 + i * 8, -31), 1.4f, Paint.A(new Color("#c9a54a")));
+        Paint.Poly(c, new[] { V(-29, -50), V(29, -50), V(26, -56), V(-26, -56) }, new Color("#b08a42"), 0.8f, 1.2f);
+        foreach (var x in new[] { -24f, 24f })
+        {
+            Paint.Stroke(c, V(x, -55), V(x * 1.08f, -64), new Color("#9a7a3a"), 3, 0.6f);
+            Paint.Stroke(c, V(x * 1.08f, -64), V(x * 0.9f, -64), new Color("#9a7a3a"), 3, 0.6f);
+        }
+        Paint.Ellipse(c, V(0, -58), 18, 4, new Color("#7a5a2a"), 0.6f, 1);
+        Paint.Circle(c, V(0, -63), 3, new Color("#c9a54a"), 0.6f, 1);
+        for (var i = 0; i < 4; i++)
+        {
+            var t = (time * 0.3f + i / 4f) % 1f;
+            var at = V(Mathf.Sin(time * 1.3f + i * 1.9f) * 6 * t, -64 - t * 64);
+            c.DrawCircle(at, 4 + t * 10, Paint.A(new Color(0.92f, 0.92f, 0.9f, 0.3f * (1 - t))));
+        }
+    }
 }

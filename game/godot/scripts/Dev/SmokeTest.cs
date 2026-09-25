@@ -243,7 +243,8 @@ public partial class SmokeTest : Node
         world.RefreshFog();
         world.SyncActors();
         await Frames(4);
-        var pack = world.Actors.Select(a => a.Body).Where(b => b.PackId != null && b.Alive)
+        // A roaming pack, not the bandit camp's garrison (that comes later, with a stronger cultivator).
+        var pack = world.Actors.Select(a => a.Body).Where(b => b.PackId != null && b.Alive && E.State.World.Beasts.Any(p => p.Id == b.PackId && p.CampId == null))
             .OrderBy(b => b.Pos.DistanceTo(world.PlayerBody.Pos)).FirstOrDefault();
         if (pack != null)
         {
@@ -381,6 +382,9 @@ public partial class SmokeTest : Node
 
         // ---------------------------------------------------------------- sword flight over the river
         world = await SwordFlight(world);
+
+        // ---------------------------------------------------------------- the first map's things to do
+        world = await FirstMapActivities(world);
 
         // ---------------------------------------------------------------- a phone: touch controls, a bigger interface
         world = await TouchByHand(world);
@@ -775,6 +779,158 @@ public partial class SmokeTest : Node
         }
         Check(seen.Count >= 9, $"between them the disciples cast {seen.Count} different arts ({string.Join(", ", seen.OrderBy(s => s))})");
         return world;
+    }
+
+    /// <summary>
+    /// The first map's things to do: a fishing landing (a strike at a nibble loses the fish; then the autopilot fishes until
+    /// a catch is landed), an ore vein broken with sword strokes, ore smelted at the forge, a villager's request answered at
+    /// the board, a brew at the apothecary's furnace, a fortune stick at the shrine, and the bandit camp stormed and its
+    /// hoard opened.
+    /// </summary>
+    private async Task<WorldScreen> FirstMapActivities(WorldScreen world)
+    {
+        world = await Settle(world);
+        DevCheats.Restore(E);
+        DevCheats.Silver(E, 400);
+        var pois = E.Map.Def.Pois;
+
+        // Fishing at the bridge.
+        var landing = pois.First(p => p.Id == "poi_fish_bridge");
+        world.DebugPlace(WorldScreen.TileCenter(landing.X, landing.Y) + new Vector2(-14, 36));
+        await Frames(10);
+        var fishing = new FishingPanel(landing);
+        world.OpenPanel(fishing);
+        await Frames(3);
+        var stage = fishing.Stage!;
+        stage.Down();
+        Check(stage.State == FishingStage.Phase.Waiting, "a cast puts the float on the water");
+        stage.Down();
+        Check(stage.State == FishingStage.Phase.Idle && stage.Lost == 1, "striking at a nibble loses the fish");
+        stage.Autopilot = true;
+        var fishBefore = E.Player.Counters.FishCaught;
+        var silverBefore = E.Player.Silver;
+        var shotReel = false;
+        for (var i = 0; i < 60 * 150 && stage.Landed == 0; i++)
+        {
+            E.Player.Footwork = Math.Max(E.Player.Footwork, 5);
+            if (stage.State == FishingStage.Phase.Idle) stage.Down();
+            if (!shotReel && stage.State == FishingStage.Phase.Reeling)
+            {
+                await Frames(40);
+                await Shot("fishing");
+                shotReel = true;
+            }
+            await Frames(1);
+        }
+        if (stage.InHand != null) stage.Land(release: false);
+        await Frames(3);
+        Check(stage.Landed >= 1 && (E.Player.Counters.FishCaught > fishBefore || E.Player.Silver > silverBefore),
+            $"the autopilot lands a catch ({stage.Casts} casts, {E.Player.Counters.FishCaught} fish in the log)");
+        world = await Settle(world);
+
+        // An ore vein on the village hill, broken with the sword (the interact key swings at it).
+        var vein = pois.First(p => p.Id == "poi_ore_village");
+        world.DebugPlace(WorldScreen.TileCenter(vein.X, vein.Y) + new Vector2(0, 90));
+        await Frames(10);
+        var veinName = Game.Instance.T(vein.Name, vein.NameEn);
+        var strike = world.Interactions.First(i => i.Label().StartsWith(veinName));
+        var oreBefore = E.Player.Counters.OreMined;
+        for (var i = 0; i < 16 && E.OreReady(vein.Id); i++)
+        {
+            strike.Act();
+            await Frames(32);
+            if (i == 1) await Shot("mining");
+        }
+        Check(!E.OreReady(vein.Id) && E.Player.Counters.OreMined > oreBefore, $"sword strokes break the ore vein ({E.Player.Counters.OreMined - oreBefore} pieces)");
+        world = await Settle(world);
+
+        // The forge smelts ore; the board's requests.
+        var village = pois.First(p => p.Kind == "town");
+        var town = E.TownFor(village)!;
+        DevCheats.Give(E, "iron_ore", 5);
+        world.OpenPanel(new TownPanel(village, TownPanel.ForgeTab));
+        await Frames(3);
+        var stones = TuTien.Core.Rules.Inventory.Count(E.Player, "enhancement_stone_common");
+        await ClickGui(await Reveal(world, "smelt_iron_ore"));
+        Check(TuTien.Core.Rules.Inventory.Count(E.Player, "enhancement_stone_common") == stones + 1, "the forge smelts five iron ore into an enhancement stone");
+        await Shot("forge_smelt");
+        world.OpenPanel(new TownPanel(village, TownPanel.BoardTab));
+        await Frames(3);
+        var request = E.RequestsFor(town).First();
+        DevCheats.Give(E, request.Item, request.Qty);
+        Game.Instance.Changed();
+        await Frames(3);
+        await ClickGui(await Reveal(world, "request_0"));
+        Check(E.RequestDone(town, request.Id), $"a villager's request is answered at the board ({request.Id})");
+        await Shot("board_requests");
+        world = await Settle(world);
+
+        // A brew at the apothecary's furnace.
+        DevCheats.Give(E, "healing_herb", 3);
+        var alchemy = new AlchemyPanel();
+        world.OpenPanel(alchemy);
+        await Frames(3);
+        var pills = TuTien.Core.Rules.Inventory.Count(E.Player, "healing_pill");
+        await ClickGui(await Reveal(world, "brew_hoi_huyet_dan"));
+        var furnace = alchemy.Stage!;
+        Check(furnace.Busy, "lighting the furnace starts a brew");
+        furnace.Autopilot = true;
+        for (var i = 0; i < 60 * 25 && furnace.Busy; i++)
+        {
+            if (i == 60 * 8) await Shot("alchemy");
+            await Frames(1);
+        }
+        Check(!furnace.Busy && !furnace.LastExploded && furnace.LastPurity >= 0.35f, $"the brew comes out (purity {furnace.LastPurity:0.00})");
+        Check(TuTien.Core.Rules.Inventory.Count(E.Player, "healing_pill") > pills, "the furnace gives healing pills");
+        await Frames(3);
+        await Shot("alchemy_done");
+        world = await Settle(world);
+
+        // A fortune stick at the Earth God shrine.
+        var shrine = pois.First(p => p.Kind == "shrine");
+        world.DebugPlace(WorldScreen.TileCenter(shrine.X, shrine.Y) + new Vector2(0, 80));
+        await Frames(6);
+        world.OpenPanel(new ShrinePanel(shrine));
+        await Frames(3);
+        if (E.Fortune == null) await ClickGui(await Reveal(world, "draw_stick"));
+        Check(E.Fortune != null, $"a fortune stick is drawn at the shrine ({E.Fortune?.Id})");
+        await Frames(3);
+        await Shot("shrine");
+        if (E.Fortune!.Grade == "ill")
+        {
+            await ClickGui(await Reveal(world, "dispel"));
+            Check(E.Player.Fortune!.Dispelled, "the shrine keeper lifts an ill omen");
+        }
+        if (!TuTien.Core.Rules.Shrine.OfferedThisMonth(E.State)) await ClickGui(await Reveal(world, "offering"));
+        Check(TuTien.Core.Rules.Shrine.OfferedThisMonth(E.State), "an offering is made at the shrine");
+        world = await Settle(world);
+
+        // The Black Wind Camp: storm it, then open the hoard.
+        DevCheats.Restore(E);
+        world.Player.SyncFromEngine();
+        var camp = pois.First(p => p.Kind == "camp");
+        var garrison = Camps.Garrison(E.State, camp.Id);
+        Check(garrison != null && garrison.EnemyIds.Count == 4, "bandits hold the Black Wind Camp");
+        world.DebugPlace(WorldScreen.TileCenter(camp.X, camp.Y - 2));
+        await Frames(20);
+        await Shot("camp");
+        if (world.Battle == null)
+        {
+            var bandit = world.Actors.Select(a => a.Body).First(b => b.PackId == garrison!.Id && b.Alive);
+            Check(world.Engage(bandit), "striking a bandit brings the whole camp down on you");
+        }
+        Check(world.Battle != null, "the camp's garrison fights");
+        world = await FightThrough(world, "battle_camp");
+        Check(Camps.Garrison(E.State, camp.Id) == null && E.Camp(camp.Id).HoardReady, "the camp falls and its hoard waits");
+        world = await Settle(world);
+        var hoardLabel = Game.Instance.T("Mở kho tang của sơn tặc", "Open the bandits' hoard");
+        var hoard = world.Interactions.First(i => i.Label() == hoardLabel);
+        var silver = E.Player.Silver;
+        hoard.Act();
+        await Frames(6);
+        Check(!E.Camp(camp.Id).HoardReady && E.Player.Silver > silver, $"the hoard is opened (+{E.Player.Silver - silver} silver)");
+        await Shot("camp_hoard");
+        return await Settle(world);
     }
 
     /// <summary>The panel's button called <paramref name="name"/>, scrolled into view so a click lands on it.</summary>

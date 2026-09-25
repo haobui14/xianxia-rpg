@@ -108,6 +108,80 @@
       "id": "mysterious_herb", "name": "Kỳ Dị Linh Thảo", "name_en": "Mysterious Herb", "type": "Medicine", "rarity": "Rare",
       "description": "Loài cỏ lạ mọc trong hang tối, tỏa ánh bạc. Ăn vào, gân cốt và tu vi cùng tăng.", "description_en": "A strange herb that grows in dark caves and glows silver. Eaten, it strengthens both body and cultivation.",
       "effects": { "cultivation_exp": 150, "permanent_hp": 10 }
+    },
+
+    {
+      "id": "fish_crucian", "name": "Cá Diếc", "name_en": "Crucian Carp", "type": "Material", "rarity": "Common",
+      "description": "Cá diếc sông, thịt ngọt, nấu cháo rất lành.", "description_en": "A river crucian with sweet flesh, good in congee.",
+      "effects": { "hp_restore": 15 }
+    },
+    {
+      "id": "fish_carp", "name": "Cá Chép", "name_en": "River Carp", "type": "Material", "rarity": "Common",
+      "description": "Cá chép sông Thanh Vân, vảy ánh vàng nhạt.", "description_en": "An Azure Cloud river carp with pale gold scales.",
+      "effects": { "hp_restore": 20 }
+    },
+    {
+      "id": "fish_catfish", "name": "Cá Trê", "name_en": "Mud Catfish", "type": "Material", "rarity": "Common",
+      "description": "Sống dưới bùn đầm, râu dài, da trơn.", "description_en": "Lives in the marsh mud: long whiskers, slick skin.",
+      "effects": { "hp_restore": 20 }
+    },
+    {
+      "id": "fish_grass_carp", "name": "Cá Trắm", "name_en": "Grass Carp", "type": "Material", "rarity": "Uncommon",
+      "description": "Cá trắm lớn, kéo rất nặng tay. Dân làng quý lắm.", "description_en": "A big grass carp that pulls hard. The villagers prize it.",
+      "effects": { "hp_restore": 40 }
+    },
+    {
+      "id": "fish_eel", "name": "Lươn Đầm", "name_en": "Marsh Eel", "type": "Material", "rarity": "Uncommon",
+      "description": "Trơn tuột khó bắt, ăn vào bổ gân cốt.", "description_en": "Slippery and hard to hold; eaten, it strengthens the sinews.",
+      "effects": { "hp_restore": 15, "stamina_restore": 40 }
+    },
+    {
+      "id": "fish_snakehead", "name": "Cá Lóc Đen", "name_en": "Black Snakehead", "type": "Material", "rarity": "Uncommon",
+      "description": "Cá lóc đen nơi đầm sâu, dữ và khỏe.", "description_en": "A black snakehead from the deep marsh, fierce and strong.",
+      "effects": { "hp_restore": 50 }
+    },
+    {
+      "id": "fish_azure_scale", "name": "Thanh Lân Ngư", "name_en": "Azure-Scale Fish", "type": "Material", "rarity": "Uncommon",
+      "description": "Cá linh vảy biếc, lớn lên nhờ linh khí trong nước. Dược sư dùng làm thuốc.", "description_en": "A spirit fish with blue-green scales that grows on the qi in the water. Alchemists use it.",
+      "effects": { "qi_restore": 30 }
+    },
+    {
+      "id": "fish_silver_thread", "name": "Ngân Tuyến Ngư", "name_en": "Silver-Thread Fish", "type": "Material", "rarity": "Rare",
+      "description": "Thân mảnh như sợi bạc, chỉ sống nơi nước lạnh đầu nguồn.", "description_en": "Slender as a silver thread; it lives only in the cold water upstream.",
+      "effects": { "qi_restore": 60, "cultivation_exp": 20 }
+    },
+    {
+      "id": "fish_golden_carp", "name": "Kim Lý", "name_en": "Golden Carp", "type": "Material", "rarity": "Epic",
+      "description": "Cá chép vàng. Tương truyền con nào vượt được Long Môn sẽ hóa rồng.", "description_en": "A golden carp. Legend says one that leaps the Dragon Gate becomes a dragon.",
+      "effects": { "cultivation_exp": 150, "permanent_luck": 1 }
+    },
+    {
+      "id": "spirit_turtle", "name": "Linh Quy", "name_en": "Spirit Turtle", "type": "Material", "rarity": "Rare",
+      "description": "Rùa linh trăm tuổi, vân mai như bát quái. Thả nó về nước là tích đức.", "description_en": "A century-old spirit turtle whose shell is patterned like the eight trigrams. Setting it free earns merit."
+    },
+
+    {
+      "id": "iron_ore", "name": "Quặng Sắt", "name_en": "Iron Ore", "type": "Material", "rarity": "Common",
+      "description": "Quặng sắt đen, nặng tay. Lò rèn luyện năm cục thành một viên đá cường hóa.", "description_en": "Heavy black iron ore. The forge smelts five lumps into an enhancement stone."
+    },
+    {
+      "id": "cold_iron", "name": "Hàn Thiết", "name_en": "Cold Iron", "type": "Material", "rarity": "Uncommon",
+      "description": "Sắt lạnh như băng từ lòng núi. Lò rèn luyện ba khối thành một viên đá cường hóa tốt.", "description_en": "Iron as cold as ice from deep in the mountain. The forge smelts three pieces into a fine enhancement stone."
+    },
+    {
+      "id": "raw_jade", "name": "Ngọc Thô", "name_en": "Raw Jade", "type": "Material", "rarity": "Uncommon",
+      "description": "Ngọc chưa mài. Thương lái trả giá khá.", "description_en": "Uncut jade. Traders pay well for it."
+    },
+
+    {
+      "id": "hoi_khi_tan", "name": "Hồi Khí Tán", "name_en": "Qi-Mending Powder", "type": "Medicine", "rarity": "Uncommon",
+      "description": "Luyện từ Nguyệt Quang Hoa và cá linh, hồi linh lực rất nhanh.", "description_en": "Refined from moonlight flower and spirit fish; restores Qi quickly.",
+      "effects": { "qi_restore": 60 }
+    },
+    {
+      "id": "boi_nguyen_dan", "name": "Bồi Nguyên Đan", "name_en": "Origin-Nourishing Pill", "type": "Medicine", "rarity": "Uncommon",
+      "description": "Bồi bổ nguyên khí, luyện từ thú đan và linh chi thảo.", "description_en": "Nourishes your original qi; refined from beast cores and spirit grass.",
+      "effects": { "cultivation_exp": 120 }
     }
   ]
 }

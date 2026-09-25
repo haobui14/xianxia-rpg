@@ -49,7 +49,7 @@ namespace TuTien.Core.World
             {
                 var pool = area.EnemyPool.Where(id => content.Enemy(id) != null).ToList();
                 if (pool.Count == 0) continue;
-                var existing = state.World.Beasts.Count(b => b.Zone == area.Id);
+                var existing = state.World.Beasts.Count(b => b.Zone == area.Id && b.CampId == null);
                 for (var i = existing; i < TargetPacks(area); i++)
                 {
                     var cell = RandomFreeCell(state, map, area.Id, rng, player, 5);
@@ -60,7 +60,7 @@ namespace TuTien.Core.World
                     var lone = members.FirstOrDefault(id => content.Enemy(id)?.Solitary == true);
                     if (lone != null)
                     {
-                        var taken = state.World.Beasts.Any(b => b.Zone == area.Id && b.EnemyIds.Any(id => content.Enemy(id)?.Solitary == true));
+                        var taken = state.World.Beasts.Any(b => b.Zone == area.Id && b.CampId == null && b.EnemyIds.Any(id => content.Enemy(id)?.Solitary == true));
                         members = taken
                             ? members.Where(id => content.Enemy(id)?.Solitary != true).ToList()
                             : new List<string> { lone };
@@ -84,7 +84,8 @@ namespace TuTien.Core.World
         {
             var p = state.Player;
             var player = new Cell(p.X, p.Y);
-            foreach (var pack in state.World.Beasts)
+            // A camp garrison holds its ground: it neither roams nor stalks.
+            foreach (var pack in state.World.Beasts.Where(b => b.CampId == null))
             {
                 var steps = rng.Range(0, 3);
                 for (var s = 0; s < steps; s++)
@@ -162,7 +163,7 @@ namespace TuTien.Core.World
             return node == null || node.ReadyMonth <= state.Calendar.MonthIndex;
         }
 
-        public static void Deplete(GameState state, string poiId)
+        public static void Deplete(GameState state, string poiId, int months = HerbRegrowMonths)
         {
             var node = state.World.Nodes.FirstOrDefault(n => n.PoiId == poiId);
             if (node == null)
@@ -170,7 +171,7 @@ namespace TuTien.Core.World
                 node = new NodeState { PoiId = poiId };
                 state.World.Nodes.Add(node);
             }
-            node.ReadyMonth = state.Calendar.MonthIndex + HerbRegrowMonths;
+            node.ReadyMonth = state.Calendar.MonthIndex + months;
         }
     }
 }

@@ -29,7 +29,58 @@
         { "id": "bounty_snakes", "name": "Độc xà ở Linh Thảo Viên", "name_en": "Snakes in the herb garden", "enemy_id": "venomous_snake", "count": 2, "reward_silver": 55, "reward_karma": 3 },
         { "id": "bounty_vines", "name": "Diệt tà đằng", "name_en": "Burn out the corrupted vines", "enemy_id": "corrupted_vine", "count": 2, "reward_silver": 45, "reward_karma": 4 },
         { "id": "bounty_bears", "name": "Hắc hùng quấy nhiễu Cổ Thụ Động", "name_en": "Black bears in the Ancient Tree Hollow", "enemy_id": "black_bear", "count": 2, "reward_silver": 120, "reward_karma": 4 },
-        { "id": "bounty_python", "name": "Trừ Thanh Lân Mãng", "name_en": "Slay the Azure-Scale Python", "enemy_id": "azure_python", "count": 1, "reward_silver": 320, "reward_karma": 10 }
+        { "id": "bounty_python", "name": "Trừ Thanh Lân Mãng", "name_en": "Slay the Azure-Scale Python", "enemy_id": "azure_python", "count": 1, "reward_silver": 320, "reward_karma": 10 },
+        { "id": "bounty_black_wind", "name": "Dẹp Hắc Phong Trại", "name_en": "Break the Black Wind Camp", "enemy_id": "black_wind_chief", "count": 1, "reward_silver": 260, "reward_karma": 10 }
+      ],
+      "requests": [
+        {
+          "id": "req_inn_carp", "giver": "Bà Tư chủ quán", "giver_en": "Mistress Tu of the inn", "item": "fish_carp", "qty": 3, "silver": 60, "karma": 1,
+          "text": "Khách đông mà bếp hết cá. Mang giúp ta ba con cá chép nhé.", "text_en": "The inn is full and the kitchen is out of fish. Bring me three river carp?"
+        },
+        {
+          "id": "req_inn_grass_carp", "giver": "Bà Tư chủ quán", "giver_en": "Mistress Tu of the inn", "item": "fish_grass_carp", "qty": 1, "silver": 55, "karma": 1,
+          "text": "Có khách sang muốn ăn cá trắm hấp. Ngươi câu được con nào không?", "text_en": "A fine guest wants steamed grass carp. Could you catch one?"
+        },
+        {
+          "id": "req_smith_iron", "giver": "Lão Thiết thợ rèn", "giver_en": "Old Thiet the smith", "item": "iron_ore", "qty": 4, "silver": 60, "karma": 1, "reward_item": "enhancement_stone_common",
+          "text": "Lò đang đói quặng. Bốn cục quặng sắt, ta trả bạc và thêm một viên đá cường hóa.", "text_en": "The forge is hungry for ore. Four lumps of iron ore, and I'll pay silver and an enhancement stone."
+        },
+        {
+          "id": "req_smith_cold_iron", "giver": "Lão Thiết thợ rèn", "giver_en": "Old Thiet the smith", "item": "cold_iron", "qty": 2, "silver": 110, "karma": 1, "reward_item": "enhancement_stone_uncommon",
+          "text": "Hàn thiết trên núi cạnh đường lên tông môn. Mang ta hai khối, ta rèn thử một thanh kiếm lạnh.", "text_en": "There's cold iron in the mountain beside the sect road. Bring me two pieces and I'll try forging a cold blade."
+        },
+        {
+          "id": "req_herbalist_healing", "giver": "Dược sư Tô", "giver_en": "Apothecary To", "item": "healing_herb", "qty": 4, "silver": 45, "karma": 2,
+          "text": "Mùa này nhiều người ốm. Ta cần bốn nhánh Chỉ Huyết Thảo.", "text_en": "Many are sick this season. I need four stalks of healing herb."
+        },
+        {
+          "id": "req_herbalist_moonlight", "giver": "Dược sư Tô", "giver_en": "Apothecary To", "item": "moonlight_flower", "qty": 2, "silver": 70, "karma": 1,
+          "text": "Nguyệt Quang Hoa chỉ nở ở vườn linh thảo. Hái giúp ta hai bông.", "text_en": "Moonlight flowers only bloom in the spirit herb garden. Pick two for me."
+        },
+        {
+          "id": "req_herbalist_spirit_fish", "giver": "Dược sư Tô", "giver_en": "Apothecary To", "item": "fish_azure_scale", "qty": 2, "silver": 90, "karma": 1,
+          "text": "Hồi Khí Tán cần cá linh vảy biếc. Hai con là đủ.", "text_en": "Qi-mending powder needs azure-scale spirit fish. Two will do."
+        },
+        {
+          "id": "req_elder_pill", "giver": "Lâm Bá", "giver_en": "Elder Lam Ba", "item": "healing_pill", "qty": 1, "silver": 30, "karma": 5,
+          "text": "Lão ho mãi không dứt. Con có viên Hồi Huyết Đan nào không?", "text_en": "This cough won't leave me. Do you have a healing pill, child?"
+        },
+        {
+          "id": "req_elder_jade", "giver": "Lâm Bá", "giver_en": "Elder Lam Ba", "item": "raw_jade", "qty": 1, "silver": 80, "karma": 3,
+          "text": "Cháu gái lão sắp xuất giá. Lão muốn tạc cho nó một miếng ngọc.", "text_en": "My granddaughter is getting married. I'd like to carve her a piece of jade."
+        },
+        {
+          "id": "req_hunter_cores", "giver": "Thợ săn A Tam", "giver_en": "A Tam the hunter", "item": "low_beast_core", "qty": 2, "silver": 80, "karma": 1,
+          "text": "Thú đan bán lên trấn được giá. Ngươi có hai viên thì để lại cho ta.", "text_en": "Beast cores fetch a good price in town. If you have two, sell them to me."
+        },
+        {
+          "id": "req_trader_jade", "giver": "Thương lái họ Mạc", "giver_en": "Mac the trader", "item": "raw_jade", "qty": 2, "silver": 130, "karma": 0,
+          "text": "Ngọc thô ở đồi quanh làng tuy nhỏ mà trong. Hai viên, giá hời.", "text_en": "The raw jade in the hills here is small but clear. Two pieces, and I'll pay well."
+        },
+        {
+          "id": "req_child_golden_carp", "giver": "Bé Na", "giver_en": "Little Na", "item": "fish_golden_carp", "qty": 1, "silver": 300, "karma": 6,
+          "text": "Ông nội bảo cá chép vàng có thật. Anh chị bắt cho em xem một con được không?", "text_en": "Grandpa says golden carp are real. Could you catch one for me to see?"
+        }
       ]
     }
   ]

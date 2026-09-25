@@ -19,13 +19,15 @@ namespace TuTien.Core.Rules
         public string SpecialReason { get; set; } = "";
         public string SpecialReasonEn { get; set; } = "";
         public int FullMoonBonus { get; set; }
+        /// <summary>The Earth God shrine's fortune stick for this month (negative for an ill omen).</summary>
+        public int BlessingBonus { get; set; }
         public double ActivityMultiplier { get; set; } = 1;
         public double InjuryMultiplier { get; set; } = 1;
         public long Total { get; set; }
         public long ToQi { get; set; }
         public long ToBody { get; set; }
 
-        public int TotalPercentBonus => QiDensity + SeasonBonus + SpecialBonus + FullMoonBonus;
+        public int TotalPercentBonus => QiDensity + SeasonBonus + SpecialBonus + FullMoonBonus + BlessingBonus;
     }
 
     public static class Cultivation
@@ -93,6 +95,7 @@ namespace TuTien.Core.Rules
                 SpecialReason = special.vi,
                 SpecialReasonEn = special.en,
                 FullMoonBonus = seclusion ? Calendar.FullMoonSeclusionBonus : 0,
+                BlessingBonus = Shrine.CultivationBonus(state, content),
                 ActivityMultiplier = seclusion ? SeclusionMultiplier : 1.0,
                 InjuryMultiplier = p.Injuries.Count == 0 ? 1.0 : p.Injuries.Min(i => i.CultivationMultiplier),
             };
