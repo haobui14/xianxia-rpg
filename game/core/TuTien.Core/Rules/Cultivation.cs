@@ -208,7 +208,7 @@ namespace TuTien.Core.Rules
                     p.Qi = p.QiMax;
                     events.Add(GameEvent.Major("foundation",
                         $"Trúc cơ {Foundation.Name(grade, Locale.Vi)}! Uy lực +{(Foundation.PowerMultiplier(grade) - 1) * 100:0}% vĩnh viễn.",
-                        $"{(Foundation.Name(grade, Locale.En).StartsWith("u") ? "An" : "A")} {Foundation.Name(grade, Locale.En)} foundation! +{(Foundation.PowerMultiplier(grade) - 1) * 100:0}% power for good."));
+                        $"{(Foundation.WithArticle(grade).StartsWith("an") ? "An" : "A")} {Foundation.Name(grade, Locale.En)} foundation! +{(Foundation.PowerMultiplier(grade) - 1) * 100:0}% power for good."));
                 }
                 p.Exp = carry;
                 return events;
@@ -272,6 +272,13 @@ namespace TuTien.Core.Rules
             FoundationGrade.Trung => 1.05,
             _ => 1.0,
         };
+
+        /// <summary>The grade's English name with the article that agrees with it: "a lower-grade", "an upper-grade".</summary>
+        public static string WithArticle(FoundationGrade g)
+        {
+            var name = Name(g, Locale.En);
+            return ("aeiou".IndexOf(name[0]) >= 0 ? "an " : "a ") + name;
+        }
 
         public static string Name(FoundationGrade g, Locale locale) => g switch
         {

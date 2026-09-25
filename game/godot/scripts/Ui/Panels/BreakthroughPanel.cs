@@ -5,9 +5,16 @@ using TuTienLuc.Art;
 
 namespace TuTienLuc.Ui.Panels;
 
-/// <summary>Before a major breakthrough (design §7.5): what it takes, what failure costs, then the trial.</summary>
+/// <summary>
+/// Before a major breakthrough (design §7.5): what it takes, what failure costs, then the trial — or first a
+/// practice run of it, for nothing (its result shows here when it's over).
+/// </summary>
 public partial class BreakthroughPanel : InkPanel
 {
+    private readonly Field.PracticeResult? _practice;
+
+    public BreakthroughPanel(Field.PracticeResult? practice = null) => _practice = practice;
+
     protected override IconKind Emblem => IconKind.Ascend;
     protected override string TitleText => T("Đột phá cảnh giới", "Breakthrough");
     protected override Vector2 PanelSize => new(760, 660);
@@ -24,6 +31,16 @@ public partial class BreakthroughPanel : InkPanel
         var target = p.Realm + 1;
         Para(T($"{Text.Realm(p.Realm, p.Stage)} → {Names.Display(target, Locale.Vi)}",
             $"{Text.Realm(p.Realm, p.Stage)} → {Names.Display(target, Locale.En)}"), 24, Ink.InkColor);
+        if (_practice is { } practice)
+        {
+            var passed = practice.Performance >= practice.Threshold;
+            var foundation = p.Realm == Realm.LuyenKhi && passed
+                ? T($" — nền móng sẽ là {Foundation.Name(Foundation.GradeFor(practice.Performance), Locale.Vi)}", $" — that would lay {Foundation.WithArticle(Foundation.GradeFor(practice.Performance))} foundation")
+                : "";
+            Para(T($"Buổi tập vừa rồi: {practice.Performance * 100:0}% (cần {practice.Threshold * 100:0}%){foundation}. {(passed ? "Đủ để đột phá." : "Chưa đủ — tập thêm hoặc chuẩn bị thêm.")}",
+                $"Your practice run: {practice.Performance * 100:0}% (needed {practice.Threshold * 100:0}%){foundation}. {(passed ? "Enough to break through." : "Not enough yet — practise again or prepare more.")}"),
+                16, passed ? Ink.JadeDeep : Ink.CinnabarDeep);
+        }
 
         var threshold = Cultivation.MajorBreakthroughThreshold(p);
         Section(T("Độ khó", "Difficulty"));
@@ -49,10 +66,14 @@ public partial class BreakthroughPanel : InkPanel
                     "Storm the bottleneck: gather qi, avoid heart demons — faster and more numerous at higher realms. 25 seconds."), 16, Ink.InkSoft);
         }
         Para(T("Thất bại: mất 20% tu vi và tổn thương kinh mạch 2 tháng (tu luyện ×0.5).", "Failure: lose 20% of your cultivation and damage your meridians for 2 months (cultivation ×0.5)."), 15, Ink.CinnabarDeep);
+        Para(T("Chưa chắc tay? Tập trước: cùng thử thách ấy, không được cũng không mất gì, và có hướng dẫn từng bước.",
+            "Not sure yet? Practise first: the same trial, with nothing to gain or lose, and a step-by-step guide."), 14, Ink.InkMute);
 
         Body.AddChild(UiKit.Spacer(8));
-        Buttons(
-            UiKit.Button(T("Bắt đầu đột phá", "Begin"), () => Main.Instance.ShowBreakthroughTrial(), primary: true),
-            UiKit.Button(T("Chuẩn bị thêm", "Prepare more"), Close));
+        var begin = UiKit.Button(T("Bắt đầu đột phá", "Begin"), () => Main.Instance.ShowBreakthroughTrial(), primary: true);
+        begin.Name = "begin_breakthrough";
+        var practise = UiKit.Button(T("Tập trước", "Practise first"), () => Main.Instance.ShowBreakthroughTrial(practice: true));
+        practise.Name = "practise";
+        Buttons(begin, practise, UiKit.Button(T("Chuẩn bị thêm", "Prepare more"), Close));
     }
 }

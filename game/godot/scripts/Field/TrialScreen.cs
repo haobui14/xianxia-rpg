@@ -52,8 +52,37 @@ public partial class TrialScreen : TrialBase
     private HashSet<Element> _root = null!;
     private int _realm;
     private float _moteTimer;
-    private float _demonTimer = 2.5f;
-    private float _calm = 1.8f;
+    private float _demonTimer = 2.8f;
+
+    public TrialScreen(bool practice = false) : base(practice)
+    {
+    }
+
+    /// <summary>The platform, whole on any screen.</summary>
+    protected override Rect2? Stage => Arena.Grow(70);
+
+    public override string GuideTitle => E.Player.Realm == Realm.PhamNhan
+        ? T("Dẫn khí nhập thể", "Drawing qi into the body")
+        : T("Xung kích bình cảnh", "Storming the bottleneck");
+
+    public override string GuideIntro => T(
+        $"Trong 25 giây, linh khí trời đất đổ về quanh ngươi. Thu đủ để thanh linh khí vượt vạch đỏ ({Threshold * 100:0}%) là đột phá thành công.",
+        $"For 25 seconds the qi of heaven and earth pours in around you. Gather enough to fill the bar past the red line ({Threshold * 100:0}%) and you break through.");
+
+    public override IReadOnlyList<GuideStep> GuideSteps => new[]
+    {
+        new GuideStep(IconKind.Orb, Ink.JadeDeep, T("Linh khí", "Qi"),
+            T($"Những luồng sáng trôi quanh đài: chạm vào để thu. Hợp linh căn ({string.Join(", ", _root.Select(e => Names.Display(e, Locale.Vi)))}, có vòng vàng) +3, hệ khác +1.",
+                $"Motes of light drift around the platform: touch one to gather it. Your root's element ({string.Join(", ", _root.Select(e => Names.Display(e, Locale.En)))}, with a gold ring) +3, others +1.")),
+        new GuideStep(IconKind.DemonEyes, Ink.CinnabarDeep, T("Tâm ma", "Heart demons"),
+            T("Bóng đỏ mắt vàng tìm tới ngươi. Chạm phải thì −4: chém nó (+1) hoặc lướt xuyên qua.",
+                "Red shades with yellow eyes hunt you. One that touches you costs −4: cut it down (+1) or dash through it.")),
+        new GuideStep(IconKind.Dash, Ink.GoldDeep, T("Điều khiển", "Controls"), TouchUi.Active
+            ? T("Cần gạt bên trái để đi · giữ nút kiếm để chém, tự nhắm tâm ma gần nhất · nút lướt: lướt nhanh, trong chớp mắt không gì chạm được.",
+                "The stick on the left moves · hold the sword button to cut (it aims at the nearest demon) · the dash button: a quick dash, untouchable for a moment.")
+            : T($"{KeyMap.MoveKeys} để đi · chuột trái chém · {KeyMap.Label("dash")}: lướt nhanh, trong chớp mắt không gì chạm được · Esc tạm dừng.",
+                $"{KeyMap.MoveKeys} moves · left click cuts · {KeyMap.Label("dash")}: a quick dash, untouchable for a moment · Esc pauses.")),
+    };
 
     public override string PlaceName => T($"Đột phá: {Names.Display(E.Player.Realm + 1, Locale.Vi)}", $"Breakthrough: {Names.Display(E.Player.Realm + 1, Locale.En)}");
     public override string PlaceSub => T("Thu linh khí, tránh tâm ma", "Gather qi, avoid heart demons");
@@ -131,27 +160,24 @@ public partial class TrialScreen : TrialBase
     {
         PlayerBody.Meditating = true;
         PlayerBody.Face(Vector2.Down);
+        ShowGuide();
+    }
+
+    protected override void OnStart() =>
         Hud.Banner(T("Tĩnh tâm…", "Still the mind…"),
             E.Player.Realm == Realm.PhamNhan
                 ? T("Dẫn khí nhập thể — thu linh khí, tránh tâm ma", "Draw qi into the body — gather qi, avoid heart demons")
                 : T("Xung kích bình cảnh — thu linh khí, tránh tâm ma", "Storm the bottleneck — gather qi, avoid heart demons"),
             Ink.JadeDeep, 1.8f);
-    }
 
     protected override void UpdateField(float dt)
     {
         foreach (var m in Motes) m.Age += dt;
         if (UpdateVerdict(dt)) return;
-        if (_calm > 0)
+        if (UpdateCountdown(dt))
         {
-            // Settle into meditation before the storm of qi begins.
-            _calm -= dt;
+            // Settled in meditation until the storm of qi begins.
             PlayerBody.Pos = SpawnPoint();
-            if (_calm <= 0)
-            {
-                PlayerBody.Meditating = false;
-                SoundBoard.Play("gong", -3);
-            }
             return;
         }
         Time += dt;
@@ -177,7 +203,7 @@ public partial class TrialScreen : TrialBase
         _demonTimer -= dt;
         if (_demonTimer <= 0)
         {
-            _demonTimer = Mathf.Max(0.9f, 2.3f - 0.3f * _realm);
+            _demonTimer = Mathf.Max(1.1f, 2.6f - 0.3f * _realm);
             var side = (int)(rng() * 4) % 4;
             var t = rng();
             var pos = side switch
@@ -187,7 +213,7 @@ public partial class TrialScreen : TrialBase
                 2 => new Vector2(arena.Position.X + t * arena.Size.X, arena.End.Y + 20),
                 _ => new Vector2(arena.Position.X - 20, arena.Position.Y + t * arena.Size.Y),
             };
-            Demons.Add(new Demon { Pos = pos, Speed = 110 + 25 * _realm + Time * 2, Wobble = rng() * Mathf.Tau });
+            Demons.Add(new Demon { Pos = pos, Speed = 95 + 20 * _realm + Time * 1.6f, Wobble = rng() * Mathf.Tau });
             Fx.Burst(pos + V(0, -20), new Color(0.45f, 0.08f, 0.1f, 0.5f), 10, 90, ParticleKind.Mist, 8);
         }
 
@@ -278,131 +304,10 @@ public partial class TrialScreen : TrialBase
 
     public override void DrawHud(FieldHud hud, Vector2 size)
     {
-        var w = 620f;
-        var pos = new Vector2(size.X / 2 - w / 2, GaugeY(size));
-        hud.DrawRect(new Rect2(pos - new Vector2(12, 28), new Vector2(w + 24, 98)), new Color(Ink.Card, 0.9f));
-        hud.DrawRect(new Rect2(pos - new Vector2(12, 28), new Vector2(w + 24, 98)), Ink.LineStrong, false, 1);
-        hud.DrawString(Ink.Serif, pos + new Vector2(0, -8), T($"Linh khí {Score:0}/{ScoreGoal:0}", $"Qi gathered {Score:0}/{ScoreGoal:0}"), HorizontalAlignment.Left, -1, 17, Ink.InkColor);
-        var tl = _calm > 0 ? "…" : $"{TimeLeft:0.0}s";
-        hud.DrawString(Ink.UiFont, pos + new Vector2(w - 50, -8), tl, HorizontalAlignment.Left, -1, 15, TimeLeft < 5 ? Ink.Cinnabar : Ink.InkSoft);
         var passed = Performance >= Threshold;
-        hud.Bar(pos, w, 18, Score, ScoreGoal, passed ? Ink.Jade : Ink.Gold, "");
-        var tx = pos.X + w * Threshold;
-        hud.DrawLine(new Vector2(tx, pos.Y - 4), new Vector2(tx, pos.Y + 22), Ink.CinnabarDeep, 3);
-        hud.DrawString(Ink.UiFont, new Vector2(tx - 30, pos.Y + 36), T($"cần {Threshold * 100:0}%", $"need {Threshold * 100:0}%"), HorizontalAlignment.Left, -1, 12, Ink.CinnabarDeep);
-        hud.DrawString(Ink.UiFont, pos + new Vector2(0, 56), T("hợp linh căn +3 · khác +1 · trảm tâm ma +1 · trúng tâm ma −4", "your element +3 · others +1 · cut a demon +1 · touched −4"),
-            HorizontalAlignment.Left, -1, 12, Ink.InkMute);
-    }
-}
-
-/// <summary>The meditation circle brushed onto the platform: the eight trigrams around a taiji.</summary>
-public partial class TrialFloor : Node2D
-{
-    private static readonly int[][] Trigrams =
-    {
-        new[] { 1, 1, 1 }, new[] { 0, 1, 1 }, new[] { 1, 0, 1 }, new[] { 0, 0, 1 },
-        new[] { 1, 1, 0 }, new[] { 0, 1, 0 }, new[] { 1, 0, 0 }, new[] { 0, 0, 0 },
-    };
-
-    public TrialFloor(Vector2 center)
-    {
-        Position = center;
-        ZIndex = -15;
-    }
-
-    public override void _Draw()
-    {
-        var ink = new Color(0.11f, 0.13f, 0.19f, 1);
-        DrawCircle(Vector2.Zero, 430, new Color(ink, 0.05f));
-        DrawArc(Vector2.Zero, 430, 0, Mathf.Tau, 96, new Color(ink, 0.28f), 6, true);
-        DrawArc(Vector2.Zero, 404, 0, Mathf.Tau, 96, new Color(ink, 0.2f), 2, true);
-        DrawArc(Vector2.Zero, 250, 0, Mathf.Tau, 72, new Color(ink, 0.16f), 2, true);
-        for (var i = 0; i < 8; i++)
-        {
-            var angle = -Mathf.Pi / 2 + Mathf.Tau * i / 8;
-            var dir = Vector2.Right.Rotated(angle);
-            var side = new Vector2(-dir.Y, dir.X);
-            for (var line = 0; line < 3; line++)
-            {
-                var center = dir * (310 + line * 22);
-                var solid = Trigrams[i][line] == 1;
-                if (solid)
-                {
-                    DrawLine(center - side * 38, center + side * 38, new Color(ink, 0.3f), 9);
-                }
-                else
-                {
-                    DrawLine(center - side * 38, center - side * 7, new Color(ink, 0.3f), 9);
-                    DrawLine(center + side * 7, center + side * 38, new Color(ink, 0.3f), 9);
-                }
-            }
-            DrawLine(dir * 404, dir * 430, new Color(ink, 0.2f), 2);
-        }
-        // Taiji: a dark half with a light eye, a light half with a dark eye.
-        const float r = 110;
-        var dark = new Color(ink, 0.22f);
-        var light = new Color(0.97f, 0.95f, 0.9f, 0.5f);
-        DrawCircle(Vector2.Zero, r, light);
-        // Right outer half, then the S back up the middle (no repeated points, or triangulation fails).
-        var half = new System.Collections.Generic.List<Vector2>();
-        for (var k = 0; k <= 24; k++) half.Add(Vector2.Up.Rotated(Mathf.Pi * k / 24) * r);
-        for (var k = 1; k <= 12; k++) half.Add(new Vector2(0, r / 2) + Vector2.Down.Rotated(-Mathf.Pi * k / 12) * (r / 2));
-        for (var k = 1; k < 12; k++) half.Add(new Vector2(0, -r / 2) + Vector2.Down.Rotated(Mathf.Pi * k / 12) * (r / 2));
-        DrawColoredPolygon(half.ToArray(), dark);
-        DrawCircle(new Vector2(0, -r / 2), r * 0.13f, light);
-        DrawCircle(new Vector2(0, r / 2), r * 0.13f, dark);
-        DrawArc(Vector2.Zero, r, 0, Mathf.Tau, 64, new Color(ink, 0.35f), 3, true);
-    }
-}
-
-/// <summary>Draws the trial's qi motes and heart demons above the platform.</summary>
-public partial class TrialLayer : Node2D
-{
-    private readonly TrialScreen _t;
-
-    public TrialLayer(TrialScreen trial)
-    {
-        _t = trial;
-        ZIndex = 5;
-    }
-
-    public override void _Process(double delta) => QueueRedraw();
-
-    public override void _Draw()
-    {
-        foreach (var m in _t.Motes)
-        {
-            var color = Ink.Element(m.Element).Lightened(0.15f);
-            var fade = Mathf.Clamp(m.Life / 0.6f, 0, 1) * Mathf.Clamp(m.Age / 0.3f, 0, 1);
-            var bob = new Vector2(0, -26 + Mathf.Sin(m.Age * 4 + m.Pos.X) * 4);
-            var at = m.Pos + bob;
-            var root = _t.IsRoot(m.Element);
-            DrawColoredPolygon(Paint.EllipsePts(m.Pos, 12, 4.5f, 12), new Color(0, 0, 0, 0.12f * fade));
-            DrawCircle(at, (root ? 30 : 22) * fade, new Color(color, 0.14f));
-            DrawCircle(at, (root ? 20 : 15) * fade, new Color(color, 0.22f));
-            DrawCircle(at, (root ? 12 : 9) * fade, new Color(color, 0.9f * fade));
-            DrawCircle(at, 4.5f * fade, new Color(1, 1, 1, 0.9f * fade));
-            if (root) DrawArc(at, 19, m.Age * 3, m.Age * 3 + 4, 16, new Color(Ink.Gold, 0.85f * fade), 2, true);
-            if (fade > 0.6f) Icons.Draw(this, Icons.ForElement(m.Element), at + new Vector2(0, -28), 15, new Color(color.Darkened(0.3f), fade));
-        }
-        foreach (var d in _t.Demons)
-        {
-            var at = d.Pos + new Vector2(0, -22);
-            var flick = Mathf.Sin(d.Age * 11) * 2;
-            DrawColoredPolygon(Paint.EllipsePts(d.Pos, 14, 5, 12), new Color(0, 0, 0, 0.18f));
-            var body = Paint.Blob(at, 16 + flick, 20, 12, 0.22f, (int)(d.Wobble * 10) % 97);
-            DrawColoredPolygon(body, new Color(0.35f, 0.05f, 0.08f, 0.75f));
-            DrawPolyline(Paint.Closed(body), new Color(0.1f, 0.02f, 0.04f, 0.85f), 2, true);
-            // Trailing wisps.
-            for (var i = 1; i <= 3; i++)
-                DrawCircle(at + new Vector2(Mathf.Sin(d.Wobble - i) * 6, 10 + i * 7), 7 - i * 1.6f, new Color(0.35f, 0.05f, 0.08f, 0.35f - i * 0.08f));
-            DrawCircle(at + new Vector2(-6, -4), 3.2f, new Color("#ffd27a"));
-            DrawCircle(at + new Vector2(6, -4), 3.2f, new Color("#ffd27a"));
-            DrawCircle(at + new Vector2(-6, -4), 1.3f, new Color(0.1f, 0, 0));
-            DrawCircle(at + new Vector2(6, -4), 1.3f, new Color(0.1f, 0, 0));
-            // A jagged grin under the eyes.
-            DrawPolyline(new[] { at + new Vector2(-6, 6), at + new Vector2(-3, 9), at + new Vector2(0, 6), at + new Vector2(3, 9), at + new Vector2(6, 6) },
-                new Color(1, 0.8f, 0.7f, 0.75f), 1.6f, true);
-        }
+        DrawGauge(hud, T($"Linh khí {Score:0}/{ScoreGoal:0}", $"Qi gathered {Score:0}/{ScoreGoal:0}"), passed ? Ink.JadeDeep : Ink.InkColor,
+            Starting ? "…" : $"{TimeLeft:0.0}s", TimeLeft < 5, Score, ScoreGoal, passed ? Ink.Jade : Ink.Gold,
+            System.Array.Empty<(double, string)>(),
+            T("hợp linh căn +3 · khác +1 · trảm tâm ma +1 · trúng tâm ma −4", "your element +3 · others +1 · cut a demon +1 · touched −4"));
     }
 }

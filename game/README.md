@@ -119,6 +119,8 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
     - Step off a meridian when a surge is announced down it.
     - In the last phase, find the gaps in the shockwaves the forming foundation sends out.
   - **Foundation grades:** how well you did sets the foundation's grade, Hạ / Trung / Thượng / Thiên phẩm. The grade multiplies the breakthrough's gains (×1 / ×1.25 / ×1.5 / ×2) and adds to your power for good (+0 / 5 / 10 / 20%). It is shown on the character sheet.
+  - **A guide first, and practice:** each trial opens on a guide that says what happens in each stretch and what to do about it, with the controls. Begin counts three and starts; "Not yet" goes back with nothing lost. From the breakthrough panel, **Practise first** plays the same trial for nothing (no gain, no risk) and brings you back to the panel with your result and the grade it would have given.
+  - **Readable on a phone:** the camera holds the whole arena in view at any screen and interface size. The date card and message log step aside; the gauge moves to the left column; banners run along the top. The meridian storm is slower than it was: qi flows in about 30% slower, and surges warn for 1.5–1.7 s where they warned for 1 s. Shockwaves glow for 1.5 s where they glowed for 0.8 s, and roll out at 210 where they rolled at 300. The foundation's goal is 140.
 - **Karma:** gifts leave ân (a debt of gratitude) and killings leave oán (a grudge). Grudges come back as ambushes.
 - **Sect life** (win the entrance trial at the Thanh Vân gate, then talk to the gate again):
   - **Mission hall (Nhiệm Vụ Đường):** a board of three missions for a sword sect, drawn from the web game's templates and rolled again every three months: win fights, gather herbs or materials, cultivate, or beat disciples of the rival Blood Killing Demonic Sect. The rival hunt is posted only while enough of them are alive. You carry two missions at most.
@@ -157,7 +159,8 @@ dotnet test game/core/TuTien.Core.Tests
 #    to F by clicking in the keys panel (then F opens the board, E doesn't)
 #  - the rest of the slice: the world and its panels, map travel that walks round
 #    props until the month turns on the road, a fight on the field, striking a roaming
-#    pack, the first breakthrough trial, a spirit-art fight, the sect trial, a secret
+#    pack, the first breakthrough trial (its guide, "Not yet", a practice run, then the
+#    real one through the guide's Begin), a spirit-art fight, the sect trial, a secret
 #    realm floor, the Trúc Cơ meridian storm (it must lay a foundation), a fight with
 #    each of the five new creatures using a different second-tier art, sword flight
 #    across the river (by key and by map), seclusion, and a save/load round trip
@@ -249,6 +252,8 @@ Then set `ANDROID_KEYSTORE_PASSWORD` (the password you chose) and `ANDROID_KEY_A
 - A field paints only the scenery near the camera; props farther away let their buffers go.
 
 The world now holds a few hundred buffers and makes about 75 draw calls a frame, down from about 1,300.
+
+The breakthrough trials were the last places that drew straight onto their canvas items, and they redraw every frame. The meridian storm built up to about 250 shapes a frame at its height, the stretch where Android phones closed it. Through brushes it makes about 60 draw calls a frame from start to finish. A trial also goes back to the world through the loading screen now, so the region is built a slice per frame there too. `--trial-stats [log] [shots dir]` plays the storm the phone's way (touch controls, 135% interface, the autopilot, a real window) and reports draw calls and memory each second, through the way back.
 
 **On the phone:**
 

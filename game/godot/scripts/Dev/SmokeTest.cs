@@ -257,16 +257,31 @@ public partial class SmokeTest : Node
         }
 
         // ---------------------------------------------------------------- the breakthrough trial
+        game.Notify(DevCheats.FillToBreakthrough(E));
+        Check(E.BreakthroughReady, "cultivation fills to a pending breakthrough");
+        // The trial opens on its guide; "Not yet" goes back with nothing lost.
+        var guided = await OpenTrial(world, "practise", "breakthrough");
+        Check(guided.Practice, "Practise first opens a practice run");
+        await Shot("trial_guide");
+        await ClickPanel(guided, "leave");
+        world = await UntilWorld();
+        Check(E.BreakthroughReady && E.Player.Realm == Realm.PhamNhan, "Not yet leaves the trial, the breakthrough still waiting");
+        world = await Settle(world);
+        // A practice run plays the trial for nothing and reports back on the breakthrough panel.
+        var practice = await OpenTrial(world, "practise");
+        await RunTrial(practice);
+        world = await UntilWorld();
+        await Frames(10);
+        Check(E.BreakthroughReady && E.Player.Realm == Realm.PhamNhan && world.CurrentPanel is BreakthroughPanel,
+            "a practice run changes nothing and brings back the breakthrough panel with its result");
+        await Shot("practice_result");
+        world = await Settle(world);
         for (var attempt = 1; attempt <= 3 && E.Player.Realm == Realm.PhamNhan; attempt++)
         {
             game.Notify(DevCheats.FillToBreakthrough(E));
-            Check(E.BreakthroughReady, "cultivation fills to a pending breakthrough");
-            world.OpenPanel(new BreakthroughPanel());
-            await Frames(3);
-            if (attempt == 1) await Shot("breakthrough");
-            var trial = Main.Instance.ShowBreakthroughTrial();
-            await Frames(2);
-            trial.Player.Autopilot = true;
+            var trial = await OpenTrial(world, "begin_breakthrough");
+            Check(!trial.Practice, "Begin opens the real trial");
+            await RunTrial(trial);
             await Frames(60 * 12);
             if (attempt == 1) await Shot("trial");
             world = await UntilWorld();
@@ -612,7 +627,7 @@ public partial class SmokeTest : Node
     }
 
     /// <summary>Scroll a named button of the open panel into view, then click it.</summary>
-    private async Task ClickPanel(WorldScreen world, string name)
+    private async Task ClickPanel(FieldScreen world, string name)
     {
         var button = world.CurrentPanel!.FindChild(name, true, false) as Button
                      ?? throw new InvalidOperationException($"no button '{name}' in the {world.CurrentPanel.GetType().Name}");
@@ -620,6 +635,30 @@ public partial class SmokeTest : Node
         await Frames(2);
         Check(!button.Disabled, $"'{name}' can be pressed");
         await ClickGui(button);
+    }
+
+    /// <summary>
+    /// The breakthrough panel's <paramref name="button"/> (begin_breakthrough or practise): the trial it opens,
+    /// which must be waiting on its guide.
+    /// </summary>
+    private async Task<TrialBase> OpenTrial(WorldScreen world, string button, string? shot = null)
+    {
+        world.OpenPanel(new BreakthroughPanel());
+        await Frames(3);
+        if (shot != null) await Shot(shot);
+        await ClickPanel(world, button);
+        await Frames(3);
+        var trial = Main.Instance.Field as TrialBase ?? throw new InvalidOperationException($"'{button}' opened no trial");
+        Check(trial.CurrentPanel is TrialGuidePanel && trial.Starting, $"{trial.GetType().Name} opens on its guide and waits");
+        return trial;
+    }
+
+    /// <summary>Press Begin on the trial's guide and let the autopilot play it.</summary>
+    private async Task RunTrial(TrialBase trial)
+    {
+        await ClickPanel(trial, "begin");
+        Check(!trial.PanelOpen, "Begin closes the guide");
+        trial.Player.Autopilot = true;
     }
 
     /// <summary>A button in the open panel with this text (in either language).</summary>
@@ -636,15 +675,13 @@ public partial class SmokeTest : Node
             E.Player.Injuries.Clear(); // a failed attempt injures; each retry starts whole
             Game.Instance.Notify(DevCheats.FillToBreakthrough(E));
             Check(E.BreakthroughReady && E.Player.Stage == 9, "Luyện Khí fills to its ninth stage, a breakthrough waiting");
-            world.OpenPanel(new BreakthroughPanel());
-            await Frames(3);
-            if (attempt == 1) await Shot("breakthrough_truc_co");
-            var trial = Main.Instance.ShowBreakthroughTrial();
+            var trial = await OpenTrial(world, "begin_breakthrough", attempt == 1 ? "breakthrough_truc_co" : null);
             Check(trial is FoundationTrial, "Luyện Khí's breakthrough is the meridian storm");
             var storm = (FoundationTrial)trial;
-            await Frames(2);
-            storm.Player.Autopilot = true;
-            await Frames(60 * 46);
+            if (attempt == 1) await Shot("foundation_guide");
+            await RunTrial(storm);
+            Check(storm.Starting && !storm.Ended, "Begin counts three before the storm starts");
+            await Frames(60 * 48);
             if (attempt == 1) await Shot("foundation_trial");
             await Until(() => storm.Ended, 60 * 30, "the meridian storm ends");
             Log($"meridian storm {attempt}: {storm.Score:0}/{FoundationTrial.Goal:0}, {storm.Hits} hits, performance {storm.Performance:0.00} (needed {storm.Threshold:0.00})");
@@ -979,11 +1016,12 @@ public partial class SmokeTest : Node
         field.Player.Autopilot = false;
     }
 
+    /// <summary>Until the world is on screen again (and the loading screen it may come back through has gone).</summary>
     private async Task<WorldScreen> UntilWorld(int maxFrames = 60 * 180)
     {
         for (var i = 0; i < maxFrames; i++)
         {
-            if (Main.Instance.World is { } w) return w;
+            if (Main.Instance.World is { } w && Main.Instance.Loading == null) return w;
             await Frames(1);
         }
         throw new TimeoutException("the world never came back");

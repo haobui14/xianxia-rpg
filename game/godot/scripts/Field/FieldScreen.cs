@@ -287,12 +287,36 @@ public abstract partial class FieldScreen : Node2D
     {
     }
 
+    /// <summary>
+    /// An arena that must be seen whole (the breakthrough trials): the camera holds on this rectangle and
+    /// zooms to fit it, whatever the screen and the interface size. Null (the default) follows the player.
+    /// </summary>
+    protected virtual Rect2? Stage => null;
+
+    /// <summary>Whether the HUD shows the date card and the message log (a trial wants the screen for itself).</summary>
+    public virtual bool ShowCalendar => true;
+    public virtual bool ShowLog => true;
+
+    /// <summary>Where the HUD's banners sit (their centre line), given the screen size.</summary>
+    public virtual float BannerY(Vector2 size) => size.Y * 0.36f;
+
     private void UpdateCamera(float dt)
     {
-        Camera.Position = PlayerBody.Pos + new Vector2(0, -30);
+        var stage = Stage;
+        var target = _zoom;
+        if (stage is { } s)
+        {
+            var screen = GetViewportRect().Size;
+            Camera.Position = s.GetCenter();
+            target = Mathf.Clamp(Mathf.Min(screen.X / s.Size.X, screen.Y / s.Size.Y), 0.35f, 1.5f);
+        }
+        else
+        {
+            Camera.Position = PlayerBody.Pos + new Vector2(0, -30);
+        }
         _shake = Mathf.Max(0, _shake - dt * 40);
         Camera.Offset = _shake > 0 ? new Vector2(GD.Randf() - 0.5f, GD.Randf() - 0.5f) * _shake : Vector2.Zero;
-        var z = Mathf.Lerp(Camera.Zoom.X, _zoom, Mathf.Min(1, dt * 10));
+        var z = Mathf.Lerp(Camera.Zoom.X, target, Mathf.Min(1, dt * 10));
         Camera.Zoom = new Vector2(z, z);
         var size = GetViewportRect().Size / Camera.Zoom;
         _view = new Rect2(Camera.GetScreenCenterPosition() - size / 2, size);

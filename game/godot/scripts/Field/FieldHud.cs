@@ -32,6 +32,8 @@ public partial class FieldHud : Control
 
     private readonly FieldScreen _f;
     private VBoxContainer _toasts = null!;
+    /// <summary>Where the cultivator's card ends (a trial hangs its gauge under it).</summary>
+    public float CardBottom { get; private set; } = 130;
     private GridContainer _icons = null!;
     private Button _breakthrough = null!;
     private Minimap? _minimap;
@@ -252,7 +254,8 @@ public partial class FieldHud : Control
         // and the log moves up under the character card.
         var touch = TouchUi.Active;
         var whoBottom = Who(new Vector2(16, 14));
-        When(size);
+        CardBottom = whoBottom;
+        if (_f.ShowCalendar) When(size);
         if (_f.Battle is { } battle)
         {
             BossBar(size, battle);
@@ -260,7 +263,7 @@ public partial class FieldHud : Control
         }
         if (_f is TrialBase trial) trial.DrawHud(this, size);
         else if (!touch) SkillBar(size);
-        Log(size, touch ? whoBottom + 10 : null);
+        if (_f.ShowLog) Log(size, touch ? whoBottom + 10 : null);
         if (_month != null) DrawCard(_month, new Vector2(size.X / 2 - 210, _f.Battle != null ? 130 : 92), 420);
         if (_result != null) DrawCard(_result, touch ? new Vector2(size.X / 2 - 190, 96) : new Vector2(size.X - 396, size.Y / 2 - 60), 380);
         if (touch) TouchHint(size);
@@ -278,7 +281,7 @@ public partial class FieldHud : Control
     /// A rectangle's outline as four filled strips. The HUD redraws every frame, and an unfilled rect is a
     /// polyline with GPU buffers of its own each time; filled rects cost nothing extra.
     /// </summary>
-    private void Frame(Rect2 r, Color color, float width)
+    public void Frame(Rect2 r, Color color, float width)
     {
         var h = width / 2;
         DrawRect(new Rect2(r.Position.X - h, r.Position.Y - h, r.Size.X + width, width), color);
@@ -597,7 +600,7 @@ public partial class FieldHud : Control
         var alpha = Mathf.Clamp(_bannerTime * 2.5f, 0, 1);
         var font = Ink.Serif;
         var s = font.GetStringSize(_banner, HorizontalAlignment.Left, -1, 70);
-        var center = new Vector2(size.X / 2, size.Y * 0.36f);
+        var center = new Vector2(size.X / 2, _f.BannerY(size));
         DrawRect(new Rect2(0, center.Y - 64, size.X, _bannerSub.Length > 0 ? 120 : 92), new Color(Ink.Card, 0.66f * alpha));
         DrawStringOutline(font, center - new Vector2(s.X / 2, -10), _banner, HorizontalAlignment.Left, -1, 70, 8, new Color(Ink.Card, alpha));
         DrawString(font, center - new Vector2(s.X / 2, -10), _banner, HorizontalAlignment.Left, -1, 70, new Color(_bannerColor, alpha));

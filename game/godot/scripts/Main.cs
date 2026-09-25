@@ -48,6 +48,12 @@ public partial class Main : Node
             AddChild(new PhoneStart(shotsAt >= 0 && shotsAt + 1 < args.Length ? args[shotsAt + 1] : null));
             return;
         }
+        if (args.Contains("--trial-stats"))
+        {
+            var at = Array.IndexOf(args, "--trial-stats");
+            AddChild(new TrialStats(at + 1 < args.Length ? args[at + 1] : null, at + 2 < args.Length ? args[at + 2] : null));
+            return;
+        }
         if (args.Contains("--arts-stress"))
         {
             var at = Array.IndexOf(args, "--arts-stress");
@@ -104,12 +110,12 @@ public partial class Main : Node
     public LoadingScreen? Loading { get; private set; }
 
     /// <summary>
-    /// Into the world behind a loading screen (a new life, or Continue): <paramref name="prepare"/> makes or
-    /// loads the run, then the region is built a slice per frame — a phone never sits on one long frame —
-    /// while the bar shows how far it got. If <paramref name="prepare"/> fails, <paramref name="failed"/> runs
-    /// and the title stays.
+    /// Into the world behind a loading screen (a new life, Continue, back from a trial): <paramref name="prepare"/>
+    /// makes or loads the run, then the region is built a slice per frame — a phone never sits on one long
+    /// frame — while the bar shows how far it got. If <paramref name="prepare"/> fails, <paramref name="failed"/>
+    /// runs and the screen stays; once the world is up, <paramref name="entered"/> gets it.
     /// </summary>
-    public async void EnterWorld(Func<bool> prepare, Vector2? spawn = null, Action? failed = null)
+    public async void EnterWorld(Func<bool> prepare, Vector2? spawn = null, Action? failed = null, Action<WorldScreen>? entered = null)
     {
         if (Loading != null) return;
         var layer = new CanvasLayer { Layer = 100 };
@@ -148,6 +154,7 @@ public partial class Main : Node
             loading.Report(0.96f, "Vẽ cảnh quanh ngươi", "Painting the land around you");
             // The scenery near the camera paints on these frames.
             await Frames(2);
+            entered?.Invoke(world);
             await loading.Finish();
         }
         catch (Exception ex)
@@ -178,10 +185,13 @@ public partial class Main : Node
         return realm;
     }
 
-    /// <summary>The breakthrough set piece (design §7.5): the meridian storm into Trúc Cơ, otherwise drawing qi in.</summary>
-    public TrialBase ShowBreakthroughTrial()
+    /// <summary>
+    /// The breakthrough set piece (design §7.5): the meridian storm into Trúc Cơ, otherwise drawing qi in.
+    /// A <paramref name="practice"/> run plays it for nothing (no gain, no risk).
+    /// </summary>
+    public TrialBase ShowBreakthroughTrial(bool practice = false)
     {
-        TrialBase trial = Game.Instance.Engine?.Player.Realm == TuTien.Core.Realm.LuyenKhi ? new FoundationTrial() : new TrialScreen();
+        TrialBase trial = Game.Instance.Engine?.Player.Realm == TuTien.Core.Realm.LuyenKhi ? new FoundationTrial(practice) : new TrialScreen(practice);
         Swap(trial);
         return trial;
     }
