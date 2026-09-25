@@ -85,18 +85,21 @@ namespace TuTien.Core.World
                         $"Only {yearsLeft} years of lifespan left — break through to extend it!"));
             }
 
-            // 5. The living world.
+            // 5. A disciple's month: the sect's stipend, and missions that ran out of time.
+            report.Events.AddRange(SectMissions.MonthPassed(state, content));
+
+            // 6. The living world.
             EventEngine.TickCooldowns(state);
             NpcSim.Tick(state, content, map, report.Rumors, report.Events);
 
-            // 6. Spawns: beasts roam and respawn, adventures refresh, herbs regrow.
+            // 7. Spawns: beasts roam and respawn, adventures refresh, herbs regrow.
             var rng = Seeds.Stream(state.Seed, "spawns", state.Calendar.MonthIndex);
             Spawns.MoveBeasts(state, content, map, rng, report.Events);
             Spawns.FillBeasts(state, content, map, rng);
             Spawns.RefreshAdventures(state, content, map, rng);
             report.Ambushed = state.World.PendingAmbush != null;
 
-            // 7. A fresh month of footwork.
+            // 8. A fresh month of footwork.
             p.FootworkMax = FootworkMax(p);
             p.Footwork = p.FootworkMax;
             p.SensePulse = false;
@@ -104,7 +107,7 @@ namespace TuTien.Core.World
             fog.RevealCircle(p.X, p.Y, MapGrid.SenseRadius(p));
             fog.SaveTo(p, map);
 
-            // 8. A plain-facts chronicle line; the storyteller rewrites these when online.
+            // 9. A plain-facts chronicle line; the storyteller rewrites these when online.
             state.Chronicle.Add(new ChronicleEntry
             {
                 MonthIndex = state.Calendar.MonthIndex,

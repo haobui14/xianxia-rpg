@@ -195,8 +195,9 @@ public class ProgressionTests
         e.State.Player.Realm = Realm.TrucCo;
         e.State.Player.Stage = 1;
         var json = e.Save();
-        Assert.Contains("\"version\":2", json);
-        var loaded = GameEngine.Load(C, json.Replace("\"version\":2", "\"version\":1"));
+        var current = $"\"version\":{SaveCodec.CurrentVersion}";
+        Assert.Contains(current, json);
+        var loaded = GameEngine.Load(C, json.Replace(current, "\"version\":1"));
         Assert.Equal(FoundationGrade.Ha, loaded.Player.Foundation);
         Assert.Equal(FoundationGrade.None, GameEngine.Load(C, json).Player.Foundation);
     }

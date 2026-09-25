@@ -332,15 +332,17 @@ namespace TuTien.Core
             // Fights happen outside the strategic clock; the host never ends a month mid-fight.
             if (ActiveEncounter != null) return new MonthReport();
             var report = WorldTick.EndMonth(State, Content, Map, seclusion: false, VeinBonusHere());
+            report.Events.AddRange(SectMissions.Announce(State, Content));
             MonthEnded?.Invoke(report);
             return report;
         }
 
         /// <summary>
         /// Bế quan for up to <paramref name="months"/> months. Stops early on death, an ambush, or a
-        /// cultivation event (15%/month) the player has to answer.
+        /// cultivation event (15%/month) the player has to answer. A rented room costs silver each month,
+        /// the sect's spirit-gathering chamber spirit stones.
         /// </summary>
-        public MonthReport Seclude(int months, int extraQiDensity, int silverPerMonth = 0)
+        public MonthReport Seclude(int months, int extraQiDensity, int silverPerMonth = 0, int stonesPerMonth = 0)
         {
             var total = new MonthReport();
             for (var i = 0; i < months; i++)
@@ -353,6 +355,16 @@ namespace TuTien.Core
                         break;
                     }
                     Player.Silver -= silverPerMonth;
+                }
+                if (stonesPerMonth > 0)
+                {
+                    if (Player.SpiritStones < stonesPerMonth)
+                    {
+                        total.Events.Add(GameEvent.Warn("seclusion_stones", "Hết linh thạch — trận tụ linh tắt, kết thúc bế quan.",
+                            "Out of spirit stones — the gathering array goes dark and seclusion ends."));
+                        break;
+                    }
+                    Player.SpiritStones -= stonesPerMonth;
                 }
                 var m = WorldTick.EndMonth(State, Content, Map, seclusion: true, extraQiDensity + VeinBonusHere());
                 total.Months += 1;
@@ -376,6 +388,7 @@ namespace TuTien.Core
                     }
                 }
             }
+            total.Events.AddRange(SectMissions.Announce(State, Content));
             return total;
         }
 
@@ -522,6 +535,8 @@ namespace TuTien.Core
 
             var qiShare = Player.Path == CultivationPath.Body ? 0 : Player.Path == CultivationPath.Kiem ? Player.QiShare : 100;
             result.Events.AddRange(Cultivation.AddExp(State, Content, result.Exp * qiShare / 100, result.Exp - result.Exp * qiShare / 100));
+            // A win counts for the sect's missions (the entrance trial is how you join, not a mission).
+            if (enc.Source != "trial") SectMissions.Won(State, npc);
 
             switch (enc.Source)
             {
@@ -549,6 +564,7 @@ namespace TuTien.Core
                 var ev = EventEngine.Select(EventEngine.ValidEvents(State, Content, "combat_end", Map.Def.RegionId), Player, rng);
                 result.FollowUpEventId = ev?.Id;
             }
+            result.Events.AddRange(SectMissions.Announce(State, Content));
             return result;
         }
 
@@ -627,6 +643,7 @@ namespace TuTien.Core
                 var enc = StartAdventureFight(result.CombatEnemyId, zone);
                 if (enc != null) result.Events.Add(GameEvent.Info("fight", "Chiến đấu!", "Fight!"));
             }
+            result.Events.AddRange(SectMissions.Announce(State, Content));
             return result;
         }
 
@@ -650,10 +667,16 @@ namespace TuTien.Core
             Player.Counters.HerbsGathered += 1;
             foreach (var s in roll.Items)
                 events.Add(GameEvent.Info("item_gained", $"Hái được {s.Name} ×{s.Qty}.", $"Gathered {s.NameEn} ×{s.Qty}."));
+            events.AddRange(SectMissions.Announce(State, Content));
             return events;
         }
 
-        public List<GameEvent> UseItem(string itemId) => Inventory.Use(State, Content, itemId);
+        public List<GameEvent> UseItem(string itemId)
+        {
+            var events = Inventory.Use(State, Content, itemId);
+            events.AddRange(SectMissions.Announce(State, Content));
+            return events;
+        }
 
         /// <summary>Put a known art into one of the four spirit-art slots (empty string clears it).</summary>
         public bool SetSkillSlot(int slot, string skillId)
@@ -777,8 +800,11 @@ namespace TuTien.Core
             var events = new List<GameEvent>();
             if (!Content.Sects.TryGetValue(sectId, out var sect) || Player.SectId != null) return events;
             Player.SectId = sectId;
-            Player.SectRank = "NgoạiMôn";
+            Player.SectRank = SectRanks.Ladder[0].Id;
             Player.Contribution = 0;
+            Player.Merit = 0;
+            Player.Missions.Clear();
+            Player.MissionBoard = new MissionBoardState();
             events.Add(GameEvent.Major("sect_join",
                 $"Bái nhập {sect.Name} — đệ tử ngoại môn. Tu luyện +{Cultivation.SectBonusPercent(Player.SectRank)}%.",
                 $"Joined the {sect.NameEn} as an outer disciple. Cultivation +{Cultivation.SectBonusPercent(Player.SectRank)}%."));
@@ -787,6 +813,26 @@ namespace TuTien.Core
                 $"{Player.Name} được thu nhận vào {sect.Name}.", $"{Player.Name} was accepted into the {sect.NameEn}.");
             return events;
         }
+
+        /// <summary>What the mission hall of the player's sect offers right now.</summary>
+        public List<MissionTemplateDef> MissionBoard() => SectMissions.Board(State, Content);
+
+        public List<GameEvent> AcceptMission(string templateId) => SectMissions.Accept(State, Content, templateId);
+
+        public List<GameEvent> AbandonMission(string missionId) => SectMissions.Abandon(State, Content, missionId);
+
+        /// <summary>Report finished missions at the hall and take their rewards.</summary>
+        public List<GameEvent> ClaimMissions() => SectMissions.Claim(State, Content);
+
+        public List<GameEvent> Promote() => SectMissions.Promote(State, Content);
+
+        /// <summary>Take something from the sect's treasury for contribution.</summary>
+        public List<GameEvent> Exchange(string itemId) => SectMissions.Exchange(State, Content, itemId);
+
+        public SectHallDef? Hall => Player.SectId != null && Content.Halls.TryGetValue(Player.SectId, out var h) ? h : null;
+
+        /// <summary>The spirit-gathering chamber, when the player's rank opens it (else null).</summary>
+        public ChamberDef? Chamber => SectMissions.Chamber(Player, Content);
 
         // ================================================================ people
 
@@ -963,6 +1009,7 @@ namespace TuTien.Core
             events.Add(GameEvent.Major("realm_clear", $"Chinh phục {d.Name}!", $"Conquered the {d.NameEn}!"));
             NpcSim.AddRumor(State, new List<Rumor>(), "player_realm", null,
                 $"{Player.Name} đã chinh phục {d.Name}.", $"{Player.Name} conquered the {d.NameEn}.");
+            events.AddRange(SectMissions.Announce(State, Content));
             return events;
         }
 

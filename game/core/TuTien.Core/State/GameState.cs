@@ -94,7 +94,14 @@ namespace TuTien.Core.State
 
         public string? SectId { get; set; }
         public string? SectRank { get; set; }
+        /// <summary>Cống hiến to spend at the treasury.</summary>
         public int Contribution { get; set; }
+        /// <summary>Công trạng: all the contribution ever earned. Promotions look at this, so spending never costs a rank.</summary>
+        public int Merit { get; set; }
+        /// <summary>Sect missions taken at the mission hall (design §7.9).</summary>
+        public List<ActiveMission> Missions { get; set; } = new List<ActiveMission>();
+        /// <summary>What the mission hall is offering, rolled every few months.</summary>
+        public MissionBoardState MissionBoard { get; set; } = new MissionBoardState();
         public List<ActiveBounty> Bounties { get; set; } = new List<ActiveBounty>();
 
         public List<InjuryState> Injuries { get; set; } = new List<InjuryState>();
@@ -125,6 +132,7 @@ namespace TuTien.Core.State
         public int Defeats { get; set; }
         public int AdventuresResolved { get; set; }
         public int HerbsGathered { get; set; }
+        public int MissionsCompleted { get; set; }
         public Dictionary<string, int> KillsByEnemy { get; set; } = new Dictionary<string, int>();
     }
 
@@ -196,6 +204,41 @@ namespace TuTien.Core.State
         public int RewardKarma { get; set; }
         public string Name { get; set; } = "";
         public string NameEn { get; set; } = "";
+    }
+
+    /// <summary>
+    /// A sect mission in hand. The objective is copied from its template when it's taken, so a content
+    /// change never alters a mission already under way.
+    /// </summary>
+    public sealed class ActiveMission
+    {
+        public string Id { get; set; } = "";
+        public string TemplateId { get; set; } = "";
+        /// <summary>gather_items | win_combats | defeat_rival_member | cultivate_exp | visit_region</summary>
+        public string Kind { get; set; } = "";
+        public int Goal { get; set; } = 1;
+        public int Progress { get; set; }
+        public string? ItemType { get; set; }
+        public string? MinRarity { get; set; }
+        public string? RivalSectId { get; set; }
+        public string? RegionId { get; set; }
+        public int AcceptedMonth { get; set; }
+        /// <summary>The month index it must be done by; a finished mission waits to be reported without one.</summary>
+        public int DeadlineMonth { get; set; }
+        public int RewardContribution { get; set; }
+        public int RewardSilver { get; set; }
+        public int RewardStones { get; set; }
+        /// <summary>The player has been told it is done (it waits at the hall for the reward).</summary>
+        public bool Announced { get; set; }
+
+        [JsonIgnore] public bool Done => Progress >= Goal;
+    }
+
+    public sealed class MissionBoardState
+    {
+        /// <summary>The month index the board was last rolled; −1 before the first time.</summary>
+        public int RolledMonth { get; set; } = -1;
+        public List<string> Offers { get; set; } = new List<string>();
     }
 
     public sealed class ChronicleEntry

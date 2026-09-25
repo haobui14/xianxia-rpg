@@ -53,6 +53,15 @@
         "id": "thanh_moc_truong_sinh_quyet", "name": "Thanh Mộc Trường Sinh Quyết", "name_en": "Evergreen Longevity Art",
         "grade": "Earth", "elements": ["Mộc"], "cultivation_speed_bonus": 20
       }
+    },
+    {
+      "id": "thanh_van_kiem_kinh", "name": "Thanh Vân Kiếm Kinh", "name_en": "Azure Cloud Sword Canon", "type": "Book", "rarity": "Rare",
+      "description": "Công pháp chân truyền của Thanh Vân Kiếm Phái, chỉ Tàng Bảo Các trao cho đệ tử nội môn trở lên.",
+      "description_en": "The Azure Cloud Sword Sect's own technique; its treasury gives it only to inner disciples and above.",
+      "teaches_technique": {
+        "id": "thanh_van_kiem_kinh", "name": "Thanh Vân Kiếm Kinh", "name_en": "Azure Cloud Sword Canon",
+        "grade": "Earth", "elements": ["Mộc", "Kim"], "cultivation_speed_bonus": 18
+      }
     }
   ]
 }

@@ -14,7 +14,7 @@ public partial class JournalPanel : InkPanel
 
     protected override void Build()
     {
-        Tabs(T("Biên niên", "Chronicle"), T("Tin đồn", "Rumors"), T("Nhân quả", "Ledger"), T("Cáo thị", "Bounties"), T("Cách chơi", "How to play"));
+        Tabs(T("Biên niên", "Chronicle"), T("Tin đồn", "Rumors"), T("Nhân quả", "Ledger"), T("Nhiệm vụ", "Tasks"), T("Cách chơi", "How to play"));
         var state = E.State;
         switch (Tab)
         {
@@ -43,6 +43,21 @@ public partial class JournalPanel : InkPanel
                     "Bonds don't fade on their own: those in your debt come to help, those with grudges come for revenge."), 13, Ink.InkFaint);
                 break;
             case 3:
+                Section(T("Nhiệm vụ tông môn", "Sect missions"));
+                if (state.Player.SectId == null)
+                    Para(T("Chưa vào tông môn nào — Nhiệm Vụ Đường chỉ giao việc cho đệ tử.", "You belong to no sect — only disciples get missions from a mission hall."), 15, Ink.InkMute);
+                else if (state.Player.Missions.Count == 0)
+                    Para(T("Chưa nhận nhiệm vụ — tới Nhiệm Vụ Đường ở sơn môn.", "No missions taken — visit the mission hall at the sect gate."), 15, Ink.InkMute);
+                foreach (var m in state.Player.Missions)
+                {
+                    var t = TuTien.Core.Rules.SectMissions.Template(E.Content, m.TemplateId);
+                    var left = m.DeadlineMonth - state.Calendar.MonthIndex;
+                    Para($"{(t != null ? T(t.Name, t.NameEn) : m.TemplateId)}: {m.Progress}/{m.Goal} · " + (m.Done
+                            ? T("xong, về sơn môn báo cáo", "done, report at the sect")
+                            : T($"còn {left} tháng", $"{left} month{(left == 1 ? "" : "s")} left")),
+                        16, m.Done ? Ink.JadeDeep : left <= 1 ? Ink.CinnabarDeep : Ink.InkColor);
+                }
+                Section(T("Cáo thị", "Bounties"));
                 if (state.Player.Bounties.Count == 0) Para(T("Chưa nhận cáo thị nào — xem bảng cáo thị ở thôn.", "No bounties taken — check the village board."));
                 foreach (var b in state.Player.Bounties)
                     Para($"{T(b.Name, b.NameEn)}: {b.Progress}/{b.Count} · {b.RewardSilver} {T("bạc", "silver")}", 16, b.Progress >= b.Count ? Ink.JadeDeep : Ink.InkColor);

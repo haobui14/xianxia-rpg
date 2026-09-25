@@ -231,6 +231,35 @@ namespace TuTien.Core.Content
         public int? SpiritStones { get; set; }
     }
 
+    /// <summary>
+    /// What a sect keeps for its own (hand-authored, design §7.9): the treasury where contribution buys
+    /// things, and the spirit-gathering chamber where disciples of rank seclude on spirit stones.
+    /// </summary>
+    public sealed class SectHallDef
+    {
+        public string SectId { get; set; } = "";
+        public List<TreasuryEntryDef> Treasury { get; set; } = new List<TreasuryEntryDef>();
+        public ChamberDef? Chamber { get; set; }
+    }
+
+    public sealed class TreasuryEntryDef
+    {
+        public string ItemId { get; set; } = "";
+        /// <summary>In contribution.</summary>
+        public int Price { get; set; }
+        /// <summary>The lowest rank that may take it (a rank id); null for every disciple.</summary>
+        public string? MinRank { get; set; }
+    }
+
+    public sealed class ChamberDef
+    {
+        public string Name { get; set; } = "";
+        public string NameEn { get; set; } = "";
+        public int QiDensity { get; set; }
+        public int StonesPerMonth { get; set; }
+        public string? MinRank { get; set; }
+    }
+
     // ---------------------------------------------------------------- items & loot
 
     public class ItemDef

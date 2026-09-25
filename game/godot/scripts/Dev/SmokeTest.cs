@@ -360,6 +360,9 @@ public partial class SmokeTest : Node
         // ---------------------------------------------------------------- Trúc Cơ: the meridian storm
         world = await FoundationBreakthrough(world);
 
+        // ---------------------------------------------------------------- a disciple's life: missions, ranks, the treasury
+        world = await SectLife(world);
+
         // ---------------------------------------------------------------- new beasts, new arts
         world = await NewBeastsAndArts(world);
 
@@ -542,6 +545,81 @@ public partial class SmokeTest : Node
         Check(E.Player.SkillSlots[0] == art, "and it goes back into the first slot");
         Check(world.CurrentPanel!.FindChildren("*", "OptionButton", true, false).Count == 0, "the Arts tab opens no drop-down pickers (popup windows)");
         return await Settle(world);
+    }
+
+    /// <summary>
+    /// A disciple's life at the gate, by mouse: take a mission from the hall's board, do it, report it for
+    /// contribution and merit; rise to inner disciple; take the sect's technique from the treasury; open
+    /// the spirit-gathering chamber that the new rank unlocks.
+    /// </summary>
+    private async Task<WorldScreen> SectLife(WorldScreen world)
+    {
+        var game = Game.Instance;
+        // The entrance trial is a real spar and can be lost; this step needs a disciple.
+        if (E.Player.SectId == null) game.Notify(E.JoinSect("thanh_van_kiem"));
+        Check(E.Player.SectId == "thanh_van_kiem" && E.Player.SectRank == "NgoạiMôn", "an outer disciple of the Azure Cloud Sword Sect");
+        var gate = E.Map.Def.Pois.First(p => p.Kind == "sect");
+        world.OpenPanel(new SectPanel(gate));
+        await Frames(3);
+        await Shot("sect_standing");
+
+        await ClickGui(PanelButton(world, "Nhiệm Vụ Đường", "Mission hall"));
+        var board = E.MissionBoard();
+        Check(board.Count > 0 && board.All(t => t.SectTypes.Contains("Kiếm")), $"the mission hall posts missions for a sword sect ({string.Join(", ", board.Select(t => t.Id))})");
+        var offer = board[0];
+        await ClickPanel(world, "take_" + offer.Id);
+        var held = E.Player.Missions.FirstOrDefault(m => m.TemplateId == offer.Id);
+        Check(held != null && E.MissionBoard().All(t => t.Id != offer.Id), $"Take puts {offer.Id} in hand and off the board");
+        await Shot("sect_missions");
+        // The dev shortcut stands in for the fights, herbs or months it asks for; the rules tests play those.
+        game.Notify(DevCheats.FinishMissions(E));
+        await Frames(3);
+        var (contribution, merit, reward) = (E.Player.Contribution, E.Player.Merit, held!.RewardContribution);
+        await ClickPanel(world, "report_missions");
+        Check(E.Player.Missions.Count == 0 && E.Player.Contribution == contribution + reward && E.Player.Merit == merit + reward,
+            $"reporting at the hall pays {reward} contribution and as much merit");
+
+        // Up the ranks: at Trúc Cơ, 200 merit makes an inner disciple.
+        DevCheats.Contribution(E, Math.Max(0, 200 - E.Player.Merit) + 300);
+        game.Changed();
+        await Frames(2);
+        await ClickGui(PanelButton(world, "Thân phận", "Standing"));
+        await ClickPanel(world, "promote");
+        Check(E.Player.SectRank == "NộiMôn", "Rise: the merit and the realm make an inner disciple");
+        await Shot("sect_promoted");
+
+        // The treasury keeps the sect's own technique for inner disciples.
+        await ClickGui(PanelButton(world, "Tàng Bảo Các", "Treasury"));
+        var before = E.Player.Contribution;
+        await ClickPanel(world, "exchange_thanh_van_kiem_kinh");
+        Check(TuTien.Core.Rules.Inventory.Count(E.Player, "thanh_van_kiem_kinh") == 1 && E.Player.Contribution == before - 260,
+            "the treasury gives the Azure Cloud Sword Canon for 260 contribution");
+        await Shot("sect_treasury");
+
+        // The new rank opens the spirit-gathering chamber: seclusion there runs on spirit stones.
+        await ClickGui(PanelButton(world, "Thân phận", "Standing"));
+        E.Player.SpiritStones += 10;
+        game.Changed();
+        await Frames(2);
+        await ClickPanel(world, "chamber");
+        Check(world.CurrentPanel is SeclusionPanel, "the chamber opens a seclusion in it");
+        await Shot("sect_chamber");
+        var stones = E.Player.SpiritStones;
+        var chamber = E.Chamber!;
+        var report = E.Seclude(1, chamber.QiDensity, stonesPerMonth: chamber.StonesPerMonth);
+        Check(report.Months == 1 && E.Player.SpiritStones == stones - chamber.StonesPerMonth + 1, "a month in the chamber costs its stones (the stipend brings one back)");
+        return await Settle(world);
+    }
+
+    /// <summary>Scroll a named button of the open panel into view, then click it.</summary>
+    private async Task ClickPanel(WorldScreen world, string name)
+    {
+        var button = world.CurrentPanel!.FindChild(name, true, false) as Button
+                     ?? throw new InvalidOperationException($"no button '{name}' in the {world.CurrentPanel.GetType().Name}");
+        world.CurrentPanel.FindChildren("*", "ScrollContainer", true, false).OfType<ScrollContainer>().First().EnsureControlVisible(button);
+        await Frames(2);
+        Check(!button.Disabled, $"'{name}' can be pressed");
+        await ClickGui(button);
     }
 
     /// <summary>A button in the open panel with this text (in either language).</summary>

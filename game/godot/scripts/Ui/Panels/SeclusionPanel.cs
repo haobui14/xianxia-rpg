@@ -16,9 +16,17 @@ public partial class SeclusionPanel : InkPanel
     public const int InnDensity = 10;
 
     private readonly TownDef? _inn;
+    private readonly ChamberDef? _chamber;
     private int _months = 3;
 
     public SeclusionPanel(TownDef? inn = null) => _inn = inn;
+
+    /// <summary>In the sect's spirit-gathering chamber: more qi, paid for in spirit stones.</summary>
+    public SeclusionPanel(ChamberDef chamber) => _chamber = chamber;
+
+    private int ExtraDensity => _inn != null ? InnDensity : _chamber?.QiDensity ?? 0;
+    private int SilverPerMonth => _inn?.SeclusionCostPerMonth ?? 0;
+    private int StonesPerMonth => _chamber?.StonesPerMonth ?? 0;
 
     protected override IconKind Emblem => IconKind.Lotus;
     protected override string TitleText => T("Bế quan tu luyện", "Secluded cultivation");
@@ -27,12 +35,15 @@ public partial class SeclusionPanel : InkPanel
     protected override void Build()
     {
         var p = E.Player;
-        var extra = _inn != null ? InnDensity : 0;
-        var cost = _inn?.SeclusionCostPerMonth ?? 0;
+        var extra = ExtraDensity;
+        var cost = SilverPerMonth;
         var poi = E.PoiHere();
 
         string where;
-        if (_inn != null)
+        if (_chamber != null)
+            where = T($"{_chamber.Name}: linh khí +{_chamber.QiDensity}%, {_chamber.StonesPerMonth} linh thạch/tháng (ngươi có {p.SpiritStones}).",
+                $"The {_chamber.NameEn}: +{_chamber.QiDensity}% qi, {_chamber.StonesPerMonth} spirit stones/month (you have {p.SpiritStones}).");
+        else if (_inn != null)
             where = T($"Tĩnh thất khách điếm: linh khí +{InnDensity}%, {cost} bạc/tháng.", $"Inn quiet room: +{InnDensity}% qi, {cost} silver/month.");
         else if (poi is { Kind: "spirit_vein" })
             where = T($"{poi.Name}: linh mạch, linh khí +{poi.QiBonus}%.", $"{poi.NameEn}: a spirit vein, +{poi.QiBonus}% qi.");
@@ -79,10 +90,13 @@ public partial class SeclusionPanel : InkPanel
             Para(T("Tu vi đã viên mãn: bế quan thêm không giúp gì — hãy đột phá trước.", "Your cultivation is full: more seclusion won't help — break through first."), 15, Ink.Cinnabar);
         else if (need != long.MaxValue)
             Para(T($"Còn thiếu {System.Math.Max(0, need - p.Exp)} tu vi tới tầng kế.", $"{System.Math.Max(0, need - p.Exp)} more to the next stage."), 15, Ink.InkMute);
-        Para(T("Bế quan có thể bị gián đoạn bởi tâm ma, phục kích, hoặc khi hết bạc.", "Seclusion can be interrupted by inner demons, an ambush, or running out of silver."), 14, Ink.InkFaint);
+        Para(_chamber != null
+                ? T("Bế quan có thể bị gián đoạn bởi tâm ma, phục kích, hoặc khi hết linh thạch.", "Seclusion can be interrupted by inner demons, an ambush, or running out of spirit stones.")
+                : T("Bế quan có thể bị gián đoạn bởi tâm ma, phục kích, hoặc khi hết bạc.", "Seclusion can be interrupted by inner demons, an ambush, or running out of silver."),
+            14, Ink.InkFaint);
 
         Body.AddChild(UiKit.Spacer(8));
-        var affordable = cost == 0 || p.Silver >= cost;
+        var affordable = (cost == 0 || p.Silver >= cost) && (StonesPerMonth == 0 || p.SpiritStones >= StonesPerMonth);
         Buttons(
             UiKit.Button(T($"Bắt đầu bế quan {_months} tháng", $"Seclude for {_months} month{(_months > 1 ? "s" : "")}"), Begin, primary: true, enabled: affordable),
             UiKit.Button(T("Để sau", "Not now"), Close));
@@ -90,7 +104,7 @@ public partial class SeclusionPanel : InkPanel
 
     private void Begin()
     {
-        var report = E.Seclude(_months, _inn != null ? InnDensity : 0, _inn?.SeclusionCostPerMonth ?? 0);
+        var report = E.Seclude(_months, ExtraDensity, SilverPerMonth, StonesPerMonth);
         Game.Instance.SaveGame();
         Game.Instance.Remember(report.Events);
         Open(new MonthReportPanel(report, seclusion: true));

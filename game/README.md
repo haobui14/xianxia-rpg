@@ -9,7 +9,7 @@ It is currently a **vertical slice** of the Thanh Vân region, played as a **2D 
 | Path | What it is |
 |---|---|
 | `core/TuTien.Core/` | All game rules, engine-free (`netstandard2.1`, no Godot references): RNG, content, calendar, cultivation, elements, karma, map and footwork, month tick, NPC sim, combat rules, loot, events, saves. `GameEngine` is the single entry point. |
-| `core/TuTien.Core.Tests/` | xUnit tests (106) that run the rules against the real content. |
+| `core/TuTien.Core.Tests/` | xUnit tests (135) that run the rules against the real content. |
 | `godot/` | The Godot project. `scripts/Field` is the top-down world: the region, secret-realm floors and the breakthrough trial are all *fields*, with collision, the player controller, fights (`Battle`, `EnemyAi`), the HUD and the map. `scripts/Art` draws people, creatures, scenery and effects in code. `scripts/Audio` synthesizes every sound effect and composes the music. `shaders/` paints the ground, the clouds of unexplored land and swaying trees. `scripts/Ui` holds the title screen, theme, panels and settings, and `scripts/Dev` holds the smoke test and F9 cheats. |
 | `godot/content/` | Game data as JSON. Most of it is exported from the web game's TypeScript; enemies, skills, items, towns, NPC names and the map are hand-authored. |
 
@@ -120,6 +120,14 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
     - In the last phase, find the gaps in the shockwaves the forming foundation sends out.
   - **Foundation grades:** how well you did sets the foundation's grade, Hạ / Trung / Thượng / Thiên phẩm. The grade multiplies the breakthrough's gains (×1 / ×1.25 / ×1.5 / ×2) and adds to your power for good (+0 / 5 / 10 / 20%). It is shown on the character sheet.
 - **Karma:** gifts leave ân (a debt of gratitude) and killings leave oán (a grudge). Grudges come back as ambushes.
+- **Sect life** (win the entrance trial at the Thanh Vân gate, then talk to the gate again):
+  - **Mission hall (Nhiệm Vụ Đường):** a board of three missions for a sword sect, drawn from the web game's templates and rolled again every three months: win fights, gather herbs or materials, cultivate, or beat disciples of the rival Blood Killing Demonic Sect. The rival hunt is posted only while enough of them are alive. You carry two missions at most.
+    - Progress counts itself as you fight, gather and cultivate. When a mission is done, report it at the hall for contribution, silver and spirit stones.
+    - A missed deadline, or giving a mission up, costs a quarter of its contribution.
+  - **Ranks:** contribution is spent, while merit (all contribution ever earned) is what promotion looks at. Outer to inner disciple takes 200 merit and Qi Condensation 5, inner to true takes 500 and Foundation 1, and true to elder takes 1500 and Golden Core 1. Each rank raises the sect's cultivation bonus and its monthly stipend of silver and spirit stones.
+  - **Treasury (Tàng Bảo Các):** pills, art manuals, the Foundation Pill, gear, and the sect's own technique, the Azure Cloud Sword Canon (+18% cultivation), for contribution. The best are kept for higher ranks.
+  - **Spirit-gathering chamber:** inner disciples can seclude in it for +30% qi, paying 2 spirit stones a month. It's the first thing in the game that spends spirit stones.
+  - The journal's Tasks tab tracks missions and bounties together.
 - **Sword flight (ngự kiếm):** from Trúc Cơ, press V to ride your sword over the river and peaks, twice as fast as walking and out of reach of beasts. Land with V, which doesn't work over water. Set off on the map across water and the sword takes you there and sets you down.
 - **Sound, all synthesized:** about 40 effects (swishes, hits, casts, coins, the month gong, and more), positional in the world. Five pieces of music are generated in pentatonic modes for the title, exploring, fights, the breakthrough trial and secret realms. The zither plays with glissandi, grace notes and tremolo over flute, bells and drone; fights get taiko drums. The music crossfades as you move between them.
 - **The seasons in the air:** blossom petals, summer fluff and butterflies, autumn leaves and snow drift across the screen. Footsteps raise dust on roads, ripples in the swamp and puffs of snow.
