@@ -277,6 +277,8 @@ namespace TuTien.Core.State
         public List<Rumor> Rumors { get; set; } = new List<Rumor>();
         public Dictionary<string, int> EventCooldowns { get; set; } = new Dictionary<string, int>();
         public Dictionary<string, int> DungeonClears { get; set; } = new Dictionary<string, int>();
+        /// <summary>Wares that change every month, by stall (a town's area id, or "caravan").</summary>
+        public Dictionary<string, MarketState> Markets { get; set; } = new Dictionary<string, MarketState>();
         public SecretRealmRun? Run { get; set; }
         /// <summary>A fight the world forced on you (e.g. an ambush during the month tick).</summary>
         public Encounter? PendingAmbush { get; set; }
@@ -342,6 +344,23 @@ namespace TuTien.Core.State
     {
         public string PoiId { get; set; } = "";
         public int ReadyMonth { get; set; }
+    }
+
+    /// <summary>Wares that change every month: a town stall's extra goods, or a merchant caravan's.</summary>
+    public sealed class MarketState
+    {
+        /// <summary>The month these wares were laid out (−1: never).</summary>
+        public int Month { get; set; } = -1;
+        public List<MarketOffer> Offers { get; set; } = new List<MarketOffer>();
+    }
+
+    public sealed class MarketOffer
+    {
+        public string ItemId { get; set; } = "";
+        public int Silver { get; set; }
+        public int SpiritStones { get; set; }
+        /// <summary>How many are left this month.</summary>
+        public int Left { get; set; }
     }
 
     public sealed class Rumor

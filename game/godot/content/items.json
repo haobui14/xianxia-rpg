@@ -62,6 +62,52 @@
         "id": "thanh_van_kiem_kinh", "name": "Thanh Vân Kiếm Kinh", "name_en": "Azure Cloud Sword Canon",
         "grade": "Earth", "elements": ["Mộc", "Kim"], "cultivation_speed_bonus": 18
       }
+    },
+    {
+      "id": "spirit_herb", "name": "Linh Thảo", "name_en": "Spirit Herb", "type": "Medicine", "rarity": "Common",
+      "description": "Cỏ thấm linh khí, nhai sống cũng hồi được chút linh lực.", "description_en": "A grass steeped in qi; chewed raw, it restores a little Qi.",
+      "effects": { "qi_restore": 25 }
+    },
+    {
+      "id": "medicinal_grass", "name": "Dược Thảo", "name_en": "Medicinal Grass", "type": "Medicine", "rarity": "Common",
+      "description": "Thảo dược dân gian, đắp vào vết thương là cầm máu.", "description_en": "A folk remedy; pressed on a wound, it stops the bleeding.",
+      "effects": { "hp_restore": 25 }
+    },
+    {
+      "id": "low_grade_pill", "name": "Hạ Phẩm Tụ Khí Đan", "name_en": "Low-grade Qi Pill", "type": "Medicine", "rarity": "Common",
+      "description": "Đan dược thô, luyện vội, nhưng vẫn giúp tu vi nhích lên.", "description_en": "A crude, hastily refined pill, but it still nudges your cultivation along.",
+      "effects": { "cultivation_exp": 40 }
+    },
+    {
+      "id": "cultivation_manual_basic", "name": "Nhập Môn Tâm Pháp", "name_en": "Primer of Cultivation", "type": "Book", "rarity": "Uncommon",
+      "description": "Quyển tâm pháp nhập môn một tu sĩ lang bạt tặng lại để tạ ơn cứu mạng.", "description_en": "A beginner's method a wandering cultivator gave you in thanks for saving their life.",
+      "teaches_technique": {
+        "id": "nhap_mon_tam_phap", "name": "Nhập Môn Tâm Pháp", "name_en": "Primer of Cultivation",
+        "grade": "Mortal", "elements": [], "cultivation_speed_bonus": 8
+      }
+    },
+    {
+      "id": "formation_fragment", "name": "Mảnh Trận Đồ", "name_en": "Formation Fragment", "type": "Book", "rarity": "Rare",
+      "description": "Mảnh trận đồ cổ khắc chi chít văn lộ. Nghiền ngẫm nó, ngộ tính tăng lên.", "description_en": "A fragment of an ancient formation diagram, dense with patterns. Studying it sharpens your insight.",
+      "effects": { "permanent_int": 1 }
+    },
+    {
+      "id": "rare_treasure", "name": "Trận Tâm Ngọc", "name_en": "Formation-Heart Jade", "type": "Accessory", "rarity": "Rare",
+      "description": "Viên ngọc từng làm lõi của một đại trận. Đeo vào, giác quan nhạy bén lạ thường.", "description_en": "A jade that once sat at the heart of a great formation. Worn, it sharpens the senses.",
+      "equipment_slot": "Accessory", "bonus_stats": { "perception": 3, "luck": 2 }
+    },
+    {
+      "id": "legendary_technique", "name": "Vân Hải Thiên Công", "name_en": "Sea of Clouds Heavenly Art", "type": "Book", "rarity": "Legendary",
+      "description": "Truyền thừa của một vị tiền bối vô danh: thổ nạp như mây trôi biển lớn.", "description_en": "The legacy of a nameless master: breathe the way clouds drift over a great sea.",
+      "teaches_technique": {
+        "id": "van_hai_thien_cong", "name": "Vân Hải Thiên Công", "name_en": "Sea of Clouds Heavenly Art",
+        "grade": "Heaven", "elements": [], "cultivation_speed_bonus": 30
+      }
+    },
+    {
+      "id": "mysterious_herb", "name": "Kỳ Dị Linh Thảo", "name_en": "Mysterious Herb", "type": "Medicine", "rarity": "Rare",
+      "description": "Loài cỏ lạ mọc trong hang tối, tỏa ánh bạc. Ăn vào, gân cốt và tu vi cùng tăng.", "description_en": "A strange herb that grows in dark caves and glows silver. Eaten, it strengthens both body and cultivation.",
+      "effects": { "cultivation_exp": 150, "permanent_hp": 10 }
     }
   ]
 }

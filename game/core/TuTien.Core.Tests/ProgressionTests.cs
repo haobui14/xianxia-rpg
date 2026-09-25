@@ -165,7 +165,7 @@ public class ProgressionTests
     {
         var state = ReadyForTrucCo();
         var p = state.Player;
-        Cultivation.CompleteMajorBreakthrough(state, C, performance: Cultivation.MajorBreakthroughThreshold(p));
+        Cultivation.CompleteMajorBreakthrough(state, C, performance: Cultivation.MajorBreakthroughThreshold(state));
         Assert.Equal((Realm.TrucCo, FoundationGrade.Ha, 530, 650), (p.Realm, p.Foundation, p.HpMax, p.QiMax));
     }
 

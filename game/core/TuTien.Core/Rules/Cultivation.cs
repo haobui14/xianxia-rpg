@@ -182,7 +182,9 @@ namespace TuTien.Core.Rules
             if (!p.PendingMajorBreakthrough) return events;
             p.PendingMajorBreakthrough = false;
 
-            var threshold = MajorBreakthroughThreshold(p);
+            var threshold = MajorBreakthroughThreshold(state);
+            // The feeling held back is spent on this attempt, whatever comes of it.
+            state.Flags.Remove(StoredFeelingFlag);
             if (performance >= threshold)
             {
                 var from = p.Realm;
@@ -231,11 +233,23 @@ namespace TuTien.Core.Rules
             return events;
         }
 
-        /// <summary>Easier with good preparation: spirit root grade, techniques, and no injuries.</summary>
-        public static double MajorBreakthroughThreshold(PlayerState p)
+        /// <summary>A breakthrough feeling held back for later (the "breakthrough opportunity" event): the next one is easier.</summary>
+        public const string StoredFeelingFlag = "stored_breakthrough_feeling";
+
+        /// <summary>Facing down an inner demon (an event) leaves the heart steadier for good.</summary>
+        public const string InnerDemonFlag = "overcame_inner_demon";
+
+        /// <summary>
+        /// Easier with good preparation: spirit root grade, techniques, and no injuries. A breakthrough feeling held
+        /// back lowers the next one by 8%; a heart that has faced its inner demon, every one by 3%.
+        /// </summary>
+        public static double MajorBreakthroughThreshold(GameState state)
         {
+            var p = state.Player;
             var t = 0.55 - 0.05 * (int)p.Root.Grade - 0.02 * p.Techniques.Count;
             if (p.Injuries.Count > 0) t += 0.15;
+            if (state.Flag(StoredFeelingFlag)) t -= 0.08;
+            if (state.Flag(InnerDemonFlag)) t -= 0.03;
             return Math.Max(0.25, Math.Min(0.9, t));
         }
     }

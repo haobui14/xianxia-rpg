@@ -68,6 +68,13 @@ public partial class EventPanel : InkPanel
         Body.AddChild(UiKit.Spacer(8));
         if (E.ActiveEncounter is { } fight)
             Buttons(UiKit.Danger(T("Nghênh chiến!", "Fight!"), () => FightHere(fight)));
+        else if (_result.Outcome.SetFlags?.Contains(TuTien.Core.Rules.Market.CaravanFlag) == true)
+        {
+            // Browsing the caravan's goods opens its wares.
+            var browse = UiKit.Button(T("Xem hàng", "See their goods"), () => Open(new WaresPanel()), primary: true);
+            browse.Name = "caravan_wares";
+            Buttons(browse, UiKit.Button(T("Lên đường", "Move on"), Close));
+        }
         else
             Buttons(UiKit.Button(T("Tiếp tục", "Continue"), Close, primary: true));
     }

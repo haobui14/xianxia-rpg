@@ -9,7 +9,7 @@ It is currently a **vertical slice** of the Thanh Vân region, played as a **2D 
 | Path | What it is |
 |---|---|
 | `core/TuTien.Core/` | All game rules, engine-free (`netstandard2.1`, no Godot references): RNG, content, calendar, cultivation, elements, karma, map and footwork, month tick, NPC sim, combat rules, loot, events, saves. `GameEngine` is the single entry point. |
-| `core/TuTien.Core.Tests/` | xUnit tests (147) that run the rules against the real content. |
+| `core/TuTien.Core.Tests/` | xUnit tests (155) that run the rules against the real content. |
 | `godot/` | The Godot project. `scripts/Field` is the top-down world: the region, secret-realm floors and the breakthrough trial are all *fields*, with collision, the player controller, fights (`Battle`, `EnemyAi`), the HUD and the map. `scripts/Art` draws people, creatures, scenery and effects in code. `scripts/Audio` synthesizes every sound effect and composes the music. `shaders/` paints the ground, the clouds of unexplored land and swaying trees. `scripts/Ui` holds the title screen, theme, panels and settings, and `scripts/Dev` holds the smoke test and F9 cheats. |
 | `godot/content/` | Game data as JSON. Most of it is exported from the web game's TypeScript; enemies, skills, items, towns, NPC names and the map are hand-authored. |
 
@@ -134,6 +134,12 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
   - Each level makes whatever is worn in the slot 10% stronger, and the slot adds 2 attack, defense or resistance of its own. The level belongs to the slot, so a better find keeps it. A failed attempt spends the silver and stones but never drops a level.
   - The forge sells common stones for silver and the rarer ones for spirit stones. The market's money changer turns a spirit stone into 100 silver.
 - **Mastery:** on Character → Arts, train an art one level for 150 silver × its level, and deepen a technique for spirit stones (5, 10 or 20 × its level by grade, up to level 10). Each technique level adds 10% to its cultivation bonus.
+- **The month's wares:** besides its fixed stock, the village stall lays out four goods each month, drawn from the region's loot (herbs, gear, manuals, enhancement stones), each with a few in stock. Rare goods sell only for spirit stones. A merchant caravan met on the road opens its own, finer wares.
+- **The web game's events, made whole:**
+  - Every reward is a real item, and every foe a real creature. Examples are the Primer of Cultivation, the Heaven-grade Sea of Clouds Heavenly Art from the legacy trial, and the Formation-Heart Jade you can wear. The Vengeful Cultivator, the Mysterious Assassin and the Void Beast now fight with their own looks and ways.
+  - A night at the inn sometimes brings a dream or a visitor.
+  - Holding back a breakthrough feeling makes the next breakthrough 8% easier. Facing down an inner demon makes every one 3% easier.
+  - Effects that set Qi (to full, or to nothing) work, and a "spirit stone" reward pays spirit stones.
 - **Sword flight (ngự kiếm):** from Trúc Cơ, press V to ride your sword over the river and peaks, twice as fast as walking and out of reach of beasts. Land with V, which doesn't work over water. Set off on the map across water and the sword takes you there and sets you down.
 - **Sound, all synthesized:** about 40 effects (swishes, hits, casts, coins, the month gong, and more), positional in the world. Five pieces of music are generated in pentatonic modes for the title, exploring, fights, the breakthrough trial and secret realms. The zither plays with glissandi, grace notes and tremolo over flute, bells and drone; fights get taiko drums. The music crossfades as you move between them.
 - **The seasons in the air:** blossom petals, summer fluff and butterflies, autumn leaves and snow drift across the screen. Footsteps raise dust on roads, ripples in the swamp and puffs of snow.
@@ -169,6 +175,7 @@ dotnet test game/core/TuTien.Core.Tests
 #    across the river (by key and by map), seclusion, and a save/load round trip
 #  - gear by mouse: buy armour and put it on from the bag, buy a stone and enhance the
 #    slot at the forge, change a spirit stone for silver, train an art, deepen a technique
+#  - the month's wares bought by mouse, and nights at the inn until one brings an event
 #  - Character → Arts by mouse: an art's slot button moves it into that slot, a second
 #    click takes it out, and no panel opens a drop-down picker
 #  - a phone: at 135% interface size, touch events pushed into the viewport drag the

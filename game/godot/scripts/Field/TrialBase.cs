@@ -36,7 +36,7 @@ public abstract partial class TrialBase : FieldScreen
     /// <summary>Where the gauge sits: at the bottom, or under the date when the touch buttons need the bottom corners.</summary>
     protected static float GaugeY(Vector2 size) => TouchUi.Active ? 150 : size.Y - 112;
 
-    protected void ReadPreparation() => Threshold = (float)Cultivation.MajorBreakthroughThreshold(E.Player);
+    protected void ReadPreparation() => Threshold = (float)Cultivation.MajorBreakthroughThreshold(E.State);
 
     public override void Flee()
     {

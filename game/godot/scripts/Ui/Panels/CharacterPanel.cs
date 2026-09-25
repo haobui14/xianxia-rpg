@@ -257,9 +257,13 @@ public partial class CharacterPanel : InkPanel
         }
 
         Section(T("Đột phá kế tiếp", "Next breakthrough"));
-        var threshold = Cultivation.MajorBreakthroughThreshold(p);
+        var threshold = Cultivation.MajorBreakthroughThreshold(E.State);
         Para(T($"Độ khó hiện tại: cần đạt {threshold * 100:0}% trong thử thách đột phá. Linh căn tốt, nhiều công pháp và thân thể lành lặn giúp dễ hơn.",
             $"Current difficulty: you need {threshold * 100:0}% in the breakthrough trial. A good root, more techniques and no injuries make it easier."), 15, Ink.InkSoft);
+        if (E.State.Flag(Cultivation.StoredFeelingFlag))
+            Para(T("Cảm ngộ đột phá ngươi dằn lại đang chờ: lần đột phá tới dễ hơn 8%.", "The breakthrough feeling you held back is waiting: your next breakthrough is 8% easier."), 15, Ink.JadeDeep);
+        if (E.State.Flag(Cultivation.InnerDemonFlag))
+            Para(T("Đã vượt qua tâm ma: đạo tâm vững hơn, mọi lần đột phá dễ hơn 3%.", "You have faced down your inner demon: a steadier heart makes every breakthrough 3% easier."), 15, Ink.JadeDeep);
         if (E.BreakthroughReady)
             Buttons(UiKit.Button(T("✦ Đột phá", "✦ Break through"), () => Open(new BreakthroughPanel()), primary: true));
     }

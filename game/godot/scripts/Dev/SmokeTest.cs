@@ -366,6 +366,9 @@ public partial class SmokeTest : Node
         // ---------------------------------------------------------------- gear, the forge, mastery
         world = await GearAndMastery(world);
 
+        // ---------------------------------------------------------------- the month's wares, a night at the inn
+        world = await WaresAndNights(world);
+
         // ---------------------------------------------------------------- new beasts, new arts
         world = await NewBeastsAndArts(world);
 
@@ -684,6 +687,41 @@ public partial class SmokeTest : Node
         await ClickGui(await Reveal(world, "deepen_" + technique.Id));
         Check(technique.Level == depth + 1, $"deepening {technique.Id} with spirit stones raises its level ({depth} → {technique.Level})");
         await Shot("character_mastery");
+        world.ClosePanel();
+        return await Settle(world);
+    }
+
+    /// <summary>
+    /// The market's wares of the month, bought by mouse; then nights at the inn until one brings an event (a
+    /// dream, a visitor), which opens on the spot.
+    /// </summary>
+    private async Task<WorldScreen> WaresAndNights(WorldScreen world)
+    {
+        var village = E.Map.Def.Pois.First(p => p.Kind == "town");
+        var town = E.TownFor(village)!;
+        E.Player.Silver += 1000;
+        world.OpenPanel(new TownPanel(village, TownPanel.MarketTab));
+        await Frames(3);
+        var wares = E.Wares(town);
+        Check(wares.Offers.Count == TuTien.Core.Rules.Market.WaresPerMonth, $"the stall lays out {wares.Offers.Count} wares this month");
+        var i = wares.Offers.FindIndex(o => o.SpiritStones == 0 && o.Left > 0);
+        Check(i >= 0, "one of them sells for silver");
+        var ware = wares.Offers[i];
+        var have = TuTien.Core.Rules.Inventory.Count(E.Player, ware.ItemId);
+        await ClickGui(await Reveal(world, $"ware_{i}"));
+        Check(TuTien.Core.Rules.Inventory.Count(E.Player, ware.ItemId) == have + 1, $"buying the month's {ware.ItemId} puts it in the bag");
+        await Shot("market_wares");
+
+        world.OpenPanel(new TownPanel(village, TownPanel.InnTab));
+        await Frames(3);
+        for (var night = 0; night < 40 && world.CurrentPanel is not EventPanel; night++)
+        {
+            E.Player.Silver += 20;
+            E.Player.Footwork = Math.Max(E.Player.Footwork, 5);
+            await ClickGui(await Reveal(world, "rest"));
+        }
+        Check(world.CurrentPanel is EventPanel, $"a night at the inn brings an event ({E.RestEvent})");
+        await Shot("inn_night");
         world.ClosePanel();
         return await Settle(world);
     }

@@ -626,7 +626,7 @@ namespace TuTien.Core
         public EventDef? EventFor(string adventureId) =>
             Adventure(adventureId) is { } adv && Content.Events.TryGetValue(adv.EventId, out var ev) ? ev : null;
 
-        public List<ChoiceView> Choices(EventDef ev) => EventEngine.Choices(State, ev);
+        public List<ChoiceView> Choices(EventDef ev) => EventEngine.Choices(State, ev, Content);
 
         /// <summary>Answer an event. Adventures on the map are consumed; direct events (seclusion, after a fight) pass null.</summary>
         public OutcomeResult ResolveEvent(string eventId, string choiceId, string? adventureId = null)
@@ -746,8 +746,27 @@ namespace TuTien.Core
             Player.Hp = Player.HpMax;
             Player.Qi = Player.QiMax;
             events.Add(GameEvent.Info("rested", "Một đêm yên giấc, khí huyết sung mãn.", "A night's rest — fully recovered."));
+            // Sometimes the night brings something: a dream, a visitor (the web game's "rest" events).
+            var rng = Rng("rest:" + State.NewId("rest"));
+            RestEvent = rng.Chance(RestEventChance)
+                ? EventEngine.Select(EventEngine.ValidEvents(State, Content, "rest", Map.Def.RegionId), Player, rng)?.Id
+                : null;
             return events;
         }
+
+        /// <summary>How often a night at the inn brings an event.</summary>
+        public const double RestEventChance = 0.3;
+
+        /// <summary>The event the last night at the inn brought, if any (the town panel opens it).</summary>
+        public string? RestEvent { get; private set; }
+
+        /// <summary>This month's wares at a town's stall, on top of its fixed stock.</summary>
+        public MarketState Wares(TownDef town) => Market.Wares(State, Content, town.AreaId);
+
+        /// <summary>The merchant caravan's wares this month.</summary>
+        public MarketState CaravanWares() => Market.Caravan(State, Content);
+
+        public List<GameEvent> BuyWare(MarketState market, int index) => Market.Buy(State, Content, market, index);
 
         public List<GameEvent> Buy(TownDef town, string itemId)
         {

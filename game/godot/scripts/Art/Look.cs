@@ -174,6 +174,18 @@ public sealed class Look
             Robe = new Color("#5d5a66"), Trim = new Color("#8e3b2b"), Sash = new Color("#8e3b2b"), Hat = Headwear.StrawHat,
             Weapon = Weapon.Sword, HairStyle = HairStyle.Ponytail,
         },
+        // Back for revenge: the robe you left them in, still stained.
+        "wounded_cultivator_revenge" => new Look
+        {
+            Robe = new Color("#8d8a80"), Trim = new Color("#5a3a32"), Sash = new Color("#9b2a26"), Weapon = Weapon.Sword,
+            HairStyle = HairStyle.Long,
+        },
+        // Dressed for the dark, a straw hat low over the eyes.
+        "mysterious_assassin" => new Look
+        {
+            Robe = new Color("#23262e"), Trim = new Color("#3a3f48"), Sash = new Color("#6b1f1c"), Hat = Headwear.StrawHat,
+            HatColor = new Color("#3a3326"), Weapon = Weapon.Saber, HairStyle = HairStyle.Ponytail, Bulk = 0.92f,
+        },
         _ => new Look { Robe = new Color("#6f6a60"), Trim = new Color("#3f3a33"), Sash = new Color("#3f3a33"), Weapon = Weapon.Saber },
     };
 }

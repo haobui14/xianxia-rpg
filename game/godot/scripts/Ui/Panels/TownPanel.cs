@@ -62,7 +62,12 @@ public partial class TownPanel : InkPanel
         Section(T("Nghỉ trọ", "Rest"));
         Row(UiKit.Label(T($"Một đêm yên giấc: hồi đầy khí huyết và linh lực. {town.RestCost} bạc, 1 cước lực.",
                 $"A night's sleep: fully restores health and Qi. {town.RestCost} silver, 1 footwork."), 16, Ink.InkSoft, wrap: true),
-            UiKit.Button(T("Nghỉ trọ", "Rest"), () => Say(E.Rest(town)), enabled: p.Silver >= town.RestCost && p.Footwork >= 1));
+            Named(UiKit.Button(T("Nghỉ trọ", "Rest"), () =>
+            {
+                Say(E.Rest(town));
+                // The night brought something: a dream, a visitor.
+                if (E.RestEvent is { } night) Open(new EventPanel(null, night));
+            }, enabled: p.Silver >= town.RestCost && p.Footwork >= 1), "rest"));
 
         Section(T("Tĩnh thất", "Quiet room"));
         Row(UiKit.Label(T($"Thuê tĩnh thất để bế quan: linh khí +10%, không bị quấy nhiễu. {town.SeclusionCostPerMonth} bạc mỗi tháng.",
@@ -92,6 +97,13 @@ public partial class TownPanel : InkPanel
             Row(info, UiKit.Label(T($"{entry.Price} bạc", $"{entry.Price} silver"), 16, Ink.GoldDeep),
                 UiKit.Button(T("Mua", "Buy"), () => Say(E.Buy(town, itemId)), enabled: p.Silver >= entry.Price));
         }
+
+        Section(T("Hàng mới tháng này", "This month's wares"));
+        Para(T("Mỗi tháng thương lái mang tới vài món khác nhau. Đồ hiếm chỉ bán bằng linh thạch.",
+            "Each month the traders bring a few different goods. Rare ones sell only for spirit stones."), 14, Ink.InkMute);
+        var wares = E.Wares(town);
+        for (var i = 0; i < wares.Offers.Count; i++)
+            WareRow(wares, i, $"ware_{i}");
 
         Section(T("Đổi linh thạch", "Money changer"));
         Row(UiKit.Label(T($"Một linh thạch đổi {GameEngine.SpiritStoneRate} bạc. Ngươi có {p.SpiritStones} linh thạch.",
@@ -185,4 +197,7 @@ public partial class TownPanel : InkPanel
         button.Name = name;
         return button;
     }
+
+    /// <summary>One of the month's wares: what it is and does, its price, how many are left, and Buy.</summary>
+    private void WareRow(MarketState wares, int index, string buttonName) => WaresPanel.Row(this, E, wares, index, buttonName);
 }

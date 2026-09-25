@@ -201,6 +201,9 @@ public abstract partial class InkPanel : PanelContainer
         return row;
     }
 
+    /// <summary><see cref="Row"/> for a helper that builds rows into another panel.</summary>
+    public HBoxContainer AddRow(Control left, params Control[] right) => Row(left, right);
+
     public override void _UnhandledInput(InputEvent e)
     {
         if (Closable && e.IsActionPressed("pause"))

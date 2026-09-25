@@ -34,7 +34,7 @@ public struct Pose
 /// </summary>
 public static class Figures
 {
-    private static readonly HashSet<string> HumanEnemies = new() { "bandit_leader", "sect_disciple", "rogue_cultivator" };
+    private static readonly HashSet<string> HumanEnemies = new() { "bandit_leader", "sect_disciple", "rogue_cultivator", "wounded_cultivator_revenge", "mysterious_assassin" };
 
     public static bool IsHuman(string kind) => kind == "human" || HumanEnemies.Contains(kind);
 
@@ -57,6 +57,7 @@ public static class Figures
         "fire_fox" => 42,
         "blood_bat" => 60,
         "wandering_wraith" => 80,
+        "void_beast" => 100,
         "azure_python" => 58,
         _ => 70,
     };
@@ -93,6 +94,8 @@ public static class Figures
                 case "fire_fox": Profile(ci, pose, scale, 16, Fox); break;
                 case "blood_bat": Front(ci, pose, scale, 9, Bat); break;
                 case "wandering_wraith": Front(ci, pose, scale, 12, Wraith); break;
+                // A beast of the void, out of a torn portal: a wraith's shape, larger.
+                case "void_beast": Front(ci, pose, scale * 1.25f, 15, Wraith); break;
                 case "azure_python": Profile(ci, pose, scale, 36, Python); break;
                 default: Front(ci, pose, scale, 16, Blob); break;
             }
