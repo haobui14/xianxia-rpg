@@ -86,7 +86,7 @@ public partial class TownPanel : InkPanel
         }
 
         Section(T("Bán", "Sell"));
-        var sellable = p.Items.Where(s => !(s.Id == p.WeaponId && s.Qty <= 1)).ToList();
+        var sellable = p.Items.Where(s => !(TuTien.Core.Rules.Gear.IsEquipped(p, s.Id) && s.Qty <= 1)).ToList();
         if (sellable.Count == 0) Para(T("Hành trang không có gì để bán.", "Nothing to sell."));
         foreach (var stack in sellable)
         {

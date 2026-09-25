@@ -9,7 +9,7 @@ It is currently a **vertical slice** of the Thanh Vân region, played as a **2D 
 | Path | What it is |
 |---|---|
 | `core/TuTien.Core/` | All game rules, engine-free (`netstandard2.1`, no Godot references): RNG, content, calendar, cultivation, elements, karma, map and footwork, month tick, NPC sim, combat rules, loot, events, saves. `GameEngine` is the single entry point. |
-| `core/TuTien.Core.Tests/` | xUnit tests (135) that run the rules against the real content. |
+| `core/TuTien.Core.Tests/` | xUnit tests (145) that run the rules against the real content. |
 | `godot/` | The Godot project. `scripts/Field` is the top-down world: the region, secret-realm floors and the breakthrough trial are all *fields*, with collision, the player controller, fights (`Battle`, `EnemyAi`), the HUD and the map. `scripts/Art` draws people, creatures, scenery and effects in code. `scripts/Audio` synthesizes every sound effect and composes the music. `shaders/` paints the ground, the clouds of unexplored land and swaying trees. `scripts/Ui` holds the title screen, theme, panels and settings, and `scripts/Dev` holds the smoke test and F9 cheats. |
 | `godot/content/` | Game data as JSON. Most of it is exported from the web game's TypeScript; enemies, skills, items, towns, NPC names and the map are hand-authored. |
 
@@ -112,6 +112,11 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
 
   The village stall sells all five as manuals, so any root can learn them. The bounty board adds a bear cull and a price on the python's head.
 - **Secret realm floors:** walled gardens where the guardians wait; clear the floor to open its chests and the gate down.
+- **Everything that drops has a use** (Inventory):
+  - **Gear:** a weapon, armor (robes and armor, the web game's "Chest" slot) and an accessory (pendants, pearls). The stats of all three count, max health and Qi included. The character sheet lists them.
+  - **Refining:** the web game's enhancement table, +1 to +10. Each level costs silver and enhancement stones (common for +1–3, uncommon for +4–6, rare for +7–9, epic for +10). The chance falls from 100% to 35%. Each level adds 10% to all of the item's stats, never less than +1. A failure spends the stones and silver but keeps the level.
+  - **Containers open:** a storage ring (a fallen cultivator's) breaks its seal into loot as rich as the ring. The treasure pouch and casket that some adventures give open the same way.
+  - Every item says what it's for: wear, use, open, refine with, or what it sells for at a market. Items that events and realms hand out are all defined now; before, some ids had no definition and turned into a nameless "Random Treasure" that did nothing. A content check keeps it that way, and spirit stones given as an item go straight to the purse.
 - **Breakthrough trials, played, not rolled:**
   - ***Dẫn khí nhập thể*** (Mortal → Luyện Khí) is on a mountaintop bagua platform. Gather qi motes and cut down heart demons; the success threshold depends on your preparation. Success awakens your root's first spirit art.
   - **Trúc Cơ, the meridian storm** (Luyện Khí 9 → Trúc Cơ) is inside the body: a jade dantian with the eight extraordinary meridians running into it, for sixty seconds.
@@ -166,6 +171,8 @@ dotnet test game/core/TuTien.Core.Tests
 #    across the river (by key and by map), seclusion, and a save/load round trip
 #  - Character → Arts by mouse: an art's slot button moves it into that slot, a second
 #    click takes it out, and no panel opens a drop-down picker
+#  - sect life by mouse: take a mission, report it, rise a rank, use the treasury, open
+#    the chamber; and the bag: wear armor and a pendant, refine, open a pouch and a ring
 #  - a phone: at 135% interface size, touch events pushed into the viewport drag the
 #    stick, press Interact, tap an art's slot button, tap the ground to walk, pinch to
 #    zoom, and in a fight press an art, pause, and hold the martial art until the bear

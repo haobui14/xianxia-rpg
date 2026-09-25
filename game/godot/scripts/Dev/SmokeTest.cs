@@ -378,6 +378,9 @@ public partial class SmokeTest : Node
         // ---------------------------------------------------------------- a disciple's life: missions, ranks, the treasury
         world = await SectLife(world);
 
+        // ---------------------------------------------------------------- the bag: gear worn and refined, loot opened
+        world = await GearByHand(world);
+
         // ---------------------------------------------------------------- new beasts, new arts
         world = await NewBeastsAndArts(world);
 
@@ -623,6 +626,37 @@ public partial class SmokeTest : Node
         var chamber = E.Chamber!;
         var report = E.Seclude(1, chamber.QiDensity, stonesPerMonth: chamber.StonesPerMonth);
         Check(report.Months == 1 && E.Player.SpiritStones == stones - chamber.StonesPerMonth + 1, "a month in the chamber costs its stones (the stipend brings one back)");
+        return await Settle(world);
+    }
+
+    /// <summary>
+    /// The inventory by mouse: armor and a pendant are worn (their stats count), worn armor is refined with
+    /// enhancement stones, and the loot that used to sit useless in the bag opens: the treasure pouch a
+    /// fight's follow-up leaves, a fallen cultivator's storage ring.
+    /// </summary>
+    private async Task<WorldScreen> GearByHand(WorldScreen world)
+    {
+        var p = E.Player;
+        foreach (var (id, qty) in new[] { ("leather_armor", 1), ("jade_pendant", 1), ("enhancement_stone_common", 1), ("random_treasure", 1), ("storage_ring_uncommon", 1) })
+            TuTien.Core.Rules.Inventory.Add(p, TuTien.Core.Rules.Inventory.Resolve(E.Content, id, qty));
+        p.Silver += 500;
+        var hp = p.HpMax;
+        var luck = TuTien.Core.Rules.CombatRules.EffectiveAttrs(E.Content, p).Luck;
+        world.OpenPanel(new InventoryPanel());
+        await Frames(3);
+        await ClickPanel(world, "wear_leather_armor");
+        Check(p.ArmorId == "leather_armor" && p.HpMax == hp + 20, "Wear puts on the leather armor: +20 max health");
+        await ClickPanel(world, "wear_jade_pendant");
+        Check(p.AccessoryId == "jade_pendant" && TuTien.Core.Rules.CombatRules.EffectiveAttrs(E.Content, p).Luck == luck + 2, "the jade pendant is worn: +2 luck");
+        await ClickPanel(world, "refine_Armor");
+        Check(TuTien.Core.Rules.Gear.RefineLevel(p, "leather_armor") == 1 && p.HpMax > hp + 20, "Refine turns the armor to +1 and its health up");
+        await Shot("inventory_gear");
+        var bag = p.Items.Sum(i => i.Qty);
+        await ClickPanel(world, "open_random_treasure");
+        Check(TuTien.Core.Rules.Inventory.Count(p, "random_treasure") == 0, "the treasure pouch opens");
+        await ClickPanel(world, "open_storage_ring_uncommon");
+        Check(TuTien.Core.Rules.Inventory.Count(p, "storage_ring_uncommon") == 0 && p.Items.Sum(i => i.Qty) >= bag - 1, "the storage ring's seal breaks and its things come out");
+        await Shot("inventory_opened");
         return await Settle(world);
     }
 

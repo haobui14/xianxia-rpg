@@ -276,6 +276,8 @@ namespace TuTien.Core.Content
         public Dictionary<string, double>? BonusStats { get; set; }
         public TechniqueDef? TeachesTechnique { get; set; }
         public string? TeachesSkillId { get; set; }
+        /// <summary>A container (a treasure pouch, a casket): opening it rolls this loot table.</summary>
+        public string? OpenLoot { get; set; }
     }
 
     public sealed class LootEntryDef : ItemDef

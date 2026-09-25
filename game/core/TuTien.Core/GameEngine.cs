@@ -89,6 +89,9 @@ namespace TuTien.Core
                 Player.FootworkMax = WorldTick.FootworkMax(Player);
                 Player.Footwork = Player.FootworkMax;
             }
+            // Health and Qi from worn gear are part of the maxima (a save from before armor counted none).
+            Gear.Recompute(State, Content);
+            Inventory.Refresh(Player, Content);
         }
 
         public static GameEngine NewGame(ContentDb content, ulong seed, string name, int age, SpiritRootState root,
@@ -671,12 +674,23 @@ namespace TuTien.Core
             return events;
         }
 
+        /// <summary>Use an item: eat a pill, read a manual — or open a container (a treasure pouch, a storage ring).</summary>
         public List<GameEvent> UseItem(string itemId)
         {
-            var events = Inventory.Use(State, Content, itemId);
+            var events = Gear.OpensInto(Content.Item(itemId)) != null
+                ? Gear.Open(State, Content, itemId, Rng("open:" + State.NewId("open")))
+                : Inventory.Use(State, Content, itemId);
             events.AddRange(SectMissions.Announce(State, Content));
             return events;
         }
+
+        /// <summary>What an item is good for, as far as the rules go.</summary>
+        public bool CanUse(string itemId) => Gear.OpensInto(Content.Item(itemId)) != null || Inventory.IsConsumable(Content, itemId);
+
+        public List<GameEvent> Unequip(GearSlot slot) => Gear.Unequip(State, Content, slot);
+
+        /// <summary>Refine what's worn in <paramref name="slot"/> one level with enhancement stones and silver.</summary>
+        public List<GameEvent> Refine(GearSlot slot) => Gear.Refine(State, Content, slot, Rng("refine:" + State.NewId("refine")));
 
         /// <summary>Put a known art into one of the four spirit-art slots (empty string clears it).</summary>
         public bool SetSkillSlot(int slot, string skillId)
@@ -698,15 +712,8 @@ namespace TuTien.Core
 
         public SectDef? SectFor(PoiDef poi) => poi.Ref != null && Content.Sects.TryGetValue(poi.Ref, out var s) ? s : null;
 
-        public List<GameEvent> Equip(string itemId)
-        {
-            var events = new List<GameEvent>();
-            var def = Content.Item(itemId);
-            if (def == null || def.EquipmentSlot != "Weapon" || Inventory.Count(Player, itemId) <= 0) return events;
-            Player.WeaponId = itemId;
-            events.Add(GameEvent.Info("equipped", $"Trang bị {def.Name}.", $"Equipped {def.NameEn}."));
-            return events;
-        }
+        /// <summary>Wear a weapon, armor or an accessory (it takes the place of what was in its slot).</summary>
+        public List<GameEvent> Equip(string itemId) => Gear.Equip(State, Content, itemId);
 
         // ================================================================ towns
 
@@ -758,9 +765,10 @@ namespace TuTien.Core
         {
             var events = new List<GameEvent>();
             var stack = Player.Items.FirstOrDefault(i => i.Id == itemId);
-            if (stack == null || itemId == Player.WeaponId && stack.Qty <= 1) return events;
+            if (stack == null || Gear.IsEquipped(Player, itemId) && stack.Qty <= 1) return events;
             var price = SellPrice(stack.Rarity);
             Inventory.Remove(Player, itemId);
+            Gear.Released(State, Content, itemId);
             Player.Silver += price;
             events.Add(GameEvent.Info("sold", $"Bán {stack.Name} (+{price} bạc).", $"Sold {stack.NameEn} (+{price} silver)."));
             return events;
@@ -867,13 +875,14 @@ namespace TuTien.Core
             var events = new List<GameEvent>();
             var npc = Npc(npcId);
             var stack = Player.Items.FirstOrDefault(i => i.Id == itemId);
-            if (npc == null || stack == null) return events;
+            if (npc == null || stack == null || Gear.IsEquipped(Player, itemId) && stack.Qty <= 1) return events;
             if (npc.LastGiftMonth == State.Calendar.MonthIndex)
             {
                 events.Add(GameEvent.Info("gift_again", $"{npc.Name} khách sáo từ chối.", $"{npc.Name} politely declines."));
                 return events;
             }
             Inventory.Remove(Player, itemId);
+            Gear.Released(State, Content, itemId);
             npc.LastGiftMonth = State.Calendar.MonthIndex;
             var gain = stack.Rarity switch { "Legendary" => 30, "Epic" => 22, "Rare" => 15, "Uncommon" => 10, _ => 6 };
             if (npc.Traits.Contains("greedy")) gain += 5;

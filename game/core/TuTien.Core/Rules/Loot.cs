@@ -67,8 +67,16 @@ namespace TuTien.Core.Rules
             return def != null ? StackOf(def, qty) : StubStack(id, qty);
         }
 
+        /// <summary>Spirit stones handed out as an item (an event's reward) are money: they go to the purse.</summary>
+        public const string SpiritStoneId = "spirit_stone";
+
         public static void Add(PlayerState p, ItemStack stack)
         {
+            if (stack.Id == SpiritStoneId)
+            {
+                p.SpiritStones += stack.Qty;
+                return;
+            }
             var existing = p.Items.FirstOrDefault(i => i.Id == stack.Id);
             if (existing != null) existing.Qty += stack.Qty;
             else p.Items.Add(new ItemStack
@@ -79,6 +87,28 @@ namespace TuTien.Core.Rules
         }
 
         public static int Count(PlayerState p, string id) => p.Items.Where(i => i.Id == id).Sum(i => i.Qty);
+
+        /// <summary>
+        /// Stacks carry a copy of their item's name and kind; bring them in line with the content (a save from
+        /// before an item was defined held a nameless stub — "Random Treasure" — that is a real pouch now).
+        /// </summary>
+        public static void Refresh(PlayerState p, ContentDb content)
+        {
+            foreach (var stack in p.Items)
+            {
+                var def = content.Item(stack.Id);
+                if (def == null) continue;
+                stack.Name = def.Name;
+                stack.NameEn = string.IsNullOrEmpty(def.NameEn) ? def.Name : def.NameEn;
+                stack.Type = def.Type;
+                stack.Rarity = def.Rarity;
+            }
+            // Spirit stones kept as an item before they went to the purse.
+            var stones = Count(p, SpiritStoneId);
+            if (stones <= 0) return;
+            p.Items.RemoveAll(i => i.Id == SpiritStoneId);
+            p.SpiritStones += stones;
+        }
 
         public static bool Remove(PlayerState p, string id, int qty = 1)
         {

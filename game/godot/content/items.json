@@ -62,6 +62,134 @@
         "id": "thanh_van_kiem_kinh", "name": "Thanh Vân Kiếm Kinh", "name_en": "Azure Cloud Sword Canon",
         "grade": "Earth", "elements": ["Mộc", "Kim"], "cultivation_speed_bonus": 18
       }
+    },
+    {
+      "id": "random_treasure", "name": "Bảo Nang", "name_en": "Treasure Pouch", "type": "Misc", "rarity": "Uncommon",
+      "description": "Túi gấm buộc chặt, ai đó đánh rơi sau trận đấu. Mở ra xem bên trong có gì.",
+      "description_en": "A tied silk pouch someone dropped in the fight. Open it and see what's inside.",
+      "open_loot": "thanh_van_wilds"
+    },
+    {
+      "id": "rare_treasure", "name": "Cổ Bảo Hạp", "name_en": "Ancient Treasure Casket", "type": "Misc", "rarity": "Rare",
+      "description": "Hộp gỗ cổ, trận văn khắc trên nắp đã phai. Mở ra lấy báu vật bên trong.",
+      "description_en": "An old wooden casket, the array carved on its lid long faded. Open it for the treasure inside.",
+      "open_loot": "cave_treasure"
+    },
+    {
+      "id": "formation_fragment", "name": "Mảnh Trận Bàn", "name_en": "Formation Fragment", "type": "Material", "rarity": "Rare",
+      "description": "Mảnh vỡ của một trận bàn cổ. Nghiền ngẫm trận văn trên đó: ngộ tính +1 vĩnh viễn.",
+      "description_en": "A shard of an ancient array plate. Study the lines on it: +1 Insight for good.",
+      "effects": { "permanent_int": 1 }
+    },
+    {
+      "id": "low_grade_pill", "name": "Hạ Phẩm Hồi Nguyên Đan", "name_en": "Low-Grade Restoring Pill", "type": "Medicine", "rarity": "Common",
+      "description": "Đan dược thô, hồi một ít khí huyết và linh lực.", "description_en": "A rough pill that restores a little health and Qi.",
+      "effects": { "hp_restore": 35, "qi_restore": 15 }
+    },
+    {
+      "id": "medicinal_grass", "name": "Dược Thảo", "name_en": "Medicinal Grass", "type": "Medicine", "rarity": "Common",
+      "description": "Cỏ thuốc dân gian, nhai nát đắp vết thương.", "description_en": "A common healing herb; chew it and press it on a wound.",
+      "effects": { "hp_restore": 20 }
+    },
+    {
+      "id": "spirit_herb", "name": "Linh Thảo", "name_en": "Spirit Herb", "type": "Material", "rarity": "Common",
+      "description": "Cỏ mọc nơi linh khí tụ lại, ăn vào hồi linh lực.", "description_en": "A herb that grows where qi gathers; eating it restores Qi.",
+      "effects": { "qi_restore": 25 }
+    },
+    {
+      "id": "mysterious_herb", "name": "Kỳ Thảo", "name_en": "Mysterious Herb", "type": "Medicine", "rarity": "Uncommon",
+      "description": "Loài thảo dược lạ mọc sau cơn mưa linh khí: lành thương và tăng chút tu vi.",
+      "description_en": "A strange herb that springs up after a rain of qi: it heals and adds a little cultivation.",
+      "effects": { "hp_restore": 20, "cultivation_exp": 40 }
+    },
+    {
+      "id": "cultivation_manual_basic", "name": "Nhập Môn Tâm Pháp", "name_en": "Beginner's Cultivation Manual", "type": "Book", "rarity": "Common",
+      "description": "Sách mỏng chép phép thổ nạp nhập môn. Đọc để lĩnh ngộ công pháp.",
+      "description_en": "A thin book of beginner's breathing. Read it to learn the technique.",
+      "teaches_technique": {
+        "id": "nhap_mon_tam_phap", "name": "Nhập Môn Tâm Pháp", "name_en": "Beginner's Method",
+        "grade": "Mortal", "elements": [], "cultivation_speed_bonus": 8
+      }
+    },
+    {
+      "id": "spirit_stone", "name": "Linh Thạch", "name_en": "Spirit Stone", "type": "Material", "rarity": "Common",
+      "description": "Tiền tệ của người tu hành: nhận được là vào túi tiền ngay.",
+      "description_en": "Cultivators' money: it goes straight into your purse."
+    },
+    {
+      "id": "water_dragon_manual", "name": "Thủy Long Quyết", "name_en": "Water Dragon Art", "type": "Book", "rarity": "Rare",
+      "description": "Công pháp Thủy hệ lưu lại trong hang long quy.", "description_en": "A Water technique left in the dragon turtle's lair.",
+      "teaches_technique": {
+        "id": "thuy_long_quyet", "name": "Thủy Long Quyết", "name_en": "Water Dragon Art",
+        "grade": "Earth", "elements": ["Thủy"], "cultivation_speed_bonus": 22
+      }
+    },
+    {
+      "id": "phoenix_fire_manual", "name": "Phượng Hỏa Kinh", "name_en": "Phoenix Fire Canon", "type": "Book", "rarity": "Epic",
+      "description": "Công pháp Hỏa hệ chép trên lông phượng trong mộ cổ.", "description_en": "A Fire technique written on phoenix feathers in an old tomb.",
+      "teaches_technique": {
+        "id": "phuong_hoa_kinh", "name": "Phượng Hỏa Kinh", "name_en": "Phoenix Fire Canon",
+        "grade": "Heaven", "elements": ["Hỏa"], "cultivation_speed_bonus": 25
+      }
+    },
+    {
+      "id": "thunder_body_manual", "name": "Lôi Thể Quyết", "name_en": "Thunder Body Art", "type": "Book", "rarity": "Epic",
+      "description": "Công pháp tôi luyện thân thể bằng lôi kiếp.", "description_en": "A technique that tempers the body in heavenly lightning.",
+      "teaches_technique": {
+        "id": "loi_the_quyet", "name": "Lôi Thể Quyết", "name_en": "Thunder Body Art",
+        "grade": "Heaven", "elements": ["Kim"], "cultivation_speed_bonus": 20
+      }
+    },
+    {
+      "id": "void_emperor_manual", "name": "Hư Không Đế Kinh", "name_en": "Void Emperor Canon", "type": "Book", "rarity": "Legendary",
+      "description": "Truyền thừa của một vị đế tôn hư không, không thuộc hệ nào.", "description_en": "The legacy of a void emperor, bound to no element.",
+      "teaches_technique": {
+        "id": "hu_khong_de_kinh", "name": "Hư Không Đế Kinh", "name_en": "Void Emperor Canon",
+        "grade": "Immortal", "elements": [], "cultivation_speed_bonus": 35
+      }
+    },
+    {
+      "id": "legendary_technique", "name": "Thái Cổ Truyền Thừa", "name_en": "Primordial Inheritance", "type": "Book", "rarity": "Legendary",
+      "description": "Truyền thừa thời thái cổ, ngọc giản còn vương thần niệm người xưa.", "description_en": "An inheritance from the primordial age; the jade slip still holds its maker's thought.",
+      "teaches_technique": {
+        "id": "thai_co_truyen_thua", "name": "Thái Cổ Truyền Thừa", "name_en": "Primordial Inheritance",
+        "grade": "Immortal", "elements": [], "cultivation_speed_bonus": 30
+      }
+    },
+    {
+      "id": "lightning_immunity", "name": "Tị Lôi Châu", "name_en": "Lightning-Warding Pearl", "type": "Accessory", "rarity": "Epic",
+      "description": "Viên châu hút lôi khí, đeo vào thân thể vững như bàn thạch.", "description_en": "A pearl that drinks the lightning; worn, it makes the body firm as rock.",
+      "equipment_slot": "Accessory", "bonus_stats": { "hp": 60, "perception": 3 }
+    },
+    {
+      "id": "void_step", "name": "Hư Không Bộ", "name_en": "Void Step", "type": "Book", "rarity": "Epic",
+      "description": "Bí pháp thân pháp bước xuyên hư không. Lĩnh hội: thân pháp +3 vĩnh viễn.",
+      "description_en": "A movement secret that steps through the void. Comprehend it: +3 Agility for good.",
+      "effects": { "permanent_agi": 3 }
+    },
+    {
+      "id": "storage_ring_uncommon", "name": "Trữ Vật Giới (Tốt)", "name_en": "Uncommon Storage Ring", "type": "Accessory", "rarity": "Uncommon",
+      "description": "Nhẫn trữ vật của một tu sĩ đã khuất. Phá phong ấn để lấy đồ bên trong.",
+      "description_en": "The storage ring of a cultivator who's gone. Break its seal and take what's inside.",
+      "equipment_slot": "Accessory", "open_loot": "cave_treasure"
+    },
+    {
+      "id": "storage_ring_rare", "name": "Trữ Vật Giới (Hiếm)", "name_en": "Rare Storage Ring", "type": "Accessory", "rarity": "Rare",
+      "description": "Nhẫn trữ vật quý, chủ cũ hẳn giàu có. Phá phong ấn để lấy đồ bên trong.",
+      "description_en": "A fine storage ring; its owner must have been rich. Break its seal and take what's inside.",
+      "equipment_slot": "Accessory", "open_loot": "dungeon_boss"
+    },
+    {
+      "id": "storage_ring_epic", "name": "Trữ Vật Giới (Sử Thi)", "name_en": "Epic Storage Ring", "type": "Accessory", "rarity": "Epic",
+      "description": "Nhẫn trữ vật của một cao nhân. Phá phong ấn để lấy đồ bên trong.",
+      "description_en": "A master's storage ring. Break its seal and take what's inside.",
+      "equipment_slot": "Accessory", "open_loot": "ancient_treasure"
+    },
+    {
+      "id": "storage_ring_legendary", "name": "Vô Tận Trữ Vật Giới", "name_en": "Infinite Storage Ring", "type": "Accessory", "rarity": "Legendary",
+      "description": "Trữ vật giới truyền thuyết. Phá phong ấn để lấy đồ bên trong.",
+      "description_en": "A storage ring of legend. Break its seal and take what's inside.",
+      "equipment_slot": "Accessory", "open_loot": "vong_linh_spirit"
     }
   ]
 }

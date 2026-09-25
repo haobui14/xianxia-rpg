@@ -175,6 +175,22 @@ namespace TuTien.Core.Content
             foreach (var town in Towns.Values)
                 foreach (var entry in town.Shop.Where(e => !Items.ContainsKey(e.ItemId)))
                     issues.Add($"town {town.AreaId}: shop item '{entry.ItemId}' does not exist");
+            // Every item the world hands out must be a real item: an unknown id becomes a nameless stub in the bag
+            // that nothing can be done with (the "random treasure" after a fight).
+            foreach (var ev in Events.Values)
+                foreach (var choice in ev.Choices)
+                {
+                    foreach (var id in choice.Outcomes.SelectMany(o => o.Items ?? new List<string>()).Where(id => !Items.ContainsKey(id)))
+                        issues.Add($"event {ev.Id}: gives unknown item '{id}'");
+                    if (choice.Requirements?.Item is { } needed && !Items.ContainsKey(needed))
+                        issues.Add($"event {ev.Id}: needs unknown item '{needed}'");
+                }
+            foreach (var dungeon in Dungeons.Values)
+                foreach (var reward in dungeon.CompletionRewards.Concat(dungeon.FirstClearBonus ?? new List<DungeonRewardDef>()))
+                    if ((reward.Type == "item" || reward.Type == "technique") && reward.Id != null && !Items.ContainsKey(reward.Id))
+                        issues.Add($"dungeon {dungeon.Id}: rewards unknown item '{reward.Id}'");
+            foreach (var item in Items.Values.Where(i => i.OpenLoot != null && !LootTables.ContainsKey(ResolveLootTable(i.OpenLoot))))
+                issues.Add($"item {item.Id}: opens into unknown loot table '{item.OpenLoot}'");
             foreach (var hall in Halls.Values)
             {
                 if (!Sects.ContainsKey(hall.SectId)) issues.Add($"hall {hall.SectId}: no such sect");

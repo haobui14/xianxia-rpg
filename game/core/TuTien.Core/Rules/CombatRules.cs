@@ -92,20 +92,14 @@ namespace TuTien.Core.Rules
 
         // ------------------------------------------------------------ player profile
 
-        private static double WeaponBonus(ContentDb content, PlayerState p, string key)
-        {
-            var weapon = content.Item(p.WeaponId);
-            return weapon?.BonusStats != null && weapon.BonusStats.TryGetValue(key, out var v) ? v : 0;
-        }
-
-        /// <summary>Base attributes plus the equipped weapon's bonus_stats (as calculateTotalAttributes did).</summary>
+        /// <summary>Base attributes plus the bonus_stats of everything worn, refined (as calculateTotalAttributes did for the weapon).</summary>
         public static Attributes EffectiveAttrs(ContentDb content, PlayerState p) => new Attributes
         {
-            Str = p.Attrs.Str + (int)WeaponBonus(content, p, "str"),
-            Agi = p.Attrs.Agi + (int)WeaponBonus(content, p, "agi"),
-            Int = p.Attrs.Int + (int)WeaponBonus(content, p, "int"),
-            Per = p.Attrs.Per + (int)WeaponBonus(content, p, "perception"),
-            Luck = p.Attrs.Luck + (int)WeaponBonus(content, p, "luck"),
+            Str = p.Attrs.Str + Gear.Bonus(content, p, "str"),
+            Agi = p.Attrs.Agi + Gear.Bonus(content, p, "agi"),
+            Int = p.Attrs.Int + Gear.Bonus(content, p, "int"),
+            Per = p.Attrs.Per + Gear.Bonus(content, p, "perception"),
+            Luck = p.Attrs.Luck + Gear.Bonus(content, p, "luck"),
         };
 
         /// <summary>DEF grows with agility and, much more, with body tempering (thể tu are tanks).</summary>
@@ -123,7 +117,7 @@ namespace TuTien.Core.Rules
             var foundation = Foundation.PowerMultiplier(p.Foundation);
             return new Combatant
             {
-                PhysicalPower = (a.Str * 1.5 + WeaponBonus(content, p, "atk")) * foundation,
+                PhysicalPower = (a.Str * 1.5 + Gear.Bonus(content, p, "atk")) * foundation,
                 SpiritPower = (a.Int * 2 + a.Str * 0.5) * foundation,
                 Def = PlayerDefense(p, a),
                 Res = PlayerResistance(p, a),

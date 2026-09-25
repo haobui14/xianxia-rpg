@@ -1,3 +1,4 @@
+using System.Linq;
 using Godot;
 using TuTien.Core;
 using TuTien.Core.Content;
@@ -68,8 +69,20 @@ public partial class CharacterPanel : InkPanel
         };
         foreach (var (vi, en, value) in rows)
             Row(UiKit.Label(T(vi, en), 16, Ink.InkSoft), UiKit.Label(value, 16, Ink.InkColor));
-        var weapon = content.Item(p.WeaponId);
-        Row(UiKit.Label(T("Binh khí", "Weapon"), 16, Ink.InkSoft), UiKit.Label(weapon != null ? Text.Name(weapon) + " · " + Text.Effects(weapon) : T("tay không", "bare hands"), 16, Ink.InkColor));
+        foreach (var (slot, vi, en, none) in new[]
+                 {
+                     (GearSlot.Weapon, "Binh khí", "Weapon", T("tay không", "bare hands")),
+                     (GearSlot.Armor, "Giáp", "Armor", T("không mặc giáp", "no armor")),
+                     (GearSlot.Accessory, "Phụ kiện", "Accessory", T("không đeo gì", "nothing")),
+                 })
+        {
+            var id = Gear.Equipped(p, slot);
+            var worn = content.Item(id);
+            var level = Gear.RefineLevel(p, id);
+            var stats = worn != null ? string.Join(", ", Gear.Stats(worn, level).Select(s => $"{Text.Stat(s.Key)} +{s.Value}")) : "";
+            Row(UiKit.Label(T(vi, en), 16, Ink.InkSoft),
+                UiKit.Label(worn != null ? Text.Name(worn) + (level > 0 ? $" +{level}" : "") + (stats.Length > 0 ? " · " + stats : "") : none, 16, Ink.InkColor));
+        }
         if (p.Foundation != FoundationGrade.None)
         {
             var bonus = (TuTien.Core.Rules.Foundation.PowerMultiplier(p.Foundation) - 1) * 100;

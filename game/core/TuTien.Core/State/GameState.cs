@@ -83,6 +83,14 @@ namespace TuTien.Core.State
         public int SpiritStones { get; set; }
         public List<ItemStack> Items { get; set; } = new List<ItemStack>();
         public string? WeaponId { get; set; }
+        /// <summary>Armor (the web game's "Chest" slot) and an accessory (a pendant, a ring); see Rules.Gear.</summary>
+        public string? ArmorId { get; set; }
+        public string? AccessoryId { get; set; }
+        /// <summary>Refine levels (+1…+10) by item id.</summary>
+        public Dictionary<string, int> Refines { get; set; } = new Dictionary<string, int>();
+        /// <summary>The max health and Qi that worn gear already adds to <see cref="HpMax"/> and <see cref="QiMax"/>.</summary>
+        public int GearHp { get; set; }
+        public int GearQi { get; set; }
         public List<SkillState> Skills { get; set; } = new List<SkillState>();
         /// <summary>Four spirit-art slots (RMB, 1, 2, 3). Empty string = empty slot.</summary>
         public List<string> SkillSlots { get; set; } = new List<string> { "", "", "", "" };

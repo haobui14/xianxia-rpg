@@ -109,6 +109,8 @@ public static class Text
         {
             foreach (var kv in def.Effects)
             {
+                // Bag space isn't counted in the slice: a storage ring is opened instead (below).
+                if (kv.Key == "storage_capacity") continue;
                 parts.Add(kv.Key switch
                 {
                     "hp_restore" => T($"hồi {kv.Value} HP", $"restores {kv.Value} HP"),
@@ -132,6 +134,15 @@ public static class Text
             parts.Add(T($"dạy {skill.Name}", $"teaches {skill.NameEn}"));
         if (def.TeachesTechnique is { } tech)
             parts.Add(T($"công pháp {tech.Name} (+{tech.CultivationSpeedBonus}% tu luyện)", $"technique {tech.NameEn} (+{tech.CultivationSpeedBonus}% cultivation)"));
+        if (Gear.OpensInto(def) != null)
+            parts.Add(Gear.IsSealed(def) ? T("phá phong ấn để lấy đồ bên trong", "break its seal for what's inside") : T("mở ra xem bên trong có gì", "open it to see what's inside"));
+        if (Gear.SlotOf(def) is { } slot)
+            parts.Add(slot switch
+            {
+                GearSlot.Weapon => T("binh khí", "a weapon"),
+                GearSlot.Armor => T("mặc làm giáp", "worn as armor"),
+                _ => T("đeo làm phụ kiện", "worn as an accessory"),
+            });
         return string.Join(", ", parts);
     }
 
