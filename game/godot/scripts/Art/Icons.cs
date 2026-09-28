@@ -22,6 +22,8 @@ public enum IconKind
     Stun, Slow, Chain, Blood, ArmorBreak, Blind,
     // The field and the trials.
     Paw, Core, Turbid, DemonEyes,
+    // Things to do on the map.
+    Fish, Pickaxe, Shrine, Tent, Cauldron,
 }
 
 /// <summary>
@@ -67,6 +69,11 @@ public static class Icons
         "vein" => IconKind.Crystal,
         "spring" => IconKind.Spring,
         "herb" => IconKind.Herb,
+        "fish" => IconKind.Fish,
+        "ore" => IconKind.Pickaxe,
+        "shrine" => IconKind.Shrine,
+        "camp" => IconKind.Tent,
+        "alchemy" => IconKind.Cauldron,
         "beast" => IconKind.Paw,
         "adventure" => IconKind.Star,
         "elder" or "deacon" or "rival" or "demonic" or "disciple" or "person" => IconKind.Person,
@@ -432,6 +439,43 @@ public static class Icons
                 break;
 
             // ---------------------------------------------------------------- the field and the trials
+            // ---------------------------------------------------------------- things to do on the map
+            case IconKind.Fish:
+                p.Ellipse(-0.14f, 0, 0.62f, 0.34f);
+                p.Fill(p.P(0.36f, 0), p.P(0.92f, -0.44f), p.P(0.76f, 0), p.P(0.92f, 0.44f));
+                p.ShadeDisc(-0.5f, -0.07f, 0.075f);
+                p.ShadeLine(-0.28f, -0.22f, -0.24f, 0.2f, 0.9f);
+                p.Fill(p.P(-0.2f, -0.3f), p.P(0.12f, -0.58f), p.P(0.2f, -0.3f));
+                break;
+            case IconKind.Pickaxe:
+                p.Line(-0.66f, 0.86f, 0.2f, -0.28f, 1.3f);
+                p.Arc(0.28f, 0.34f, 0.78f, 212, 322, 2.1f);
+                p.Fill(p.P(-0.92f, 0.62f), p.P(-0.5f, 0.42f), p.P(-0.28f, 0.66f), p.P(-0.46f, 0.9f), p.P(-0.86f, 0.9f));
+                break;
+            case IconKind.Shrine:
+                p.Fill(p.P(-0.94f, -0.18f), p.P(-0.58f, -0.62f), p.P(0.58f, -0.62f), p.P(0.94f, -0.18f), p.P(0.6f, -0.26f), p.P(-0.6f, -0.26f));
+                p.Outline(1.1f, p.P(-0.5f, -0.24f), p.P(0.5f, -0.24f), p.P(0.5f, 0.58f), p.P(-0.5f, 0.58f));
+                p.Fill(p.P(-0.18f, 0.06f), p.P(0.18f, 0.06f), p.P(0.18f, 0.58f), p.P(-0.18f, 0.58f));
+                p.Line(-0.76f, 0.84f, 0.76f, 0.84f, 1.3f);
+                p.Line(0, -0.62f, 0, -0.92f, 1);
+                break;
+            case IconKind.Tent:
+                p.Fill(p.P(-0.92f, 0.82f), p.P(-0.04f, -0.66f), p.P(0.92f, 0.82f));
+                p.FillShade(p.P(-0.24f, 0.82f), p.P(-0.04f, 0.1f), p.P(0.16f, 0.82f));
+                p.Line(-0.04f, -0.66f, -0.04f, -0.98f, 1);
+                p.Fill(p.P(-0.04f, -0.98f), p.P(0.46f, -0.87f), p.P(-0.04f, -0.76f));
+                break;
+            case IconKind.Cauldron:
+                p.Fill(p.P(-0.74f, -0.2f), p.P(0.74f, -0.2f), p.P(0.62f, 0.3f), p.P(0.3f, 0.54f), p.P(-0.3f, 0.54f), p.P(-0.62f, 0.3f));
+                p.Line(-0.84f, -0.26f, 0.84f, -0.26f, 1.3f);
+                p.Line(-0.4f, 0.46f, -0.56f, 0.92f, 1.2f);
+                p.Line(0.4f, 0.46f, 0.56f, 0.92f, 1.2f);
+                p.Ring(-0.76f, -0.44f, 0.13f, 0.9f);
+                p.Ring(0.76f, -0.44f, 0.13f, 0.9f);
+                p.Arc(-0.2f, -0.62f, 0.14f, 180, 360, 0.8f);
+                p.Arc(0.12f, -0.8f, 0.14f, 0, 180, 0.8f);
+                p.ShadeLine(-0.44f, 0.08f, 0.44f, 0.08f, 0.9f);
+                break;
             case IconKind.Paw:
                 p.Ellipse(0, 0.36f, 0.42f, 0.34f);
                 p.Ellipse(-0.56f, -0.1f, 0.15f, 0.21f, -20);

@@ -28,6 +28,15 @@ namespace TuTien.Core.Content
         /// <summary>Treasuries and chambers, by sect id.</summary>
         public Dictionary<string, SectHallDef> Halls { get; } = new Dictionary<string, SectHallDef>();
         public NpcNamesDef NpcNames { get; private set; } = new NpcNamesDef();
+        /// <summary>How each catch fights on the line, by item id.</summary>
+        public Dictionary<string, FishDef> Fish { get; } = new Dictionary<string, FishDef>();
+        /// <summary>What bites at each fishing spot, by the spot's place id.</summary>
+        public Dictionary<string, FishSpotDef> FishSpots { get; } = new Dictionary<string, FishSpotDef>();
+        /// <summary>The alchemy furnace's recipes, in the order the apothecary lists them.</summary>
+        public List<RecipeDef> Recipes { get; } = new List<RecipeDef>();
+        public List<FortuneDef> Fortunes { get; } = new List<FortuneDef>();
+        /// <summary>Bandit camps, by their place id.</summary>
+        public Dictionary<string, CampDef> Camps { get; } = new Dictionary<string, CampDef>();
 
         /// <summary>Map files to load (relative to the content root).</summary>
         public static readonly string[] MapFiles = { "maps/thanh_van.json" };
@@ -91,6 +100,15 @@ namespace TuTien.Core.Content
                 db.Halls[hall.SectId] = hall;
             db.NpcNames = GameJson.ReadEnvelope<NpcNamesDef>(Require("npc_names.json"), "npc_names.json");
 
+            // Fishing, mining, alchemy, the shrine and the bandit camp. Their loot tables name items defined above.
+            var activities = GameJson.ReadEnvelope<ActivitiesDef>(Require("activities.json"), "activities.json");
+            foreach (var table in activities.LootTables) db.LootTables[table.Id] = table;
+            foreach (var fish in activities.Fishing.Fish) db.Fish[fish.Item] = fish;
+            foreach (var spot in activities.Fishing.Spots) db.FishSpots[spot.Poi] = spot;
+            db.Recipes.AddRange(activities.Recipes);
+            db.Fortunes.AddRange(activities.Fortunes);
+            foreach (var camp in activities.Camps) db.Camps[camp.Poi] = camp;
+
             foreach (var file in MapFiles)
             {
                 var map = GameJson.ReadEnvelope<MapDef>(Require(file), file);
@@ -107,6 +125,7 @@ namespace TuTien.Core.Content
         public ItemDef? Item(string? id) => id != null && Items.TryGetValue(id, out var i) ? i : null;
 
         public MapDef? MapForRegion(string regionId) => Maps.Values.FirstOrDefault(m => m.RegionId == regionId);
+        public RecipeDef? Recipe(string? id) => Recipes.FirstOrDefault(r => r.Id == id);
 
         /// <summary>Same rule as the web game's getLootTableForDungeonTier.</summary>
         public static string LootTableForTier(int tier)
@@ -173,14 +192,59 @@ namespace TuTien.Core.Content
                     issues.Add($"map {map.Id}: zone '{zone}' is not an area");
             }
             foreach (var town in Towns.Values)
+            {
                 foreach (var entry in town.Shop.Where(e => !Items.ContainsKey(e.ItemId)))
                     issues.Add($"town {town.AreaId}: shop item '{entry.ItemId}' does not exist");
+                foreach (var b in town.Bounties.Where(b => !Enemies.ContainsKey(b.EnemyId)))
+                    issues.Add($"town {town.AreaId}: bounty target '{b.EnemyId}' does not exist");
+                foreach (var r in town.Requests)
+                {
+                    if (!Items.ContainsKey(r.Item)) issues.Add($"town {town.AreaId}: request {r.Id} asks for unknown item '{r.Item}'");
+                    if (r.RewardItem != null && !Items.ContainsKey(r.RewardItem)) issues.Add($"town {town.AreaId}: request {r.Id} rewards unknown item '{r.RewardItem}'");
+                }
+            }
+            // The hand-authored activities.
+            var pois = Maps.Values.SelectMany(m => m.Pois).ToList();
+            foreach (var fish in Fish.Values.Where(f => !Items.ContainsKey(f.Item)))
+                issues.Add($"fish '{fish.Item}' is not an item");
+            foreach (var spot in FishSpots.Values)
+            {
+                if (pois.All(p => p.Id != spot.Poi || p.Kind != "fishing")) issues.Add($"fishing spot '{spot.Poi}' is not a fishing place on any map");
+                foreach (var c in spot.Catches)
+                {
+                    if (c.Item != null && !Fish.ContainsKey(c.Item)) issues.Add($"fishing spot {spot.Poi}: '{c.Item}' has no fish entry");
+                    if (c.Loot != null && !LootTables.ContainsKey(c.Loot)) issues.Add($"fishing spot {spot.Poi}: loot table '{c.Loot}' does not exist");
+                    if ((c.Item == null) == (c.Loot == null)) issues.Add($"fishing spot {spot.Poi}: a catch needs an item or a loot table");
+                }
+            }
+            foreach (var p in pois.Where(p => p.Kind == "fishing" && !FishSpots.ContainsKey(p.Id)))
+                issues.Add($"place {p.Id}: a fishing spot with nothing to catch");
+            foreach (var p in pois.Where(p => (p.Kind == "ore" || p.Kind == "herb") && (p.LootTable == null || !LootTables.ContainsKey(p.LootTable))))
+                issues.Add($"place {p.Id}: loot table '{p.LootTable}' does not exist");
+            foreach (var p in pois.Where(p => p.Kind == "camp" && !Camps.ContainsKey(p.Id)))
+                issues.Add($"place {p.Id}: a camp with no garrison");
+            foreach (var r in Recipes)
+            {
+                if (!Items.ContainsKey(r.Output)) issues.Add($"recipe {r.Id}: output '{r.Output}' does not exist");
+                foreach (var i in r.Ingredients.Where(i => !Items.ContainsKey(i.Item)))
+                    issues.Add($"recipe {r.Id}: ingredient '{i.Item}' does not exist");
+            }
+            foreach (var camp in Camps.Values)
+            {
+                foreach (var id in camp.Garrison.Where(id => !Enemies.ContainsKey(id)))
+                    issues.Add($"camp {camp.Poi}: '{id}' has no catalog entry");
+                if (!LootTables.ContainsKey(camp.Hoard)) issues.Add($"camp {camp.Poi}: hoard '{camp.Hoard}' does not exist");
+            }
+            foreach (var table in LootTables.Values)
+                foreach (var e in table.Entries.Where(e => !Items.ContainsKey(e.Id)))
+                    issues.Add($"loot table {table.Id}: item '{e.Id}' does not exist");
             // Every item the world hands out must be a real item: an unknown id becomes a nameless stub in the bag
-            // that nothing can be done with (the "random treasure" after a fight).
+            // that nothing can be done with. (Spirit stones and a random treasure are paid out by the event engine.)
             foreach (var ev in Events.Values)
                 foreach (var choice in ev.Choices)
                 {
-                    foreach (var id in choice.Outcomes.SelectMany(o => o.Items ?? new List<string>()).Where(id => !Items.ContainsKey(id)))
+                    foreach (var id in choice.Outcomes.SelectMany(o => o.Items ?? new List<string>())
+                                 .Where(id => !Items.ContainsKey(id) && id != global::TuTien.Core.Events.EventEngine.SpiritStoneReward && id != global::TuTien.Core.Events.EventEngine.RandomTreasureReward))
                         issues.Add($"event {ev.Id}: gives unknown item '{id}'");
                     if (choice.Requirements?.Item is { } needed && !Items.ContainsKey(needed))
                         issues.Add($"event {ev.Id}: needs unknown item '{needed}'");

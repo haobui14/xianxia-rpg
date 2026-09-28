@@ -1,4 +1,3 @@
-using System.Linq;
 using Godot;
 using TuTien.Core;
 using TuTien.Core.Content;
@@ -69,19 +68,14 @@ public partial class CharacterPanel : InkPanel
         };
         foreach (var (vi, en, value) in rows)
             Row(UiKit.Label(T(vi, en), 16, Ink.InkSoft), UiKit.Label(value, 16, Ink.InkColor));
-        foreach (var (slot, vi, en, none) in new[]
-                 {
-                     (GearSlot.Weapon, "Binh khí", "Weapon", T("tay không", "bare hands")),
-                     (GearSlot.Armor, "Giáp", "Armor", T("không mặc giáp", "no armor")),
-                     (GearSlot.Accessory, "Phụ kiện", "Accessory", T("không đeo gì", "nothing")),
-                 })
+        foreach (var slot in Equipment.Slots)
         {
-            var id = Gear.Equipped(p, slot);
-            var worn = content.Item(id);
-            var level = Gear.RefineLevel(p, id);
-            var stats = worn != null ? string.Join(", ", Gear.Stats(worn, level).Select(s => $"{Text.Stat(s.Key)} +{s.Value}")) : "";
-            Row(UiKit.Label(T(vi, en), 16, Ink.InkSoft),
-                UiKit.Label(worn != null ? Text.Name(worn) + (level > 0 ? $" +{level}" : "") + (stats.Length > 0 ? " · " + stats : "") : none, 16, Ink.InkColor));
+            var g = p.Gear.TryGetValue(slot, out var worn) ? worn : new TuTien.Core.State.GearSlot();
+            var info = UiKit.Column(0);
+            info.AddChild(UiKit.Label(Text.Slot(slot, g.Level), 14, Ink.InkSoft));
+            info.AddChild(UiKit.Label(g.ItemId != null ? Text.Worn(content, slot, g) : slot == Equipment.Weapon ? T("tay không", "bare hands") : T("(trống)", "(empty)"),
+                16, g.ItemId != null ? Ink.InkColor : Ink.InkFaint, wrap: true));
+            Body.AddChild(info);
         }
         if (p.Foundation != FoundationGrade.None)
         {
@@ -143,6 +137,14 @@ public partial class CharacterPanel : InkPanel
             var cost = CombatRules.QiCost(def, p.Root.Elements);
             Para($"{Text.Desc(def)}  ·  {T("linh lực", "Qi")} {cost} · {T("hồi", "cooldown")} {def.Cooldown:0.#}s · ×{def.DamageMultiplier * Skills.LevelMultiplier(p, s.Id):0.##}", 14, Ink.InkMute);
             Body.AddChild(SlotButtons(s.Id));
+            if (Mastery.SkillCost(s) is { } price)
+            {
+                var id = s.Id;
+                var train = UiKit.Button(T($"Khổ luyện lên cấp {s.Level + 1} ({price} bạc)", $"Train to level {s.Level + 1} ({price} silver)"),
+                    () => Say(E.TrainSkill(id)), enabled: p.Silver >= price);
+                train.Name = $"train_{s.Id}";
+                Buttons(train);
+            }
         }
 
         Section(T("Công pháp", "Techniques"));
@@ -151,7 +153,17 @@ public partial class CharacterPanel : InkPanel
         foreach (var t in p.Techniques)
         {
             var fit = t.Elements.Count == 0 ? 0.2 : Elements.TechniqueCompatibility(p.Root.Elements, t.Elements);
-            Para($"{T(t.Name, t.NameEn)} · {t.Grade} · {T("tu luyện", "cultivation")} +{t.SpeedBonus}% · {T("hợp linh căn", "root fit")} {Text.Signed(fit * 100)}%", 16, Ink.JadeDeep);
+            var effective = t.SpeedBonus * (1 + 0.1 * (System.Math.Max(1, t.Level) - 1));
+            Para(T($"{t.Name} · {Mastery.GradeName(t.Grade, Locale.Vi)} · tầng {t.Level}/{Mastery.TechniqueMaxLevel} · tu luyện +{effective:0.#}% · hợp linh căn {Text.Signed(fit * 100)}%",
+                $"{t.NameEn} · {Mastery.GradeName(t.Grade, Locale.En)} · level {t.Level}/{Mastery.TechniqueMaxLevel} · cultivation +{effective:0.#}% · root fit {Text.Signed(fit * 100)}%"), 16, Ink.JadeDeep);
+            if (Mastery.TechniqueCost(t) is { } stones)
+            {
+                var id = t.Id;
+                var deepen = UiKit.Button(T($"Lĩnh ngộ tầng {t.Level + 1} ({stones} linh thạch)", $"Deepen to level {t.Level + 1} ({stones} spirit stones)"),
+                    () => Say(E.DeepenTechnique(id)), enabled: p.SpiritStones >= stones);
+                deepen.Name = $"deepen_{t.Id}";
+                Buttons(deepen);
+            }
         }
         Para(T($"Tổng hệ số công pháp: ×{Cultivation.TechniqueMultiplier(p):0.00}", $"Total technique multiplier: ×{Cultivation.TechniqueMultiplier(p):0.00}"), 15, Ink.InkSoft);
     }
@@ -245,9 +257,13 @@ public partial class CharacterPanel : InkPanel
         }
 
         Section(T("Đột phá kế tiếp", "Next breakthrough"));
-        var threshold = Cultivation.MajorBreakthroughThreshold(p);
+        var threshold = Cultivation.MajorBreakthroughThreshold(E.State);
         Para(T($"Độ khó hiện tại: cần đạt {threshold * 100:0}% trong thử thách đột phá. Linh căn tốt, nhiều công pháp và thân thể lành lặn giúp dễ hơn.",
             $"Current difficulty: you need {threshold * 100:0}% in the breakthrough trial. A good root, more techniques and no injuries make it easier."), 15, Ink.InkSoft);
+        if (E.State.Flag(Cultivation.StoredFeelingFlag))
+            Para(T("Cảm ngộ đột phá ngươi dằn lại đang chờ: lần đột phá tới dễ hơn 8%.", "The breakthrough feeling you held back is waiting: your next breakthrough is 8% easier."), 15, Ink.JadeDeep);
+        if (E.State.Flag(Cultivation.InnerDemonFlag))
+            Para(T("Đã vượt qua tâm ma: đạo tâm vững hơn, mọi lần đột phá dễ hơn 3%.", "You have faced down your inner demon: a steadier heart makes every breakthrough 3% easier."), 15, Ink.JadeDeep);
         if (E.BreakthroughReady)
             Buttons(UiKit.Button(T("✦ Đột phá", "✦ Break through"), () => Open(new BreakthroughPanel()), primary: true));
     }

@@ -7,7 +7,7 @@ namespace TuTien.Core
     /// <summary>Versioned save files. Bump <see cref="CurrentVersion"/> and add a migration step for every format change.</summary>
     public static class SaveCodec
     {
-        public const int CurrentVersion = 3;
+        public const int CurrentVersion = 4;
 
         public static string Serialize(GameState state, bool indented = false)
         {
@@ -34,6 +34,10 @@ namespace TuTien.Core
             // v3: sects keep merit (all contribution ever earned) for promotions. Before, nothing spent contribution,
             // so what a disciple holds is what they earned.
             if (state.Version < 3 && state.Player.SectId != null) state.Player.Merit = Math.Max(state.Player.Merit, state.Player.Contribution);
+            // v4: gear slots. The weapon was the only thing worn; it moves into the Weapon slot (weapons add no health or Qi).
+            if (state.Player.LegacyWeaponId is { } weapon && !state.Player.Gear.ContainsKey(Rules.Equipment.Weapon))
+                state.Player.Gear[Rules.Equipment.Weapon] = new GearSlot { ItemId = weapon };
+            state.Player.LegacyWeaponId = null;
             state.Version = CurrentVersion;
         }
     }

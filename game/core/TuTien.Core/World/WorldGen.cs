@@ -44,7 +44,7 @@ namespace TuTien.Core.World
             {
                 if (content.Item(starter.Item1) != null) Inventory.Add(p, Inventory.Resolve(content, starter.Item1, starter.Item2));
             }
-            p.WeaponId = content.Item("wooden_sword") != null ? "wooden_sword" : null;
+            if (content.Item("wooden_sword") != null) Equipment.Equip(content, p, "wooden_sword");
 
             var mapDef = content.MapForRegion(StartRegion) ?? throw new KeyNotFoundException("No map for the starting region");
             var map = new MapGrid(mapDef);
@@ -64,6 +64,7 @@ namespace TuTien.Core.World
             var rng = Seeds.Stream(seed, "worldgen");
             state.World.Npcs.AddRange(NpcSim.Generate(state, content, map, RandomNpcCount, rng));
             Spawns.FillBeasts(state, content, map, rng);
+            Camps.Fill(state, content, map);
             Spawns.RefreshAdventures(state, content, map, rng);
 
             var region = content.Region(StartRegion);

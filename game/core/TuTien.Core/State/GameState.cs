@@ -82,15 +82,14 @@ namespace TuTien.Core.State
         public int Silver { get; set; }
         public int SpiritStones { get; set; }
         public List<ItemStack> Items { get; set; } = new List<ItemStack>();
-        public string? WeaponId { get; set; }
-        /// <summary>Armor (the web game's "Chest" slot) and an accessory (a pendant, a ring); see Rules.Gear.</summary>
-        public string? ArmorId { get; set; }
-        public string? AccessoryId { get; set; }
-        /// <summary>Refine levels (+1…+10) by item id.</summary>
-        public Dictionary<string, int> Refines { get; set; } = new Dictionary<string, int>();
-        /// <summary>The max health and Qi that worn gear already adds to <see cref="HpMax"/> and <see cref="QiMax"/>.</summary>
-        public int GearHp { get; set; }
-        public int GearQi { get; set; }
+        /// <summary>What is worn in each gear slot ("Weapon", "Chest", "Accessory"), and how far each slot is enhanced.</summary>
+        public Dictionary<string, GearSlot> Gear { get; set; } = new Dictionary<string, GearSlot>();
+        /// <summary>The weapon in hand: the Weapon slot's item.</summary>
+        [JsonIgnore]
+        public string? WeaponId => Gear.TryGetValue("Weapon", out var slot) ? slot.ItemId : null;
+        /// <summary>Saves before v4 kept only a weapon, here; <see cref="SaveCodec"/> moves it into <see cref="Gear"/>.</summary>
+        [JsonPropertyName("weapon_id")]
+        public string? LegacyWeaponId { get; set; }
         public List<SkillState> Skills { get; set; } = new List<SkillState>();
         /// <summary>Four spirit-art slots (RMB, 1, 2, 3). Empty string = empty slot.</summary>
         public List<string> SkillSlots { get; set; } = new List<string> { "", "", "", "" };
@@ -130,6 +129,11 @@ namespace TuTien.Core.State
         /// <summary>A Thần thức pulse widens the sense radius until the month ends.</summary>
         public bool SensePulse { get; set; }
 
+        /// <summary>The fortune stick drawn at the Earth God shrine, and the month it speaks for.</summary>
+        public FortuneState? Fortune { get; set; }
+        /// <summary>The month of the last offering at the shrine (−1: never).</summary>
+        public int ShrineOfferingMonth { get; set; } = -1;
+
         public PlayerCounters Counters { get; set; } = new PlayerCounters();
     }
 
@@ -142,6 +146,32 @@ namespace TuTien.Core.State
         public int HerbsGathered { get; set; }
         public int MissionsCompleted { get; set; }
         public Dictionary<string, int> KillsByEnemy { get; set; } = new Dictionary<string, int>();
+        public int FishCaught { get; set; }
+        /// <summary>Every kind of fish (and turtle) ever landed, and how many.</summary>
+        public Dictionary<string, int> Catches { get; set; } = new Dictionary<string, int>();
+        public int OreMined { get; set; }
+        public int PillsBrewed { get; set; }
+        public int CampsCleared { get; set; }
+        public int RequestsDone { get; set; }
+    }
+
+    public sealed class FortuneState
+    {
+        public string Id { get; set; } = "";
+        public int Month { get; set; }
+        /// <summary>An ill omen the shrine keeper has lifted.</summary>
+        public bool Dispelled { get; set; }
+    }
+
+    /// <summary>A gear slot: what is worn there (an item in the bag), and how far the slot is enhanced.</summary>
+    public sealed class GearSlot
+    {
+        public string? ItemId { get; set; }
+        /// <summary>Enhancement, 0–10: whatever is worn here gains 10% of its bonuses per level.</summary>
+        public int Level { get; set; }
+        /// <summary>The max health and Qi this slot added, so taking the item off removes exactly that.</summary>
+        public int AppliedHp { get; set; }
+        public int AppliedQi { get; set; }
     }
 
     public sealed class ItemStack
@@ -267,9 +297,33 @@ namespace TuTien.Core.State
         public List<Rumor> Rumors { get; set; } = new List<Rumor>();
         public Dictionary<string, int> EventCooldowns { get; set; } = new Dictionary<string, int>();
         public Dictionary<string, int> DungeonClears { get; set; } = new Dictionary<string, int>();
+        /// <summary>Wares that change every month, by stall (a town's area id, or "caravan").</summary>
+        public Dictionary<string, MarketState> Markets { get; set; } = new Dictionary<string, MarketState>();
         public SecretRealmRun? Run { get; set; }
         /// <summary>A fight the world forced on you (e.g. an ambush during the month tick).</summary>
         public Encounter? PendingAmbush { get; set; }
+        /// <summary>Bandit camps, by their place id: when the garrison returns, and whether the hoard waits.</summary>
+        public Dictionary<string, CampState> Camps { get; set; } = new Dictionary<string, CampState>();
+        /// <summary>The villagers' requests on each town's board, by the town's area id.</summary>
+        public Dictionary<string, RequestBoardState> Requests { get; set; } = new Dictionary<string, RequestBoardState>();
+    }
+
+    public sealed class CampState
+    {
+        /// <summary>The month index the garrison is back (0: it holds the camp now).</summary>
+        public int ReturnMonth { get; set; }
+        /// <summary>The camp has fallen and its hoard waits to be opened.</summary>
+        public bool HoardReady { get; set; }
+        public int TimesCleared { get; set; }
+    }
+
+    public sealed class RequestBoardState
+    {
+        /// <summary>The month index the requests were last put up (−1: never).</summary>
+        public int RolledMonth { get; set; } = -1;
+        public List<string> Offers { get; set; } = new List<string>();
+        /// <summary>Requests already answered since they went up.</summary>
+        public List<string> Done { get; set; } = new List<string>();
     }
 
     public sealed class NpcState
@@ -314,6 +368,8 @@ namespace TuTien.Core.State
         public int X { get; set; }
         public int Y { get; set; }
         public bool Aggressive { get; set; }
+        /// <summary>A camp's garrison (the camp's place id): it holds its ground instead of roaming.</summary>
+        public string? CampId { get; set; }
     }
 
     public sealed class AdventureSpot
@@ -326,12 +382,31 @@ namespace TuTien.Core.State
         public int ExpiresMonth { get; set; }
         /// <summary>Hidden spots need a Thần thức pulse or high perception to see.</summary>
         public bool Hidden { get; set; }
+        /// <summary>A fortune stick pointed here: it shows on the map from afar.</summary>
+        public bool Revealed { get; set; }
     }
 
     public sealed class NodeState
     {
         public string PoiId { get; set; } = "";
         public int ReadyMonth { get; set; }
+    }
+
+    /// <summary>Wares that change every month: a town stall's extra goods, or a merchant caravan's.</summary>
+    public sealed class MarketState
+    {
+        /// <summary>The month these wares were laid out (−1: never).</summary>
+        public int Month { get; set; } = -1;
+        public List<MarketOffer> Offers { get; set; } = new List<MarketOffer>();
+    }
+
+    public sealed class MarketOffer
+    {
+        public string ItemId { get; set; } = "";
+        public int Silver { get; set; }
+        public int SpiritStones { get; set; }
+        /// <summary>How many are left this month.</summary>
+        public int Left { get; set; }
     }
 
     public sealed class Rumor
@@ -368,5 +443,22 @@ namespace TuTien.Core.State
         public Realm? RealmOverride { get; set; }
         public int StageOverride { get; set; }
         public string? DisplayName { get; set; }
+        /// <summary>For NPC fights: the arts the NPC knows and their root's element, in place of the template's.</summary>
+        public List<string>? ArtsOverride { get; set; }
+        public Element? ElementOverride { get; set; }
+        /// <summary>For NPC fights: the NPC's own stats (see NpcCombat.Stats), in place of the template's.</summary>
+        public CultivatorStats? Stats { get; set; }
+    }
+
+    /// <summary>A cultivator's fighting numbers, made the way the player's are (design Appendix A).</summary>
+    public sealed class CultivatorStats
+    {
+        public int HpMax { get; set; }
+        public double Physical { get; set; }
+        public double Spirit { get; set; }
+        public double Defense { get; set; }
+        public double Resistance { get; set; }
+        public double Perception { get; set; }
+        public double Luck { get; set; }
     }
 }

@@ -37,6 +37,8 @@ public sealed class Battle
     public readonly List<Pillar> Pillars = new();
     private readonly Dictionary<Pillar, Prop> _pillarProps = new();
     public readonly Dictionary<string, int> SkillUses = new();
+    /// <summary>Which arts the foes have cast this fight, and how often.</summary>
+    public readonly Dictionary<string, int> EnemyArtUses = new();
     public readonly Dictionary<string, int> ItemsUsed = new();
     public Pcg32 Rng { get; }
     public bool NonLethal { get; }
@@ -69,7 +71,12 @@ public sealed class Battle
         body.Hp = body.HpMax = inst.HpMax;
         body.Speed = (float)inst.Speed;
         body.Archetype = def.Archetype;
-        body.Skill = E.Content.Skill(def.Skills.FirstOrDefault());
+        // The whole kit (an NPC's own arts, or the template's): the brain picks among them as the fight goes.
+        body.Arts = inst.Arts.Select(E.Content.Skill).Where(s => s != null).Select(s => s!).ToList();
+        body.Skill = body.Arts.FirstOrDefault();
+        body.ArtCds.Clear();
+        body.LastArt = null;
+        body.Shield = body.ShieldTime = 0;
         body.NameVi = inst.Name;
         body.NameEn = inst.NameEn;
         body.InBattle = true;
@@ -182,7 +189,16 @@ public sealed class Battle
         var attacker = Player.Stats;
         var r = CombatRules.Compute(kind, mult, element, in attacker, target.Defending(), mark, Rng);
 
-        Damage(target, r.Amount, r.Crit, from);
+        // A guarding art soaks the blow first.
+        var amount = r.Amount;
+        if (target.Shield > 0)
+        {
+            var soaked = (int)Mathf.Min(target.Shield, amount);
+            target.Shield -= soaked;
+            amount -= soaked;
+            if (soaked > 0) Fx.Say(target.Pos + new Vector2(24, -Figures.HeightOf(target.Kind) * target.Scale + 8), $"({soaked})", Ink.JadeSoft, 15);
+        }
+        if (amount > 0) Damage(target, amount, r.Crit, from);
         SoundBoard.PlayAt(r.Crit ? "crit" : "hit", target.Pos);
         if (r.Reaction != Reaction.None)
         {
@@ -432,14 +448,14 @@ public sealed class Battle
         });
     }
 
-    /// <summary>An enemy fires its art along <paramref name="dir"/>.</summary>
-    public void EnemyShoot(Fighter owner, SkillDef skill, Vector2 dir)
+    /// <summary>An enemy fires its art along <paramref name="dir"/> (at <paramref name="mult"/>, or the art's own multiplier).</summary>
+    public void EnemyShoot(Fighter owner, SkillDef skill, Vector2 dir, float? mult = null)
     {
         var color = skill.Element != null ? Ink.Element(skill.Element.Value).Darkened(0.15f) : Ink.CinnabarDeep;
         owner.CastAnim = 1;
         owner.CastColor = color;
         SoundBoard.PlayAt("shoot", owner.Pos, -3);
-        Shoot(owner, skill, dir, (float)skill.DamageMultiplier * (owner.Enraged ? 1.15f : 1f),
+        Shoot(owner, skill, dir, (mult ?? (float)skill.DamageMultiplier) * (owner.Enraged ? 1.15f : 1f),
             skill.Damage == "physical" ? DamageKind.Physical : DamageKind.Spirit, color);
     }
 
@@ -560,12 +576,40 @@ public sealed class Battle
             var away = (enemy.Pos - at).LengthSquared() > 1 ? (enemy.Pos - at).Normalized() : Vector2.Right;
             enemy.Pos = at + away * (radius + enemy.Radius + 2);
         }
+        AddPillar(at, radius, duration);
+        return true;
+    }
+
+    /// <summary>
+    /// A foe's stone pillar, raised round the player to hem them in. Whoever stands on its spot is struck and
+    /// thrown clear (the circle on the ground gave warning); other foes step aside.
+    /// </summary>
+    public bool RaiseEnemyPillar(Fighter owner, Vector2 at, float radius, float duration, SkillDef skill, float mult, DamageKind kind)
+    {
+        var cell = F.Walls.CellOf(at);
+        if (F.Walls.SolidCell(cell.X, cell.Y) || Pillars.Any(p => p.Pos.DistanceTo(at) < radius * 2)) return false;
+        if (Player.Pos.DistanceTo(at) < radius + Player.Radius)
+        {
+            HitPlayer(owner, mult, kind, skill.Element, skill);
+            var away = (Player.Pos - at).LengthSquared() > 1 ? (Player.Pos - at).Normalized() : Vector2.Right;
+            Player.Pos = F.Walls.Move(Player.Pos, Player.Radius, away * (radius + Player.Radius + 2 - Player.Pos.DistanceTo(at)));
+        }
+        foreach (var enemy in Enemies.Where(x => x.Active && x.InBattle && x.Pos.DistanceTo(at) < radius + x.Radius).ToList())
+        {
+            var away = (enemy.Pos - at).LengthSquared() > 1 ? (enemy.Pos - at).Normalized() : Vector2.Left;
+            enemy.Pos = at + away * (radius + enemy.Radius + 2);
+        }
+        AddPillar(at, radius, duration);
+        return true;
+    }
+
+    private void AddPillar(Vector2 at, float radius, float duration)
+    {
         var pillar = new Pillar { Pos = at, Radius = radius, Duration = duration, Obstacle = Obstacle.Circle(at, radius) };
         F.Walls.Add(pillar.Obstacle);
         Pillars.Add(pillar);
         _pillarProps[pillar] = F.AddProp(at, (c, _) => PropArt.StonePillar(c, pillar), animated: true);
         Fx.Dust(at, 6);
-        return true;
     }
 
     private void Crumble(Pillar pillar)
@@ -583,6 +627,26 @@ public sealed class Battle
             o.Time += dt;
             o.Angle += dt * 4.4f;
             foreach (var key in o.Cooldowns.Keys.ToList()) o.Cooldowns[key] -= dt;
+            if (!o.Owner.IsPlayer)
+            {
+                // A foe's leaves cut the player; they scatter when their caster falls or yields.
+                if (!o.Owner.Active)
+                {
+                    o.Time = o.Duration;
+                    continue;
+                }
+                for (var i = 0; i < o.Count; i++)
+                {
+                    var at = o.At(i);
+                    if (Player.Pos.DistanceTo(at + new Vector2(0, 22)) > Player.Radius + 12) continue;
+                    if (o.Cooldowns.TryGetValue(Player, out var pcd) && pcd > 0) break;
+                    o.Cooldowns[Player] = 0.6f;
+                    HitPlayer(o.Owner, o.Mult, o.Kind, o.Skill.Element, o.Skill);
+                    Fx.Leaves(at, o.Color, 2);
+                    break;
+                }
+                continue;
+            }
             for (var i = 0; i < o.Count; i++)
             {
                 var at = o.At(i);
@@ -605,6 +669,13 @@ public sealed class Battle
             if (GD.Randf() < dt * 14) Fx.Burst(g.Pos + Vector2.Right.Rotated(GD.Randf() * Mathf.Tau) * GD.Randf() * g.Radius, new Color("#f08a3a"), 1, 50, ParticleKind.Ember, 2.5f);
             if (g.Tick > 0) continue;
             g.Tick = 0.5f;
+            if (g.Owner != null)
+            {
+                // A foe's fire burns the player standing in it.
+                if (!g.Owner.Active) g.Time = g.Duration;
+                else if (Player.Pos.DistanceTo(g.Pos) <= g.Radius + Player.Radius * 0.5f) HitPlayer(g.Owner, g.Mult, g.Kind, g.Skill.Element, g.Skill);
+                continue;
+            }
             foreach (var enemy in Enemies.Where(x => x.Active && x.InBattle && x.Pos.DistanceTo(g.Pos) <= g.Radius + x.Radius * 0.5f).ToList())
                 HitEnemy(enemy, g.Skill, g.Mult, g.Kind, g.Skill.Element, g.Pos);
         }

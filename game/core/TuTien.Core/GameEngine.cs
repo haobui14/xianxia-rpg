@@ -22,6 +22,10 @@ namespace TuTien.Core
         Adventure,
         Npc,
         Beast,
+        Fishing,
+        Ore,
+        Shrine,
+        Camp,
     }
 
     /// <summary>Something on the map the player can see or act on.</summary>
@@ -84,13 +88,14 @@ namespace TuTien.Core
             State = state;
             Map = new MapGrid(content.MapForRegion(state.Player.Region)
                               ?? throw new KeyNotFoundException($"No map for region {state.Player.Region}"));
+            // A save from before the camps: the bandits move in now.
+            Camps.Fill(State, Content, Map);
             if (Player.FootworkMax <= 0)
             {
                 Player.FootworkMax = WorldTick.FootworkMax(Player);
                 Player.Footwork = Player.FootworkMax;
             }
-            // Health and Qi from worn gear are part of the maxima (a save from before armor counted none).
-            Gear.Recompute(State, Content);
+            // Stacks from before their item was defined (the old "Random Treasure") take the item's name and kind.
             Inventory.Refresh(Player, Content);
         }
 
@@ -129,7 +134,7 @@ namespace TuTien.Core
                 yield return FromPack(pack);
             foreach (var npc in State.World.Npcs.Where(n => n.Alive && n.Zone.Length > 0 && Senses(n.X, n.Y)))
                 yield return FromNpc(npc);
-            foreach (var adv in State.World.Adventures.Where(a => Senses(a.X, a.Y) && (!a.Hidden || Player.SensePulse || Player.Attrs.Per >= 12)))
+            foreach (var adv in State.World.Adventures.Where(a => (Senses(a.X, a.Y) || a.Revealed) && (!a.Hidden || Player.SensePulse || Player.Attrs.Per >= 12)))
                 yield return FromAdventure(adv);
         }
 
@@ -152,12 +157,21 @@ namespace TuTien.Core
                 "secret_realm" => InteractKind.SecretRealm,
                 "spirit_vein" => InteractKind.SpiritVein,
                 "herb" => InteractKind.Herb,
+                "fishing" => InteractKind.Fishing,
+                "ore" => InteractKind.Ore,
+                "shrine" => InteractKind.Shrine,
+                "camp" => InteractKind.Camp,
                 _ => InteractKind.Pass,
             };
             return new Interactable
             {
                 Kind = kind, Id = poi.Id, Name = poi.Name, NameEn = poi.NameEn, Icon = poi.Icon, X = poi.X, Y = poi.Y,
-                Ready = kind != InteractKind.Herb || Spawns.NodeReady(State, poi.Id),
+                Ready = kind switch
+                {
+                    InteractKind.Herb or InteractKind.Ore => Spawns.NodeReady(State, poi.Id),
+                    InteractKind.Camp => State.World.Camps.TryGetValue(poi.Id, out var camp) && camp.HoardReady,
+                    _ => true,
+                },
             };
         }
 
@@ -429,13 +443,13 @@ namespace TuTien.Core
         {
             var npc = State.World.Npcs.FirstOrDefault(n => n.Id == npcId && n.Alive);
             if (npc == null || ActiveEncounter != null) return null;
-            return BeginEncounter(new Encounter
+            return BeginEncounter(NpcCombat.Prepare(new Encounter
             {
                 Id = State.NewId("enc"), Source = lethal ? "npc" : "spar", SourceId = npc.Id,
                 EnemyIds = { npc.SectId == "thanh_van_kiem" ? "sect_disciple" : "rogue_cultivator" },
                 Zone = npc.Zone, Danger = 1, NonLethal = !lethal,
                 RealmOverride = npc.Realm, StageOverride = npc.Stage, DisplayName = npc.Name,
-            });
+            }, npc, Content));
         }
 
         public Encounter? StartSectTrial(string sectId)
@@ -509,8 +523,10 @@ namespace TuTien.Core
 
             // ---------------- victory
             var defeatedDefs = outcome.Defeated.Select(id => Content.Enemy(id) ?? Encounters.Fallback(id)).ToList();
+            var campId = enc.Source == "beast" ? State.World.Beasts.FirstOrDefault(b => b.Id == enc.SourceId)?.CampId : null;
             if (enc.Source == "beast" || (enc.Source == "ambush" && npc == null))
                 State.World.Beasts.RemoveAll(b => b.Id == enc.SourceId);
+            if (campId != null) result.Events.AddRange(Camps.Fallen(State, Content, campId, rng));
 
             foreach (var def in defeatedDefs)
             {
@@ -629,7 +645,7 @@ namespace TuTien.Core
         public EventDef? EventFor(string adventureId) =>
             Adventure(adventureId) is { } adv && Content.Events.TryGetValue(adv.EventId, out var ev) ? ev : null;
 
-        public List<ChoiceView> Choices(EventDef ev) => EventEngine.Choices(State, ev);
+        public List<ChoiceView> Choices(EventDef ev) => EventEngine.Choices(State, ev, Content);
 
         /// <summary>Answer an event. Adventures on the map are consumed; direct events (seclusion, after a fight) pass null.</summary>
         public OutcomeResult ResolveEvent(string eventId, string choiceId, string? adventureId = null)
@@ -674,23 +690,140 @@ namespace TuTien.Core
             return events;
         }
 
+        // ================================================================ fishing, mining, alchemy, the shrine, camps
+
+        /// <summary>A place of this kind on the player's tile or the next one.</summary>
+        private PoiDef? PoiWithinReach(string poiId, string kind)
+        {
+            var poi = Poi(poiId);
+            return poi != null && poi.Kind == kind && Math.Abs(poi.X - Player.X) + Math.Abs(poi.Y - Player.Y) <= 1 ? poi : null;
+        }
+
+        /// <summary>What is on the line right now (the host plays the strike and the reel), if anything.</summary>
+        public Bite? PendingBite { get; private set; }
+
+        /// <summary>Cast at a fishing spot: a footwork spent (the month may turn), and something bites.</summary>
+        public Bite? CastLine(string poiId)
+        {
+            PendingBite = null;
+            if (Player.Dead || ActiveEncounter != null) return null;
+            if (PoiWithinReach(poiId, "fishing") == null || !Content.FishSpots.TryGetValue(poiId, out var spot)) return null;
+            SpendFootwork(Fishing.CastFootwork);
+            if (Player.Dead) return null;
+            PendingBite = Fishing.Roll(State, Content, spot, Rng("fish:" + poiId + ":" + State.NewId("cast")));
+            return PendingBite;
+        }
+
+        /// <summary>The reel is won: keep the catch, or (for the few that may be let go) release it.</summary>
+        public List<GameEvent> LandCatch(bool release = false)
+        {
+            var bite = PendingBite;
+            PendingBite = null;
+            if (bite == null) return new List<GameEvent>();
+            var events = Fishing.Land(State, Content, bite, release, Rng("landed:" + bite.SpotId + ":" + State.NewId("catch")));
+            events.AddRange(SectMissions.Announce(State, Content));
+            return events;
+        }
+
+        /// <summary>It got away: struck too early, too late, or the line went slack.</summary>
+        public void LoseCatch() => PendingBite = null;
+
+        public bool OreReady(string poiId) => Spawns.NodeReady(State, poiId);
+
+        /// <summary>A vein broke under the sword (the host counts the strikes): its ore, for a footwork.</summary>
+        public List<GameEvent> Mine(string poiId)
+        {
+            var events = new List<GameEvent>();
+            var poi = PoiWithinReach(poiId, "ore");
+            if (poi == null || Player.Dead || ActiveEncounter != null) return events;
+            if (!Spawns.NodeReady(State, poiId))
+            {
+                events.Add(GameEvent.Info("ore_empty", "Mạch khoáng đã bị đào cạn, chờ vài tháng nữa.", "This vein is worked out; give it a few months."));
+                return events;
+            }
+            SpendFootwork(Mining.Footwork);
+            if (Player.Dead) return events;
+            events.AddRange(Mining.Mine(State, Content, poi, Rng("mine:" + poiId)));
+            events.AddRange(SectMissions.Announce(State, Content));
+            return events;
+        }
+
+        /// <summary>At the forge: ore into an enhancement stone.</summary>
+        public List<GameEvent> Smelt(string oreId) => Mining.Smelt(Content, Player, oreId);
+
+        /// <summary>The recipe in the furnace (the host plays the fire), if any.</summary>
+        public RecipeDef? PendingBrew { get; private set; }
+
+        /// <summary>Light the furnace: the herbs, the fee and two footwork go in.</summary>
+        public List<GameEvent> StartBrew(string recipeId)
+        {
+            var events = new List<GameEvent>();
+            var recipe = Content.Recipe(recipeId);
+            if (recipe == null || PendingBrew != null || Player.Dead || ActiveEncounter != null) return events;
+            if (Alchemy.Blocked(Content, Player, recipe) is { } why)
+            {
+                events.Add(GameEvent.Info("brew_blocked", why.Vi, why.En));
+                return events;
+            }
+            SpendFootwork(Alchemy.Footwork);
+            if (Player.Dead) return events;
+            events.AddRange(Alchemy.Start(Content, Player, recipe));
+            PendingBrew = recipe;
+            return events;
+        }
+
+        /// <summary>The fire is out: <paramref name="purity"/> (0–1) from the furnace, and whether it blew.</summary>
+        public List<GameEvent> FinishBrew(double purity, bool exploded)
+        {
+            var recipe = PendingBrew;
+            PendingBrew = null;
+            return recipe == null ? new List<GameEvent>() : Alchemy.Finish(State, Content, recipe, purity, exploded);
+        }
+
+        /// <summary>This month's fortune stick, if one was drawn.</summary>
+        public FortuneDef? Fortune => Shrine.Current(State, Content);
+
+        public List<GameEvent> DrawFortune() => Shrine.Draw(State, Content, Map, Rng("fortune:" + State.NewId("stick")));
+
+        public List<GameEvent> DispelFortune() => Shrine.Dispel(State, Content);
+
+        public List<GameEvent> MakeOffering() => Shrine.Offer(State);
+
+        public CampState Camp(string poiId) => Camps.Of(State, poiId);
+
+        public CampDef? CampFor(string poiId) => Content.Camps.TryGetValue(poiId, out var c) ? c : null;
+
+        /// <summary>Open a fallen camp's hoard (standing in the camp).</summary>
+        public List<GameEvent> OpenHoard(string poiId)
+        {
+            var poi = PoiWithinReach(poiId, "camp");
+            if (poi == null || ActiveEncounter != null) return new List<GameEvent>();
+            var events = Camps.OpenHoard(State, Content, poi, Rng("hoard:" + poiId + ":" + State.NewId("hoard")));
+            events.AddRange(SectMissions.Announce(State, Content));
+            return events;
+        }
+
+        /// <summary>The villagers' requests on a town's board right now (put up again every two months).</summary>
+        public List<RequestDef> RequestsFor(TownDef town) =>
+            Rules.Requests.Offers(Rules.Requests.Board(State, town, Rng("requests:" + town.AreaId)), town);
+
+        public bool RequestDone(TownDef town, string requestId) =>
+            State.World.Requests.TryGetValue(town.AreaId, out var board) && board.Done.Contains(requestId);
+
+        public List<GameEvent> FulfilRequest(TownDef town, string requestId) => Rules.Requests.Fulfil(State, Content, town, requestId);
+
         /// <summary>Use an item: eat a pill, read a manual — or open a container (a treasure pouch, a storage ring).</summary>
         public List<GameEvent> UseItem(string itemId)
         {
-            var events = Gear.OpensInto(Content.Item(itemId)) != null
-                ? Gear.Open(State, Content, itemId, Rng("open:" + State.NewId("open")))
+            var events = Containers.OpensInto(Content.Item(itemId)) != null
+                ? Containers.Open(State, Content, itemId, Rng("open:" + State.NewId("open")))
                 : Inventory.Use(State, Content, itemId);
             events.AddRange(SectMissions.Announce(State, Content));
             return events;
         }
 
         /// <summary>What an item is good for, as far as the rules go.</summary>
-        public bool CanUse(string itemId) => Gear.OpensInto(Content.Item(itemId)) != null || Inventory.IsConsumable(Content, itemId);
-
-        public List<GameEvent> Unequip(GearSlot slot) => Gear.Unequip(State, Content, slot);
-
-        /// <summary>Refine what's worn in <paramref name="slot"/> one level with enhancement stones and silver.</summary>
-        public List<GameEvent> Refine(GearSlot slot) => Gear.Refine(State, Content, slot, Rng("refine:" + State.NewId("refine")));
+        public bool CanUse(string itemId) => Containers.OpensInto(Content.Item(itemId)) != null || Inventory.IsConsumable(Content, itemId);
 
         /// <summary>Put a known art into one of the four spirit-art slots (empty string clears it).</summary>
         public bool SetSkillSlot(int slot, string skillId)
@@ -712,8 +845,36 @@ namespace TuTien.Core
 
         public SectDef? SectFor(PoiDef poi) => poi.Ref != null && Content.Sects.TryGetValue(poi.Ref, out var s) ? s : null;
 
-        /// <summary>Wear a weapon, armor or an accessory (it takes the place of what was in its slot).</summary>
-        public List<GameEvent> Equip(string itemId) => Gear.Equip(State, Content, itemId);
+        // ================================================================ gear and mastery
+
+        /// <summary>Wear an item from the bag in its slot (weapon, armour, accessory).</summary>
+        public List<GameEvent> Equip(string itemId) => Equipment.Equip(Content, Player, itemId);
+
+        public List<GameEvent> Unequip(string slot) => Equipment.Unequip(Content, Player, slot);
+
+        /// <summary>At the forge: try to take a gear slot one level higher.</summary>
+        public List<GameEvent> Enhance(string slot) => Equipment.Enhance(Content, Player, slot, Rng("forge:" + slot + ":" + State.NewId("forge")));
+
+        public List<GameEvent> BuyStone(string stoneId) => Equipment.BuyStone(Content, Player, stoneId);
+
+        public List<GameEvent> DeepenTechnique(string techniqueId) => Mastery.DeepenTechnique(Player, techniqueId);
+
+        public List<GameEvent> TrainSkill(string skillId) => Mastery.TrainSkill(Content, Player, skillId);
+
+        /// <summary>The money changer's rate: one spirit stone for this much silver (the web game's market exchange).</summary>
+        public const int SpiritStoneRate = 100;
+
+        public List<GameEvent> ExchangeStones(int stones)
+        {
+            var events = new List<GameEvent>();
+            stones = Math.Min(stones, Player.SpiritStones);
+            if (stones <= 0) return events;
+            Player.SpiritStones -= stones;
+            Player.Silver += stones * SpiritStoneRate;
+            events.Add(GameEvent.Info("silver", $"Đổi {stones} linh thạch lấy {stones * SpiritStoneRate} bạc.",
+                $"Exchanged {stones} spirit stones for {stones * SpiritStoneRate} silver."));
+            return events;
+        }
 
         // ================================================================ towns
 
@@ -732,8 +893,27 @@ namespace TuTien.Core
             Player.Hp = Player.HpMax;
             Player.Qi = Player.QiMax;
             events.Add(GameEvent.Info("rested", "Một đêm yên giấc, khí huyết sung mãn.", "A night's rest — fully recovered."));
+            // Sometimes the night brings something: a dream, a visitor (the web game's "rest" events).
+            var rng = Rng("rest:" + State.NewId("rest"));
+            RestEvent = rng.Chance(RestEventChance)
+                ? EventEngine.Select(EventEngine.ValidEvents(State, Content, "rest", Map.Def.RegionId), Player, rng)?.Id
+                : null;
             return events;
         }
+
+        /// <summary>How often a night at the inn brings an event.</summary>
+        public const double RestEventChance = 0.3;
+
+        /// <summary>The event the last night at the inn brought, if any (the town panel opens it).</summary>
+        public string? RestEvent { get; private set; }
+
+        /// <summary>This month's wares at a town's stall, on top of its fixed stock.</summary>
+        public MarketState Wares(TownDef town) => Market.Wares(State, Content, town.AreaId);
+
+        /// <summary>The merchant caravan's wares this month.</summary>
+        public MarketState CaravanWares() => Market.Caravan(State, Content);
+
+        public List<GameEvent> BuyWare(MarketState market, int index) => Market.Buy(State, Content, market, index);
 
         public List<GameEvent> Buy(TownDef town, string itemId)
         {
@@ -765,10 +945,9 @@ namespace TuTien.Core
         {
             var events = new List<GameEvent>();
             var stack = Player.Items.FirstOrDefault(i => i.Id == itemId);
-            if (stack == null || Gear.IsEquipped(Player, itemId) && stack.Qty <= 1) return events;
+            if (stack == null || Equipment.IsWorn(Player, itemId) && stack.Qty <= 1) return events;
             var price = SellPrice(stack.Rarity);
             Inventory.Remove(Player, itemId);
-            Gear.Released(State, Content, itemId);
             Player.Silver += price;
             events.Add(GameEvent.Info("sold", $"Bán {stack.Name} (+{price} bạc).", $"Sold {stack.NameEn} (+{price} silver)."));
             return events;
@@ -875,14 +1054,13 @@ namespace TuTien.Core
             var events = new List<GameEvent>();
             var npc = Npc(npcId);
             var stack = Player.Items.FirstOrDefault(i => i.Id == itemId);
-            if (npc == null || stack == null || Gear.IsEquipped(Player, itemId) && stack.Qty <= 1) return events;
+            if (npc == null || stack == null || Equipment.IsWorn(Player, itemId) && stack.Qty <= 1) return events;
             if (npc.LastGiftMonth == State.Calendar.MonthIndex)
             {
                 events.Add(GameEvent.Info("gift_again", $"{npc.Name} khách sáo từ chối.", $"{npc.Name} politely declines."));
                 return events;
             }
             Inventory.Remove(Player, itemId);
-            Gear.Released(State, Content, itemId);
             npc.LastGiftMonth = State.Calendar.MonthIndex;
             var gain = stack.Rarity switch { "Legendary" => 30, "Epic" => 22, "Rare" => 15, "Uncommon" => 10, _ => 6 };
             if (npc.Traits.Contains("greedy")) gain += 5;
@@ -904,6 +1082,8 @@ namespace TuTien.Core
             if (Player.Realm != before)
             {
                 Player.FootworkMax = WorldTick.FootworkMax(Player);
+                // A mortal had no Qi to hold; the gear's Qi flows in now.
+                Equipment.RefreshAll(Content, Player);
                 if (before == Realm.PhamNhan)
                 {
                     var starter = StarterArt(Player.Root.Elements.FirstOrDefault());

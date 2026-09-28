@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 using TuTien.Core;
+using TuTien.Core.Rules;
 using TuTien.Core.State;
 using TuTien.Core.Story;
 using TuTien.Core.World;
@@ -47,6 +48,21 @@ public partial class NpcPanel : InkPanel
         var traits = string.Join(", ", npc.Traits.Select(t => NpcSim.TraitName(content, t, locale)));
         var leaning = npc.Alignment >= 30 ? T("chính phái", "righteous") : npc.Alignment <= -30 ? T("tà đạo", "wicked") : T("trung lập", "neutral");
         Para(T($"Tính cách: {traits} · thiên hướng {leaning}", $"Temperament: {traits} · {leaning}"), 14, Ink.InkMute);
+        // What they fight with: their root's arts, their sect's, perhaps a guard or a heal.
+        var arts = NpcCombat.Kit(npc, content).Select(id => content.Skill(id)).Where(s => s != null).Select(s => Text.Name(s!)).ToList();
+        if (arts.Count > 0) Para(T("Võ học: ", "Arts: ") + string.Join(", ", arts), 14, Ink.InkMute);
+        // Their own numbers, grown by the same gains as yours, and how a fight with them would go.
+        var stats = NpcCombat.Stats(npc, content);
+        Para(T($"Khí huyết {stats.HpMax} · công vật lý {stats.Physical:0} · công linh lực {stats.Spirit:0} · phòng thủ {stats.Defense:0} · kháng pháp {stats.Resistance:0}",
+            $"Health {stats.HpMax} · physical {stats.Physical:0} · spirit {stats.Spirit:0} · defense {stats.Defense:0} · resistance {stats.Resistance:0}"), 14, Ink.InkMute);
+        var (sense, tint) = NpcCombat.Assess(content, E.Player, npc) switch
+        {
+            MatchUp.Weaker => (T("yếu hơn ngươi", "weaker than you"), Ink.JadeDeep),
+            MatchUp.Even => (T("ngang tài ngang sức", "an even match"), Ink.InkColor),
+            MatchUp.Stronger => (T("mạnh hơn ngươi", "stronger than you"), Ink.CinnabarDeep),
+            _ => (T("vượt xa ngươi — chớ động thủ", "far beyond you — do not fight"), Ink.Cinnabar),
+        };
+        Para(T("Cảm nhận: ", "You sense: ") + sense, 15, tint);
 
         var favor = npc.RelationTo(NpcSim.PlayerKey);
         var meter = new Meter(T("Hảo cảm", "Favor"), favor >= 0 ? Ink.Jade : Ink.Cinnabar, 320);
@@ -74,7 +90,7 @@ public partial class NpcPanel : InkPanel
         if (_gifting)
         {
             Section(T("Chọn quà", "Choose a gift"));
-            var giftable = E.Player.Items.Where(i => !(TuTien.Core.Rules.Gear.IsEquipped(E.Player, i.Id) && i.Qty <= 1)).ToList();
+            var giftable = E.Player.Items.Where(i => !(Equipment.IsWorn(E.Player, i.Id) && i.Qty <= 1)).ToList();
             if (giftable.Count == 0) Para(T("Ngươi chẳng có gì để tặng.", "You have nothing to give."));
             foreach (var item in giftable)
             {

@@ -121,7 +121,7 @@ public abstract partial class TrialBase : FieldScreen
         hud.DrawString(Ink.UiFont, new Vector2(x0, ly), line, HorizontalAlignment.Left, -1, 12, Ink.InkMute);
     }
 
-    protected void ReadPreparation() => Threshold = (float)Cultivation.MajorBreakthroughThreshold(E.Player);
+    protected void ReadPreparation() => Threshold = (float)Cultivation.MajorBreakthroughThreshold(E.State);
 
     /// <summary>Open the guide (subclasses call this from AfterReady); the trial waits until it's closed.</summary>
     protected void ShowGuide()

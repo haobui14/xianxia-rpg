@@ -42,7 +42,7 @@ public partial class BreakthroughPanel : InkPanel
                 16, passed ? Ink.JadeDeep : Ink.CinnabarDeep);
         }
 
-        var threshold = Cultivation.MajorBreakthroughThreshold(p);
+        var threshold = Cultivation.MajorBreakthroughThreshold(E.State);
         Section(T("Độ khó", "Difficulty"));
         Para(T($"Cần đạt {threshold * 100:0}% trong thử thách.", $"You need {threshold * 100:0}% in the trial."), 20, Ink.CinnabarDeep);
         Para(T($"· Linh căn {Names.Display(p.Root.Grade, Locale.Vi)}: −{5 * (int)p.Root.Grade}%", $"· {Names.Display(p.Root.Grade, Locale.En)} root: −{5 * (int)p.Root.Grade}%"), 15, Ink.InkSoft);

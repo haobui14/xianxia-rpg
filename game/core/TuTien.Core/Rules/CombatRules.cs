@@ -92,17 +92,19 @@ namespace TuTien.Core.Rules
 
         // ------------------------------------------------------------ player profile
 
-        /// <summary>Base attributes plus the bonus_stats of everything worn, refined (as calculateTotalAttributes did for the weapon).</summary>
+        private static double GearBonus(ContentDb content, PlayerState p, string key) => Equipment.Bonus(content, p, key);
+
+        /// <summary>Base attributes plus everything worn, enhancement included (as calculateTotalAttributes did).</summary>
         public static Attributes EffectiveAttrs(ContentDb content, PlayerState p) => new Attributes
         {
-            Str = p.Attrs.Str + Gear.Bonus(content, p, "str"),
-            Agi = p.Attrs.Agi + Gear.Bonus(content, p, "agi"),
-            Int = p.Attrs.Int + Gear.Bonus(content, p, "int"),
-            Per = p.Attrs.Per + Gear.Bonus(content, p, "perception"),
-            Luck = p.Attrs.Luck + Gear.Bonus(content, p, "luck"),
+            Str = p.Attrs.Str + (int)GearBonus(content, p, "str"),
+            Agi = p.Attrs.Agi + (int)GearBonus(content, p, "agi"),
+            Int = p.Attrs.Int + (int)GearBonus(content, p, "int"),
+            Per = p.Attrs.Per + (int)GearBonus(content, p, "perception"),
+            Luck = p.Attrs.Luck + (int)GearBonus(content, p, "luck"),
         };
 
-        /// <summary>DEF grows with agility and, much more, with body tempering (thể tu are tanks).</summary>
+        /// <summary>DEF grows with agility and, much more, with body tempering (thể tu are tanks); armour adds its own.</summary>
         public static double PlayerDefense(PlayerState p, Attributes a)
         {
             double[] bodyDef = { 0, 12, 30, 60, 110 };
@@ -117,10 +119,10 @@ namespace TuTien.Core.Rules
             var foundation = Foundation.PowerMultiplier(p.Foundation);
             return new Combatant
             {
-                PhysicalPower = (a.Str * 1.5 + Gear.Bonus(content, p, "atk")) * foundation,
+                PhysicalPower = (a.Str * 1.5 + GearBonus(content, p, "atk")) * foundation,
                 SpiritPower = (a.Int * 2 + a.Str * 0.5) * foundation,
-                Def = PlayerDefense(p, a),
-                Res = PlayerResistance(p, a),
+                Def = PlayerDefense(p, a) + GearBonus(content, p, "def"),
+                Res = PlayerResistance(p, a) + GearBonus(content, p, "res"),
                 Per = a.Per,
                 Luck = a.Luck,
                 RealmValue = Math.Max(Progression.RealmValue(p.Realm, p.Stage), Progression.RealmValue((Realm)(int)p.BodyRealm, p.BodyStage)),

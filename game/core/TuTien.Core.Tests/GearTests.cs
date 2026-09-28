@@ -3,178 +3,199 @@ using TuTien.Core.State;
 
 namespace TuTien.Core.Tests;
 
-/// <summary>Everything the world drops has a use: gear is worn (weapon, armor, accessory) and refined, containers are opened.</summary>
+/// <summary>Gear slots and the forge, technique mastery, art training and the money changer (the web game's economy).</summary>
 public class GearTests
 {
     private static Content.ContentDb C => TestContent.Content;
 
-    private static GameEngine Carrying(params (string Id, int Qty)[] items)
+    private static void Give(GameEngine e, string id, int qty = 1) => Inventory.Add(e.Player, Inventory.Resolve(C, id, qty));
+
+    /// <summary>A generator whose first roll is at least <paramref name="above"/>: the forge's odds will fail.</summary>
+    private static Pcg32 Unlucky(double above)
+    {
+        for (ulong seed = 1; ; seed++)
+            if (new Pcg32(seed).NextDouble() >= above) return new Pcg32(seed);
+    }
+
+    [Fact]
+    public void A_new_life_starts_with_the_wooden_sword_in_hand()
     {
         var e = TestContent.NewEngine();
-        foreach (var (id, qty) in items) Inventory.Add(e.Player, Inventory.Resolve(C, id, qty));
-        return e;
+        Assert.Equal("wooden_sword", e.Player.WeaponId);
+        Assert.Equal("wooden_sword", e.Player.Gear[Equipment.Weapon].ItemId);
     }
 
     [Fact]
-    public void Every_item_the_world_hands_out_is_a_real_item()
+    public void Armour_adds_its_health_and_gives_it_back_when_taken_off()
     {
-        var issues = C.Validate().Where(i => i.Contains("unknown item") || i.Contains("unknown loot table")).ToList();
-        Assert.True(issues.Count == 0, string.Join("\n", issues));
-        // The pouch the fight's follow-up event gives is one of them now.
-        Assert.NotNull(C.Item("random_treasure")?.OpenLoot);
+        var e = TestContent.NewEngine();
+        var hpMax = e.Player.HpMax;
+        Give(e, "leather_armor");
+        e.Equip("leather_armor");
+        Assert.Equal(hpMax + 20, e.Player.HpMax);
+        Assert.True(Equipment.IsWorn(e.Player, "leather_armor"));
+        e.Unequip(Equipment.Chest);
+        Assert.Equal(hpMax, e.Player.HpMax);
+        Assert.True(e.Player.Hp <= e.Player.HpMax);
     }
 
     [Fact]
-    public void Everything_that_drops_can_be_worn_used_opened_or_refined_with()
+    public void Every_slot_counts_in_combat_not_only_the_weapon()
     {
-        var useless = new List<string>();
-        foreach (var id in C.LootTables.Values.SelectMany(t => t.Entries).Select(e => e.Id).Distinct())
-        {
-            var def = C.Item(id)!;
-            var worn = Gear.SlotOf(def) != null;
-            var used = Inventory.IsConsumable(C, id) || Gear.OpensInto(def) != null;
-            var refines = id.StartsWith("enhancement_stone");
-            if (!worn && !used && !refines) useless.Add(id);
-        }
-        Assert.True(useless.Count == 0, "drops that do nothing: " + string.Join(", ", useless));
-    }
-
-    [Fact]
-    public void Armor_and_an_accessory_are_worn_and_their_stats_count()
-    {
-        var e = Carrying(("leather_armor", 1), ("jade_pendant", 1), ("mystic_robe", 1));
-        var hp = e.Player.HpMax;
-        var luck = CombatRules.EffectiveAttrs(C, e.Player).Luck;
-        Assert.Equal("equipped", Assert.Single(e.Equip("leather_armor")).Kind);
-        Assert.Equal("leather_armor", e.Player.ArmorId);
-        Assert.Equal(hp + 20, e.Player.HpMax);
+        var e = TestContent.NewEngine();
+        var before = CombatRules.EffectiveAttrs(C, e.Player).Luck;
+        Give(e, "jade_pendant");
         e.Equip("jade_pendant");
-        Assert.Equal(luck + 2, CombatRules.EffectiveAttrs(C, e.Player).Luck);
-        // A second armor takes the first one's place.
-        var qi = e.Player.QiMax;
-        e.Equip("mystic_robe");
-        Assert.Equal("mystic_robe", e.Player.ArmorId);
-        Assert.Equal(hp, e.Player.HpMax);
-        Assert.Equal(qi + 30, e.Player.QiMax);
-        e.Unequip(GearSlot.Armor);
-        Assert.Null(e.Player.ArmorId);
-        Assert.Equal(qi, e.Player.QiMax);
+        Assert.Equal(before + 2, CombatRules.EffectiveAttrs(C, e.Player).Luck);
     }
 
     [Fact]
-    public void Storage_rings_and_pouches_are_opened_not_worn()
-    {
-        var e = Carrying(("storage_ring_uncommon", 1), ("random_treasure", 2));
-        Assert.Null(Gear.SlotOf(C.Item("storage_ring_uncommon")));
-        Assert.True(e.CanUse("storage_ring_uncommon") && e.CanUse("random_treasure"));
-        var before = e.Player.Items.Sum(i => i.Qty) + e.Player.Silver;
-        var ring = e.UseItem("storage_ring_uncommon");
-        Assert.Contains(ring, ev => ev.Kind == "item_gained");
-        Assert.Equal(0, Inventory.Count(e.Player, "storage_ring_uncommon"));
-        e.UseItem("random_treasure");
-        e.UseItem("random_treasure");
-        Assert.Equal(0, Inventory.Count(e.Player, "random_treasure"));
-        Assert.True(e.Player.Items.Sum(i => i.Qty) + e.Player.Silver > before);
-    }
-
-    [Fact]
-    public void Two_pouches_opened_in_one_month_hold_different_things()
-    {
-        var a = Carrying(("random_treasure", 5));
-        var found = new HashSet<string>();
-        for (var i = 0; i < 5; i++) found.Add(string.Join(",", a.UseItem("random_treasure").Select(ev => ev.TextEn)));
-        Assert.True(found.Count > 1);
-    }
-
-    [Fact]
-    public void A_save_holding_the_old_nameless_stubs_gets_real_items_back()
+    public void Enhancing_a_slot_costs_silver_and_stones_and_scales_what_is_worn_there()
     {
         var e = TestContent.NewEngine();
-        e.Player.Items.Add(Inventory.StubStack("random_treasure", 2));
-        e.Player.Items.Add(Inventory.StubStack(Inventory.SpiritStoneId, 4));
-        var stones = e.Player.SpiritStones;
-        var loaded = GameEngine.Load(C, e.Save());
-        var pouch = loaded.Player.Items.Single(i => i.Id == "random_treasure");
-        Assert.Equal(("Treasure Pouch", "Misc", 2), (pouch.NameEn, pouch.Type, pouch.Qty));
-        Assert.True(loaded.CanUse("random_treasure"));
-        Assert.Equal(stones + 4, loaded.Player.SpiritStones);
-        Assert.Equal(0, Inventory.Count(loaded.Player, Inventory.SpiritStoneId));
-    }
-
-    [Fact]
-    public void Spirit_stones_handed_out_as_an_item_go_to_the_purse()
-    {
-        var e = TestContent.NewEngine();
-        var stones = e.Player.SpiritStones;
-        Inventory.Add(e.Player, Inventory.Resolve(C, Inventory.SpiritStoneId, 3));
-        Assert.Equal(stones + 3, e.Player.SpiritStones);
-        Assert.Equal(0, Inventory.Count(e.Player, Inventory.SpiritStoneId));
-    }
-
-    [Fact]
-    public void Refining_spends_stones_and_silver_and_raises_every_stat()
-    {
-        var e = Carrying(("iron_sword", 1), ("enhancement_stone_common", 3));
-        e.Equip("iron_sword");
-        var str = CombatRules.EffectiveAttrs(C, e.Player).Str;
-        e.Player.Silver = 0;
-        Assert.Equal("refine_poor", Assert.Single(e.Refine(GearSlot.Weapon)).Kind); // no silver
-        Assert.Equal(3, Inventory.Count(e.Player, "enhancement_stone_common")); // and nothing spent
+        Give(e, "leather_armor");
+        e.Equip("leather_armor");
+        var hpMax = e.Player.HpMax;
+        var def = CombatRules.PlayerCombatant(C, e.Player).Def;
         e.Player.Silver = 1000;
-        Assert.Equal("refined", Assert.Single(e.Refine(GearSlot.Weapon)).Kind); // +1 never fails
-        Assert.Equal(1, Gear.RefineLevel(e.Player, "iron_sword"));
+        Give(e, Equipment.StoneCommon, 3);
+
+        e.Enhance(Equipment.Chest); // +1 always succeeds: 100 silver, 1 common stone
+        Assert.Equal(1, e.Player.Gear[Equipment.Chest].Level);
         Assert.Equal(900, e.Player.Silver);
-        Assert.Equal(2, Inventory.Count(e.Player, "enhancement_stone_common"));
-        Assert.Equal(str + 1, CombatRules.EffectiveAttrs(C, e.Player).Str); // +1 a level at least
-        e.Refine(GearSlot.Weapon); // +2 takes both remaining stones
-        Assert.Equal(2, Gear.RefineLevel(e.Player, "iron_sword"));
-        Assert.Equal(0, Inventory.Count(e.Player, "enhancement_stone_common"));
-        var next = Gear.NextRefine(e.Player, "iron_sword")!.Value;
-        Assert.Equal((3, 400, 3, 0.95), (next.Level, next.Silver, next.Stones, next.Chance));
+        Assert.Equal(2, Inventory.Count(e.Player, Equipment.StoneCommon));
+        Assert.Equal(hpMax + 2, e.Player.HpMax); // 20 health × 1.1
+        Assert.Equal(def + Equipment.FlatPerLevel, CombatRules.PlayerCombatant(C, e.Player).Def, 3); // the slot's own defense
+
+        e.Enhance(Equipment.Chest); // +2: 200 silver, 2 common stones
+        Assert.Equal(2, e.Player.Gear[Equipment.Chest].Level);
+        Assert.Equal(700, e.Player.Silver);
+        Assert.Equal(0, Inventory.Count(e.Player, Equipment.StoneCommon));
+
+        e.Enhance(Equipment.Chest); // +3 needs 3 more stones: refused, nothing spent
+        Assert.Equal(2, e.Player.Gear[Equipment.Chest].Level);
+        Assert.Equal(700, e.Player.Silver);
     }
 
     [Fact]
-    public void A_failed_refine_spends_its_cost_but_keeps_the_level()
+    public void A_failed_enhancement_spends_everything_but_keeps_the_level()
     {
-        var e = Carrying(("iron_sword", 1), ("enhancement_stone_epic", 40));
+        var e = TestContent.NewEngine();
+        var slot = Equipment.Slot(e.Player, Equipment.Weapon);
+        slot.Level = 6; // the next step, +7, has 65% odds
+        e.Player.Silver = 10000;
+        Give(e, Equipment.StoneRare);
+        var events = Equipment.Enhance(C, e.Player, Equipment.Weapon, Unlucky(0.65));
+        Assert.Contains(events, ev => ev.Kind == "enhance_failed");
+        Assert.Equal(6, slot.Level);
+        Assert.Equal(5000, e.Player.Silver);
+        Assert.Equal(0, Inventory.Count(e.Player, Equipment.StoneRare));
+    }
+
+    [Fact]
+    public void An_enhanced_slot_keeps_its_level_for_a_better_find()
+    {
+        var e = TestContent.NewEngine();
+        Equipment.Slot(e.Player, Equipment.Weapon).Level = 3;
+        Give(e, "iron_sword");
         e.Equip("iron_sword");
-        e.Player.Refines["iron_sword"] = 9;
-        e.Player.Silver = 20000 * 40;
-        var failed = false;
-        for (var i = 0; i < 40 && Gear.RefineLevel(e.Player, "iron_sword") == 9; i++)
-            failed |= e.Refine(GearSlot.Weapon).Any(ev => ev.Kind == "refine_failed");
-        Assert.True(failed); // a 35% chance fails sooner or later
-        Assert.InRange(Gear.RefineLevel(e.Player, "iron_sword"), 9, 10);
-        Assert.Null(Gear.NextRefine(new PlayerState { Refines = { ["x"] = Gear.MaxRefine } }, "x"));
+        Assert.Equal(3, e.Player.Gear[Equipment.Weapon].Level);
+        Assert.Equal(3, Equipment.SlotBonus(C, Equipment.Weapon, e.Player.Gear[Equipment.Weapon], "str")); // 2 × 1.3, rounded up
     }
 
     [Fact]
-    public void Selling_the_last_worn_piece_takes_it_off_first()
+    public void Selling_the_last_of_a_worn_item_is_refused_and_losing_it_empties_the_slot()
     {
-        var e = Carrying(("leather_armor", 2));
-        var hp = e.Player.HpMax;
+        var e = TestContent.NewEngine();
+        Give(e, "leather_armor");
         e.Equip("leather_armor");
+        var hpMax = e.Player.HpMax;
         e.Sell("leather_armor");
-        Assert.Equal("leather_armor", e.Player.ArmorId); // one is left, still worn
-        Assert.Empty(e.Sell("leather_armor")); // the last one is worn: not for sale
-        e.Unequip(GearSlot.Armor);
-        e.Sell("leather_armor");
-        Assert.Null(e.Player.ArmorId);
-        Assert.Equal(hp, e.Player.HpMax);
+        Assert.True(Equipment.IsWorn(e.Player, "leather_armor"));
+        Inventory.Remove(e.Player, "leather_armor"); // an event takes it
+        Assert.False(Equipment.IsWorn(e.Player, "leather_armor"));
+        Assert.Equal(hpMax - 20, e.Player.HpMax);
     }
 
     [Fact]
-    public void Gear_and_its_refinement_survive_a_save()
+    public void A_mortal_holds_no_qi_from_gear_until_qi_condensation()
     {
-        var e = Carrying(("leather_armor", 1), ("enhancement_stone_common", 1));
-        e.Player.Silver = 500;
+        var e = TestContent.NewEngine();
+        Give(e, "mystic_robe");
+        e.Equip("mystic_robe");
+        Assert.Equal(0, e.Player.QiMax);
+        e.Player.Realm = Realm.LuyenKhi;
+        Equipment.RefreshAll(C, e.Player);
+        Assert.Equal(30, e.Player.QiMax);
+    }
+
+    [Fact]
+    public void The_forge_sells_stones_for_silver_and_spirit_stones()
+    {
+        var e = TestContent.NewEngine();
+        e.Player.Silver = 100;
+        e.Player.SpiritStones = 7;
+        e.BuyStone(Equipment.StoneCommon);
+        e.BuyStone(Equipment.StoneUncommon);
+        e.BuyStone(Equipment.StoneUncommon); // 5 + 5 > 7: refused
+        Assert.Equal(40, e.Player.Silver);
+        Assert.Equal(2, e.Player.SpiritStones);
+        Assert.Equal(1, Inventory.Count(e.Player, Equipment.StoneCommon));
+        Assert.Equal(1, Inventory.Count(e.Player, Equipment.StoneUncommon));
+    }
+
+    [Fact]
+    public void Techniques_deepen_for_spirit_stones_and_arts_train_for_silver()
+    {
+        var e = TestContent.NewEngine();
+        e.Player.Techniques.Add(new TechniqueState { Id = "t", Name = "t", NameEn = "t", Grade = "Earth", SpeedBonus = 12, Level = 2 });
+        e.Player.SpiritStones = 25;
+        e.DeepenTechnique("t"); // Earth grade × level 2 = 20
+        Assert.Equal(3, e.Player.Techniques[0].Level);
+        Assert.Equal(5, e.Player.SpiritStones);
+        Assert.Equal(30, Mastery.TechniqueCost(e.Player.Techniques[0]));
+
+        e.Player.Skills.Add(new SkillState { Id = "hoa_cau_thuat", Level = 2, Exp = 150 });
+        e.Player.Silver = 400;
+        e.TrainSkill("hoa_cau_thuat"); // 150 × 2
+        var art = e.Player.Skills.First(s => s.Id == "hoa_cau_thuat");
+        Assert.Equal(3, art.Level);
+        Assert.Equal(100, e.Player.Silver);
+        Assert.True(art.Exp < art.Level * 100);
+    }
+
+    [Fact]
+    public void The_money_changer_gives_a_hundred_silver_a_stone()
+    {
+        var e = TestContent.NewEngine();
+        e.Player.SpiritStones = 3;
+        var silver = e.Player.Silver;
+        e.ExchangeStones(10);
+        Assert.Equal(0, e.Player.SpiritStones);
+        Assert.Equal(silver + 300, e.Player.Silver);
+    }
+
+    [Fact]
+    public void Gear_survives_a_save_and_old_saves_move_their_weapon_into_the_slot()
+    {
+        var e = TestContent.NewEngine();
+        Give(e, "leather_armor");
         e.Equip("leather_armor");
-        e.Refine(GearSlot.Armor);
-        var hp = e.Player.HpMax;
-        Assert.Equal(e.Player.HpMax, GameEngine.Load(C, e.Save()).Player.HpMax);
-        var loaded = GameEngine.Load(C, e.Save());
-        Assert.Equal(hp, loaded.Player.HpMax);
-        Assert.Equal(1, Gear.RefineLevel(loaded.Player, "leather_armor"));
-        Assert.Equal(20 + Math.Max(1, 2), loaded.Player.GearHp); // 20 HP, refined once: +2 (10%)
+        Equipment.Slot(e.Player, Equipment.Chest).Level = 2;
+        var json = e.Save();
+        var loaded = GameEngine.Load(C, json);
+        Assert.Equal(json, loaded.Save());
+        Assert.Equal(2, loaded.Player.Gear[Equipment.Chest].Level);
+
+        // A version 3 save: the weapon sat in "weapon_id" and there were no slots.
+        var old = System.Text.Json.Nodes.JsonNode.Parse(json)!;
+        old["version"] = 3;
+        var player = old["player"]!.AsObject();
+        player.Remove("gear");
+        player["weapon_id"] = "iron_sword";
+        var migrated = GameEngine.Load(C, old.ToJsonString());
+        Assert.Equal("iron_sword", migrated.Player.WeaponId);
+        Assert.Null(migrated.Player.LegacyWeaponId);
+        Assert.DoesNotContain("weapon_id", migrated.Save());
     }
 }

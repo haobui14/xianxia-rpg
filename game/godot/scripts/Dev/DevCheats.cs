@@ -28,6 +28,9 @@ public static class DevCheats
 
     public static void Silver(GameEngine e, int amount) => e.Player.Silver += amount;
 
+    /// <summary>Put items in the bag (herbs for a brew, a villager's request).</summary>
+    public static void Give(GameEngine e, string itemId, int qty) => Inventory.Add(e.Player, Inventory.Resolve(e.Content, itemId, qty));
+
     public static void Restore(GameEngine e)
     {
         var p = e.Player;

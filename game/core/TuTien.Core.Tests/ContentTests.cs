@@ -14,7 +14,8 @@ public class ContentTests
         Assert.Equal(5, C.Dungeons.Count);
         Assert.Equal(18, C.Events.Count);
         Assert.Equal(5, C.Sects.Count);
-        Assert.Equal(10, C.LootTables.Count);
+        // The web game's 10, and 4 hand-authored in activities.json (ore, deep ore, sunken things, the bandits' hoard).
+        Assert.Equal(14, C.LootTables.Count);
         Assert.NotEmpty(C.Missions);
         Assert.Equal(100, C.Progression.CultivationExp["PhàmNhân"][0]);
     }

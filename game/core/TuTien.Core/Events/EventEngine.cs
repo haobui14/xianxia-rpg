@@ -81,10 +81,13 @@ namespace TuTien.Core.Events
             return i < 0 ? null : list[i];
         }
 
-        public static List<ChoiceView> Choices(GameState state, EventDef ev)
+        public static List<ChoiceView> Choices(GameState state, EventDef ev, ContentDb? content = null)
         {
             var views = new List<ChoiceView>();
             var p = state.Player;
+            // A requirement names the item or art the player would know, not its id.
+            string ItemName(string id, Locale l) => content?.Item(id) is { } d ? Names.Pick(l, d.Name, d.NameEn) : id;
+            string SkillName(string id, Locale l) => content?.Skill(id) is { } d ? Names.Pick(l, d.Name, d.NameEn) : id;
             foreach (var choice in ev.Choices)
             {
                 var view = new ChoiceView { Choice = choice, Available = true };
@@ -98,9 +101,9 @@ namespace TuTien.Core.Events
                             Fail(view, $"Cần {StatLabel(req.Stat.Key, Locale.Vi)} ≥ {req.Stat.Min}", $"Requires {StatLabel(req.Stat.Key, Locale.En)} ≥ {req.Stat.Min}");
                     }
                     if (req.Item != null && Inventory.Count(p, req.Item) <= 0)
-                        Fail(view, $"Cần vật phẩm: {req.Item}", $"Requires item: {req.Item}");
+                        Fail(view, $"Cần vật phẩm: {ItemName(req.Item, Locale.Vi)}", $"Requires item: {ItemName(req.Item, Locale.En)}");
                     if (req.Skill != null && !Skills.Knows(p, req.Skill))
-                        Fail(view, $"Cần kỹ năng: {req.Skill}", $"Requires art: {req.Skill}");
+                        Fail(view, $"Cần linh kỹ: {SkillName(req.Skill, Locale.Vi)}", $"Requires art: {SkillName(req.Skill, Locale.En)}");
                     if (req.Realm != null && p.Realm < req.Realm.Value)
                         Fail(view, $"Cần cảnh giới {Names.Display(req.Realm.Value, Locale.Vi)}", $"Requires {Names.Display(req.Realm.Value, Locale.En)}");
                     if (req.KarmaMin != null && p.Karma < req.KarmaMin.Value)
@@ -147,7 +150,14 @@ namespace TuTien.Core.Events
 
             foreach (var id in outcome.Items ?? new List<string>())
             {
-                var stack = Inventory.Resolve(content, id);
+                // "A spirit stone" in the web game's rewards is money, not a thing to carry.
+                if (id == SpiritStoneReward)
+                {
+                    p.SpiritStones += SpiritStonesPerReward;
+                    result.Events.Add(GameEvent.Info("spirit_stones", $"+{SpiritStonesPerReward} linh thạch", $"+{SpiritStonesPerReward} spirit stones"));
+                    continue;
+                }
+                var stack = id == RandomTreasureReward ? RandomTreasure(content, rng) : Inventory.Resolve(content, id);
                 Inventory.Add(p, stack);
                 result.Events.Add(GameEvent.Info("item_gained", $"Nhận được {stack.Name}.", $"Received {stack.NameEn}."));
             }
@@ -165,16 +175,49 @@ namespace TuTien.Core.Events
             return result;
         }
 
+        /// <summary>An event reward that pays spirit stones rather than giving an item.</summary>
+        public const string SpiritStoneReward = "spirit_stone";
+        public const int SpiritStonesPerReward = 8;
+
+        /// <summary>An event reward that is whatever a cave's treasure roll turns up.</summary>
+        public const string RandomTreasureReward = "random_treasure";
+
+        private static ItemStack RandomTreasure(ContentDb content, Pcg32 rng)
+        {
+            var roll = Loot.Roll(content, "cave_treasure", 2, rng, maxItems: 1);
+            return roll.Items.FirstOrDefault() ?? Inventory.Resolve(content, "rare_treasure");
+        }
+
         /// <summary>Apply one effect with the web game's field names ("stats.hp", "inventory.silver", "karma", …).</summary>
         public static void ApplyDelta(GameState state, ContentDb content, DeltaDef delta, DeltaPolicy policy, List<GameEvent> events)
         {
             var p = state.Player;
             var sign = delta.Operation == "subtract" ? -1 : 1;
-            var number = Number(delta.Value);
+            // A value may name a maximum ("qi_max": fill it to the brim).
+            var number = Number(delta.Value) ?? Symbol(p, delta.Value);
             if (number == null) return;
             var n = number.Value;
 
             int Clamp(double v, int max) => (int)Math.Max(-max, Math.Min(max, Math.Round(v)));
+
+            // "set" puts a stat at a value; "add" and "subtract" move it.
+            if (delta.Operation == "set")
+            {
+                var v = (int)Math.Round(n);
+                switch (delta.Field)
+                {
+                    case "stats.hp":
+                        p.Hp = Math.Max(0, Math.Min(p.HpMax, v));
+                        return;
+                    case "stats.qi":
+                        p.Qi = Math.Max(0, Math.Min(p.QiMax, v));
+                        return;
+                    case "stats.stamina":
+                        p.Stamina = Math.Max(0, Math.Min(p.StaminaMax, v));
+                        return;
+                }
+                return;
+            }
 
             switch (delta.Field)
             {
@@ -225,6 +268,15 @@ namespace TuTien.Core.Events
                     break;
             }
         }
+
+        private static double? Symbol(PlayerState p, JsonElement value) =>
+            value.ValueKind != JsonValueKind.String ? null : value.GetString() switch
+            {
+                "hp_max" => p.HpMax,
+                "qi_max" => p.QiMax,
+                "stamina_max" => p.StaminaMax,
+                _ => (double?)null,
+            };
 
         private static double? Number(JsonElement value)
         {

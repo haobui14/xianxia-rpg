@@ -19,6 +19,12 @@ public abstract partial class InkPanel : PanelContainer
     protected virtual Vector2 PanelSize => new(760, 620);
     protected virtual bool Closable => true;
 
+    /// <summary>
+    /// A live part of the panel (a mini-game) made once and kept above the body: rebuilding the body when the game
+    /// changes never touches it.
+    /// </summary>
+    protected virtual Control? CreateStage() => null;
+
     private Label _title = null!;
     private Button _close = null!;
     private bool _refreshQueued;
@@ -45,6 +51,7 @@ public abstract partial class InkPanel : PanelContainer
         header.AddChild(_close);
         root.AddChild(header);
         root.AddChild(UiKit.Rule());
+        if (CreateStage() is { } stage) root.AddChild(stage);
 
         // A finger has to travel a little before it scrolls: with no dead zone every tap that wobbles a
         // pixel would turn into a scroll and cancel the button under it.
@@ -200,6 +207,9 @@ public abstract partial class InkPanel : PanelContainer
         Body.AddChild(row);
         return row;
     }
+
+    /// <summary><see cref="Row"/> for a helper that builds rows into another panel.</summary>
+    public HBoxContainer AddRow(Control left, params Control[] right) => Row(left, right);
 
     public override void _UnhandledInput(InputEvent e)
     {

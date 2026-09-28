@@ -9,7 +9,7 @@ It is currently a **vertical slice** of the Thanh Vân region, played as a **2D 
 | Path | What it is |
 |---|---|
 | `core/TuTien.Core/` | All game rules, engine-free (`netstandard2.1`, no Godot references): RNG, content, calendar, cultivation, elements, karma, map and footwork, month tick, NPC sim, combat rules, loot, events, saves. `GameEngine` is the single entry point. |
-| `core/TuTien.Core.Tests/` | xUnit tests (145) that run the rules against the real content. |
+| `core/TuTien.Core.Tests/` | xUnit tests (217) that run the rules against the real content. |
 | `godot/` | The Godot project. `scripts/Field` is the top-down world: the region, secret-realm floors and the breakthrough trial are all *fields*, with collision, the player controller, fights (`Battle`, `EnemyAi`), the HUD and the map. `scripts/Art` draws people, creatures, scenery and effects in code. `scripts/Audio` synthesizes every sound effect and composes the music. `shaders/` paints the ground, the clouds of unexplored land and swaying trees. `scripts/Ui` holds the title screen, theme, panels and settings, and `scripts/Dev` holds the smoke test and F9 cheats. |
 | `godot/content/` | Game data as JSON. Most of it is exported from the web game's TypeScript; enemies, skills, items, towns, NPC names and the map are hand-authored. |
 
@@ -90,11 +90,31 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
 
 ### What the slice has
 
+- **A new player guide:** a first life on a keyboard and mouse opens with a card at the left of the screen that teaches the controls one step at a time, and each step waits for you to do it:
+  1. Walk.
+  2. Press interact by a person or a place.
+  3. Close the panel.
+  4. Swing the sword.
+  5. Dash.
+  6. Open the map.
+  7. Open the character sheet.
+
+  Three more steps explain time and months, fights, and what else there is to do, and wait for Next. The prompts name your own keys, so a rebound key shows as rebound. Skip ends the guide, and the journal's How to play tab replays it. It shows once: finishing or skipping is remembered in the settings.
 - **Character creation:** name, age, a spirit root roll with 3 rerolls, and a path (Qi, Body, or Kiêm tu).
-- **Thanh Vân as a top-down world (48×30 tiles, 128 px each):** painted ground with river banks, bridges and roads; forests, bamboo groves, hills and snow peaks; drifting clouds over unexplored land; seasons that recolour the grass and trees. The village has houses, an inn, a market stall, a bounty board and a well; the Thanh Vân Kiếm Phái sits behind its gate between cliffs; the Linh Thảo Bí Cảnh opens from a glowing cave; there are two spirit veins and herb patches.
+- **Thanh Vân as a top-down world (48×30 tiles, 128 px each):** painted ground with river banks, bridges and roads; forests, bamboo groves, hills and snow peaks; drifting clouds over unexplored land; seasons that recolour the grass and trees. The village has houses, an inn, a market stall, a bounty board, a forge and a well; the Thanh Vân Kiếm Phái sits behind its gate between cliffs; the Linh Thảo Bí Cảnh opens from a glowing cave; there are two spirit veins and herb patches.
 - **A living field:** 25 NPCs stroll where the month's simulation put them (talk to them with E), beast packs prowl their patch and aggressive ones chase you, adventures glow as pillars of light under a gold star, and a rumor feed runs in the corner. Trees and roofs in front of you turn see-through.
 - **Time flows as you travel:** each tile crossed spends its footwork (the HUD shows "day N of the month"). When it runs out the month turns (cultivation, world tick, autosave) and a card sums it up while you keep walking.
 - **Real-time combat where you meet:** eleven enemy archetypes, each with a readable telegraph, fighting on real terrain: charger, swarm, ranged, tank, caster and boss, plus the five below. Every hit goes through the core's `CombatRules`. Element marks trigger the 10 Ngũ Hành reactions, and every creature reacts to its own element on a cooldown (for example, Fireball on a wood vine triggers *Liệt Diễm*). Spars end at 15% health; escape by running away.
+- **Cultivators fight with everything they know:** an NPC you spar, fight or are ambushed by uses their own arts, by the player's rules:
+  - Their root's first art, and a second root's from Qi Condensation 3.
+  - Their root's second art from Qi Condensation 5.
+  - Their sect's sword dash.
+  - For some, a guard or a heal.
+  - The fight picks the art for the moment: a heal when hurt, a guard when pressed, a dash from afar, a cleave or a wave up close, beams and bolts at range. Each art has its own cooldown, and every cast is telegraphed.
+  - The NPC panel lists their arts. Outer disciples, rogue cultivators and bandit leaders know two or three arts each.
+- **Every cultivator has their own numbers:** an NPC grows by the same realm and stage gains as you, so a same-realm duel is a fair fight and a realm above is a wall. A new character needs about a dozen sword strikes to down a mortal, and a Qi Condensation 1 cultivator takes twice that while downing you in six or seven.
+  - On top of the shared tables: a weapon fit for their realm, the foundation their root would lay at Trúc Cơ, a little more for a talented root, their temperament (the belligerent hit harder and guard worse, the timid the other way), a few percent of their own, and less health while injured.
+  - The NPC panel shows their health, physical and spirit power, defense and resistance, and sizes them up against you: weaker, an even match, stronger, or far beyond you.
 - **The Ancient Tree Hollow's creatures** (Cổ Thụ Động, the deep forest):
   - **Hắc Hùng** (Black Bear), a brute: lumbers in, rears up and crashes down on a wide arc in front of it, stunning whoever it catches.
   - **Hỏa Hồ** (Fire Fox), a trickster: keeps its distance and throws volleys of three fox-fires. Get close and it vanishes, reappears somewhere else and throws fire at once.
@@ -113,10 +133,8 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
   The village stall sells all five as manuals, so any root can learn them. The bounty board adds a bear cull and a price on the python's head.
 - **Secret realm floors:** walled gardens where the guardians wait; clear the floor to open its chests and the gate down.
 - **Everything that drops has a use** (Inventory):
-  - **Gear:** a weapon, armor (robes and armor, the web game's "Chest" slot) and an accessory (pendants, pearls). The stats of all three count, max health and Qi included. The character sheet lists them.
-  - **Refining:** the web game's enhancement table, +1 to +10. Each level costs silver and enhancement stones (common for +1–3, uncommon for +4–6, rare for +7–9, epic for +10). The chance falls from 100% to 35%. Each level adds 10% to all of the item's stats, never less than +1. A failure spends the stones and silver but keeps the level.
-  - **Containers open:** a storage ring (a fallen cultivator's) breaks its seal into loot as rich as the ring. The treasure pouch and casket that some adventures give open the same way.
-  - Every item says what it's for: wear, use, open, refine with, or what it sells for at a market. Items that events and realms hand out are all defined now; before, some ids had no definition and turned into a nameless "Random Treasure" that did nothing. A content check keeps it that way, and spirit stones given as an item go straight to the purse.
+  - **Containers open:** a storage ring (a fallen cultivator's) isn't worn: its seal breaks into loot as rich as the ring. The nameless "Random Treasure" old saves still carry is a treasure pouch now, and opens the same way.
+  - Every item in the bag says what it's for: equip, use, open, take to the forge (stones, ore) or the furnace (herbs), or what it sells for at a market. Everything events, secret realms and loot tables hand out is a real item (the realms' manuals, the Lightning-Warding Pearl and the Void Step were missing), a content check keeps it that way, and spirit stones given as an item go straight to the purse.
 - **Breakthrough trials, played, not rolled:**
   - ***Dẫn khí nhập thể*** (Mortal → Luyện Khí) is on a mountaintop bagua platform. Gather qi motes and cut down heart demons; the success threshold depends on your preparation. Success awakens your root's first spirit art.
   - **Trúc Cơ, the meridian storm** (Luyện Khí 9 → Trúc Cơ) is inside the body: a jade dantian with the eight extraordinary meridians running into it, for sixty seconds.
@@ -135,6 +153,37 @@ Controllers are mapped too: the left stick moves, the right stick aims, Y talks 
   - **Treasury (Tàng Bảo Các):** pills, art manuals, the Foundation Pill, gear, and the sect's own technique, the Azure Cloud Sword Canon (+18% cultivation), for contribution. The best are kept for higher ranks.
   - **Spirit-gathering chamber:** inner disciples can seclude in it for +30% qi, paying 2 spirit stones a month. It's the first thing in the game that spends spirit stones.
   - The journal's Tasks tab tracks missions and bounties together.
+- **Gear and the forge** (from the web game's equipment and cường hóa):
+  - Three slots, a weapon, armour and an accessory, each worn from the bag (Inventory → Equip). Everything worn counts in combat, and armour's health and robes' Qi raise your maximums (Qi from gear waits for Qi Condensation). The village stall now sells leather armour and a jade pendant.
+  - **The forge** at the east end of the village square enhances a slot from +1 to +10 for silver and enhancement stones: 100 silver and a common stone for +1, up to 20,000 silver and an epic stone for +10. The odds fall from 100% to 35%.
+  - Each level makes whatever is worn in the slot 10% stronger, and the slot adds 2 attack, defense or resistance of its own. The level belongs to the slot, so a better find keeps it. A failed attempt spends the silver and stones but never drops a level.
+  - The forge sells common stones for silver and the rarer ones for spirit stones. The market's money changer turns a spirit stone into 100 silver.
+- **Mastery:** on Character → Arts, train an art one level for 150 silver × its level, and deepen a technique for spirit stones (5, 10 or 20 × its level by grade, up to level 10). Each technique level adds 10% to its cultivation bonus.
+- **The month's wares:** besides its fixed stock, the village stall lays out four goods each month, drawn from the region's loot (herbs, gear, manuals, enhancement stones), each with a few in stock. Rare goods sell only for spirit stones. A merchant caravan met on the road opens its own, finer wares.
+- **The web game's events, made whole:**
+  - Every reward is a real item, and every foe a real creature. Examples are the Primer of Cultivation, the Heaven-grade Sea of Clouds Heavenly Art from the legacy trial, and the Formation-Heart Jade you can wear. The Vengeful Cultivator, the Mysterious Assassin and the Void Beast now fight with their own looks and ways.
+  - A night at the inn sometimes brings a dream or a visitor.
+  - Holding back a breakthrough feeling makes the next breakthrough 8% easier. Facing down an inner demon makes every one 3% easier.
+  - Effects that set Qi (to full, or to nothing) work, and a "spirit stone" reward pays spirit stones.
+- **Things to do on the first map** besides fighting:
+  - **Fishing** at four landings: by the village bridge, in the reed beds near the spirit spring, at the cold headwaters in the north, and in the Blackwater Marsh inside the Ancient Tree Hollow. A cast costs 1 footwork.
+    - Wait for the float to go right under before you strike: a strike at a nibble scares the fish off, and a slow one loses the bait.
+    - Then reel: holding the button, a finger on the water or Space lifts the net, and letting go drops it. Keep the fish inside the net until the catch meter fills.
+    - Ten catches, each fighting its own way: crucian and river carp, grass carp in summer and autumn, catfish, eels and snakeheads in the marsh, the blue-green azure-scale spirit fish, the silver-thread fish of the cold headwaters (not in summer), the rare golden carp and the spirit turtle. The line sometimes snags an old clay jar with silver inside.
+    - The golden carp and the spirit turtle may be let go for karma; a freed turtle adds a year of lifespan. Fish you haven't caught yet show as unknown in the spot's list, and every eight fish landed make the net a little wider.
+  - **Mining:** four ore veins in the hills and mountains. Strike one with your sword (or press interact beside it) until it breaks: four strokes, or seven for the cold-iron seam in the mountain beside the sect road.
+    - A vein gives one to three pieces of iron ore, cold iron, raw jade, spirit stone fragments or enhancement stones, then needs three months to be worth mining again.
+    - The forge smelts 5 iron ore and 20 silver into a common enhancement stone, or 3 cold iron and 60 silver into an uncommon one.
+  - **Alchemy** at the Hundred Herbs Hall (Bách Thảo Đường), west of the village square. Six recipes turn herbs, fish, beast cores and spirit stone fragments into healing pills, low-grade qi pills, Qi-mending powder, Origin-Nourishing Pills, Qi Gathering Pills and the Foundation Pill; the stronger ones need Qi Condensation 1, 3 or 7. A brew costs 2 footwork and a small fee.
+    - The furnace is played: keep the heat inside the green band through three stages (warm the furnace, melt the herbs, condense the pill) by working the bellows, since the fire cools by itself and sometimes flares. Add the herbs when the furnace calls. Too hot for too long and it blows.
+    - Purity sets the grade: ash, or a low, middle or high grade brew of 1, 2 or 3 pills.
+  - **The Earth God shrine** (Miếu Thổ Địa) by the east road: burn incense (5 silver) and draw one of twelve fortune sticks a month. Each has a verse in both languages and a meaning for the month:
+    - cultivation from +15% to −5%, rare fish biting twice as often, every ore vein giving one more piece, or the incense smoke pointing to a chance meeting, which then shows on the map from anywhere.
+    - The shrine keeper lifts an ill omen for 20 silver, and an offering of 50 silver earns karma once a month.
+  - **The Black Wind Camp** (Hắc Phong Trại), in a clearing in the dense forest south of the high road. Two mountain bandits, a knife thrower and their chief hold it, and they come for anyone who walks in. The chief is Qi Condensation 3 and fights with a dashing cleave, blade qi and a qi shield.
+    - Break the garrison and the hoard waits by the chief's tent: silver, spirit stones and whatever they took from the road. Sometimes a captive merchant is freed too, for karma.
+    - The bandits come back four months later and take any hoard left unopened. The bounty board pays 260 silver for the chief.
+  - **Villagers' requests** on the bounty board, three at a time and new every two months: the innkeeper wants fish, the smith ore, the apothecary herbs and spirit fish, Elder Lam Ba a healing pill or raw jade, and a little girl a golden carp. They pay silver and karma, sometimes with an enhancement stone.
 - **Sword flight (ngự kiếm):** from Trúc Cơ, press V to ride your sword over the river and peaks, twice as fast as walking and out of reach of beasts. Land with V, which doesn't work over water. Set off on the map across water and the sword takes you there and sets you down.
 - **Sound, all synthesized:** about 40 effects (swishes, hits, casts, coins, the month gong, and more), positional in the world. Five pieces of music are generated in pentatonic modes for the title, exploring, fights, the breakthrough trial and secret realms. The zither plays with glissandi, grace notes and tremolo over flute, bells and drone; fights get taiko drums. The music crossfades as you move between them.
 - **The seasons in the air:** blossom petals, summer fluff and butterflies, autumn leaves and snow drift across the screen. Footsteps raise dust on roads, ripples in the swamp and puffs of snow.
@@ -169,15 +218,26 @@ dotnet test game/core/TuTien.Core.Tests
 #    realm floor, the Trúc Cơ meridian storm (it must lay a foundation), a fight with
 #    each of the five new creatures using a different second-tier art, sword flight
 #    across the river (by key and by map), seclusion, and a save/load round trip
+#  - gear by mouse: buy armour and put it on from the bag, buy a stone and enhance the
+#    slot at the forge, change a spirit stone for silver, train an art, deepen a technique
+#  - the month's wares bought by mouse, and nights at the inn until one brings an event
+#  - the first map's activities: a strike at a nibble loses the fish, then the autopilot fishes
+#    until a catch is landed; sword strokes break an ore vein; the forge smelts ore; a villager's
+#    request is answered; the autopilot brews at the furnace; a fortune stick at the shrine; the
+#    bandit camp is stormed and its hoard opened
+#  - a spar with a disciple of each element: each must use two or more of their arts, and
+#    between them every kind of cast (bolts, the cleave, the beam, leaves, wave, fire, pillars, dash)
 #  - Character → Arts by mouse: an art's slot button moves it into that slot, a second
 #    click takes it out, and no panel opens a drop-down picker
 #  - sect life by mouse: take a mission, report it, rise a rank, use the treasury, open
-#    the chamber; and the bag: wear armor and a pendant, refine, open a pouch and a ring
+#    the chamber; and the bag: open a treasure pouch and break a storage ring's seal
 #  - a phone: at 135% interface size, touch events pushed into the viewport drag the
 #    stick, press Interact, tap an art's slot button, tap the ground to walk, pinch to
 #    zoom, and in a fight press an art, pause, and hold the martial art until the bear
 #    is beaten
 #  - the new life goes in through the loading screen, like the title's button
+#  - the new player guide: a first life opens it and Skip ends it; later the journal's Replay
+#    starts it again and it is played by hand, key by key, each step ticking off only once done
 #  - one language at a time: at every step it reads each visible label and button and
 #    every word painted on the field (signs, names, the HUD). In English no Vietnamese
 #    letter may show, and in Vietnamese no English word. At the end it switches language
@@ -207,6 +267,30 @@ xvfb-run -s "-screen 0 2400x1080x24" godot --rendering-driver opengl3_es --resol
 godot --path game/godot --resolution 1600x720 -- --arts-stress 300 arts.log shots/
 godot --path game/godot --resolution 1600x900 -- --capture title.png 120
 ```
+
+## Sharing a playtest build
+
+Every push to `main` or this branch that touches `game/` builds the game for Windows and Android on GitHub Actions (`.github/workflows/android.yml`), and the newest builds replace the ones on the **playtest** release:
+
+**https://github.com/haobui14/xianxia-rpg/releases/tag/playtest**
+
+That is the one link to give testers. It never changes, it needs no GitHub account (the repository is public), and it always holds the latest build. Anyone with the link can download the game.
+
+- **Windows 10 and 11 (64-bit):** `TuTienLuc-windows.zip`. Testers unzip the whole folder and run `TuTienLuc.exe`; the .NET runtime is inside, so there is nothing to install. The zip carries a `READ-ME-FIRST.txt`.
+  - Windows says *Windows protected your PC* because the game isn't code-signed: **More info → Run anyway**.
+  - The game uses the OpenGL compatibility renderer (with Godot's automatic Direct3D fallback), so it runs on most laptops, integrated graphics included.
+- **Android:** `TuTienLuc-debug.apk` and `TuTienLuc.apk` (see *Android* below for signing).
+- Saves and logs on Windows are in `%APPDATA%\Godot\app_userdata\Tu Tiên Lục`. When something goes wrong, `logs\trail.txt` shows what the game was doing just before.
+
+Each run also keeps its builds as artifacts for 30 days (`tu-tien-luc-windows-<run>` and `tu-tien-luc-android-<run>`), but those need a GitHub login, so the release is the way to share.
+
+To build for Windows yourself, install the Windows export templates (Editor → Manage Export Templates), then:
+
+```bash
+godot --headless --path game/godot --export-release "Windows Desktop" export/windows/TuTienLuc.exe
+```
+
+Keep `TuTienLuc.exe` together with `data_TuTienLuc_windows_x86_64/` (the .NET assemblies) and zip the folder. The smoke test runs on the exported game too: `TuTienLuc.exe --headless --fixed-fps 60 -- --smoke`.
 
 ## Android
 
@@ -267,6 +351,7 @@ The breakthrough trials were the last places that drew straight onto their canva
 - Saves go to the app's own storage.
 - The back button works like Esc.
 - The package name is `com.tutienluc.game`; change it in the preset before publishing.
+- The launcher icon is adaptive: a cultivator riding a flying sword across a cinnabar sun, over ink mountains in mist. The background, foreground and a monochrome silhouette for Android 13's themed icons are separate layers, so any launcher shape (Samsung's squircle, circles) crops only the sky. `node scripts/make-game-icons.mjs` rewrites them (`godot/art/icon/`) and `godot/icon.svg` from one description.
 
 **If the game closes by itself:** a phone shows nothing when an app crashes, so the game leaves itself a trail.
 

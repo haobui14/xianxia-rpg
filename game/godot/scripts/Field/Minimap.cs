@@ -50,6 +50,10 @@ public static class MapImage
         "secret_realm" => Ink.Violet,
         "spirit_vein" => Ink.Jade,
         "herb" => Ink.JadeDeep,
+        "fishing" => Ink.WaterBlue,
+        "ore" => Ink.Ochre,
+        "shrine" => Ink.CinnabarSoft,
+        "camp" => Ink.CinnabarDeep,
         _ => Ink.GoldDeep,
     };
 }
@@ -105,13 +109,13 @@ public partial class Minimap : Control
         Vector2 At(float x, float y) => origin + new Vector2(x, y) * scale;
         foreach (var poi in map.Def.Pois)
         {
-            if (!_w.Explored(poi.X, poi.Y) || poi.Kind == "herb") continue;
+            if (!_w.Explored(poi.X, poi.Y) || poi.Kind is "herb" or "fishing" or "ore") continue;
             var p = At(poi.X + 0.5f, poi.Y + 0.5f);
             ink.DrawRect(new Rect2(p - new Vector2(3, 3), new Vector2(6, 6)), MapImage.PoiColor(poi.Kind));
         }
         foreach (var adv in e.State.World.Adventures)
         {
-            if (!_w.Explored(adv.X, adv.Y) || !e.Senses(adv.X, adv.Y) || (adv.Hidden && !e.Player.SensePulse && e.Player.Attrs.Per < 12)) continue;
+            if (!_w.Explored(adv.X, adv.Y) || !(e.Senses(adv.X, adv.Y) || adv.Revealed) || (adv.Hidden && !e.Player.SensePulse && e.Player.Attrs.Per < 12)) continue;
             ink.DrawCircle(At(adv.X + 0.5f, adv.Y + 0.5f), 2.6f, Ink.Gold);
         }
         foreach (var pack in e.State.World.Beasts.Where(b => e.Senses(b.X, b.Y)))

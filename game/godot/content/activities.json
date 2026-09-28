@@ -1,0 +1,198 @@
+{
+  "$source": "hand-authored — what there is to do on the map besides fighting: fishing, mining, alchemy, the Earth God shrine's fortune sticks and the bandit camp. Loot tables here join loot.json's; their entries name items defined elsewhere.",
+  "data": {
+    "loot_tables": [
+      {
+        "id": "thanh_van_ore", "tier": 1, "silverRange": [0, 0], "spiritStoneChance": 0.04, "spiritStoneRange": [1, 1],
+        "entries": [
+          { "id": "iron_ore", "weight": 10 },
+          { "id": "raw_jade", "weight": 2 },
+          { "id": "cold_iron", "weight": 1.5 },
+          { "id": "enhancement_stone_common", "weight": 1.5 },
+          { "id": "spirit_stone_fragment", "weight": 0.8 }
+        ]
+      },
+      {
+        "id": "thanh_van_deep_ore", "tier": 2, "silverRange": [0, 0], "spiritStoneChance": 0.15, "spiritStoneRange": [1, 2],
+        "entries": [
+          { "id": "cold_iron", "weight": 8 },
+          { "id": "iron_ore", "weight": 4 },
+          { "id": "raw_jade", "weight": 2.5 },
+          { "id": "spirit_stone_fragment", "weight": 2 },
+          { "id": "enhancement_stone_uncommon", "weight": 1 },
+          { "id": "kim_tinh", "weight": 0.25 }
+        ]
+      },
+      {
+        "id": "sunken_things", "tier": 1, "silverRange": [15, 60], "spiritStoneChance": 0.1, "spiritStoneRange": [1, 2],
+        "entries": [
+          { "id": "healing_pill", "weight": 4 },
+          { "id": "spirit_stone_fragment", "weight": 2 },
+          { "id": "raw_jade", "weight": 2 },
+          { "id": "jade_pendant", "weight": 0.4 }
+        ]
+      },
+      {
+        "id": "black_wind_hoard", "tier": 2, "silverRange": [120, 260], "spiritStoneChance": 0.6, "spiritStoneRange": [1, 4],
+        "entries": [
+          { "id": "healing_pill", "weight": 4 },
+          { "id": "enhancement_stone_common", "weight": 3 },
+          { "id": "iron_sword", "weight": 2 },
+          { "id": "leather_armor", "weight": 2 },
+          { "id": "raw_jade", "weight": 2 },
+          { "id": "enhancement_stone_uncommon", "weight": 1.5 },
+          { "id": "qi_gathering_pill", "weight": 1.2 },
+          { "id": "azure_bamboo_sword", "weight": 0.8 }
+        ]
+      }
+    ],
+
+    "fishing": {
+      "fish": [
+        { "item": "fish_crucian", "difficulty": 0.15, "dart": 0.15 },
+        { "item": "fish_carp", "difficulty": 0.25, "dart": 0.2 },
+        { "item": "fish_catfish", "difficulty": 0.3, "dart": 0.1 },
+        { "item": "fish_grass_carp", "difficulty": 0.5, "dart": 0.35 },
+        { "item": "fish_snakehead", "difficulty": 0.55, "dart": 0.45 },
+        { "item": "fish_azure_scale", "difficulty": 0.5, "dart": 0.55 },
+        { "item": "fish_eel", "difficulty": 0.62, "dart": 0.75 },
+        { "item": "fish_silver_thread", "difficulty": 0.72, "dart": 0.8 },
+        { "item": "fish_golden_carp", "difficulty": 0.88, "dart": 0.9, "release_karma": 6 },
+        { "item": "spirit_turtle", "difficulty": 0.4, "dart": 0.05, "release_karma": 4, "release_lifespan": 1 }
+      ],
+      "spots": [
+        {
+          "poi": "poi_fish_bridge",
+          "catches": [
+            { "item": "fish_crucian", "weight": 34 },
+            { "item": "fish_carp", "weight": 30 },
+            { "item": "fish_grass_carp", "weight": 12, "seasons": ["summer", "autumn"] },
+            { "item": "fish_azure_scale", "weight": 5 },
+            { "item": "fish_golden_carp", "weight": 0.5 },
+            { "loot": "sunken_things", "weight": 5 }
+          ]
+        },
+        {
+          "poi": "poi_fish_reeds",
+          "catches": [
+            { "item": "fish_crucian", "weight": 24 },
+            { "item": "fish_carp", "weight": 24 },
+            { "item": "fish_grass_carp", "weight": 10 },
+            { "item": "fish_azure_scale", "weight": 16 },
+            { "item": "spirit_turtle", "weight": 1.5, "seasons": ["spring", "summer"] },
+            { "item": "fish_golden_carp", "weight": 0.8 },
+            { "loot": "sunken_things", "weight": 3 }
+          ]
+        },
+        {
+          "poi": "poi_fish_upper",
+          "catches": [
+            { "item": "fish_carp", "weight": 16 },
+            { "item": "fish_azure_scale", "weight": 26 },
+            { "item": "fish_silver_thread", "weight": 12, "seasons": ["autumn", "winter", "spring"] },
+            { "item": "fish_grass_carp", "weight": 8 },
+            { "item": "fish_golden_carp", "weight": 1.6 },
+            { "loot": "sunken_things", "weight": 2 }
+          ]
+        },
+        {
+          "poi": "poi_fish_marsh",
+          "catches": [
+            { "item": "fish_catfish", "weight": 30 },
+            { "item": "fish_eel", "weight": 18 },
+            { "item": "fish_snakehead", "weight": 16 },
+            { "item": "fish_azure_scale", "weight": 6 },
+            { "item": "spirit_turtle", "weight": 3 },
+            { "loot": "sunken_things", "weight": 6 }
+          ]
+        }
+      ]
+    },
+
+    "recipes": [
+      {
+        "id": "hoi_huyet_dan", "output": "healing_pill", "difficulty": 0.15, "silver": 5,
+        "ingredients": [ { "item": "healing_herb", "qty": 3 } ]
+      },
+      {
+        "id": "tu_khi_dan_ha", "output": "low_grade_pill", "difficulty": 0.25, "silver": 8,
+        "ingredients": [ { "item": "lingzhi_grass", "qty": 3 } ]
+      },
+      {
+        "id": "hoi_khi_tan", "output": "hoi_khi_tan", "difficulty": 0.35, "silver": 10,
+        "ingredients": [ { "item": "moonlight_flower", "qty": 1 }, { "item": "fish_azure_scale", "qty": 1 } ]
+      },
+      {
+        "id": "boi_nguyen_dan", "output": "boi_nguyen_dan", "difficulty": 0.45, "silver": 15, "realm": "LuyệnKhí", "stage": 1,
+        "ingredients": [ { "item": "low_beast_core", "qty": 2 }, { "item": "lingzhi_grass", "qty": 2 } ]
+      },
+      {
+        "id": "tu_khi_dan", "output": "qi_gathering_pill", "difficulty": 0.6, "silver": 25, "realm": "LuyệnKhí", "stage": 3,
+        "ingredients": [ { "item": "moonlight_flower", "qty": 2 }, { "item": "moc_tinh", "qty": 1 }, { "item": "fish_silver_thread", "qty": 1 } ]
+      },
+      {
+        "id": "truc_co_dan", "output": "foundation_pill", "difficulty": 0.8, "silver": 60, "realm": "LuyệnKhí", "stage": 7,
+        "ingredients": [ { "item": "moonlight_flower", "qty": 3 }, { "item": "moc_tinh", "qty": 2 }, { "item": "low_beast_core", "qty": 3 }, { "item": "spirit_stone_fragment", "qty": 2 } ]
+      }
+    ],
+
+    "fortunes": [
+      {
+        "id": "stick_1", "number": 1, "grade": "great", "weight": 4, "cultivation": 15,
+        "verse": "Mây tan trăng hiện, đường tu thênh thang.", "verse_en": "The clouds part and the moon shows: the road of cultivation lies wide open."
+      },
+      {
+        "id": "stick_2", "number": 2, "grade": "great", "weight": 4, "cultivation": 10, "lucky_catch": true,
+        "verse": "Cá chép gặp sóng lớn, vượt cửa hóa rồng bay.", "verse_en": "A carp that meets the great wave leaps the gate and flies up a dragon."
+      },
+      {
+        "id": "stick_3", "number": 3, "grade": "good", "weight": 8, "cultivation": 8,
+        "verse": "Gió thuận căng buồm, thuyền về bến cũ.", "verse_en": "A fair wind fills the sail, and the boat comes home."
+      },
+      {
+        "id": "stick_4", "number": 4, "grade": "good", "weight": 8, "cultivation": 5, "rich_vein": true,
+        "verse": "Núi xanh giấu ngọc, ai chịu khó ắt tìm.", "verse_en": "The green hills hide their jade for whoever will dig."
+      },
+      {
+        "id": "stick_5", "number": 5, "grade": "good", "weight": 8, "guidance": true,
+        "verse": "Sao sáng đầu non, kỳ ngộ chẳng xa.", "verse_en": "A bright star over the hills: good fortune is not far."
+      },
+      {
+        "id": "stick_6", "number": 6, "grade": "good", "weight": 8, "cultivation": 6, "lucky_catch": true,
+        "verse": "Mưa xuân thấm đất, mầm non tự lớn.", "verse_en": "Spring rain soaks the earth, and the shoots grow of themselves."
+      },
+      {
+        "id": "stick_7", "number": 7, "grade": "fair", "weight": 10,
+        "verse": "Nước chảy đá mòn, chớ vội chớ ngừng.", "verse_en": "Water wears down stone: neither hurry nor stop."
+      },
+      {
+        "id": "stick_8", "number": 8, "grade": "fair", "weight": 10,
+        "verse": "Trăng tròn rồi khuyết, lẽ thường trời đất.", "verse_en": "The moon waxes and wanes; such is the way of heaven and earth."
+      },
+      {
+        "id": "stick_9", "number": 9, "grade": "fair", "weight": 10,
+        "verse": "Gieo hạt nào, gặt quả nấy.", "verse_en": "As the seed, so the harvest."
+      },
+      {
+        "id": "stick_10", "number": 10, "grade": "fair", "weight": 10,
+        "verse": "Đường dài mới biết ngựa hay.", "verse_en": "Only a long road shows a good horse."
+      },
+      {
+        "id": "stick_11", "number": 11, "grade": "ill", "weight": 10, "cultivation": -5,
+        "verse": "Mây đen che đỉnh, chớ vội leo cao.", "verse_en": "Dark clouds hide the peak: do not hurry to climb."
+      },
+      {
+        "id": "stick_12", "number": 12, "grade": "ill", "weight": 10, "cultivation": -5,
+        "verse": "Sóng ngầm dưới nước, thuyền nhẹ chớ ra khơi.", "verse_en": "An undertow runs beneath: light boats should stay ashore."
+      }
+    ],
+
+    "camps": [
+      {
+        "poi": "poi_camp_black_wind", "name": "Hắc Phong Trại", "name_en": "Black Wind Camp",
+        "garrison": ["black_wind_chief", "bandit_thug", "bandit_thug", "bandit_knifer"],
+        "respawn_months": 4, "hoard": "black_wind_hoard", "captive_chance": 0.5
+      }
+    ]
+  }
+}

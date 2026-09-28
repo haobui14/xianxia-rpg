@@ -103,7 +103,13 @@ public sealed class Fighter
     public Vector2 Dir;
     public float Strafe = 1;
     public bool Enraged;
+    /// <summary>The first of <see cref="Arts"/> (a foe's signature art).</summary>
     public SkillDef? Skill;
+    /// <summary>Every art this foe can use; its brain picks one for the moment each time it casts.</summary>
+    public List<SkillDef> Arts = new();
+    /// <summary>Each art's own cooldown, so a foe with several doesn't lean on one.</summary>
+    public readonly Dictionary<string, float> ArtCds = new();
+    public string? LastArt;
     public Vector2 WanderTarget;
     public float WanderWait;
     public float AggroCd;
@@ -144,6 +150,9 @@ public sealed class Fighter
         Mark = null;
         Stun = Rooted = Slow = Blind = DefBreak = ResBreak = 0;
         BleedDps = BleedTime = BurnDps = BurnTime = DotAcc = 0;
+        Shield = ShieldTime = 0;
+        ArtCds.Clear();
+        LastArt = null;
         State = "approach";
         Yielded = false;
     }
@@ -254,6 +263,8 @@ public sealed class Orbiter
 /// <summary>Ground that keeps burning (a "field" art): everyone inside takes a hit every half second.</summary>
 public sealed class GroundFire
 {
+    /// <summary>Who lit it: null for the player's own fire (it burns foes), a foe's burns the player.</summary>
+    public Fighter? Owner;
     public Vector2 Pos;
     public float Radius = 90;
     public float Time;

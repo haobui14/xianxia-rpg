@@ -64,57 +64,131 @@
       }
     },
     {
-      "id": "random_treasure", "name": "Bảo Nang", "name_en": "Treasure Pouch", "type": "Misc", "rarity": "Uncommon",
-      "description": "Túi gấm buộc chặt, ai đó đánh rơi sau trận đấu. Mở ra xem bên trong có gì.",
-      "description_en": "A tied silk pouch someone dropped in the fight. Open it and see what's inside.",
-      "open_loot": "thanh_van_wilds"
-    },
-    {
-      "id": "rare_treasure", "name": "Cổ Bảo Hạp", "name_en": "Ancient Treasure Casket", "type": "Misc", "rarity": "Rare",
-      "description": "Hộp gỗ cổ, trận văn khắc trên nắp đã phai. Mở ra lấy báu vật bên trong.",
-      "description_en": "An old wooden casket, the array carved on its lid long faded. Open it for the treasure inside.",
-      "open_loot": "cave_treasure"
-    },
-    {
-      "id": "formation_fragment", "name": "Mảnh Trận Bàn", "name_en": "Formation Fragment", "type": "Material", "rarity": "Rare",
-      "description": "Mảnh vỡ của một trận bàn cổ. Nghiền ngẫm trận văn trên đó: ngộ tính +1 vĩnh viễn.",
-      "description_en": "A shard of an ancient array plate. Study the lines on it: +1 Insight for good.",
-      "effects": { "permanent_int": 1 }
-    },
-    {
-      "id": "low_grade_pill", "name": "Hạ Phẩm Hồi Nguyên Đan", "name_en": "Low-Grade Restoring Pill", "type": "Medicine", "rarity": "Common",
-      "description": "Đan dược thô, hồi một ít khí huyết và linh lực.", "description_en": "A rough pill that restores a little health and Qi.",
-      "effects": { "hp_restore": 35, "qi_restore": 15 }
-    },
-    {
-      "id": "medicinal_grass", "name": "Dược Thảo", "name_en": "Medicinal Grass", "type": "Medicine", "rarity": "Common",
-      "description": "Cỏ thuốc dân gian, nhai nát đắp vết thương.", "description_en": "A common healing herb; chew it and press it on a wound.",
-      "effects": { "hp_restore": 20 }
-    },
-    {
-      "id": "spirit_herb", "name": "Linh Thảo", "name_en": "Spirit Herb", "type": "Material", "rarity": "Common",
-      "description": "Cỏ mọc nơi linh khí tụ lại, ăn vào hồi linh lực.", "description_en": "A herb that grows where qi gathers; eating it restores Qi.",
+      "id": "spirit_herb", "name": "Linh Thảo", "name_en": "Spirit Herb", "type": "Medicine", "rarity": "Common",
+      "description": "Cỏ thấm linh khí, nhai sống cũng hồi được chút linh lực.", "description_en": "A grass steeped in qi; chewed raw, it restores a little Qi.",
       "effects": { "qi_restore": 25 }
     },
     {
-      "id": "mysterious_herb", "name": "Kỳ Thảo", "name_en": "Mysterious Herb", "type": "Medicine", "rarity": "Uncommon",
-      "description": "Loài thảo dược lạ mọc sau cơn mưa linh khí: lành thương và tăng chút tu vi.",
-      "description_en": "A strange herb that springs up after a rain of qi: it heals and adds a little cultivation.",
-      "effects": { "hp_restore": 20, "cultivation_exp": 40 }
+      "id": "medicinal_grass", "name": "Dược Thảo", "name_en": "Medicinal Grass", "type": "Medicine", "rarity": "Common",
+      "description": "Thảo dược dân gian, đắp vào vết thương là cầm máu.", "description_en": "A folk remedy; pressed on a wound, it stops the bleeding.",
+      "effects": { "hp_restore": 25 }
     },
     {
-      "id": "cultivation_manual_basic", "name": "Nhập Môn Tâm Pháp", "name_en": "Beginner's Cultivation Manual", "type": "Book", "rarity": "Common",
-      "description": "Sách mỏng chép phép thổ nạp nhập môn. Đọc để lĩnh ngộ công pháp.",
-      "description_en": "A thin book of beginner's breathing. Read it to learn the technique.",
+      "id": "low_grade_pill", "name": "Hạ Phẩm Tụ Khí Đan", "name_en": "Low-grade Qi Pill", "type": "Medicine", "rarity": "Common",
+      "description": "Đan dược thô, luyện vội, nhưng vẫn giúp tu vi nhích lên.", "description_en": "A crude, hastily refined pill, but it still nudges your cultivation along.",
+      "effects": { "cultivation_exp": 40 }
+    },
+    {
+      "id": "cultivation_manual_basic", "name": "Nhập Môn Tâm Pháp", "name_en": "Primer of Cultivation", "type": "Book", "rarity": "Uncommon",
+      "description": "Quyển tâm pháp nhập môn một tu sĩ lang bạt tặng lại để tạ ơn cứu mạng.", "description_en": "A beginner's method a wandering cultivator gave you in thanks for saving their life.",
       "teaches_technique": {
-        "id": "nhap_mon_tam_phap", "name": "Nhập Môn Tâm Pháp", "name_en": "Beginner's Method",
+        "id": "nhap_mon_tam_phap", "name": "Nhập Môn Tâm Pháp", "name_en": "Primer of Cultivation",
         "grade": "Mortal", "elements": [], "cultivation_speed_bonus": 8
       }
     },
     {
-      "id": "spirit_stone", "name": "Linh Thạch", "name_en": "Spirit Stone", "type": "Material", "rarity": "Common",
-      "description": "Tiền tệ của người tu hành: nhận được là vào túi tiền ngay.",
-      "description_en": "Cultivators' money: it goes straight into your purse."
+      "id": "formation_fragment", "name": "Mảnh Trận Đồ", "name_en": "Formation Fragment", "type": "Book", "rarity": "Rare",
+      "description": "Mảnh trận đồ cổ khắc chi chít văn lộ. Nghiền ngẫm nó, ngộ tính tăng lên.", "description_en": "A fragment of an ancient formation diagram, dense with patterns. Studying it sharpens your insight.",
+      "effects": { "permanent_int": 1 }
+    },
+    {
+      "id": "rare_treasure", "name": "Trận Tâm Ngọc", "name_en": "Formation-Heart Jade", "type": "Accessory", "rarity": "Rare",
+      "description": "Viên ngọc từng làm lõi của một đại trận. Đeo vào, giác quan nhạy bén lạ thường.", "description_en": "A jade that once sat at the heart of a great formation. Worn, it sharpens the senses.",
+      "equipment_slot": "Accessory", "bonus_stats": { "perception": 3, "luck": 2 }
+    },
+    {
+      "id": "legendary_technique", "name": "Vân Hải Thiên Công", "name_en": "Sea of Clouds Heavenly Art", "type": "Book", "rarity": "Legendary",
+      "description": "Truyền thừa của một vị tiền bối vô danh: thổ nạp như mây trôi biển lớn.", "description_en": "The legacy of a nameless master: breathe the way clouds drift over a great sea.",
+      "teaches_technique": {
+        "id": "van_hai_thien_cong", "name": "Vân Hải Thiên Công", "name_en": "Sea of Clouds Heavenly Art",
+        "grade": "Heaven", "elements": [], "cultivation_speed_bonus": 30
+      }
+    },
+    {
+      "id": "mysterious_herb", "name": "Kỳ Dị Linh Thảo", "name_en": "Mysterious Herb", "type": "Medicine", "rarity": "Rare",
+      "description": "Loài cỏ lạ mọc trong hang tối, tỏa ánh bạc. Ăn vào, gân cốt và tu vi cùng tăng.", "description_en": "A strange herb that grows in dark caves and glows silver. Eaten, it strengthens both body and cultivation.",
+      "effects": { "cultivation_exp": 150, "permanent_hp": 10 }
+    },
+
+    {
+      "id": "fish_crucian", "name": "Cá Diếc", "name_en": "Crucian Carp", "type": "Material", "rarity": "Common",
+      "description": "Cá diếc sông, thịt ngọt, nấu cháo rất lành.", "description_en": "A river crucian with sweet flesh, good in congee.",
+      "effects": { "hp_restore": 15 }
+    },
+    {
+      "id": "fish_carp", "name": "Cá Chép", "name_en": "River Carp", "type": "Material", "rarity": "Common",
+      "description": "Cá chép sông Thanh Vân, vảy ánh vàng nhạt.", "description_en": "An Azure Cloud river carp with pale gold scales.",
+      "effects": { "hp_restore": 20 }
+    },
+    {
+      "id": "fish_catfish", "name": "Cá Trê", "name_en": "Mud Catfish", "type": "Material", "rarity": "Common",
+      "description": "Sống dưới bùn đầm, râu dài, da trơn.", "description_en": "Lives in the marsh mud: long whiskers, slick skin.",
+      "effects": { "hp_restore": 20 }
+    },
+    {
+      "id": "fish_grass_carp", "name": "Cá Trắm", "name_en": "Grass Carp", "type": "Material", "rarity": "Uncommon",
+      "description": "Cá trắm lớn, kéo rất nặng tay. Dân làng quý lắm.", "description_en": "A big grass carp that pulls hard. The villagers prize it.",
+      "effects": { "hp_restore": 40 }
+    },
+    {
+      "id": "fish_eel", "name": "Lươn Đầm", "name_en": "Marsh Eel", "type": "Material", "rarity": "Uncommon",
+      "description": "Trơn tuột khó bắt, ăn vào bổ gân cốt.", "description_en": "Slippery and hard to hold; eaten, it strengthens the sinews.",
+      "effects": { "hp_restore": 15, "stamina_restore": 40 }
+    },
+    {
+      "id": "fish_snakehead", "name": "Cá Lóc Đen", "name_en": "Black Snakehead", "type": "Material", "rarity": "Uncommon",
+      "description": "Cá lóc đen nơi đầm sâu, dữ và khỏe.", "description_en": "A black snakehead from the deep marsh, fierce and strong.",
+      "effects": { "hp_restore": 50 }
+    },
+    {
+      "id": "fish_azure_scale", "name": "Thanh Lân Ngư", "name_en": "Azure-Scale Fish", "type": "Material", "rarity": "Uncommon",
+      "description": "Cá linh vảy biếc, lớn lên nhờ linh khí trong nước. Dược sư dùng làm thuốc.", "description_en": "A spirit fish with blue-green scales that grows on the qi in the water. Alchemists use it.",
+      "effects": { "qi_restore": 30 }
+    },
+    {
+      "id": "fish_silver_thread", "name": "Ngân Tuyến Ngư", "name_en": "Silver-Thread Fish", "type": "Material", "rarity": "Rare",
+      "description": "Thân mảnh như sợi bạc, chỉ sống nơi nước lạnh đầu nguồn.", "description_en": "Slender as a silver thread; it lives only in the cold water upstream.",
+      "effects": { "qi_restore": 60, "cultivation_exp": 20 }
+    },
+    {
+      "id": "fish_golden_carp", "name": "Kim Lý", "name_en": "Golden Carp", "type": "Material", "rarity": "Epic",
+      "description": "Cá chép vàng. Tương truyền con nào vượt được Long Môn sẽ hóa rồng.", "description_en": "A golden carp. Legend says one that leaps the Dragon Gate becomes a dragon.",
+      "effects": { "cultivation_exp": 150, "permanent_luck": 1 }
+    },
+    {
+      "id": "spirit_turtle", "name": "Linh Quy", "name_en": "Spirit Turtle", "type": "Material", "rarity": "Rare",
+      "description": "Rùa linh trăm tuổi, vân mai như bát quái. Thả nó về nước là tích đức.", "description_en": "A century-old spirit turtle whose shell is patterned like the eight trigrams. Setting it free earns merit."
+    },
+
+    {
+      "id": "iron_ore", "name": "Quặng Sắt", "name_en": "Iron Ore", "type": "Material", "rarity": "Common",
+      "description": "Quặng sắt đen, nặng tay. Lò rèn luyện năm cục thành một viên đá cường hóa.", "description_en": "Heavy black iron ore. The forge smelts five lumps into an enhancement stone."
+    },
+    {
+      "id": "cold_iron", "name": "Hàn Thiết", "name_en": "Cold Iron", "type": "Material", "rarity": "Uncommon",
+      "description": "Sắt lạnh như băng từ lòng núi. Lò rèn luyện ba khối thành một viên đá cường hóa tốt.", "description_en": "Iron as cold as ice from deep in the mountain. The forge smelts three pieces into a fine enhancement stone."
+    },
+    {
+      "id": "raw_jade", "name": "Ngọc Thô", "name_en": "Raw Jade", "type": "Material", "rarity": "Uncommon",
+      "description": "Ngọc chưa mài. Thương lái trả giá khá.", "description_en": "Uncut jade. Traders pay well for it."
+    },
+
+    {
+      "id": "hoi_khi_tan", "name": "Hồi Khí Tán", "name_en": "Qi-Mending Powder", "type": "Medicine", "rarity": "Uncommon",
+      "description": "Luyện từ Nguyệt Quang Hoa và cá linh, hồi linh lực rất nhanh.", "description_en": "Refined from moonlight flower and spirit fish; restores Qi quickly.",
+      "effects": { "qi_restore": 60 }
+    },
+    {
+      "id": "boi_nguyen_dan", "name": "Bồi Nguyên Đan", "name_en": "Origin-Nourishing Pill", "type": "Medicine", "rarity": "Uncommon",
+      "description": "Bồi bổ nguyên khí, luyện từ thú đan và linh chi thảo.", "description_en": "Nourishes your original qi; refined from beast cores and spirit grass.",
+      "effects": { "cultivation_exp": 120 }
+    },
+
+    {
+      "id": "random_treasure", "name": "Bảo Nang", "name_en": "Treasure Pouch", "type": "Misc", "rarity": "Uncommon",
+      "description": "Túi gấm buộc chặt, ai đó đánh rơi sau trận đấu. Mở ra xem bên trong có gì.",
+      "description_en": "A tied silk pouch someone dropped in the fight. Open it and see what's inside.",
+      "open_loot": "cave_treasure"
     },
     {
       "id": "water_dragon_manual", "name": "Thủy Long Quyết", "name_en": "Water Dragon Art", "type": "Book", "rarity": "Rare",
@@ -146,14 +220,6 @@
       "teaches_technique": {
         "id": "hu_khong_de_kinh", "name": "Hư Không Đế Kinh", "name_en": "Void Emperor Canon",
         "grade": "Immortal", "elements": [], "cultivation_speed_bonus": 35
-      }
-    },
-    {
-      "id": "legendary_technique", "name": "Thái Cổ Truyền Thừa", "name_en": "Primordial Inheritance", "type": "Book", "rarity": "Legendary",
-      "description": "Truyền thừa thời thái cổ, ngọc giản còn vương thần niệm người xưa.", "description_en": "An inheritance from the primordial age; the jade slip still holds its maker's thought.",
-      "teaches_technique": {
-        "id": "thai_co_truyen_thua", "name": "Thái Cổ Truyền Thừa", "name_en": "Primordial Inheritance",
-        "grade": "Immortal", "elements": [], "cultivation_speed_bonus": 30
       }
     },
     {

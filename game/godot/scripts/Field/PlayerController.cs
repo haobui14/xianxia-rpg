@@ -50,6 +50,9 @@ public sealed class PlayerController
     /// <summary>Set by the screen from unhandled mouse input, so clicks on the HUD never swing the sword.</summary>
     public bool MouseAttack;
     public bool MouseSkill;
+    /// <summary>Sword swings and dashes so far (the new player guide watches for them).</summary>
+    public int Swings { get; private set; }
+    public int Dashes { get; private set; }
 
     private Vector2 _dashDir;
     private float _dashSpeed;
@@ -506,6 +509,7 @@ public sealed class PlayerController
         StaminaDelay = 0.6f;
         DashCd = 0.35f;
         StartDash(dir, 210, 0.16f, null, 0);
+        Dashes += 1;
         SoundBoard.Play("dash", -3);
     }
 
@@ -892,6 +896,7 @@ public sealed class PlayerController
         var p = Body;
         p.AttackAnim = 1;
         p.AttackDir = dir;
+        Swings += 1;
         var arc = (float)skill.Cast.Arc;
         var range = (float)skill.Cast.Range + 10;
         F.Fx.Slash(p.Pos + new Vector2(0, -22), dir, Mathf.Min(arc, 300), range, arc >= 300 ? Ink.Violet : color, 0.2f, arc >= 300 ? 1.6f : 1);
